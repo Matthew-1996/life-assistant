@@ -177,6 +177,7 @@ JOURNAL_INDEX_ALLOWED_FIELDS = (
 BACKUP_PREFIX = "生活助手-完整备份-"
 BACKUP_EXCLUDED_DIRS = {
     ".git",
+    ".worktrees",
     ".mypy_cache",
     ".next",
     ".nox",

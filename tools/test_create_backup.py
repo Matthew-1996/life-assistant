@@ -128,6 +128,17 @@ class CreateBackupTests(unittest.TestCase):
         self.assertIn("codex-生活助手/web/life-dashboard/.openai/hosting.json", names)
         self.assertIn("codex-生活助手/.env.example", names)
 
+    def test_git_worktrees_are_excluded_from_project_snapshot(self) -> None:
+        self._write(".worktrees/agent-task/private-marker.txt", "never archive\n")
+
+        result, _, stderr = self._run("--date", "2026-08-01")
+
+        self.assertEqual(result, 0, stderr)
+        archive = self.root / "backups/生活助手-完整备份-2026-08-01.zip"
+        with zipfile.ZipFile(archive) as handle:
+            names = set(handle.namelist())
+        self.assertFalse(any("/.worktrees/" in name for name in names))
+
     def test_nonempty_journal_adds_specific_warning(self) -> None:
         identifier = "20260801-unknown-0123456789ab"
         self._write(

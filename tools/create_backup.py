@@ -51,6 +51,7 @@ ROOT = Path(__file__).resolve().parents[1]
 ARCHIVE_ROOT = "codex-生活助手"
 EXCLUDED_DIRS = {
     ".git",
+    ".worktrees",
     ".mypy_cache",
     ".next",
     ".nox",

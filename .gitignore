@@ -19,12 +19,23 @@
 credentials.json
 .npmrc
 
-# Personal source records and derived indexes
+# Private user context and personalized plans (iCloud only)
+USER.md
+MEMORY.md
+GOALS.md
+PROJECT_CONTEXT.md
+PORTABILITY.md
+plans/2026-07-31-两周睡眠与生活恢复计划.md
+plans/2026-08-01-生活扩展路线图.md
+automations/
+
+# Personal source records and derived indexes (iCloud only)
 journal/entries/
 journal/reviews/
 journal/index.jsonl
 journal/INDEX.md
 journal/insight-decisions.jsonl
+journal/review-policy.json
 journal/.journal.lock
 records/*.jsonl
 records/.*.lock
@@ -41,6 +52,22 @@ STATUS.md
 integrations/google-sheets.json
 integrations/google-sheets.sync-state.json
 web/life-dashboard/.openai/
+
+# Personalized dashboard content and workbook implementation (iCloud only
+# until user-specific content is separated from reusable code)
+web/life-dashboard/PUBLICATION_STATE.json
+web/life-dashboard/README.md
+web/life-dashboard/app/life-plan.js
+web/life-dashboard/app/page.tsx
+web/life-dashboard/tests/life-plan.test.mjs
+web/life-dashboard/tests/rendered-html.test.mjs
+tools/google_sheets_payload.mjs
+tools/life_plan_records.mjs
+tools/test_google_sheets_payload.mjs
+tools/test_journal_workbook_e2e.mjs
+tools/test_life_plan_records.mjs
+tools/update_life_plan_growth.mjs
+tools/update_life_plan_journal.mjs
 
 # Web dependencies, builds, and local deployment state
 web/life-dashboard/node_modules/
