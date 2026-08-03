@@ -116,6 +116,7 @@ REQUIRED_FILES = [
 TEXT_SUFFIXES = {".json", ".md", ".mjs", ".py", ".ts", ".tsx", ".txt", ".yaml", ".yml"}
 EXCLUDED_DIRS = {
     ".git",
+    ".worktrees",
     ".mypy_cache",
     ".next",
     ".nox",
