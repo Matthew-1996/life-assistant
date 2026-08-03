@@ -1,0 +1,56 @@
+# macOS and editor metadata
+.DS_Store
+**/.DS_Store
+*.swp
+*.swo
+
+# Local agent/runtime state
+.workbuddy/
+.worktrees/
+**/__pycache__/
+*.py[cod]
+
+# Secrets and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials.json
+.npmrc
+
+# Personal source records and derived indexes
+journal/entries/
+journal/reviews/
+journal/index.jsonl
+journal/INDEX.md
+journal/insight-decisions.jsonl
+journal/.journal.lock
+records/*.jsonl
+records/.*.lock
+records/apple-health-latest.txt
+records/apple-sleep-details-latest.txt
+
+# Backups and generated exports
+backups/
+outputs/
+STATUS.md
+*.bundle
+
+# External service bindings and sync receipts
+integrations/google-sheets.json
+integrations/google-sheets.sync-state.json
+web/life-dashboard/.openai/
+
+# Web dependencies, builds, and local deployment state
+web/life-dashboard/node_modules/
+web/life-dashboard/dist/
+web/life-dashboard/.next/
+web/life-dashboard/.vinext/
+web/life-dashboard/.wrangler/
+web/life-dashboard/out/
+web/life-dashboard/coverage/
+web/life-dashboard/outputs/
+web/life-dashboard/work/
+web/life-dashboard/next-env.d.ts
+web/life-dashboard/*.log

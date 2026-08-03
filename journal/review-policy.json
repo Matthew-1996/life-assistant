@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "timezone": "Asia/Shanghai",
+  "trial_weekly_start": "2026-08-02",
+  "trial_weekly_end": "2026-08-14",
+  "long_term_cadence": "pending_user_choice",
+  "long_term_effective_from": null,
+  "decided_on": null
+}

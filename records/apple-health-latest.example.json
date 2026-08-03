@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "source": "apple-health-shortcuts",
+  "generated_at": "2026-08-02T10:30:00+08:00",
+  "timezone": "Asia/Shanghai",
+  "days": [
+    {
+      "date": "2026-08-02",
+      "sleep": {
+        "sleep_start": "03:30",
+        "sleep_end": "09:00",
+        "asleep_minutes": 300
+      }
+    },
+    {
+      "date": "2026-08-01",
+      "activity": {
+        "steps": 4200,
+        "exercise_minutes": 18,
+        "active_energy_kcal": 260
+      }
+    }
+  ]
+}

@@ -1,0 +1,195 @@
+#!/usr/bin/env python3
+"""Tests for the read-only portability environment doctor."""
+
+from __future__ import annotations
+
+import importlib.util
+import json
+import tempfile
+import unittest
+from pathlib import Path
+from unittest import mock
+
+
+MODULE_PATH = Path(__file__).with_name("portability_doctor.py")
+SPEC = importlib.util.spec_from_file_location("portability_doctor", MODULE_PATH)
+assert SPEC and SPEC.loader
+doctor = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(doctor)
+
+
+class PortabilityDoctorTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        self.root = Path(self.temp.name)
+
+    def tearDown(self) -> None:
+        self.temp.cleanup()
+
+    def _write(self, relative: str, content: str = "ok\n") -> None:
+        path = self.root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+
+    def _write_required(self) -> None:
+        for relative in doctor.REQUIRED_PROJECT_FILES:
+            self._write(relative)
+        self._write(
+            "web/life-dashboard/package.json",
+            json.dumps({"engines": {"node": ">=22.13.0"}}),
+        )
+        self._write("web/life-dashboard/package-lock.json", "{}\n")
+
+    def test_version_parser(self) -> None:
+        self.assertEqual(doctor._version_tuple("v22.13.1"), (22, 13, 1))
+        self.assertIsNone(doctor._version_tuple("unknown"))
+
+    def test_missing_core_files_is_failure(self) -> None:
+        with mock.patch.object(doctor.shutil, "which", return_value=None):
+            report = doctor.build_report(self.root)
+
+        self.assertEqual(report["overall"], "FAIL")
+        project = next(item for item in report["checks"] if item["name"] == "project_files")
+        self.assertEqual(project["status"], "FAIL")
+
+    def test_new_portable_truth_sources_are_required(self) -> None:
+        expected = {
+            "automations/registry.json",
+            "automations/生活状态回访.prompt.txt",
+            "journal/PRIVACY.md",
+            "outputs/019fb832-be4f-74f1-add5-58cb6fb6fc09/生活计划表.xlsx",
+            "outputs/019fb832-be4f-74f1-add5-58cb6fb6fc09/生活计划表.sync-state.json",
+            "records/README.md",
+            "tools/daily_checkin.py",
+            "tools/weekly_review.py",
+            "tools/test_weekly_review.py",
+            "tools/phase_review.py",
+            "tools/test_phase_review.py",
+            "tools/phase_actions.py",
+            "tools/test_phase_actions.py",
+            "tools/journal_insights.py",
+            "tools/test_journal_insights.py",
+            "tools/life_plan_records.mjs",
+            "tools/update_life_plan_journal.mjs",
+            "tools/verify_backup.py",
+            "web/life-dashboard/.openai/hosting.json",
+            "web/life-dashboard/PUBLICATION_STATE.json",
+        }
+        self.assertTrue(expected.issubset(set(doctor.REQUIRED_PROJECT_FILES)))
+        self.assertNotIn("records/weekly-reviews.jsonl", doctor.REQUIRED_PROJECT_FILES)
+        self.assertNotIn("records/phase-reviews.jsonl", doctor.REQUIRED_PROJECT_FILES)
+        self.assertNotIn("records/phase-actions.jsonl", doctor.REQUIRED_PROJECT_FILES)
+        self.assertNotIn("journal/insight-decisions.jsonl", doctor.REQUIRED_PROJECT_FILES)
+
+    def test_missing_optional_runtimes_is_attention_not_failure(self) -> None:
+        self._write_required()
+
+        def fake_spec(name: str):
+            return object() if name == "fcntl" else None
+
+        with mock.patch.object(doctor.shutil, "which", return_value=None), mock.patch.object(
+            doctor.importlib.util, "find_spec", side_effect=fake_spec
+        ), mock.patch.object(doctor.sys, "version_info", (3, 11, 0)):
+            report = doctor.build_report(self.root)
+
+        self.assertEqual(report["overall"], "ATTENTION")
+        statuses = {item["name"]: item["status"] for item in report["checks"]}
+        self.assertEqual(statuses["project_files"], "PASS")
+        self.assertEqual(statuses["weekly_review_data"], "INFO")
+        self.assertEqual(statuses["phase_review_data"], "INFO")
+        self.assertEqual(statuses["phase_action_data"], "INFO")
+        self.assertEqual(statuses["journal_insight_data"], "INFO")
+        self.assertEqual(statuses["python"], "PASS")
+        self.assertEqual(statuses["journal_lock"], "PASS")
+        self.assertEqual(statuses["pyyaml"], "INFO")
+        self.assertEqual(statuses["node"], "ATTENTION")
+        self.assertEqual(statuses["artifact_tool"], "INFO")
+
+    def test_present_optional_weekly_data_is_pass_and_not_core_requirement(self) -> None:
+        self._write_required()
+        self._write("records/weekly-reviews.jsonl", "")
+
+        with mock.patch.object(doctor.shutil, "which", return_value=None):
+            report = doctor.build_report(self.root)
+
+        weekly = next(
+            item for item in report["checks"] if item["name"] == "weekly_review_data"
+        )
+        self.assertEqual(weekly["status"], "PASS")
+        self.assertEqual(weekly["scope"], "optional_source")
+
+    def test_non_file_weekly_data_path_is_failure(self) -> None:
+        self._write_required()
+        (self.root / "records/weekly-reviews.jsonl").mkdir(parents=True)
+
+        with mock.patch.object(doctor.shutil, "which", return_value=None):
+            report = doctor.build_report(self.root)
+
+        weekly = next(
+            item for item in report["checks"] if item["name"] == "weekly_review_data"
+        )
+        self.assertEqual(weekly["status"], "FAIL")
+        self.assertEqual(report["overall"], "FAIL")
+
+    def test_non_file_phase_and_insight_paths_are_failures(self) -> None:
+        self._write_required()
+        (self.root / "records/phase-reviews.jsonl").mkdir(parents=True)
+        (self.root / "journal/insight-decisions.jsonl").mkdir(parents=True)
+
+        with mock.patch.object(doctor.shutil, "which", return_value=None):
+            report = doctor.build_report(self.root)
+
+        statuses = {item["name"]: item["status"] for item in report["checks"]}
+        self.assertEqual(statuses["phase_review_data"], "FAIL")
+        self.assertEqual(statuses["journal_insight_data"], "FAIL")
+        self.assertEqual(report["overall"], "FAIL")
+
+    def test_present_optional_phase_action_data_is_pass(self) -> None:
+        self._write_required()
+        self._write("records/phase-actions.jsonl", "")
+
+        with mock.patch.object(doctor.shutil, "which", return_value=None):
+            report = doctor.build_report(self.root)
+
+        action = next(
+            item for item in report["checks"] if item["name"] == "phase_action_data"
+        )
+        self.assertEqual(action["status"], "PASS")
+        self.assertEqual(action["scope"], "optional_source")
+
+    def test_phase_action_directory_and_symlink_paths_are_failures(self) -> None:
+        for unsafe_kind in ("directory", "symlink"):
+            with self.subTest(unsafe_kind=unsafe_kind):
+                self.temp.cleanup()
+                self.temp = tempfile.TemporaryDirectory()
+                self.root = Path(self.temp.name)
+                self._write_required()
+                action_path = self.root / "records/phase-actions.jsonl"
+                if unsafe_kind == "directory":
+                    action_path.mkdir(parents=True)
+                else:
+                    target = self.root / "records/phase-actions-target.jsonl"
+                    target.write_text("", encoding="utf-8")
+                    action_path.symlink_to(target)
+
+                with mock.patch.object(doctor.shutil, "which", return_value=None):
+                    report = doctor.build_report(self.root)
+
+                statuses = {item["name"]: item["status"] for item in report["checks"]}
+                self.assertEqual(statuses["phase_action_data"], "FAIL")
+                self.assertEqual(report["overall"], "FAIL")
+
+    def test_missing_site_lockfile_is_failure_even_when_site_build_is_optional(self) -> None:
+        self._write_required()
+        (self.root / "web/life-dashboard/package-lock.json").unlink()
+
+        with mock.patch.object(doctor.shutil, "which", return_value=None):
+            report = doctor.build_report(self.root)
+
+        site = next(item for item in report["checks"] if item["name"] == "site_dependencies")
+        self.assertEqual(site["status"], "FAIL")
+        self.assertEqual(report["overall"], "FAIL")
+
+
+if __name__ == "__main__":
+    unittest.main()
