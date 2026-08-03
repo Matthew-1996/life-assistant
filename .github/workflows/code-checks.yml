@@ -13,6 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Check repository privacy boundary
+        run: tools/check_git_privacy.sh
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -23,6 +25,7 @@ jobs:
           python -m unittest -v
           tools.test_apple_health_sleep
           tools.test_daily_checkin
+          tools.test_git_privacy
           tools.test_google_sheets_state
           tools.test_journal_insights
           tools.test_journal_integrity

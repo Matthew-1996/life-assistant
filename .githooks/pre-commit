@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+branch="$(git symbolic-ref --quiet --short HEAD || true)"
+if [[ "$branch" == "main" ]]; then
+  printf '拒绝：不要直接在 main 提交；请使用 agent/<短任务名> 分支和 Pull Request。\n' >&2
+  exit 1
+fi
+
+exec tools/check_git_privacy.sh
