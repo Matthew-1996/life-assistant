@@ -325,8 +325,8 @@ def build_report(root: Path = ROOT) -> dict[str, Any]:
             "site_dependencies",
             "INFO",
             "optional",
-            "移动端依赖缓存未恢复，这是预期状态。",
-            "仅在需要本地构建网页时，在 web/life-dashboard/ 运行 npm ci（需要 npm 源访问）。",
+            "移动端 node_modules 不在 iCloud（按设计），这是预期状态。",
+            "需要构建网页时，在 iCloud 外工作区运行：tools/dev_dashboard.sh init ~/Projects/life-dashboard，再 cd 进去 npm ci。",
         )
 
     if _artifact_tool_resolves(node, root):
