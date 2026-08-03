@@ -30,6 +30,16 @@
 
 21. Google 表格同步固定遵循 `integrations/README.md`：先运行 `node tools/google_sheets_payload.mjs` 从完整 iCloud 源生成确定性载荷，再优先使用已安装并已连接的个人 Google Drive/Sheets 插件或连接器，先幂等应用 `spreadsheet_properties` 与 `format_updates`，再依次清空 `clear_ranges`、批量写入 `value_updates`，并读回 `verification_ranges`；不得在插件可用时改用浏览器手工维护。若插件未安装、未连接、缺少权限或未暴露所需能力，可直接请用户完成安装、连接或授权后重试。表格必须是 `integrations/google-sheets.json` 绑定的私人原生 Google 表格，八个页面完整存在；不得创建公开链接、共享给他人或把表格当作真相源。只有插件或连接器写入和读回均成功、且源未漂移时，才通过 stdin 调用 `tools/google_sheets_state.py mark-success`。配置尚未连接或外部失败时，本地写入仍算成功，回执明确“Google 表格待刷新”，下次记录重试；每日自动化只在状态为 stale/pending 时补一次重试，不新增高频任务。同步载荷允许现有完整视图与轻量日记索引，但严禁日记原文、苹果健康摘要/明细、Prompt、凭据和聊天原文。现有 XLSX 不日常更新；只有用户明确要求导出或恢复该备选时才按电子表格 Skill 重建。
 
+22. 涉及代码、规则、Prompt、测试、网页、工具或 Git 仓库维护时，先完整读取 `GIT_WORKFLOW.md`，再遵循下方“Git 与多 Agent 协作”规则；普通生活对话、状态回复和日记快速新增不需要启动 Git 流程。
+
+## Git 与多 Agent 协作
+
+1. 首次使用当前克隆或新 worktree 时运行 `tools/setup_git_collaboration.sh`，启用版本化的隐私检查和 pre-commit/pre-push hooks；脚本失败时先停止提交或推送，不绕过检查。
+2. 不直接在 `main` 开发。每个 Agent 从最新 `origin/main` 创建独立的 `agent/<短任务名>` 分支和独立 worktree；不得与其他 Agent 共用工作目录或分支。
+3. 开始前检查 `git status`、现有分支和开放 PR；发现陌生修改时先确认归属，不执行会丢弃他人工作的 checkout、reset、强制推送或批量覆盖，也不默认使用 `git add -A`。
+4. 只显式暂存本任务文件，提交前运行 `tools/check_git_privacy.sh`、`git diff --check` 和相关验证；默认先推送任务分支并创建 Draft Pull Request，经检查通过后再合并。
+5. GitHub 只保存不含真实个人数据的通用方案和代码。`USER.md`、`MEMORY.md`、`GOALS.md`、`PROJECT_CONTEXT.md`、个性化计划、自动化、日记、状态、健康数据、外部绑定、导出和备份只留在 iCloud；通用代码与个人内容未分离时也先留在 iCloud。
+
 ## 权限与安全
 
 - 可以直接读取、研究、计算、生成草稿和进行工作区内可逆编辑。
