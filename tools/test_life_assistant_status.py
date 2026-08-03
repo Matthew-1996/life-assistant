@@ -678,9 +678,11 @@ class LifeAssistantStatusTest(unittest.TestCase):
 
     def test_portable_contract_covers_daily_upsert_and_natural_week(self) -> None:
         project_root = SCRIPT.parent.parent
-        registry = json.loads(
-            (project_root / "automations/registry.json").read_text(encoding="utf-8")
-        )
+        registry_path = project_root / "automations/registry.json"
+        if not registry_path.is_file():
+            # automations/ 是 iCloud-only 私有契约，不在 git 中；CI 仓库没有该文件时优雅跳过
+            self.skipTest("本机 automations/ 私有契约不在 git 中，CI 跳过本地契约测试")
+        registry = json.loads(registry_path.read_text(encoding="utf-8"))
         contract = registry["automations"][0]
         prompt_bytes = (project_root / contract["prompt_file"]).read_bytes()
         prompt = prompt_bytes.decode("utf-8")
