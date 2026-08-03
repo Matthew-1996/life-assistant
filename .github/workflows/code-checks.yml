@@ -9,7 +9,22 @@ permissions:
   contents: read
 
 jobs:
+  privacy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check repository privacy boundary (index + history)
+        run: |
+          if [ -n "${{ github.event.pull_request.base.sha }}" ]; then
+            tools/check_git_privacy.sh --history "${{ github.event.pull_request.base.sha }}..HEAD"
+          else
+            tools/check_git_privacy.sh
+          fi
+
   python:
+    needs: privacy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -40,6 +55,7 @@ jobs:
           tools.test_weekly_review
 
   node:
+    needs: privacy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 import tempfile
 import unittest
@@ -48,6 +49,29 @@ class GitPrivacyTests(unittest.TestCase):
             check=False,
         )
 
+    def _commit(self, message: str) -> None:
+        env = {
+            "GIT_AUTHOR_NAME": "t",
+            "GIT_AUTHOR_EMAIL": "t@example.com",
+            "GIT_COMMITTER_NAME": "t",
+            "GIT_COMMITTER_EMAIL": "t@example.com",
+        }
+        subprocess.run(
+            ["git", "commit", "-q", "-m", message],
+            cwd=self.root,
+            check=True,
+            env={**os.environ, **env},
+        )
+
+    def _check_history(self, rev_range: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [str(SCRIPT), "--history", rev_range],
+            cwd=self.root,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
     def test_safe_synthetic_source_passes(self) -> None:
         self._write("tools/example.py", "print('synthetic')\n")
         self._add("tools/example.py")
@@ -78,6 +102,80 @@ class GitPrivacyTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("高置信凭据", result.stderr)
         self.assertNotIn(secret, result.stdout + result.stderr)
+
+    def test_history_scan_rejects_added_then_deleted_private_file(self) -> None:
+        # 首个干净提交作为 base。
+        self._write("tools/example.py", "print('ok')\n")
+        self._add("tools/example.py")
+        self._commit("base")
+        base = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=self.root,
+            text=True,
+            capture_output=True,
+            check=True,
+        ).stdout.strip()
+
+        # 中间提交引入个人文件，随后删除——索引最终干净，但历史留痕。
+        sentinel = "PRIVATE-HISTORY-MUST-NOT-LEAK"
+        self._write("USER.md", sentinel)
+        self._add("USER.md", force=True)
+        self._commit("add private file")
+        subprocess.run(["git", "rm", "-q", "USER.md"], cwd=self.root, check=True)
+        self._commit("remove private file")
+
+        # 索引扫描此时应通过（最终树干净）。
+        self.assertEqual(self._check().returncode, 0)
+
+        # 历史扫描应拒绝，且不回显个人内容。
+        result = self._check_history(f"{base}..HEAD")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("USER.md", result.stderr)
+        self.assertNotIn(sentinel, result.stdout + result.stderr)
+
+    def test_history_scan_rejects_secret_in_old_commit(self) -> None:
+        self._write("tools/example.py", "print('ok')\n")
+        self._add("tools/example.py")
+        self._commit("base")
+        base = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=self.root,
+            text=True,
+            capture_output=True,
+            check=True,
+        ).stdout.strip()
+
+        secret = "ghp_" + ("b" * 24)
+        self._write("tools/leak.txt", secret)
+        self._add("tools/leak.txt")
+        self._commit("leak secret")
+        subprocess.run(["git", "rm", "-q", "tools/leak.txt"], cwd=self.root, check=True)
+        self._commit("remove secret")
+
+        result = self._check_history(f"{base}..HEAD")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("高置信凭据", result.stderr)
+        self.assertNotIn(secret, result.stdout + result.stderr)
+
+    def test_history_scan_passes_for_clean_history(self) -> None:
+        self._write("tools/example.py", "print('ok')\n")
+        self._add("tools/example.py")
+        self._commit("base")
+        base = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=self.root,
+            text=True,
+            capture_output=True,
+            check=True,
+        ).stdout.strip()
+
+        self._write("tools/example2.py", "print('still ok')\n")
+        self._add("tools/example2.py")
+        self._commit("more synthetic code")
+
+        result = self._check_history(f"{base}..HEAD")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("PASS", result.stdout)
 
 
 if __name__ == "__main__":
