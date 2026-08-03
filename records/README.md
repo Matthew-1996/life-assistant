@@ -235,4 +235,4 @@ python3 tools/phase_actions.py status
 
 ### 当前真实数据状态
 
-截至 2026-08-01，周复盘、阶段复盘与阶段动作工具、测试及相关派生链路已经建立，但 `records/weekly-reviews.jsonl`、`records/phase-reviews.jsonl` 与 `records/phase-actions.jsonl` 尚无任何真实用户数据。缺失文件或空文件都表示“尚未记录”，不是失败，也不要求用户补写。首次真实源记录只会在用户明确回答对应的自然周或阶段复盘问题后产生；动作台账只在对阶段回答运行 `plan` 后产生。
+截至 2026-08-03，每日状态台账 `records/daily-checkins.jsonl` 已有真实记录；`records/weekly-reviews.jsonl`、`records/phase-reviews.jsonl` 与 `records/phase-actions.jsonl` 尚无任何真实用户数据。缺失文件或空文件都表示“尚未记录”，不是失败，也不要求用户补写。首次真实源记录只会在用户明确回答对应的自然周或阶段复盘问题后产生；动作台账只在对阶段回答运行 `plan` 后产生。

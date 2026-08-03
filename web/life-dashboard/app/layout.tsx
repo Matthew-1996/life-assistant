@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "生活助手｜恢复、健身与职业探索路线",
-  description: "一个低压力、移动优先的生活看板：先恢复，复盘后再从健身与职业候选分支中至多启用一条。",
+  title: "生活助手",
+  description: "一个低压力、移动优先的个人生活看板。",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
