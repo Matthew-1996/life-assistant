@@ -23,6 +23,17 @@ GitHub 克隆不能单独恢复用户的生活助手实例。
 如果通用代码与个人内容混在同一文件，先留在 iCloud；拆出无真实数据的通用配置层后再提交。
 仓库私有不能替代数据最小化。
 
+首次克隆或新建 worktree 后运行：
+
+```bash
+tools/setup_git_collaboration.sh
+```
+
+它把仓库级 `core.hooksPath` 指向版本化的 `.githooks/`：本地会阻止直接在
+`main` 提交/推送、重新跟踪 iCloud 私有路径或提交高置信凭据。GitHub Actions
+会再次运行相同的 `tools/check_git_privacy.sh`。当前账号套餐不支持私有仓库服务端
+分支保护，因此这些防线不能替代 Pull Request 纪律。
+
 提交前运行：
 
 ```bash

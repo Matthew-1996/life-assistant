@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+tools/check_git_privacy.sh
+
+while read -r _local_ref _local_sha remote_ref _remote_sha; do
+  if [[ "$remote_ref" == "refs/heads/main" ]]; then
+    printf '拒绝：不要从本地直接推送 main；请推送 agent/* 分支并通过 Pull Request 合并。\n' >&2
+    exit 1
+  fi
+done

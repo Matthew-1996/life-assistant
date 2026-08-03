@@ -21,7 +21,11 @@ GitHub 只保存通用方案和代码，不保存某位用户的个人生活助�
 ## 多 Agent 协作
 
 所有任务使用 `agent/<短任务名>` 分支和独立 worktree，通过 Pull Request 合并到 `main`。
-开始修改前请阅读 [Git 协作约定](GIT_WORKFLOW.md) 和 [工作区规则](AGENTS.md)。
+开始修改前请阅读 [Git 协作约定](GIT_WORKFLOW.md) 和 [工作区规则](AGENTS.md)，并运行：
+
+```bash
+tools/setup_git_collaboration.sh
+```
 
 ## 主要目录
 
