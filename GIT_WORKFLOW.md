@@ -80,3 +80,63 @@ gh pr create --draft --base main --head agent/task-name
 - `AGENTS.md`、核心 Skill、公共 Prompt 和验证器：同一时间只安排一个 Agent 主改。
 - iCloud 私有文件：Git 不提供并发保护，继续使用项目内原子工具与 revision/etag，禁止手工批量覆盖。
 - 发现陌生修改时先停止暂存并确认归属；不要默认执行 `git add -A`。
+
+## 历史扫描防线
+
+隐私检查分索引和历史两层，二者都要过；只过索引不能证明历史干净。
+
+- 索引扫描（提交前，pre-commit 自动执行）：`tools/check_git_privacy.sh`
+- 历史扫描（推送/合入前）：`tools/check_git_privacy.sh --history <range>`，扫描该
+  提交范围内新增或修改过的私有路径与 blob 凭据。例如推分支前：
+
+  ```bash
+  tools/check_git_privacy.sh --history origin/main..HEAD
+  ```
+
+- CI 的 `privacy` job 用 `fetch-depth: 0` 检出全历史，对 PR 自动执行
+  `--history <base>..HEAD`；Python、Node job 都 `needs: privacy`。
+- 两种模式共用脚本内 `is_private_path` 判定，新增禁止路径只改这一个函数，
+  同时更新 `.gitignore` 保持口径一致。
+
+## 历史清理（应急，一次性仓库维护）
+
+仅当个人数据或凭据已进入历史提交时执行；这是不可逆且改写远端的操作，需用户
+当次明确授权。它无法用 PR 完成（PR 改不了既有提交），只能强推 `main`。
+
+1. 先全量备份，记录回滚锚点：
+
+   ```bash
+   ts=$(date +%Y%m%d-%H%M%S)
+   git bundle create "backups/git-history/pre-history-rewrite-${ts}.bundle" --all
+   git bundle verify "backups/git-history/pre-history-rewrite-${ts}.bundle"
+   git rev-parse HEAD > "backups/git-history/pre-history-rewrite-${ts}.mainsha.txt"
+   ```
+
+2. 列出历史中出现过的个人路径，逐一确认（保留 `*.example.*` 合成示例），
+   写入一个待剥离清单，用 `git filter-branch --index-filter` 从全历史移除：
+
+   ```bash
+   FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch --force --prune-empty \
+     --index-filter 'while IFS= read -r p; do
+        git rm -q --cached --ignore-unmatch "$p"; done < /tmp/strip_paths.txt' -- main
+   ```
+
+3. 清理残留引用与对象：删除 `refs/original/`、`refs/codex/` 等锚定旧历史的
+   ref，`git reflog expire --expire=now --all` 后 `git gc --prune=now`。
+
+4. 强推前手动过索引+历史隐私检查，再覆盖远端（用 `--force-with-lease` 防并发）：
+
+   ```bash
+   tools/check_git_privacy.sh
+   root=$(git rev-list --max-parents=0 main | tail -1)
+   tools/check_git_privacy.sh --history "${root}..HEAD"
+   git push --force-with-lease --no-verify origin main
+   ```
+
+5. 黑盒验证：从远端全新 `git clone`，确认个人文件在全历史提交数为 0，
+   通用文件数与测试符合预期。
+
+边界：`--no-verify` 仅用于此类一次性历史维护，且必须先手动跑完隐私检查再推，
+并如实报告。GitHub 服务端可能短期保留旧对象，彻底清除需联系 GitHub Support 或
+删库重建。备份 bundle 含个人历史，只留 iCloud、由 `.gitignore` 排除、不进新仓库。
+日常协作不复用此流程，仍走 `agent/*` 分支 + PR。
