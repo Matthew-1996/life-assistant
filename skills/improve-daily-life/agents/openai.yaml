@@ -1,0 +1,4 @@
+interface:
+  display_name: "生活助手核心"
+  short_description: "记录生活日记，动态维护目标，并转化为低打扰、可复盘的行动"
+  default_prompt: "使用 $improve-daily-life 帮我记录和整理生活，并维护当前最值得推进的目标。"
