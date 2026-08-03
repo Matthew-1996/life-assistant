@@ -1,5 +1,7 @@
 # 外部展示连接
 
+> 后续 Agent 执行 Google 表格同步前，先读同目录的 `GOOGLE_SYNC_SOP.md`：它给出插件可用性判定、载荷生成、按序写入、读回验证、`mark-success` 与换机重建的固定步骤。
+
 当前生活计划采用两层结构：
 
 - 当前 iCloud 项目中的 `GOALS.md`、`journal/` 与 `records/` 是唯一真相源；
