@@ -1,0 +1,33 @@
+name: Code checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile tools
+        run: python -m compileall -q tools
+      - name: Run private-data-independent tests
+        run: >-
+          python -m unittest -v
+          tools.test_apple_health_sleep
+          tools.test_daily_checkin
+          tools.test_google_sheets_state
+          tools.test_journal_insights
+          tools.test_journal_integrity
+          tools.test_journal_manager
+          tools.test_journal_review_policy
+          tools.test_phase_actions
+          tools.test_phase_review
+          tools.test_weekly_review
