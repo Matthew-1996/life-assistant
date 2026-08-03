@@ -25,12 +25,32 @@ jobs:
           python -m unittest -v
           tools.test_apple_health_sleep
           tools.test_daily_checkin
+          tools.test_create_backup
           tools.test_git_privacy
           tools.test_google_sheets_state
           tools.test_journal_insights
           tools.test_journal_integrity
           tools.test_journal_manager
           tools.test_journal_review_policy
+          tools.test_life_assistant_status
           tools.test_phase_actions
           tools.test_phase_review
+          tools.test_portability_doctor
+          tools.test_verify_backup
           tools.test_weekly_review
+
+  node:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check repository privacy boundary
+        run: tools/check_git_privacy.sh
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run reusable Node tests (dashboard date/state logic + Google Sheets payload tooling)
+        run: >-
+          node --test
+          web/life-dashboard/tests/life-date.test.mjs
+          tools/test_life_plan_records.mjs
+          tools/test_google_sheets_payload.mjs

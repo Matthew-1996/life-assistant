@@ -558,9 +558,9 @@ class LifeAssistantStatusTest(unittest.TestCase):
         expected_relatives = sorted(
             [
                 *STATUS_MODULE.SITE_DEPLOYMENT_FILES,
-                "app/chatgpt-auth.ts",
                 "app/globals.css",
                 "app/layout.tsx",
+                "app/life-date.js",
                 "app/life-plan.js",
                 "app/page.tsx",
                 "public/test-asset.txt",

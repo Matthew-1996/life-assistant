@@ -282,9 +282,9 @@ CORE_FILES = (
     "web/life-dashboard/vite.config.ts",
     "web/life-dashboard/tsconfig.json",
     "web/life-dashboard/drizzle.config.ts",
-    "web/life-dashboard/app/chatgpt-auth.ts",
     "web/life-dashboard/app/globals.css",
     "web/life-dashboard/app/layout.tsx",
+    "web/life-dashboard/app/life-date.js",
     "web/life-dashboard/app/life-plan.js",
     "web/life-dashboard/app/page.tsx",
 )
