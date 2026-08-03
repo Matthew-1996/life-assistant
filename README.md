@@ -34,3 +34,11 @@ tools/setup_git_collaboration.sh
 - `journal/`、`records/`：只提交通用说明和示例，真实数据不进入 Git；
 - `research/`：公开来源调研与实现审计；
 - `plans/`：只提交无真实个人信息的通用模板。
+
+## DeepSeek API
+
+仓库包含一个不依赖第三方 Python 包的 DeepSeek OpenAI-compatible 适配器，支持
+macOS 钥匙串、环境变量、模型检查、普通对话、流式输出和结构化错误。它不会自动读取
+任何个人记录；只有显式传入 stdin 的内容才会发送到 DeepSeek。
+
+配置与使用方法见 [DeepSeek API 接入](integrations/deepseek.md)。
