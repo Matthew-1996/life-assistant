@@ -43,13 +43,16 @@ python3 tools/validate_project.py
 python3 -m unittest discover -s tools -p 'test_*.py'
 ```
 
-网页变更还需在具备 Node.js `>=22.13.0` 的环境运行：
+网页变更还需在具备 Node.js `>=22.13.0` 的环境运行；`node_modules` 不在 iCloud 内，先在外部工作区同步源码再装依赖：
 
 ```bash
-cd web/life-dashboard
+tools/dev_dashboard.sh init ~/Projects/life-dashboard   # 首次或换机后
+cd ~/Projects/life-dashboard
 npm ci
 npm test
 ```
+
+日常在外部工作区编辑后用 `tools/dev_dashboard.sh push` 回写 iCloud 真相源，脚手架变更再按本文件流程经 PR 提交。
 
 ## 多 Agent 工作流
 
