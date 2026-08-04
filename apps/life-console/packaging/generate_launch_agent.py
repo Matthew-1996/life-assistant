@@ -15,19 +15,29 @@ def app_root() -> Path:
     return Path(__file__).resolve().parents[1]
 
 
-def generate(output_dir: Path, *, root: Path | None = None) -> tuple[Path, Path]:
+def generate(
+    output_dir: Path,
+    *,
+    root: Path | None = None,
+    project_root: Path | None = None,
+) -> tuple[Path, Path]:
     application = (root or app_root()).resolve()
     if not (application / "hub/server.py").is_file():
         raise ValueError("Life Console application root is invalid")
+    source = (project_root or application.parents[1]).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
+    output_dir.chmod(0o700)
     plist_path = output_dir / f"{LABEL}.plist"
     launcher_path = output_dir / "Open Life Console.command"
-    logs = Path.home() / "Library/Logs/LifeConsole"
+    logs = output_dir / "logs"
+    logs.mkdir(exist_ok=True)
+    logs.chmod(0o700)
 
     plist = {
         "Label": LABEL,
         "ProgramArguments": [
             sys.executable, "-m", "hub.server", "--host", "127.0.0.1", "--port", "47321",
+            "--root", str(source),
         ],
         "WorkingDirectory": str(application),
         "RunAtLoad": True,
@@ -50,9 +60,14 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Generate local Life Console launch files")
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--app-root", type=Path)
+    parser.add_argument("--project-root", type=Path)
     args = parser.parse_args()
     try:
-        plist_path, launcher_path = generate(args.output_dir, root=args.app_root)
+        plist_path, launcher_path = generate(
+            args.output_dir,
+            root=args.app_root,
+            project_root=args.project_root,
+        )
     except (OSError, ValueError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 2

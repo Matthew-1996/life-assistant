@@ -30,13 +30,14 @@ class SyntheticWorkflowTests(unittest.TestCase):
             try:
                 def request(method: str, path: str, body: dict | None = None, auth: dict | None = None):
                     headers = {"Host": host}
+                    headers.update(auth or {})
                     if body is not None:
-                        headers.update({"Content-Type": "application/json", **(auth or {})})
+                        headers["Content-Type"] = "application/json"
                     connection.request(method, path, body=json.dumps(body) if body is not None else None, headers=headers)
                     response = connection.getresponse()
                     return response.status, json.loads(response.read())
 
-                self.assertEqual(request("GET", "/api/v1/dashboard")[0], 200)
+                self.assertEqual(request("GET", "/api/v1/dashboard")[0], 403)
                 _, session = request("GET", "/api/v1/session")
                 cookie = next(iter(server.sessions))
                 auth = {
@@ -44,6 +45,7 @@ class SyntheticWorkflowTests(unittest.TestCase):
                     "Cookie": f"life_console_session={cookie}",
                     "X-Life-CSRF": session["csrf_token"],
                 }
+                self.assertEqual(request("GET", "/api/v1/dashboard", auth=auth)[0], 200)
                 journal = {
                     "schema_version": 1, "idempotency_key": "e2e_journal_key_01",
                     "event_date": "2026-01-12", "time_precision": "unknown",

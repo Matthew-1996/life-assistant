@@ -63,8 +63,27 @@ class HubReadTests(unittest.TestCase):
         result = build_dashboard(self.root, today=date(2026, 1, 12))
         self.assertEqual(result["today"]["focus"]["title"], "保持合成节奏")
         self.assertEqual(result["today"]["daily_revision"], 2)
+        self.assertEqual(
+            [sample["date"] for sample in result["progress"]["ratings"]],
+            [f"2026-01-{day:02d}" for day in range(6, 13)],
+        )
+        self.assertEqual(result["progress"]["sample_counts"], {"daily": 1, "missing": 6})
+        self.assertIsNone(result["progress"]["ratings"][0]["energy"])
+        self.assertEqual(result["progress"]["ratings"][-1]["energy"], 3)
+        self.assertEqual(result["system"]["icloud"], "readable")
         self.assertNotIn("note_summary", json.dumps(result, ensure_ascii=False))
         self.assertNotIn("raw", json.dumps(result, ensure_ascii=False))
+
+    def test_focus_prefers_goal_heading_over_status_metadata(self) -> None:
+        (self.root / "GOALS.md").write_text(
+            "## 当前重点\n"
+            "- 状态：当前重点，但不是永久第一目标\n\n"
+            "### 恢复可持续的生活节奏\n"
+            "- 阶段：01\n",
+            encoding="utf-8",
+        )
+        result = build_dashboard(self.root, today=date(2026, 1, 12))
+        self.assertEqual(result["today"]["focus"]["title"], "恢复可持续的生活节奏")
 
     def test_bad_and_duplicate_sources_fail_closed(self) -> None:
         path = self.root / "records/daily-checkins.jsonl"
@@ -107,7 +126,22 @@ class HubReadTests(unittest.TestCase):
             response = connection.getresponse()
             self.assertEqual(response.status, 200)
             self.assertIn("SameSite=Strict", response.getheader("Set-Cookie"))
+            cookie = response.getheader("Set-Cookie").split(";", 1)[0]
             response.read()
+
+            connection.request("GET", "/api/v1/dashboard", headers={"Host": f"127.0.0.1:{server.server_port}"})
+            response = connection.getresponse()
+            self.assertEqual(response.status, 403)
+            response.read()
+
+            connection.request(
+                "GET",
+                "/api/v1/dashboard",
+                headers={"Host": f"127.0.0.1:{server.server_port}", "Cookie": cookie},
+            )
+            response = connection.getresponse()
+            self.assertEqual(response.status, 200)
+            self.assertEqual(json.loads(response.read())["date"], date.today().isoformat())
 
             connection.request("GET", "/api/v1/dashboard", headers={"Host": "malicious.example"})
             response = connection.getresponse()

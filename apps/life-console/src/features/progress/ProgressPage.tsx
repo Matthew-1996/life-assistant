@@ -9,15 +9,24 @@ const signals: Array<{ key: RatingKey; label: string }> = [
   { key: "life_feeling", label: "生活实感" },
 ];
 
-const week = [
-  ["周一", "整理节奏"],
-  ["周二", "轻量活动"],
-  ["周三", "留出空白"],
-  ["周四", "观察变化"],
-  ["周五", "完成小事"],
-  ["周六", "生活体验"],
-  ["周日", "轻复盘"],
-];
+const weekLabels = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
+
+function naturalWeek(current: string) {
+  const currentDate = new Date(`${current}T00:00:00Z`);
+  const mondayOffset = (currentDate.getUTCDay() + 6) % 7;
+  const monday = new Date(currentDate);
+  monday.setUTCDate(currentDate.getUTCDate() - mondayOffset);
+  return weekLabels.map((label, index) => {
+    const day = new Date(monday);
+    day.setUTCDate(monday.getUTCDate() + index);
+    const value = day.toISOString().slice(0, 10);
+    return {
+      date: value,
+      label,
+      state: value === current ? "今天" : value < current ? "已过" : "待到",
+    };
+  });
+}
 
 function lineSegments(
   values: Array<number | null>,
@@ -46,6 +55,7 @@ interface ProgressPageProps {
 
 export function ProgressPage({ dashboard }: ProgressPageProps) {
   const dates = dashboard.progress.ratings.map((sample) => sample.date);
+  const week = naturalWeek(dashboard.date);
 
   return (
     <section aria-labelledby="progress-title">
@@ -65,10 +75,11 @@ export function ProgressPage({ dashboard }: ProgressPageProps) {
           </div>
         </div>
         <ol className="week-path">
-          {week.map(([day, theme], index) => (
-            <li data-current={index === 1} key={day}>
-              <span>{day}</span>
-              <strong>{theme}</strong>
+          {week.map((item) => (
+            <li data-current={item.date === dashboard.date} key={item.date}>
+              <span>{item.label}</span>
+              <strong>{item.state}</strong>
+              <small>{item.date.slice(5)}</small>
             </li>
           ))}
         </ol>
@@ -108,7 +119,7 @@ export function ProgressPage({ dashboard }: ProgressPageProps) {
             <h2 id="signals-title">四项主观评分</h2>
           </div>
           <span className="supporting-text">
-            {dates.at(0)} 至 {dates.at(-1)}
+            {dates.at(0)} 至 {dates.at(-1)} · 记录 {dashboard.progress.sample_counts.daily} · 无记录 {dashboard.progress.sample_counts.missing}
           </span>
         </div>
         <div className="signal-grid">

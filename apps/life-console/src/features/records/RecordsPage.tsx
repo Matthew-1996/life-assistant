@@ -10,7 +10,7 @@ type FormMode = "journal" | "checkin";
 interface RecordsPageProps {
   dashboard: Dashboard;
   client?: LifeConsoleClient;
-  onSaved?: () => void | Promise<void>;
+  onSaved?: () => boolean | Promise<boolean>;
 }
 
 const ratingFields = [
@@ -56,6 +56,16 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
       }
     }
     setPreviewReady(true);
+  }
+
+  async function useLatestRecord() {
+    const refreshed = await onSaved?.();
+    if (refreshed === false) {
+      setReceipt("暂时无法读取最新记录，冲突仍保留。");
+      return;
+    }
+    setConflict(null);
+    setReceipt("已读取最新记录；本次未覆盖。");
   }
 
   async function saveForm(
@@ -128,7 +138,11 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
           <p className="eyebrow">对话优先，表单兜底</p>
           <h1 id="records-title">记录</h1>
         </div>
-        <p>当前阶段只使用内存合成数据，刷新后清空。</p>
+        <p>
+          {client
+            ? "通过本机 Life Hub 写入 iCloud 真相源；保存失败时保留当前输入。"
+            : "当前是合成演示；不会写入真实 iCloud。"}
+        </p>
       </div>
 
       <div className="tab-list" role="tablist" aria-label="记录入口">
@@ -334,7 +348,7 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
             <article><strong>当前值</strong><pre>{JSON.stringify(conflict.current, null, 2)}</pre></article>
             <article><strong>本次提交</strong><pre>{JSON.stringify(conflict.submitted, null, 2)}</pre></article>
           </div>
-          <button className="secondary-button" onClick={() => void onSaved?.()} type="button">
+          <button className="secondary-button" onClick={() => void useLatestRecord()} type="button">
             使用最新记录
           </button>
         </section>

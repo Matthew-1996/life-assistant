@@ -28,31 +28,56 @@ function idempotencyKey(): string {
 }
 
 export function createApiClient(): LifeConsoleClient {
-  let session: Promise<Session> | null = null;
-  async function getSession(): Promise<Session> {
-    session ??= fetch("/api/v1/session", { credentials: "same-origin", cache: "no-store" })
-      .then((response) => response.json());
-    return session;
+  let session: Session | null = null;
+  let sessionRequest: Promise<Session> | null = null;
+
+  function sessionIsFresh(value: Session): boolean {
+    return Date.parse(value.expires_at) > Date.now() + 5_000;
+  }
+
+  async function getSession(force = false): Promise<Session> {
+    if (!force && session && sessionIsFresh(session)) return session;
+    if (!force && sessionRequest) return sessionRequest;
+    sessionRequest = fetch("/api/v1/session", {
+      credentials: "same-origin",
+      cache: "no-store",
+    }).then(async (response) => {
+      const value = await response.json();
+      if (!response.ok) throw new ApiError(value as ErrorResponse, response.status);
+      session = value as Session;
+      return session;
+    }).finally(() => {
+      sessionRequest = null;
+    });
+    return sessionRequest;
   }
 
   async function request<T>(path: string, body?: object): Promise<T> {
-    const options: RequestInit = {
-      credentials: "same-origin",
-      cache: "no-store",
-    };
-    if (body) {
-      const state = await getSession();
-      options.method = "POST";
-      options.headers = {
-        "Content-Type": "application/json",
-        "X-Life-CSRF": state.csrf_token,
+    let state = await getSession();
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const options: RequestInit = {
+        credentials: "same-origin",
+        cache: "no-store",
       };
-      options.body = JSON.stringify(body);
+      if (body) {
+        options.method = "POST";
+        options.headers = {
+          "Content-Type": "application/json",
+          "X-Life-CSRF": state.csrf_token,
+        };
+        options.body = JSON.stringify(body);
+      }
+      const response = await fetch(path, options);
+      const value = await response.json();
+      if (response.status === 403 && attempt === 0) {
+        session = null;
+        state = await getSession(true);
+        continue;
+      }
+      if (!response.ok) throw new ApiError(value as ErrorResponse, response.status);
+      return value as T;
     }
-    const response = await fetch(path, options);
-    const value = await response.json();
-    if (!response.ok) throw new ApiError(value as ErrorResponse, response.status);
-    return value as T;
+    throw new Error("Life Console session retry was exhausted");
   }
 
   return {

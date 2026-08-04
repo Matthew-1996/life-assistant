@@ -6,7 +6,7 @@ contract assets. The iCloud project remains the source of truth.
 
 ## Current scope
 
-Implemented in the foundation package:
+Implemented in phase one:
 
 - Vite, React, and TypeScript build scaffold;
 - the frozen `/api/v1` OpenAPI contract;
@@ -14,14 +14,22 @@ Implemented in the foundation package:
 - synthetic dashboard, receipt, and error fixtures;
 - contract tests for schema validity and localhost-only configuration;
 - Mac desktop pages for Today, Progress, Records, and System;
-- in-memory anchor, trend, handoff, and fallback form interactions;
-- a Python standard-library Life Hub with localhost-only read endpoints.
+- source-backed anchor, trend, handoff, and fallback form interactions;
+- a Python standard-library Life Hub with authenticated localhost reads;
+- whitelisted journal and daily-checkin writes through existing atomic tools;
+- revision-conflict, idempotency, purge-plan, and partial-refresh handling;
+- rebuildable LaunchAgent and local launcher generation.
 
-Not implemented yet:
+Not enabled or included in phase one:
 
-- real source writes;
-- LaunchAgent packaging, deployment, mobile access, or remote access;
+- an approved write against a user's current iCloud source of truth;
+- automatic LaunchAgent installation, mobile access, or remote access;
 - Google Sheets synchronization or a new Todo source of truth.
+
+Passing synthetic write tests proves the adapter behavior. It does not prove
+that a particular iCloud project is writable. The System page reports
+`readable` until a separately approved real write has been completed and
+verified.
 
 ## Requirements
 
@@ -46,24 +54,30 @@ the committed output is stale.
 Use `npm run dev` only for local UI development. The Vite development server is
 not the production Life Hub and must not be exposed as a personal-data API.
 
-After building the UI, start the local read-only Hub from this directory:
+After building the UI, start the local Hub from this directory and point it at
+the intended iCloud project root:
 
 ```bash
-python3 -m hub.server
+python3 -m hub.server --root /path/to/private/icloud-project
 ```
 
-The server rejects non-loopback bind addresses. It reads only whitelisted
-Dashboard fields and serves the built UI from `dist/`.
+When `--root` is omitted, the repository root containing `apps/life-console`
+is used. The server rejects non-loopback bind addresses, requires a short-lived
+local session for personal-data reads, requires same-port Origin plus CSRF for
+writes, reads only whitelisted Dashboard fields, and serves `dist/`.
 
 Generate, but do not install, machine-local launch files with:
 
 ```bash
-python3 packaging/generate_launch_agent.py --output-dir /path/to/private/runtime
+python3 packaging/generate_launch_agent.py \
+  --output-dir /path/to/private/runtime \
+  --project-root /path/to/private/icloud-project
 ```
 
 The generated plist and `.command` launcher contain paths for the current
-machine. They are runtime artifacts, not portable source files, and must not be
-committed.
+machine. Logs stay inside the permission-restricted runtime directory. These
+files are not installed or loaded automatically; they are runtime artifacts,
+not portable source files, and must not be committed.
 
 ## Structure
 
@@ -71,15 +85,17 @@ committed.
 contracts/
   life-console.openapi.yaml
   fixtures/                 synthetic data only
+hub/
+  read_model/               whitelisted iCloud projection
+  command_runner/           fixed atomic-tool adapters
+  security/                 loopback/session/origin policy
 src/
   contracts/                shared TypeScript types
 tests/
   contract/                 OpenAPI and fixture checks
+  hub/                      read/write/security integration checks
+  e2e/                      synthetic full workflow
 ```
-
-Future agents should keep feature ownership isolated under `src/features/`,
-`src/components/shell/`, or the future `hub/` directory. Changes to the
-OpenAPI file and shared contract types require explicit Integrator ownership.
 
 ## Data boundary
 

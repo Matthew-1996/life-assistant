@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -64,8 +64,21 @@ def _focus(root: Path) -> tuple[bytes, dict[str, str]]:
         if line.startswith("- 当前重点："):
             return raw, {"title": line.split("：", 1)[1].strip(), "phase_label": "进行中"}
         if line in {"## 当前重点", "# 当前重点"}:
-            for candidate in lines[index + 1:]:
-                if candidate and not candidate.startswith("#"):
+            section: list[str] = []
+            for candidate in lines[index + 1 :]:
+                if candidate.startswith("## ") or candidate.startswith("# "):
+                    break
+                section.append(candidate)
+            for candidate in section:
+                if candidate.startswith("### "):
+                    return raw, {
+                        "title": candidate.removeprefix("### ").strip(),
+                        "phase_label": "进行中",
+                    }
+            for candidate in section:
+                if candidate.startswith("- ") and not candidate.startswith(
+                    ("- 状态：", "- 阶段：", "- 日期：", "- 复盘：")
+                ):
                     return raw, {
                         "title": candidate.removeprefix("- ").strip(),
                         "phase_label": "进行中",
@@ -107,20 +120,34 @@ def build_dashboard(root: Path, *, today: date | None = None) -> dict[str, Any]:
             raise ReadModelError("source invalid")
         seen.add(row_date)
 
-    latest = next((row for row in reversed(daily) if row["date"] == current.isoformat()), None)
-    recent = daily[-31:]
+    by_date = {row["date"]: row for row in daily}
+    latest = by_date.get(current.isoformat())
+    window_dates = [current - timedelta(days=offset) for offset in range(6, -1, -1)]
+    recent = [by_date.get(day.isoformat()) for day in window_dates]
     ratings = [
-        {"date": row["date"], **row["ratings"]}
-        for row in recent
+        {
+            "date": day.isoformat(),
+            **(
+                row["ratings"]
+                if row is not None
+                else {
+                    "sleep_quality": None,
+                    "energy": None,
+                    "mood": None,
+                    "life_feeling": None,
+                }
+            ),
+        }
+        for day, row in zip(window_dates, recent)
     ]
     sleep = [
         {
-            "date": row["date"],
-            "sleep_time": row["sleep_time"],
-            "wake_time": row["wake_time"],
-            "out_of_bed_time": row["out_of_bed_time"],
+            "date": day.isoformat(),
+            "sleep_time": row["sleep_time"] if row is not None else None,
+            "wake_time": row["wake_time"] if row is not None else None,
+            "out_of_bed_time": row["out_of_bed_time"] if row is not None else None,
         }
-        for row in recent
+        for day, row in zip(window_dates, recent)
     ]
     safe_journals = [
         {"date": row["date"], "title": row["title"], "summary": row["summary"]}
@@ -145,11 +172,14 @@ def build_dashboard(root: Path, *, today: date | None = None) -> dict[str, Any]:
         "progress": {
             "ratings": ratings,
             "sleep": sleep,
-            "sample_counts": {"daily": len(recent), "missing": max(0, 7 - len(recent))},
+            "sample_counts": {
+                "daily": sum(row is not None for row in recent),
+                "missing": sum(row is None for row in recent),
+            },
         },
         "records": {"recent_journals": safe_journals},
         "system": {
-            "hub": "ready", "icloud": "ready", "automation": "unknown",
+            "hub": "ready", "icloud": "readable", "automation": "unknown",
             "backup": "unknown", "google": "paused", "mobile": "pending",
         },
         "source_revisions": {
