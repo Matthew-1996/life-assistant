@@ -1,9 +1,29 @@
+import { useState } from "react";
+
+import { AppShell, type PageId } from "./components/shell/AppShell";
+import { syntheticDashboard } from "./data/dashboard";
+import { ProgressPage } from "./features/progress/ProgressPage";
+import { RecordsPage } from "./features/records/RecordsPage";
+import { SystemPage } from "./features/system/SystemPage";
+import { TodayPage } from "./features/today/TodayPage";
+
 export function App() {
+  const [activePage, setActivePage] = useState<PageId>("today");
+
+  const pages = {
+    today: <TodayPage dashboard={syntheticDashboard} />,
+    progress: <ProgressPage dashboard={syntheticDashboard} />,
+    records: <RecordsPage dashboard={syntheticDashboard} />,
+    system: <SystemPage dashboard={syntheticDashboard} />,
+  };
+
   return (
-    <main className="foundation-shell">
-      <p className="eyebrow">Mac 本机个人工作站</p>
-      <h1>Life Console</h1>
-      <p>通用脚手架已就绪，等待页面工作包接入。</p>
-    </main>
+    <AppShell
+      activePage={activePage}
+      date={syntheticDashboard.date}
+      onNavigate={setActivePage}
+    >
+      {pages[activePage]}
+    </AppShell>
   );
 }

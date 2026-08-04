@@ -9,5 +9,10 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    environmentOptions: {
+      jsdom: {
+        url: "http://127.0.0.1:47321/",
+      },
+    },
   },
 });
