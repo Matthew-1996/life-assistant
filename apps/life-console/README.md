@@ -14,11 +14,12 @@ Implemented in the foundation package:
 - synthetic dashboard, receipt, and error fixtures;
 - contract tests for schema validity and localhost-only configuration;
 - Mac desktop pages for Today, Progress, Records, and System;
-- in-memory anchor, trend, handoff, and fallback form interactions.
+- in-memory anchor, trend, handoff, and fallback form interactions;
+- a Python standard-library Life Hub with localhost-only read endpoints.
 
 Not implemented yet:
 
-- the Life Hub HTTP server or real source reads and writes;
+- real source writes;
 - LaunchAgent packaging, deployment, mobile access, or remote access;
 - Google Sheets synchronization or a new Todo source of truth.
 
@@ -44,6 +45,15 @@ the committed output is stale.
 
 Use `npm run dev` only for local UI development. The Vite development server is
 not the production Life Hub and must not be exposed as a personal-data API.
+
+After building the UI, start the local read-only Hub from this directory:
+
+```bash
+python3 -m hub.server
+```
+
+The server rejects non-loopback bind addresses. It reads only whitelisted
+Dashboard fields and serves the built UI from `dist/`.
 
 ## Structure
 

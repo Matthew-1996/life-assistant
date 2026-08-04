@@ -1,0 +1,1 @@
+"""Whitelisted dashboard read models."""
