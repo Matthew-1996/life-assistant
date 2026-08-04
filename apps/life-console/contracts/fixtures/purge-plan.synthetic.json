@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "plan_id": "plan_synthetic_0001",
+  "target_type": "daily_checkin",
+  "target_key": "2026-01-12",
+  "expect_revision": 3,
+  "plan_etag": "etag_synthetic_0001",
+  "scope_summary": "删除 2026-01-12 的一条合成每日状态。",
+  "confirmation_text": "删除 2026-01-12",
+  "historical_copies_notice": "聊天、旧备份和设备历史不在本次删除范围内。"
+}

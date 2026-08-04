@@ -32,9 +32,14 @@ Run from this directory:
 
 ```bash
 npm ci
+npm run check:contracts
 npm run build
 npm test
 ```
+
+`src/contracts/life-console.ts` is generated from the OpenAPI document. Do not
+edit it directly. `npm run check:contracts` regenerates the file and fails when
+the committed output is stale.
 
 Use `npm run dev` only for local UI development. The Vite development server is
 not the production Life Hub and must not be exposed as a personal-data API.
