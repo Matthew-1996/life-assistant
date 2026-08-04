@@ -132,6 +132,23 @@ class HubWriteTests(unittest.TestCase):
         self.assertEqual(result["state"], "handoff_required")
         self.assertNotIn("合成对话记录", json.dumps(result, ensure_ascii=False))
 
+    def test_higher_schema_and_unavailable_commit_are_rejected(self) -> None:
+        status, result = self.post("/api/v1/checkins/2026-01-12", {
+            "schema_version": 2,
+            "idempotency_key": "synthetic_key_0030",
+            "expect_revision": None,
+            "fields": {"energy": 3},
+        })
+        self.assertEqual(status, 400)
+        self.assertEqual(result["error"]["code"], "INVALID_REQUEST")
+        status, result = self.post("/api/v1/capture/commit", {
+            "schema_version": 1,
+            "idempotency_key": "synthetic_key_0031",
+            "preview_token": "synthetic_preview_token_0001",
+        })
+        self.assertEqual(status, 400)
+        self.assertEqual(result["error"]["code"], "PREVIEW_EXPIRED")
+
     def test_source_success_survives_snapshot_refresh_failure(self) -> None:
         (self.root / "GOALS.md").write_bytes(b"\xff")
         body = {
