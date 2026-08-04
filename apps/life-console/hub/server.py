@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 import logging
+import re
 import secrets
 from datetime import datetime, timedelta, timezone
 from http import HTTPStatus
@@ -172,6 +173,8 @@ class LifeConsoleHandler(SimpleHTTPRequestHandler):
         try:
             body = self._body()
             route = self.path.split("?", 1)[0]
+            if body.get("schema_version") != 1:
+                raise ValueError("schema version")
             if route == "/api/v1/purge-plans":
                 if set(body) != {"schema_version", "target_type", "target_key"}:
                     raise ValueError("fields")
@@ -218,7 +221,10 @@ class LifeConsoleHandler(SimpleHTTPRequestHandler):
                 })
                 return
             key = body.get("idempotency_key")
-            if not isinstance(key, str) or not 16 <= len(key) <= 100:
+            if (
+                not isinstance(key, str)
+                or re.fullmatch(r"[A-Za-z0-9_-]{16,100}", key) is None
+            ):
                 raise ValueError("idempotency")
             fingerprint = hashlib.sha256(
                 json.dumps(body, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
@@ -229,6 +235,9 @@ class LifeConsoleHandler(SimpleHTTPRequestHandler):
                     self._error(HTTPStatus.CONFLICT, "INVALID_REQUEST", "幂等键已用于其他请求")
                     return
                 self._json(HTTPStatus.OK, cached[1])
+                return
+            if route == "/api/v1/capture/commit":
+                self._error(HTTPStatus.BAD_REQUEST, "PREVIEW_EXPIRED", "当前没有可提交的保存预览")
                 return
             if route == "/api/v1/purge-confirmations":
                 required = {

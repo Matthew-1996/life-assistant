@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import http.client
 import json
+import subprocess
 import sys
 import tempfile
 import threading
@@ -208,6 +209,34 @@ class HubWriteTests(unittest.TestCase):
         status, result = self.post("/api/v1/purge-confirmations", confirm)
         self.assertEqual(status, 409)
         self.assertEqual(result["error"]["code"], "REVISION_CONFLICT")
+
+    def test_weekly_and_phase_purge_adapters(self) -> None:
+        repo = APP_ROOT.parents[1]
+        fixtures = [
+            (
+                "weekly_review.py", ["upsert", "--root", str(self.root / "records"), "--week-start", "2026-01-05", "--input", "-"],
+                {"better_summary": "合成周复盘"}, "weekly_review", "2026-01-05",
+            ),
+            (
+                "phase_review.py", ["upsert", "--root", str(self.root / "records"), "--review-date", "2026-01-12", "--input", "-"],
+                {"recovery_change": "合成阶段复盘"}, "phase_review", "2026-01-12",
+            ),
+        ]
+        for index, (tool, arguments, payload, target_type, target_key) in enumerate(fixtures, start=20):
+            subprocess.run(
+                [sys.executable, str(repo / "tools" / tool), *arguments],
+                input=json.dumps(payload), text=True, capture_output=True, check=True,
+            )
+            _, plan = self.post("/api/v1/purge-plans", {
+                "schema_version": 1, "target_type": target_type, "target_key": target_key,
+            })
+            confirm = {
+                "schema_version": 1, "idempotency_key": f"synthetic_key_{index:04d}",
+                "plan_id": plan["plan_id"], "confirmation_text": plan["confirmation_text"],
+                "expect_revision": plan["expect_revision"], "plan_etag": plan["plan_etag"],
+                "acknowledge_historical_copies": True,
+            }
+            self.assertEqual(self.post("/api/v1/purge-confirmations", confirm)[0], 200)
 
 
 if __name__ == "__main__":
