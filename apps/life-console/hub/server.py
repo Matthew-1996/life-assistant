@@ -49,6 +49,7 @@ class LifeConsoleHandler(SimpleHTTPRequestHandler):
         super().end_headers()
 
     def log_message(self, _format: str, *args: Any) -> None:
+        del _format
         LOG.info("request method=%s path=%s status=%s", self.command, self.path.split("?", 1)[0], args[1] if len(args) > 1 else "unknown")
 
     def _json(self, status: HTTPStatus, payload: dict[str, Any], *, cookie: str | None = None) -> None:
