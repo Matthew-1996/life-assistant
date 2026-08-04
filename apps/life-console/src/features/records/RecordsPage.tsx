@@ -1,5 +1,7 @@
 import { type SyntheticEvent, useState } from "react";
 
+import { ApiError, type LifeConsoleClient } from "../../api/client";
+import type { components } from "../../contracts/life-console";
 import type { Dashboard } from "../../data/dashboard";
 
 type EntryMode = "conversation" | "forms";
@@ -7,28 +9,89 @@ type FormMode = "journal" | "checkin";
 
 interface RecordsPageProps {
   dashboard: Dashboard;
+  client?: LifeConsoleClient;
+  onSaved?: () => void | Promise<void>;
 }
 
-export function RecordsPage({ dashboard }: RecordsPageProps) {
+const ratingFields = [
+  ["sleep_quality", "睡眠质量"],
+  ["energy", "精力"],
+  ["mood", "情绪"],
+  ["life_feeling", "生活实感"],
+] as const;
+
+export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
   const [entryMode, setEntryMode] = useState<EntryMode>("conversation");
   const [formMode, setFormMode] = useState<FormMode>("journal");
   const [captureText, setCaptureText] = useState("");
   const [previewReady, setPreviewReady] = useState(false);
   const [receipt, setReceipt] = useState<string | null>(null);
+  const [previewMessage, setPreviewMessage] = useState("前往现有生活助手对话继续");
+  const [conflict, setConflict] = useState<components["schemas"]["CheckinConflict"] | null>(null);
 
-  function previewCapture(event: SyntheticEvent<HTMLFormElement, SubmitEvent>) {
+  async function previewCapture(event: SyntheticEvent<HTMLFormElement, SubmitEvent>) {
     event.preventDefault();
     if (!captureText.trim()) return;
-    setPreviewReady(true);
     setReceipt(null);
+    if (client) {
+      try {
+        const preview = await client.preview(
+          captureText,
+          dashboard.source_revisions.journal ?? "empty",
+        );
+        setPreviewMessage(preview.message);
+      } catch {
+        setPreviewMessage("本地服务暂不可用，请稍后重试");
+      }
+    }
+    setPreviewReady(true);
   }
 
-  function saveSynthetic(
+  async function saveForm(
     event: SyntheticEvent<HTMLFormElement, SubmitEvent>,
   ) {
     event.preventDefault();
-    setReceipt("合成演示已完成；未写入真实 iCloud");
-    event.currentTarget.reset();
+    if (!client) {
+      setReceipt("合成演示已完成；未写入真实 iCloud");
+      event.currentTarget.reset();
+      return;
+    }
+    const form = event.currentTarget;
+    const values = new FormData(form);
+    try {
+      if (formMode === "journal") {
+        const time = String(values.get("time") ?? "");
+        const result = await client.journal({
+          schema_version: 1,
+          event_date: String(values.get("date")),
+          event_time: time || null,
+          time_precision: String(values.get("precision")) as "exact" | "approximate" | "unknown",
+          text: String(values.get("text")),
+        });
+        setReceipt(result.message);
+      } else {
+        const fields: Record<string, number> = {};
+        for (const [key] of ratingFields) {
+          const value = String(values.get(key) ?? "");
+          if (value) fields[key] = Number(value);
+        }
+        const result = await client.checkin(String(values.get("date")), {
+          schema_version: 1,
+          expect_revision: dashboard.today.daily_revision,
+          fields,
+        });
+        setReceipt(result.message);
+      }
+      setConflict(null);
+      form.reset();
+      await onSaved?.();
+    } catch (error) {
+      if (error instanceof ApiError && error.response.conflict) {
+        setConflict(error.response.conflict);
+      } else {
+        setReceipt("保存失败，请保留当前内容并重试");
+      }
+    }
   }
 
   return (
@@ -83,7 +146,7 @@ export function RecordsPage({ dashboard }: RecordsPageProps) {
           {previewReady && (
             <article className="preview-card" aria-live="polite">
               <span className="neutral-badge">需要转交</span>
-              <h2>前往现有生活助手对话继续</h2>
+              <h2>{previewMessage}</h2>
               <dl>
                 <div>
                   <dt>意图</dt>
@@ -132,7 +195,7 @@ export function RecordsPage({ dashboard }: RecordsPageProps) {
           </div>
 
           {formMode === "journal" ? (
-            <form className="stacked-form" onSubmit={saveSynthetic}>
+            <form className="stacked-form" onSubmit={(event) => void saveForm(event)}>
               <label htmlFor="journal-text">正文</label>
               <textarea id="journal-text" name="text" required />
               <label htmlFor="journal-date">事件日期</label>
@@ -164,7 +227,7 @@ export function RecordsPage({ dashboard }: RecordsPageProps) {
               </button>
             </form>
           ) : (
-            <form className="stacked-form" onSubmit={saveSynthetic}>
+            <form className="stacked-form" onSubmit={(event) => void saveForm(event)}>
               <label htmlFor="checkin-date">日期</label>
               <input
                 defaultValue={dashboard.date}
@@ -173,10 +236,10 @@ export function RecordsPage({ dashboard }: RecordsPageProps) {
                 type="date"
               />
               <div className="rating-grid">
-                {["睡眠质量", "精力", "情绪", "生活实感"].map((label) => (
-                  <label key={label}>
+                {ratingFields.map(([key, label]) => (
+                  <label key={key}>
                     {label}
-                    <select defaultValue="" name={label}>
+                    <select defaultValue="" name={key}>
                       <option value="">未提供</option>
                       <option value="1">1 很差</option>
                       <option value="2">2</option>
@@ -205,6 +268,18 @@ export function RecordsPage({ dashboard }: RecordsPageProps) {
         <p className="save-receipt" role="status">
           {receipt}
         </p>
+      )}
+      {conflict && (
+        <section className="conflict-card" aria-label="状态冲突">
+          <h2>当前值与本次提交不同</h2>
+          <div>
+            <article><strong>当前值</strong><pre>{JSON.stringify(conflict.current, null, 2)}</pre></article>
+            <article><strong>本次提交</strong><pre>{JSON.stringify(conflict.submitted, null, 2)}</pre></article>
+          </div>
+          <button className="secondary-button" onClick={() => void onSaved?.()} type="button">
+            使用最新记录
+          </button>
+        </section>
       )}
 
       <section className="section-block" aria-labelledby="recent-title">

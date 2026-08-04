@@ -294,6 +294,41 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        CheckinConflict: {
+            /** Format: date */
+            target_key: string;
+            current_revision: number | null;
+            current: {
+                sleep_time?: string | null;
+                wake_time?: string | null;
+                out_of_bed_time?: string | null;
+                sleep_quality?: components["schemas"]["Rating"];
+                energy?: components["schemas"]["Rating"];
+                mood?: components["schemas"]["Rating"];
+                life_feeling?: components["schemas"]["Rating"];
+                /** @enum {string|null} */
+                awake_in_bed?: "yes" | "no" | null;
+                wake?: components["schemas"]["AnchorState"];
+                body_light?: components["schemas"]["AnchorState"];
+                life_action?: components["schemas"]["AnchorState"];
+                wind_down?: components["schemas"]["AnchorState"];
+            };
+            submitted: {
+                sleep_time?: string;
+                wake_time?: string;
+                out_of_bed_time?: string;
+                sleep_quality?: components["schemas"]["RatingValue"];
+                energy?: components["schemas"]["RatingValue"];
+                mood?: components["schemas"]["RatingValue"];
+                life_feeling?: components["schemas"]["RatingValue"];
+                /** @enum {string} */
+                awake_in_bed?: "yes" | "no";
+                wake?: components["schemas"]["AnchorValue"];
+                body_light?: components["schemas"]["AnchorValue"];
+                life_action?: components["schemas"]["AnchorValue"];
+                wind_down?: components["schemas"]["AnchorValue"];
+            };
+        };
         Confirmation: {
             id: string;
             /** @enum {string} */
@@ -331,6 +366,7 @@ export interface components {
         };
         ErrorResponse: {
             request_id: string;
+            conflict?: components["schemas"]["CheckinConflict"];
             error: {
                 /** @enum {string} */
                 code: "INVALID_REQUEST" | "REVISION_CONFLICT" | "SOURCE_INVALID" | "HUB_UNAVAILABLE" | "TOOL_TIMEOUT" | "PREVIEW_EXPIRED";

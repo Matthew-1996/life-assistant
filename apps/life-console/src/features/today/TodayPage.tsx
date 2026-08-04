@@ -1,5 +1,7 @@
 import { useState } from "react";
 
+import { ApiError, type LifeConsoleClient } from "../../api/client";
+import type { components } from "../../contracts/life-console";
 import type { Dashboard } from "../../data/dashboard";
 
 type Anchors = Dashboard["today"]["anchors"];
@@ -42,13 +44,29 @@ const states: Array<{ value: AnchorState; label: string }> = [
 
 interface TodayPageProps {
   dashboard: Dashboard;
+  client?: LifeConsoleClient;
+  onSaved?: () => void | Promise<void>;
 }
 
-export function TodayPage({ dashboard }: TodayPageProps) {
+export function TodayPage({ dashboard, client, onSaved }: TodayPageProps) {
   const [anchors, setAnchors] = useState<Anchors>(dashboard.today.anchors);
+  const [conflict, setConflict] = useState<components["schemas"]["CheckinConflict"] | null>(null);
 
-  function updateAnchor(key: AnchorKey, value: AnchorState) {
+  async function updateAnchor(key: AnchorKey, value: AnchorState) {
     setAnchors((current) => ({ ...current, [key]: value }));
+    if (!client || value === null) return;
+    try {
+      await client.checkin(dashboard.date, {
+        schema_version: 1,
+        expect_revision: dashboard.today.daily_revision,
+        fields: { [key]: value },
+      });
+      await onSaved?.();
+    } catch (error) {
+      if (error instanceof ApiError && error.response.conflict) {
+        setConflict(error.response.conflict);
+      }
+    }
   }
 
   return (
@@ -112,7 +130,7 @@ export function TodayPage({ dashboard }: TodayPageProps) {
                     aria-pressed={anchors[anchor.key] === state.value}
                     data-state={state.value ?? "unknown"}
                     key={state.label}
-                    onClick={() => updateAnchor(anchor.key, state.value)}
+                    onClick={() => void updateAnchor(anchor.key, state.value)}
                     type="button"
                   >
                     {state.label}
@@ -123,6 +141,25 @@ export function TodayPage({ dashboard }: TodayPageProps) {
           ))}
         </div>
       </section>
+
+      {conflict && (
+        <section className="conflict-card" aria-label="状态冲突">
+          <h2>状态已在其他位置更新</h2>
+          <div>
+            <article>
+              <strong>当前值</strong>
+              <pre>{JSON.stringify(conflict.current, null, 2)}</pre>
+            </article>
+            <article>
+              <strong>本次提交</strong>
+              <pre>{JSON.stringify(conflict.submitted, null, 2)}</pre>
+            </article>
+          </div>
+          <button className="secondary-button" onClick={() => void onSaved?.()} type="button">
+            使用最新记录
+          </button>
+        </section>
+      )}
 
       <div className="two-column">
         <section className="section-block compact" aria-labelledby="confirm-title">

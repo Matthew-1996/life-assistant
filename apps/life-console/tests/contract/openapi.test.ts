@@ -181,6 +181,7 @@ describe("Life Console OpenAPI contract", () => {
     ["dashboard.empty.synthetic.json", "Dashboard"],
     ["command-receipt.synthetic.json", "CommandReceipt"],
     ["error-response.synthetic.json", "ErrorResponse"],
+    ["revision-conflict.synthetic.json", "ErrorResponse"],
   ])("validates %s against component %s", (fixtureName, schemaName) => {
     expectValid(createComponentValidator(schemaName), readFixture(fixtureName));
   });

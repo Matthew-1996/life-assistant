@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from hub.command_runner.runner import CommandError, CommandRunner
-from hub.read_model.dashboard import ReadModelError, build_dashboard
+from hub.read_model.dashboard import ReadModelError, build_dashboard, checkin_conflict_projection
 from hub.security.policy import require_loopback_bind, valid_host, valid_origin
 
 
@@ -60,11 +60,21 @@ class LifeConsoleHandler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def _error(self, status: HTTPStatus, code: str, message: str) -> None:
-        self._json(status, {
+    def _error(
+        self,
+        status: HTTPStatus,
+        code: str,
+        message: str,
+        *,
+        conflict: dict[str, Any] | None = None,
+    ) -> None:
+        payload = {
             "request_id": f"req_{secrets.token_hex(8)}",
             "error": {"code": code, "message": message, "retryable": status >= 500},
-        })
+        }
+        if conflict is not None:
+            payload["conflict"] = conflict
+        self._json(status, payload)
 
     def _session(self) -> bool:
         cookie = self.headers.get("Cookie", "")
@@ -194,6 +204,19 @@ class LifeConsoleHandler(SimpleHTTPRequestHandler):
                 }
                 self._json(HTTPStatus.OK, plan)
                 return
+            if route == "/api/v1/capture/preview":
+                if set(body) != {"schema_version", "text", "context_etag"}:
+                    raise ValueError("fields")
+                text = body.get("text")
+                if not isinstance(text, str) or not text.strip() or len(text) > 8000:
+                    raise ValueError("text")
+                self._json(HTTPStatus.OK, {
+                    "schema_version": 1,
+                    "state": "handoff_required",
+                    "message": "请前往现有生活助手对话继续",
+                    "intent": "unknown",
+                })
+                return
             key = body.get("idempotency_key")
             if not isinstance(key, str) or not 16 <= len(key) <= 100:
                 raise ValueError("idempotency")
@@ -259,7 +282,21 @@ class LifeConsoleHandler(SimpleHTTPRequestHandler):
             self._error(HTTPStatus.BAD_REQUEST, "INVALID_REQUEST", "请求格式无效")
         except CommandError as error:
             status = HTTPStatus.CONFLICT if error.code == "REVISION_CONFLICT" else HTTPStatus.SERVICE_UNAVAILABLE
-            self._error(status, error.code, "记录无法安全保存")
+            conflict = None
+            if error.code == "REVISION_CONFLICT" and route.startswith("/api/v1/checkins/"):
+                day = route.rsplit("/", 1)[1]
+                revision, current = checkin_conflict_projection(self.server.project_root, day)
+                submitted = {
+                    key: value for key, value in body.get("fields", {}).items()
+                    if key != "note_summary"
+                }
+                conflict = {
+                    "target_key": day,
+                    "current_revision": revision,
+                    "current": current,
+                    "submitted": submitted,
+                }
+            self._error(status, error.code, "记录无法安全保存", conflict=conflict)
 
 
 def create_server(*, root: Path = PROJECT_ROOT, host: str = DEFAULT_HOST, port: int = DEFAULT_PORT) -> LifeConsoleServer:

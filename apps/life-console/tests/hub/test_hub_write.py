@@ -106,6 +106,9 @@ class HubWriteTests(unittest.TestCase):
         status, result = self.post("/api/v1/checkins/2026-01-12", stale)
         self.assertEqual(status, 409)
         self.assertEqual(result["error"]["code"], "REVISION_CONFLICT")
+        self.assertEqual(result["conflict"]["current"]["energy"], 3)
+        self.assertEqual(result["conflict"]["submitted"]["mood"], 4)
+        self.assertNotIn("note_summary", result["conflict"]["current"])
 
     def test_write_requires_csrf(self) -> None:
         body = {
@@ -117,6 +120,16 @@ class HubWriteTests(unittest.TestCase):
         status, result = self.post("/api/v1/checkins/2026-01-12", body, csrf=False)
         self.assertEqual(status, 403)
         self.assertEqual(result["error"]["code"], "INVALID_REQUEST")
+
+    def test_capture_preview_returns_safe_handoff(self) -> None:
+        status, result = self.post("/api/v1/capture/preview", {
+            "schema_version": 1,
+            "text": "合成对话记录",
+            "context_etag": "synthetic-context",
+        })
+        self.assertEqual(status, 200)
+        self.assertEqual(result["state"], "handoff_required")
+        self.assertNotIn("合成对话记录", json.dumps(result, ensure_ascii=False))
 
     def test_source_success_survives_snapshot_refresh_failure(self) -> None:
         (self.root / "GOALS.md").write_bytes(b"\xff")

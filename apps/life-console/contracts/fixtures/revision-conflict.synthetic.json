@@ -1,0 +1,19 @@
+{
+  "request_id": "req_synthetic_conflict",
+  "error": {
+    "code": "REVISION_CONFLICT",
+    "message": "记录已在其他位置更新，请核对最新值",
+    "retryable": false
+  },
+  "conflict": {
+    "target_key": "2026-01-12",
+    "current_revision": 2,
+    "current": {
+      "energy": 4,
+      "mood": 3
+    },
+    "submitted": {
+      "energy": 3
+    }
+  }
+}

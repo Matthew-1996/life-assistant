@@ -16,6 +16,14 @@ body {
   margin: 0;
 }
 
+.startup-state {
+  display: grid;
+  min-height: 100vh;
+  place-content: center;
+  gap: 16px;
+  text-align: center;
+}
+
 button,
 input,
 select,
@@ -759,6 +767,32 @@ select {
 .boundary-card p {
   margin-bottom: 0;
   color: #667085;
+}
+
+.conflict-card {
+  margin-top: 22px;
+  padding: 22px;
+  border: 1px solid #e6a6ac;
+  border-radius: 18px;
+  background: #fff;
+}
+
+.conflict-card > div {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.conflict-card article {
+  padding: 14px;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.conflict-card pre {
+  overflow: auto;
+  margin-bottom: 0;
+  white-space: pre-wrap;
 }
 
 @media (prefers-reduced-motion: no-preference) {
