@@ -19,6 +19,17 @@ const ratingFields = [
   ["mood", "情绪"],
   ["life_feeling", "生活实感"],
 ] as const;
+const advancedCheckinFields = [
+  ["sleep_time", "入睡", "time"],
+  ["wake_time", "最终醒来", "time"],
+  ["out_of_bed_time", "离床", "time"],
+] as const;
+const anchorFields = [
+  ["wake", "起床"],
+  ["body_light", "身体 / 光照"],
+  ["life_action", "生活动作"],
+  ["wind_down", "晚间降速"],
+] as const;
 
 export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
   const [entryMode, setEntryMode] = useState<EntryMode>("conversation");
@@ -70,10 +81,26 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
         });
         setReceipt(result.message);
       } else {
-        const fields: Record<string, number> = {};
+        const fields: Record<string, string | number> = {};
         for (const [key] of ratingFields) {
           const value = String(values.get(key) ?? "");
           if (value) fields[key] = Number(value);
+        }
+        for (const [key] of advancedCheckinFields) {
+          const value = String(values.get(key) ?? "");
+          if (value) fields[key] = value;
+        }
+        for (const [key] of anchorFields) {
+          const value = String(values.get(key) ?? "");
+          if (value) fields[key] = value;
+        }
+        for (const key of ["awake_in_bed", "note_summary"]) {
+          const value = String(values.get(key) ?? "").trim();
+          if (value) fields[key] = value;
+        }
+        if (!Object.keys(fields).length) {
+          setReceipt("请至少提供一个状态字段");
+          return;
         }
         const result = await client.checkin(String(values.get("date")), {
           schema_version: 1,
@@ -252,9 +279,40 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
               </div>
               <details>
                 <summary>补充睡眠与锚点</summary>
-                <p className="supporting-text">
-                  入睡、最终醒来和离床保持独立；未填写字段不会提交。
-                </p>
+                <div className="advanced-fields">
+                  {advancedCheckinFields.map(([key, label, type]) => (
+                    <label key={key}>
+                      {label}
+                      <input name={key} type={type} />
+                    </label>
+                  ))}
+                  <label>
+                    醒后是否长时间躺在床上
+                    <select defaultValue="" name="awake_in_bed">
+                      <option value="">未提供</option>
+                      <option value="yes">是</option>
+                      <option value="no">否</option>
+                    </select>
+                  </label>
+                  {anchorFields.map(([key, label]) => (
+                    <label key={key}>
+                      {label}
+                      <select defaultValue="" name={key}>
+                        <option value="">未提供</option>
+                        <option value="complete">完成</option>
+                        <option value="minimum">最低版</option>
+                        <option value="skipped">跳过</option>
+                      </select>
+                    </label>
+                  ))}
+                  <label>
+                    去敏短备注
+                    <input maxLength={160} name="note_summary" type="text" />
+                  </label>
+                  <p className="supporting-text">
+                    入睡、最终醒来和离床保持独立；未填写字段不会提交。
+                  </p>
+                </div>
               </details>
               <button className="primary-button" type="submit">
                 更新这些状态

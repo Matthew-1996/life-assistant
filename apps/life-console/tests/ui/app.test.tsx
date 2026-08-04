@@ -169,4 +169,31 @@ describe("Life Console synthetic UI", () => {
     expect(screen.getByText("当前值")).toBeTruthy();
     expect(screen.getByText("本次提交")).toBeTruthy();
   });
+
+  it("submits only explicitly filled checkin fields", async () => {
+    const user = userEvent.setup();
+    const checkin = vi.fn().mockResolvedValue({
+      request_id: "req_checkin",
+      command_id: "cmd_checkin",
+      action: "updated",
+      source: { state: "saved", revision: 2 },
+      read_model: "current",
+      message: "已保存到 iCloud",
+    });
+    const client = {
+      dashboard: vi.fn().mockResolvedValue(syntheticDashboard),
+      journal: vi.fn(),
+      checkin,
+      preview: vi.fn(),
+    } satisfies LifeConsoleClient;
+    render(<App client={client} initialDashboard={syntheticDashboard} />);
+    await user.click(navigationButton("记录"));
+    await user.click(screen.getByRole("tab", { name: "简洁表单" }));
+    await user.click(screen.getByRole("tab", { name: "每日状态" }));
+    await user.selectOptions(screen.getByLabelText("精力"), "4");
+    await user.click(screen.getByRole("button", { name: "更新这些状态" }));
+
+    await waitFor(() => expect(checkin).toHaveBeenCalledTimes(1));
+    expect(checkin.mock.calls[0][1].fields).toEqual({ energy: 4 });
+  });
 });
