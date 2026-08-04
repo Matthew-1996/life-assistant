@@ -1,0 +1,11 @@
+{
+  "request_id": "req_synthetic_01",
+  "command_id": "cmd_synthetic_01",
+  "action": "created",
+  "source": {
+    "state": "saved",
+    "revision": 1
+  },
+  "read_model": "current",
+  "message": "已保存到 iCloud"
+}
