@@ -30,6 +30,7 @@ while (($# > 0)); do
 done
 
 secret_pattern='sk-[A-Za-z0-9_-]{20,}|ghp_[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9-]{20,}|(AKIA|ASIA)[A-Z0-9]{16}|authorization:[[:space:]]*bearer[[:space:]]+[A-Za-z0-9._-]{16,}|-----BEGIN (RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----'
+machine_path_pattern='/'"Users/"'[A-Za-z0-9._-]+/'
 
 # 判断单个路径是否属于禁止进入 Git 的 iCloud 私有文件或凭据路径。
 is_private_path() {
@@ -56,6 +57,22 @@ is_private_path() {
   esac
 
   local name="${path##*/}"
+  if [[ "$path" == apps/life-console/* ]]; then
+    case "$name" in
+      USER.md|MEMORY.md|GOALS.md|PROJECT_CONTEXT.md|PORTABILITY.md|STATUS.md|\
+      index.jsonl|insight-decisions.jsonl|review-policy.json|\
+      apple-health-latest.txt|apple-sleep-details-latest.txt|\
+      google-sheets.json|google-sheets.sync-state.json)
+        return 0
+        ;;
+    esac
+    case "$path" in
+      */journal/entries/*|*/journal/reviews/*|*/records/*.jsonl|*/backups/*)
+        return 0
+        ;;
+    esac
+  fi
+
   case "$name" in
     .env.example|.env.sample|.env.template)
       return 1
@@ -84,6 +101,11 @@ fi
 
 if git grep --cached -I -q -E "$secret_pattern" --; then
   printf '拒绝：Git 索引内容命中高置信凭据模式；为避免泄露，未输出匹配内容。\n' >&2
+  exit 1
+fi
+
+if git grep --cached -I -q -E "$machine_path_pattern" --; then
+  printf '拒绝：Git 索引内容包含机器专属绝对路径；为避免泄露，未输出匹配内容。\n' >&2
   exit 1
 fi
 
@@ -117,6 +139,10 @@ if [[ -n "$history_range" ]]; then
     [[ -z "$commit" ]] && continue
     if git grep -I -q -E "$secret_pattern" "$commit" -- 2>/dev/null; then
       printf '拒绝：提交 %s 内容命中高置信凭据模式；为避免泄露，未输出匹配内容。\n' "$commit" >&2
+      exit 1
+    fi
+    if git grep -I -q -E "$machine_path_pattern" "$commit" -- 2>/dev/null; then
+      printf '拒绝：提交 %s 内容包含机器专属绝对路径；为避免泄露，未输出匹配内容。\n' "$commit" >&2
       exit 1
     fi
   done < <(git rev-list "$history_range" 2>/dev/null)
