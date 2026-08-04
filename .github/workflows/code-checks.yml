@@ -75,6 +75,6 @@ jobs:
       - name: Install Life Console dependencies
         working-directory: apps/life-console
         run: npm ci
-      - name: Test and build Life Console
+      - name: Check Life Console generated contract, tests, and build
         working-directory: apps/life-console
         run: npm test && npm run build

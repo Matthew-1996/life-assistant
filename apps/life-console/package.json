@@ -9,8 +9,10 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "test": "vitest run",
-    "test:contracts": "vitest run tests/contract"
+    "generate:contracts": "openapi-typescript contracts/life-console.openapi.yaml -o src/contracts/life-console.ts",
+    "check:contracts": "npm run generate:contracts && git diff --exit-code -- src/contracts/life-console.ts",
+    "test": "npm run check:contracts && vitest run",
+    "test:contracts": "npm run check:contracts && vitest run tests/contract"
   },
   "dependencies": {
     "react": "^19.1.1",
@@ -23,6 +25,7 @@
     "@vitejs/plugin-react": "^5.0.2",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
+    "openapi-typescript": "7.13.0",
     "typescript": "^5.9.2",
     "vite": "^7.1.3",
     "vitest": "^3.2.4",
