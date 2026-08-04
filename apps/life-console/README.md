@@ -55,6 +55,16 @@ python3 -m hub.server
 The server rejects non-loopback bind addresses. It reads only whitelisted
 Dashboard fields and serves the built UI from `dist/`.
 
+Generate, but do not install, machine-local launch files with:
+
+```bash
+python3 packaging/generate_launch_agent.py --output-dir /path/to/private/runtime
+```
+
+The generated plist and `.command` launcher contain paths for the current
+machine. They are runtime artifacts, not portable source files, and must not be
+committed.
+
 ## Structure
 
 ```text

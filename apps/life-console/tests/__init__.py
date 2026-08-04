@@ -1,0 +1,1 @@
+"""Life Console test suites."""
