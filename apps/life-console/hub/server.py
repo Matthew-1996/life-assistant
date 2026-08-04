@@ -32,6 +32,7 @@ class LifeConsoleServer(ThreadingHTTPServer):
         self.sessions: dict[str, tuple[str, datetime]] = {}
         self.idempotency: dict[str, tuple[str, dict[str, Any]]] = {}
         self.purge_plans: dict[str, dict[str, Any]] = {}
+        self.confirmations: dict[str, dict[str, Any]] = {}
         super().__init__(address, handler)
 
 
@@ -47,7 +48,7 @@ class LifeConsoleHandler(SimpleHTTPRequestHandler):
         self.send_header("Referrer-Policy", "no-referrer")
         super().end_headers()
 
-    def log_message(self, format: str, *args: Any) -> None:
+    def log_message(self, _format: str, *args: Any) -> None:
         LOG.info("request method=%s path=%s status=%s", self.command, self.path.split("?", 1)[0], args[1] if len(args) > 1 else "unknown")
 
     def _json(self, status: HTTPStatus, payload: dict[str, Any], *, cookie: str | None = None) -> None:
@@ -156,10 +157,14 @@ class LifeConsoleHandler(SimpleHTTPRequestHandler):
             except (ReadModelError, UnicodeError, KeyError, TypeError, ValueError):
                 self._error(HTTPStatus.SERVICE_UNAVAILABLE, "SOURCE_INVALID", "本地来源暂不可用")
                 return
+            snapshot["today"]["confirmations"] = list(self.server.confirmations.values())
             self._json(HTTPStatus.OK, snapshot)
             return
         if route == "/api/v1/confirmations":
-            self._json(HTTPStatus.OK, {"schema_version": 1, "items": []})
+            self._json(HTTPStatus.OK, {
+                "schema_version": 1,
+                "items": list(self.server.confirmations.values()),
+            })
             return
         if route.startswith("/api/"):
             self._error(HTTPStatus.NOT_FOUND, "INVALID_REQUEST", "接口不存在")
@@ -304,6 +309,14 @@ class LifeConsoleHandler(SimpleHTTPRequestHandler):
                     "current_revision": revision,
                     "current": current,
                     "submitted": submitted,
+                }
+                confirmation_id = f"conflict:{day}"
+                self.server.confirmations[confirmation_id] = {
+                    "id": confirmation_id,
+                    "type": "revision_conflict",
+                    "title": "状态已在其他位置更新",
+                    "message": "请核对最新记录与本次提交后再决定。",
+                    "action_label": "查看差异",
                 }
             self._error(status, error.code, "记录无法安全保存", conflict=conflict)
 

@@ -110,6 +110,10 @@ class HubWriteTests(unittest.TestCase):
         self.assertEqual(result["conflict"]["current"]["energy"], 3)
         self.assertEqual(result["conflict"]["submitted"]["mood"], 4)
         self.assertNotIn("note_summary", result["conflict"]["current"])
+        self.connection.request("GET", "/api/v1/confirmations", headers={"Host": self.host})
+        response = self.connection.getresponse()
+        items = json.loads(response.read())["items"]
+        self.assertEqual(items[0]["type"], "revision_conflict")
 
     def test_write_requires_csrf(self) -> None:
         body = {
