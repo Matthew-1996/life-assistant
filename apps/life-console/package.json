@@ -13,7 +13,7 @@
     "check:contracts": "npm run generate:contracts && git diff --exit-code -- src/contracts/life-console.ts",
     "test": "npm run check:contracts && vitest run && npm run test:hub",
     "test:contracts": "npm run check:contracts && vitest run tests/contract",
-    "test:hub": "python3 -m unittest -v tests.hub.test_hub_read"
+    "test:hub": "python3 -m unittest discover -v -s tests/hub -p 'test_*.py'"
   },
   "dependencies": {
     "react": "^19.1.1",
