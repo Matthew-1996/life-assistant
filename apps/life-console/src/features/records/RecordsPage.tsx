@@ -358,7 +358,7 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
 
   return (
     <section aria-labelledby="records-title">
-      <div className="page-heading">
+      <header className="hero capture-hero">
         <div>
           <p className="eyebrow">记录输入</p>
           <h1 id="records-title">记录，不打断生活</h1>
@@ -368,39 +368,56 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
             ? "通过本机 Life Hub 写入 iCloud 真相源；保存失败时保留当前输入。"
             : "当前是合成演示；不会写入真实 iCloud。"}
         </p>
-      </div>
+      </header>
 
-      <div className="record-layout">
-        <section className="record-panel record-panel--hero" aria-label="对话式记录面板">
+      <section className="capture-grid" aria-label="记录输入">
+        <section className="card conversation-card" aria-label="对话式记录面板">
           <form onSubmit={saveConversation}>
-            <label htmlFor="capture-text">直接描述想记录的内容</label>
+            <div className="card-header">
+              <div>
+                <h2 className="card-title">对话式记录</h2>
+                <p className="card-desc">主入口是自然语言。系统先保存，再慢慢整理。</p>
+              </div>
+              <span className="status-pill">Mac 本地</span>
+            </div>
             <p className="input-prompt">写一句也可以</p>
-            <textarea
-              id="capture-text"
-              onChange={(event) => setCaptureText(event.target.value)}
-              placeholder="写一句也可以。例如：今天散步后感觉轻松一些……"
-              value={captureText}
-            />
-            <div className="form-actions">
-              <span>先原样保存到 iCloud；外部展示待刷新不回滚本地成功。</span>
-              <button
-                className="primary-button"
-                type="submit"
-                disabled={captureSaving || !captureText.trim()}
-              >
-                {captureSaving ? "保存中…" : "保存记录"}
-              </button>
+            <label className="sr-only" htmlFor="capture-text">直接描述想记录的内容</label>
+            <div className="input-wrap">
+              <textarea
+                className="capture-textarea"
+                id="capture-text"
+                onChange={(event) => setCaptureText(event.target.value)}
+                placeholder="写一句也可以。例如：今天散步后感觉轻松一些……"
+                value={captureText}
+              />
+              <div className="input-hint">
+                <span>先原样保存到 iCloud；外部展示待刷新不回滚本地成功。</span>
+                <span className="mono">{captureText.trim().length} 字</span>
+              </div>
+            </div>
+            <div className="actions">
+              <div className="button-row">
+                <button
+                  className="primary-button btn btn-primary"
+                  type="submit"
+                  disabled={captureSaving || !captureText.trim()}
+                >
+                  {captureSaving ? "保存中…" : "保存记录"}
+                </button>
+                <span className="text-link">先预览</span>
+              </div>
+              <span className="status-pill">默认不发布原文</span>
             </div>
           </form>
         </section>
 
-        <aside className="record-side-card" aria-label="简洁表单">
+        <aside className="card form-card" aria-label="简洁表单">
           <div className="side-card-head">
             <div>
               <span className="neutral-badge">简洁表单</span>
-              <h2>补充结构化信息</h2>
+          <h2 className="card-title">简洁表单</h2>
             </div>
-            <p>表单只是兜底，不要求重复录入。</p>
+            <p className="card-desc">当需要补全状态时，用少量字段辅助回顾；表单只是兜底，不要求重复录入。</p>
           </div>
           <div className="subtabs" role="tablist" aria-label="表单类型">
             <button
@@ -542,12 +559,15 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
             </form>
           )}
         </aside>
-      </div>
+      </section>
 
-      <div className="save-chain-bar">
-        <strong>本地成功先算完成</strong>
-        <span>写入 iCloud 成功即可回执；Google 表格或其他展示层失败时，只提示待刷新。</span>
-      </div>
+      <section className="feedback-bar" aria-label="保存反馈">
+        <div>
+          <strong>本地成功先算完成，外部展示待刷新不回滚</strong>
+          <span>记录先落在 Mac 本地真相源；表格或网页只是派生视图，失败时保留待刷新状态。</span>
+        </div>
+        <span className="feedback-state">local saved</span>
+      </section>
 
       {receipt && (
         <p className="save-receipt" role="status">

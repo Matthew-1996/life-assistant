@@ -67,8 +67,10 @@ describe("Life Console synthetic UI", () => {
     expect(container.querySelector(".global-nav")).toBeTruthy();
     expect(container.querySelector(".brand-dot")).toBeTruthy();
     expect(screen.getByRole("navigation", { name: "全局导航" })).toBeTruthy();
+    const globalNav = container.querySelector(".global-nav");
+    expect(globalNav).toBeTruthy();
     expect(
-      within(screen.getByRole("banner")).getByRole("button", {
+      within(globalNav as HTMLElement).getByRole("button", {
         name: "快速记录",
       }),
     ).toBeTruthy();
@@ -76,9 +78,14 @@ describe("Life Console synthetic UI", () => {
 
   it("keeps the redesigned workbench hero calls to action in React", async () => {
     const user = userEvent.setup();
-    render(<App />);
+    const { container } = render(<App />);
 
     const main = within(screen.getByRole("main"));
+    expect(container.querySelector(".status-panel")).toBeTruthy();
+    expect(container.querySelector(".info-grid")).toBeTruthy();
+    expect(container.querySelector(".privacy-card")).toBeTruthy();
+    expect(screen.getByLabelText("今日状态摘要")).toBeTruthy();
+    expect(screen.getByText("隐私与保存链路")).toBeTruthy();
     expect(main.getByRole("button", { name: "快速记录" })).toBeTruthy();
     expect(main.getByRole("button", { name: "查看进展" })).toBeTruthy();
 
@@ -90,10 +97,14 @@ describe("Life Console synthetic UI", () => {
 
   it("shows conversation capture and the compact form at the same time", async () => {
     const user = userEvent.setup();
-    render(<App />);
+    const { container } = render(<App />);
 
     await user.click(navigationButton("记录"));
 
+    expect(container.querySelector(".capture-grid")).toBeTruthy();
+    expect(container.querySelector(".conversation-card")).toBeTruthy();
+    expect(container.querySelector(".form-card")).toBeTruthy();
+    expect(container.querySelector(".feedback-bar")).toBeTruthy();
     expect(screen.getByLabelText("直接描述想记录的内容")).toBeTruthy();
     expect(screen.getByRole("complementary", { name: "简洁表单" })).toBeTruthy();
     expect(screen.getByText("写一句也可以")).toBeTruthy();
