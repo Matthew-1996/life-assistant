@@ -404,7 +404,6 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
                 >
                   {captureSaving ? "保存中…" : "保存记录"}
                 </button>
-                <span className="text-link">先预览</span>
               </div>
               <span className="status-pill">默认不发布原文</span>
             </div>

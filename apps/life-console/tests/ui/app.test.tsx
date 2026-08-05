@@ -108,6 +108,7 @@ describe("Life Console synthetic UI", () => {
     expect(screen.getByLabelText("直接描述想记录的内容")).toBeTruthy();
     expect(screen.getByRole("complementary", { name: "简洁表单" })).toBeTruthy();
     expect(screen.getByText("写一句也可以")).toBeTruthy();
+    expect(screen.queryByText("先预览")).toBeNull();
     expect(screen.getByRole("tab", { name: "日记" })).toBeTruthy();
     expect(screen.getByRole("tab", { name: "每日状态" })).toBeTruthy();
   });
