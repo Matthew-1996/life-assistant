@@ -324,6 +324,91 @@ paths:
         "403": {$ref: "#/components/responses/Forbidden"}
         "404": {$ref: "#/components/responses/NotFound"}
         "409": {$ref: "#/components/responses/Conflict"}
+  /api/v1/journal-enrichments/enrich:
+    post:
+      operationId: enrichJournalNow
+      description: >-
+        One-step enrichment for a journal id: the Hub mints a preview and
+        commits it in a single call (used by auto-enrich-on-save and the manual
+        "整理" button). Requires an active launch authorization; returns 202.
+      parameters:
+        - {$ref: "#/components/parameters/CsrfHeader"}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [schema_version, idempotency_key, journal_id]
+              properties:
+                schema_version: {type: integer, const: 1}
+                idempotency_key: {$ref: "#/components/schemas/IdempotencyKey"}
+                journal_id: {type: string, minLength: 1, maxLength: 120}
+      responses:
+        "202":
+          description: Enrichment job accepted; no external request has been sent yet.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/EnrichmentJob"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "409": {$ref: "#/components/responses/Conflict"}
+        "503": {$ref: "#/components/responses/ServiceUnavailable"}
+  /api/v1/journal-enrichments/by-journal/{journal_id}:
+    get:
+      operationId: getJournalEnrichmentByJournal
+      description: Latest raw-free enrichment status for one journal entry.
+      parameters:
+        - name: journal_id
+          in: path
+          required: true
+          schema: {type: string, minLength: 1, maxLength: 120}
+      responses:
+        "200":
+          description: Per-journal enrichment status.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/JournalEnrichmentStatus"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "503": {$ref: "#/components/responses/ServiceUnavailable"}
+  /api/v1/journals/{journal_id}/delete:
+    post:
+      operationId: deleteJournal
+      description: >-
+        Delete one journal entry from the current project (withdraw then purge).
+        Requires confirm to equal the journal id; the UI gates this behind a
+        second confirmation dialog. Does not touch chats, old ZIPs, or iCloud
+        device history.
+      parameters:
+        - name: journal_id
+          in: path
+          required: true
+          schema: {type: string, minLength: 1, maxLength: 120}
+        - {$ref: "#/components/parameters/CsrfHeader"}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [schema_version, idempotency_key, confirm]
+              properties:
+                schema_version: {type: integer, const: 1}
+                idempotency_key: {$ref: "#/components/schemas/IdempotencyKey"}
+                confirm: {type: string, minLength: 1, maxLength: 120}
+      responses:
+        "200":
+          description: The entry was deleted from the current project.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/JournalDeleteReceipt"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "409": {$ref: "#/components/responses/Conflict"}
+        "503": {$ref: "#/components/responses/ServiceUnavailable"}
 components:
   securitySchemes:
     LocalSession:
@@ -444,12 +529,13 @@ components:
               items:
                 type: object
                 additionalProperties: false
-                required: [id, date, title, summary]
+                required: [id, date, title, summary, enrichment_state]
                 properties:
                   id: {type: string, minLength: 1, maxLength: 120}
                   date: {type: string, format: date}
                   title: {type: string, maxLength: 100}
                   summary: {type: string, maxLength: 240}
+                  enrichment_state: {$ref: "#/components/schemas/EnrichmentState"}
         system:
           type: object
           additionalProperties: false
@@ -607,6 +693,9 @@ components:
     EnrichmentModel:
       type: string
       enum: [deepseek-v4-flash, deepseek-v4-pro]
+    EnrichmentState:
+      type: string
+      enum: [raw, working, enriched, failed]
     EnrichmentField:
       type: string
       enum: [title, summary, facts, feelings, people, places, themes, tags]
@@ -665,6 +754,27 @@ components:
           type: [string, "null"]
           enum: [PROVIDER_UNAVAILABLE, MODEL_OUTPUT_INVALID, SOURCE_CHANGED, null]
         updated_at: {type: string, format: date-time}
+    JournalEnrichmentStatus:
+      description: Per-journal enrichment status projection; status "none" means no job yet.
+      oneOf:
+        - type: object
+          additionalProperties: false
+          required: [schema_version, journal_id, status]
+          properties:
+            schema_version: {type: integer, const: 1}
+            journal_id: {type: string, minLength: 1, maxLength: 120}
+            status: {type: string, const: none}
+        - $ref: "#/components/schemas/EnrichmentJob"
+    JournalDeleteReceipt:
+      type: object
+      additionalProperties: false
+      required: [request_id, command_id, action, journal_id, message]
+      properties:
+        request_id: {type: string}
+        command_id: {type: string}
+        action: {type: string, const: deleted}
+        journal_id: {type: string, minLength: 1, maxLength: 120}
+        message: {type: string}
     CommandReceipt:
       type: object
       additionalProperties: false

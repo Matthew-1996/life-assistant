@@ -232,6 +232,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/journal-enrichments/enrich": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description One-step enrichment for a journal id: the Hub mints a preview and commits it in a single call (used by auto-enrich-on-save and the manual "整理" button). Requires an active launch authorization; returns 202. */
+        post: operations["enrichJournalNow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/journal-enrichments/by-journal/{journal_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Latest raw-free enrichment status for one journal entry. */
+        get: operations["getJournalEnrichmentByJournal"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/journals/{journal_id}/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Delete one journal entry from the current project (withdraw then purge). Requires confirm to equal the journal id; the UI gates this behind a second confirmation dialog. Does not touch chats, old ZIPs, or iCloud device history. */
+        post: operations["deleteJournal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -297,6 +348,7 @@ export interface components {
                     date: string;
                     title: string;
                     summary: string;
+                    enrichment_state: components["schemas"]["EnrichmentState"];
                 }[];
             };
             system: {
@@ -430,6 +482,8 @@ export interface components {
         /** @enum {string} */
         EnrichmentModel: "deepseek-v4-flash" | "deepseek-v4-pro";
         /** @enum {string} */
+        EnrichmentState: "raw" | "working" | "enriched" | "failed";
+        /** @enum {string} */
         EnrichmentField: "title" | "summary" | "facts" | "feelings" | "people" | "places" | "themes" | "tags";
         EnrichmentPreview: {
             /** @constant */
@@ -464,6 +518,22 @@ export interface components {
             failure_code?: "PROVIDER_UNAVAILABLE" | "MODEL_OUTPUT_INVALID" | "SOURCE_CHANGED" | null;
             /** Format: date-time */
             updated_at?: string;
+        };
+        /** @description Per-journal enrichment status projection; status "none" means no job yet. */
+        JournalEnrichmentStatus: {
+            /** @constant */
+            schema_version: 1;
+            journal_id: string;
+            /** @constant */
+            status: "none";
+        } | components["schemas"]["EnrichmentJob"];
+        JournalDeleteReceipt: {
+            request_id: string;
+            command_id: string;
+            /** @constant */
+            action: "deleted";
+            journal_id: string;
+            message: string;
         };
         CommandReceipt: {
             request_id: string;
@@ -955,6 +1025,103 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    enrichJournalNow: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Life-CSRF": components["parameters"]["CsrfHeader"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @constant */
+                    schema_version: 1;
+                    idempotency_key: components["schemas"]["IdempotencyKey"];
+                    journal_id: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Enrichment job accepted; no external request has been sent yet. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnrichmentJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    getJournalEnrichmentByJournal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                journal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Per-journal enrichment status. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JournalEnrichmentStatus"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    deleteJournal: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Life-CSRF": components["parameters"]["CsrfHeader"];
+            };
+            path: {
+                journal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @constant */
+                    schema_version: 1;
+                    idempotency_key: components["schemas"]["IdempotencyKey"];
+                    confirm: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The entry was deleted from the current project. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JournalDeleteReceipt"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            503: components["responses"]["ServiceUnavailable"];
         };
     };
 }

@@ -217,6 +217,27 @@ class LifeConsoleHandler(SimpleHTTPRequestHandler):
         }.get(error.code, "云端整理暂不可用")
         self._error(status, error.code, message)
 
+    def _overlay_enrichment_states(self, snapshot: dict[str, Any]) -> None:
+        """把每篇日记最近作业状态映射为看板上的整理状态标签。
+
+        job 状态 → UI：queued/running→working，succeeded→enriched，
+        failed→failed，无作业→raw。只读，不触发任何发送。
+        """
+
+        try:
+            states = self.server.enrichment.journal_states()
+        except (JobError, EnrichmentValidationError, OSError):
+            states = {}
+        mapping = {
+            "queued": "working",
+            "running": "working",
+            "succeeded": "enriched",
+            "failed": "failed",
+        }
+        for item in snapshot.get("records", {}).get("recent_journals", []):
+            job_state = states.get(item.get("id"))
+            item["enrichment_state"] = mapping.get(job_state, "raw")
+
     def _session(self, *, require_csrf: bool = False) -> bool:
         cookie = self.headers.get("Cookie", "")
         values = dict(
@@ -313,6 +334,7 @@ class LifeConsoleHandler(SimpleHTTPRequestHandler):
             snapshot["today"]["confirmations"] = list(self.server.confirmations.values())
             snapshot["system"]["icloud"] = self.server.icloud_status
             snapshot["system"]["automation"] = self.server.automation_status
+            self._overlay_enrichment_states(snapshot)
             self._json(HTTPStatus.OK, snapshot)
             return
         if route == "/api/v1/confirmations":
@@ -320,6 +342,19 @@ class LifeConsoleHandler(SimpleHTTPRequestHandler):
                 "schema_version": 1,
                 "items": list(self.server.confirmations.values()),
             })
+            return
+        if route.startswith("/api/v1/journal-enrichments/by-journal/"):
+            if not self._session():
+                self._error(HTTPStatus.FORBIDDEN, "INVALID_REQUEST", "本地会话无效")
+                return
+            journal_id = route[len("/api/v1/journal-enrichments/by-journal/"):]
+            if not journal_id or "/" in journal_id:
+                self._error(HTTPStatus.BAD_REQUEST, "INVALID_REQUEST", "日记标识无效")
+                return
+            try:
+                self._json(HTTPStatus.OK, self.server.enrichment.status_for_journal(journal_id))
+            except (JobError, EnrichmentValidationError):
+                self._error(HTTPStatus.SERVICE_UNAVAILABLE, "SOURCE_INVALID", "状态暂不可用")
             return
         if route.startswith("/api/v1/journal-enrichments/"):
             job_id = route.rsplit("/", 1)[1]
@@ -468,6 +503,38 @@ class LifeConsoleHandler(SimpleHTTPRequestHandler):
                     self._enrichment_error(error)
                     return
                 self._json(HTTPStatus.ACCEPTED, job)
+                return
+            if route == "/api/v1/journal-enrichments/enrich":
+                if set(body) != {"schema_version", "idempotency_key", "journal_id"}:
+                    raise ValueError("fields")
+                if not _valid_text(body.get("journal_id"), maximum=120):
+                    raise ValueError("journal id")
+                try:
+                    job = self.server.enrichment.enrich_now(body["journal_id"], key)
+                except EnrichmentValidationError as error:
+                    self._enrichment_error(error)
+                    return
+                self._json(HTTPStatus.ACCEPTED, job)
+                return
+            if route.startswith("/api/v1/journals/") and route.endswith("/delete"):
+                if set(body) != {"schema_version", "idempotency_key", "confirm"}:
+                    raise ValueError("fields")
+                journal_id = route[len("/api/v1/journals/"):-len("/delete")]
+                if not journal_id or "/" in journal_id:
+                    raise ValueError("journal id")
+                if body.get("confirm") != journal_id:
+                    raise ValueError("confirm")
+                result = self.server.runner.delete_journal(journal_id)
+                receipt = {
+                    "request_id": f"req_{secrets.token_hex(8)}",
+                    "command_id": f"cmd_{secrets.token_hex(8)}",
+                    "action": "deleted",
+                    "journal_id": journal_id,
+                    "message": "已从当前项目删除这条日记",
+                }
+                del result
+                self.server.idempotency[key] = (fingerprint, receipt)
+                self._json(HTTPStatus.OK, receipt)
                 return
             if route == "/api/v1/purge-confirmations":
                 required = {

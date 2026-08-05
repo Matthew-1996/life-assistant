@@ -75,6 +75,25 @@ class CommandRunner:
             stdin=payload,
         )
 
+    def delete_journal(self, journal_id: str) -> dict[str, Any]:
+        """逻辑撤回后永久删除一篇日记（当前项目范围）。
+
+        journal_manager 要求永久删除前先 withdraw，且 --confirm 必须等于 id。
+        撤回幂等（already_withdrawn 也可继续）；purge 只覆盖当前项目副本。
+        """
+
+        self._run([
+            sys.executable, str(self.code_root / "tools/journal_manager.py"),
+            "withdraw", "--id", journal_id,
+            "--root", str(self.data_root / "journal"),
+        ])
+        return self._run([
+            sys.executable, str(self.code_root / "tools/journal_manager.py"),
+            "purge", "--id", journal_id, "--confirm", journal_id,
+            "--acknowledge-historical-copies",
+            "--root", str(self.data_root / "journal"),
+        ])
+
     def upsert_checkin(self, day: str, request: dict[str, Any]) -> dict[str, Any]:
         field_flags = {
             "sleep_time": "--sleep-time", "wake_time": "--wake-time",

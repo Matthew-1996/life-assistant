@@ -1,6 +1,6 @@
 import { type SyntheticEvent, useState } from "react";
 
-import { ApiError, type EnrichmentJob, type EnrichmentPreview, type LifeConsoleClient } from "../../api/client";
+import { ApiError, type LifeConsoleClient } from "../../api/client";
 import type { components } from "../../contracts/life-console";
 import type { Dashboard } from "../../data/dashboard";
 
@@ -52,130 +52,153 @@ function splitJournalList(value: FormDataEntryValue | null): string[] {
     .filter(Boolean))).slice(0, 12);
 }
 
-type EnrichmentPhase = "idle" | "preview" | "working" | "succeeded" | "failed";
+type EnrichmentState = NonNullable<RecentJournal["enrichment_state"]>;
 
-function EnrichmentControl({
+const STATE_LABELS: Record<EnrichmentState, string> = {
+  raw: "原始记录",
+  working: "整理中",
+  enriched: "已整理",
+  failed: "整理失败",
+};
+
+function JournalCard({
   journal,
   client,
+  onChanged,
 }: {
   journal: RecentJournal;
   client?: LifeConsoleClient;
+  onChanged?: () => boolean | Promise<boolean>;
 }) {
-  const [phase, setPhase] = useState<EnrichmentPhase>("idle");
-  const [preview, setPreview] = useState<EnrichmentPreview | null>(null);
+  // 本地覆盖状态：卡片内触发整理/删除后立即反映，不必等下一次看板刷新。
+  const [override, setOverride] = useState<EnrichmentState | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+  const [removed, setRemoved] = useState(false);
 
-  async function pollUntilDone(jobId: string): Promise<void> {
+  const state: EnrichmentState = override ?? journal.enrichment_state ?? "raw";
+
+  async function pollUntilSettled(): Promise<void> {
     if (!client) return;
     for (let attempt = 0; attempt < 40; attempt += 1) {
-      const job: EnrichmentJob = await client.enrichmentStatus(jobId);
-      if (job.status === "succeeded") {
-        setPhase("succeeded");
-        setNote("结构化整理已保存；原文与时间不变。");
-        return;
-      }
-      if (job.status === "failed") {
-        setPhase("failed");
-        setNote("云端整理未完成；本地原文和索引保持不变，可主动重试。");
-        return;
-      }
       await new Promise((resolve) => setTimeout(resolve, 1000));
+      let status;
+      try {
+        status = await client.enrichmentByJournal(journal.id);
+      } catch {
+        continue;
+      }
+      if (status.status === "succeeded") {
+        setOverride("enriched");
+        await onChanged?.();
+        return;
+      }
+      if (status.status === "failed") {
+        setOverride("failed");
+        return;
+      }
     }
-    setPhase("failed");
-    setNote("云端整理仍在进行，请稍后在此重试。");
   }
 
-  async function startPreview() {
+  async function enrichNow() {
     setNote(null);
     if (!client) {
-      setPhase("preview");
-      setPreview(null);
-      setNote("合成演示：预览不联网，也不会发送任何日记。");
+      setNote("合成演示：未联网，也未发送任何日记。");
       return;
     }
+    setBusy(true);
+    setOverride("working");
     try {
-      const result = await client.enrichmentPreview(journal.id);
-      setPreview(result);
-      setPhase("preview");
+      await client.enrichNow(journal.id);
+      await pollUntilSettled();
     } catch {
-      setPhase("failed");
-      setNote("暂时无法生成发送预览，请稍后重试。");
+      setOverride("failed");
+      setNote("云端整理未成功；本地记录未受影响，可再次点击整理。");
+    } finally {
+      setBusy(false);
     }
   }
 
-  async function confirmSend() {
-    if (!client || !preview) {
-      setPhase("idle");
-      setNote("合成演示未发送任何数据。");
+  async function confirmDelete() {
+    if (!client) {
+      setRemoved(true);
       return;
     }
-    setPhase("working");
-    setNote("已提交；可继续使用工作台。");
+    setBusy(true);
     try {
-      const job = await client.enrichmentCommit(preview.preview_token);
-      await pollUntilDone(job.job_id);
-    } catch (error) {
-      setPhase("failed");
-      setNote(
-        error instanceof ApiError && error.response.error.code === "SOURCE_CHANGED"
-          ? "这篇日记刚刚有改动，未发送旧内容；请重新生成预览。"
-          : "云端整理未成功；本地记录未受影响，可主动重试。",
-      );
+      await client.deleteJournal(journal.id);
+      setRemoved(true);
+      await onChanged?.();
+    } catch {
+      setNote("删除失败，请稍后重试。");
+      setConfirming(false);
+    } finally {
+      setBusy(false);
     }
+  }
+
+  if (removed) {
+    return (
+      <article className="journal-card journal-card--removed" aria-live="polite">
+        <p className="supporting-text">已删除这条记录。</p>
+      </article>
+    );
   }
 
   return (
-    <div className="enrichment-control">
-      {phase === "idle" && (
-        <button className="secondary-button" type="button" onClick={() => void startPreview()}>
-          用 DeepSeek 整理此篇
+    <article className="journal-card">
+      <div className="journal-card-head">
+        <time>{journal.date}</time>
+        <span className={`enrichment-badge enrichment-badge--${state}`}>
+          {STATE_LABELS[state]}
+        </span>
+      </div>
+      <strong>{journal.title}</strong>
+      <p>{journal.summary}</p>
+      <div className="journal-card-actions">
+        <button
+          className="secondary-button"
+          type="button"
+          disabled={busy || state === "working"}
+          onClick={() => void enrichNow()}
+        >
+          {state === "failed" ? "重新整理" : "整理"}
         </button>
-      )}
-
-      {phase === "preview" && (
-        <article className="preview-card" aria-label="云端整理发送预览">
-          <span className="neutral-badge">发送预览（尚未联网）</span>
-          <h3>将这一篇发送给 DeepSeek 做结构化整理</h3>
-          {preview ? (
-            <>
-              <dl>
-                <div><dt>接收方</dt><dd>{preview.provider} · {preview.model}</dd></div>
-                <div><dt>可写回字段</dt><dd>{preview.writable_fields.join("、")}</dd></div>
-                <div><dt>最多重试</dt><dd>{preview.max_retries} 次</dd></div>
-              </dl>
-              <ul className="disclosure-list">
-                {preview.disclosures.map((line) => (
-                  <li key={line}>{line}</li>
-                ))}
-              </ul>
-            </>
-          ) : (
-            <p>{note}</p>
-          )}
+        <button
+          className="secondary-button danger"
+          type="button"
+          disabled={busy}
+          onClick={() => setConfirming(true)}
+        >
+          删除
+        </button>
+      </div>
+      {note && <p className="save-receipt" role="status">{note}</p>}
+      {confirming && (
+        <div className="confirm-dialog" role="alertdialog" aria-label="确认删除这条记录">
+          <p>删除后这条日记将从当前项目移除（不影响聊天、旧备份与设备历史）。确认删除？</p>
           <div className="form-actions">
-            <button className="secondary-button" type="button" onClick={() => { setPhase("idle"); setPreview(null); }}>
+            <button
+              className="secondary-button"
+              type="button"
+              disabled={busy}
+              onClick={() => setConfirming(false)}
+            >
               取消
             </button>
-            <button className="primary-button" type="button" onClick={() => void confirmSend()}>
-              确认发送
+            <button
+              className="primary-button danger"
+              type="button"
+              disabled={busy}
+              onClick={() => void confirmDelete()}
+            >
+              确认删除
             </button>
           </div>
-        </article>
-      )}
-
-      {phase === "working" && <p className="save-receipt" role="status">{note}</p>}
-
-      {phase === "succeeded" && <p className="save-receipt" role="status">{note}</p>}
-
-      {phase === "failed" && (
-        <div className="enrichment-failed" role="status">
-          <p>{note}</p>
-          <button className="secondary-button" type="button" onClick={() => void startPreview()}>
-            重新预览并重试
-          </button>
         </div>
       )}
-    </div>
+    </article>
   );
 }
 
@@ -201,7 +224,7 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
     const title = firstSentence(eventText, 120);
     setCaptureSaving(true);
     try {
-      const result = await client.journal({
+      await client.journal({
         schema_version: 1,
         event_date: dashboard.date,
         event_time: null,
@@ -216,8 +239,27 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
         themes: [],
         tags: [],
       });
-      setReceipt(result.message);
       setCaptureText("");
+      // 保存成功后自动触发一次 DeepSeek 语义整理：读回最新看板定位这条，
+      // 再一步 enrich；效果等同于直接把记录交给助手自动整理。
+      let autoEnriched = false;
+      try {
+        const latest = await client.dashboard();
+        const newest = latest.records.recent_journals.find(
+          (item) => item.date === dashboard.date && item.title === title,
+        );
+        if (newest) {
+          await client.enrichNow(newest.id);
+          autoEnriched = true;
+        }
+      } catch {
+        // 云端整理失败不影响已保存的本地记录；卡片会显示"整理失败"并可手动重试。
+      }
+      setReceipt(
+        autoEnriched
+          ? "已保存到 iCloud，正在用 DeepSeek 整理…"
+          : "已保存到 iCloud（云端整理未启动，可在卡片上手动整理）",
+      );
       await onSaved?.();
     } catch {
       setReceipt("保存失败，请保留当前内容并重试");
@@ -540,12 +582,12 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
         </div>
         <div className="recent-list">
           {dashboard.records.recent_journals.map((item) => (
-            <article key={item.id}>
-              <time>{item.date}</time>
-              <strong>{item.title}</strong>
-              <p>{item.summary}</p>
-              <EnrichmentControl journal={item} client={client} />
-            </article>
+            <JournalCard
+              key={item.id}
+              journal={item}
+              client={client}
+              onChanged={onSaved}
+            />
           ))}
         </div>
       </section>

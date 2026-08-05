@@ -28,6 +28,9 @@ function enrichmentStubs() {
     enrichmentCommit: vi.fn(),
     enrichmentStatus: vi.fn(),
     enrichmentRetry: vi.fn(),
+    enrichNow: vi.fn(),
+    enrichmentByJournal: vi.fn(),
+    deleteJournal: vi.fn(),
   };
 }
 
@@ -158,9 +161,9 @@ describe("Life Console synthetic UI", () => {
     expect(sent.time_precision).toBe("unknown");
     expect(sent.event_date).toBe(syntheticDashboard.date);
     await waitFor(() =>
-      expect(screen.getByRole("status").textContent).toBe("已保存到 iCloud"),
+      expect(screen.getByRole("status").textContent).toContain("已保存到 iCloud"),
     );
-    // Refreshed the dashboard so the new card (with enrich button) appears.
+    // Refreshed the dashboard so the new card (with its status) appears.
     expect(dashboard).toHaveBeenCalled();
   });
 
@@ -338,28 +341,59 @@ describe("Life Console synthetic UI", () => {
     expect(checkin.mock.calls[0][1].fields).toEqual({ energy: 4 });
   });
 
-  it("previews before sending and only enriches after explicit confirmation", async () => {
+  it("auto-enriches a conversation entry after saving it", async () => {
     const user = userEvent.setup();
-    const enrichmentPreview = vi.fn().mockResolvedValue({
-      schema_version: 1,
-      preview_token: "synthetic-enrichment-preview-token-1234",
-      expires_at: "2099-01-01T00:00:00Z",
-      journal_id: "20260111-unknown-000000000000",
-      provider: "deepseek",
-      model: "deepseek-v4-flash",
-      prompt_version: "journal-enrichment-2026-08-05.1",
-      authorization_version: "auth-1",
-      max_retries: 2,
-      writable_fields: ["title", "summary", "facts", "feelings", "people", "places", "themes", "tags"],
-      disclosures: ["仅发送当前这一篇日记的原文。", "不发送其他日记、健康数据、目标或状态。"],
+    const saved = structuredClone(syntheticDashboard);
+    saved.records.recent_journals = [
+      {
+        id: "20260112-unknown-abc123abc123",
+        date: syntheticDashboard.date,
+        title: "今天去公园散步，很放松",
+        summary: "今天去公园散步，很放松",
+        enrichment_state: "raw",
+      },
+    ];
+    const journal = vi.fn().mockResolvedValue({
+      request_id: "r", command_id: "c", action: "created",
+      source: { state: "saved", revision: null }, read_model: "current", message: "已保存到 iCloud",
     });
-    const enrichmentCommit = vi.fn().mockResolvedValue({
-      schema_version: 1, job_id: "job_ui_0001", journal_id: "20260111-unknown-000000000000",
+    const enrichNow = vi.fn().mockResolvedValue({
+      schema_version: 1, job_id: "job_auto_0001", journal_id: "20260112-unknown-abc123abc123",
       provider: "deepseek", model: "deepseek-v4-flash",
       prompt_version: "journal-enrichment-2026-08-05.1", status: "queued", attempts: 0, max_retries: 2,
     });
-    const enrichmentStatus = vi.fn().mockResolvedValue({
-      schema_version: 1, job_id: "job_ui_0001", journal_id: "20260111-unknown-000000000000",
+    const client = {
+      dashboard: vi.fn().mockResolvedValue(saved),
+      journal,
+      checkin: vi.fn(),
+      preview: vi.fn(),
+      ...enrichmentStubs(),
+      enrichNow,
+    } satisfies LifeConsoleClient;
+    render(<App client={client} initialDashboard={syntheticDashboard} />);
+    await user.click(navigationButton("记录"));
+
+    await user.type(
+      screen.getByLabelText("直接描述想记录的内容"),
+      "今天去公园散步，很放松。",
+    );
+    await user.click(screen.getByRole("button", { name: "保存到 iCloud" }));
+
+    await waitFor(() => expect(journal).toHaveBeenCalledTimes(1));
+    // 保存后自动触发一次整理，无需再手动点击。
+    await waitFor(() => expect(enrichNow).toHaveBeenCalledTimes(1));
+    expect(enrichNow.mock.calls[0][0]).toBe("20260112-unknown-abc123abc123");
+  });
+
+  it("shows a status label and manually enriches a record", async () => {
+    const user = userEvent.setup();
+    const enrichNow = vi.fn().mockResolvedValue({
+      schema_version: 1, job_id: "job_manual_0001", journal_id: "20260111-unknown-000000000000",
+      provider: "deepseek", model: "deepseek-v4-flash",
+      prompt_version: "journal-enrichment-2026-08-05.1", status: "queued", attempts: 0, max_retries: 2,
+    });
+    const enrichmentByJournal = vi.fn().mockResolvedValue({
+      schema_version: 1, job_id: "job_manual_0001", journal_id: "20260111-unknown-000000000000",
       provider: "deepseek", model: "deepseek-v4-flash",
       prompt_version: "journal-enrichment-2026-08-05.1", status: "succeeded", attempts: 1, max_retries: 2,
     });
@@ -368,25 +402,48 @@ describe("Life Console synthetic UI", () => {
       journal: vi.fn(),
       checkin: vi.fn(),
       preview: vi.fn(),
-      enrichmentPreview,
-      enrichmentCommit,
-      enrichmentStatus,
-      enrichmentRetry: vi.fn(),
+      ...enrichmentStubs(),
+      enrichNow,
+      enrichmentByJournal,
     } satisfies LifeConsoleClient;
     render(<App client={client} initialDashboard={syntheticDashboard} />);
     await user.click(navigationButton("记录"));
 
-    await user.click(screen.getByRole("button", { name: "用 DeepSeek 整理此篇" }));
-    // 第一次点击只生成预览，绝不联网发送。
-    await waitFor(() => expect(enrichmentPreview).toHaveBeenCalledTimes(1));
-    expect(enrichmentCommit).not.toHaveBeenCalled();
-    expect(screen.getByText("仅发送当前这一篇日记的原文。")).toBeTruthy();
+    // 卡片显示状态标签，而不是"用 DeepSeek 整理此篇"按钮。
+    expect(screen.getByText("原始记录")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "用 DeepSeek 整理此篇" })).toBeNull();
 
-    await user.click(screen.getByRole("button", { name: "确认发送" }));
-    await waitFor(() => expect(enrichmentCommit).toHaveBeenCalledTimes(1));
-    await waitFor(() =>
-      expect(screen.getByRole("status").textContent).toContain("结构化整理已保存"),
-    );
+    await user.click(screen.getByRole("button", { name: "整理" }));
+    await waitFor(() => expect(enrichNow).toHaveBeenCalledTimes(1));
+    expect(enrichNow.mock.calls[0][0]).toBe("20260111-unknown-000000000000");
+  });
+
+  it("requires a second confirmation before deleting a record", async () => {
+    const user = userEvent.setup();
+    const deleteJournal = vi.fn().mockResolvedValue({
+      request_id: "r", command_id: "c", action: "deleted",
+      journal_id: "20260111-unknown-000000000000", message: "已从当前项目删除这条日记",
+    });
+    const client = {
+      dashboard: vi.fn().mockResolvedValue(syntheticDashboard),
+      journal: vi.fn(),
+      checkin: vi.fn(),
+      preview: vi.fn(),
+      ...enrichmentStubs(),
+      deleteJournal,
+    } satisfies LifeConsoleClient;
+    render(<App client={client} initialDashboard={syntheticDashboard} />);
+    await user.click(navigationButton("记录"));
+
+    await user.click(screen.getByRole("button", { name: "删除" }));
+    // 第一次点击只弹出确认，不删除。
+    expect(deleteJournal).not.toHaveBeenCalled();
+    expect(screen.getByRole("alertdialog", { name: "确认删除这条记录" })).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "确认删除" }));
+    await waitFor(() => expect(deleteJournal).toHaveBeenCalledTimes(1));
+    expect(deleteJournal.mock.calls[0][0]).toBe("20260111-unknown-000000000000");
+    expect(await screen.findByText("已删除这条记录。")).toBeTruthy();
   });
 });
 
