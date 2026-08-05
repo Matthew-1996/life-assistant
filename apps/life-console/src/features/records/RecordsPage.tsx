@@ -4,7 +4,6 @@ import { ApiError, type LifeConsoleClient } from "../../api/client";
 import type { components } from "../../contracts/life-console";
 import type { Dashboard } from "../../data/dashboard";
 
-type EntryMode = "conversation" | "forms";
 type FormMode = "journal" | "checkin";
 type RecentJournal = Dashboard["records"]["recent_journals"][number];
 
@@ -203,7 +202,6 @@ function JournalCard({
 }
 
 export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
-  const [entryMode, setEntryMode] = useState<EntryMode>("conversation");
   const [formMode, setFormMode] = useState<FormMode>("journal");
   const [captureText, setCaptureText] = useState("");
   const [captureSaving, setCaptureSaving] = useState(false);
@@ -362,8 +360,8 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
     <section aria-labelledby="records-title">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">对话优先，表单兜底</p>
-          <h1 id="records-title">记录</h1>
+          <p className="eyebrow">记录输入</p>
+          <h1 id="records-title">记录，不打断生活</h1>
         </div>
         <p>
           {client
@@ -372,49 +370,38 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
         </p>
       </div>
 
-      <div className="tab-list" role="tablist" aria-label="记录入口">
-        <button
-          aria-selected={entryMode === "conversation"}
-          onClick={() => setEntryMode("conversation")}
-          role="tab"
-          type="button"
-        >
-          对话式记录
-        </button>
-        <button
-          aria-selected={entryMode === "forms"}
-          onClick={() => setEntryMode("forms")}
-          role="tab"
-          type="button"
-        >
-          简洁表单
-        </button>
-      </div>
-
-      {entryMode === "conversation" ? (
-        <section className="record-panel" aria-label="对话式记录面板">
+      <div className="record-layout">
+        <section className="record-panel record-panel--hero" aria-label="对话式记录面板">
           <form onSubmit={saveConversation}>
             <label htmlFor="capture-text">直接描述想记录的内容</label>
+            <p className="input-prompt">写一句也可以</p>
             <textarea
               id="capture-text"
               onChange={(event) => setCaptureText(event.target.value)}
-              placeholder="例如：今天散步后感觉轻松一些……"
+              placeholder="写一句也可以。例如：今天散步后感觉轻松一些……"
               value={captureText}
             />
             <div className="form-actions">
-              <span>先原样保存到 iCloud；之后可在下方记录卡片选择用 DeepSeek 整理。</span>
+              <span>先原样保存到 iCloud；外部展示待刷新不回滚本地成功。</span>
               <button
                 className="primary-button"
                 type="submit"
                 disabled={captureSaving || !captureText.trim()}
               >
-                {captureSaving ? "保存中…" : "保存到 iCloud"}
+                {captureSaving ? "保存中…" : "保存记录"}
               </button>
             </div>
           </form>
         </section>
-      ) : (
-        <section className="record-panel" aria-label="简洁表单面板">
+
+        <aside className="record-side-card" aria-label="简洁表单">
+          <div className="side-card-head">
+            <div>
+              <span className="neutral-badge">简洁表单</span>
+              <h2>补充结构化信息</h2>
+            </div>
+            <p>表单只是兜底，不要求重复录入。</p>
+          </div>
           <div className="subtabs" role="tablist" aria-label="表单类型">
             <button
               aria-selected={formMode === "journal"}
@@ -554,8 +541,13 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
               </button>
             </form>
           )}
-        </section>
-      )}
+        </aside>
+      </div>
+
+      <div className="save-chain-bar">
+        <strong>本地成功先算完成</strong>
+        <span>写入 iCloud 成功即可回执；Google 表格或其他展示层失败时，只提示待刷新。</span>
+      </div>
 
       {receipt && (
         <p className="save-receipt" role="status">

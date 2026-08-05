@@ -14,7 +14,7 @@ afterEach(() => {
 });
 
 function navigationButton(name: string) {
-  return within(screen.getByRole("navigation", { name: "主导航" })).getByRole(
+  return within(screen.getByRole("navigation", { name: "全局导航" })).getByRole(
     "button",
     { name: new RegExp(`^${name}`) },
   );
@@ -40,36 +40,65 @@ describe("Life Console synthetic UI", () => {
     render(<App />);
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "今日" }),
+      screen.getByRole("heading", { level: 1, name: "今天，只看必要信息" }),
     ).toBeTruthy();
 
     const progress = navigationButton("进展");
     progress.focus();
     await user.keyboard("{Enter}");
     expect(
-      screen.getByRole("heading", { level: 1, name: "进展" }),
+      screen.getByRole("heading", { level: 1, name: "趋势，只是辅助判断" }),
     ).toBeTruthy();
 
     await user.click(navigationButton("记录"));
     expect(
-      screen.getByRole("heading", { level: 1, name: "记录" }),
+      screen.getByRole("heading", { level: 1, name: "记录，不打断生活" }),
     ).toBeTruthy();
 
     await user.click(navigationButton("系统"));
     expect(
-      screen.getByRole("heading", { level: 1, name: "系统" }),
+      screen.getByRole("heading", { level: 1, name: "正常时，系统保持安静" }),
     ).toBeTruthy();
   });
 
-  it("renders a stable brand mark and one icon for every main tab", () => {
+  it("renders the Apple-style global navigation shell", () => {
     const { container } = render(<App />);
 
-    expect(container.querySelector('[data-icon="life"]')).toBeTruthy();
-    for (const name of ["today", "progress", "records", "system"]) {
-      expect(
-        container.querySelector(`nav [data-icon="${name}"]`),
-      ).toBeTruthy();
-    }
+    expect(container.querySelector(".global-nav")).toBeTruthy();
+    expect(container.querySelector(".brand-dot")).toBeTruthy();
+    expect(screen.getByRole("navigation", { name: "全局导航" })).toBeTruthy();
+    expect(
+      within(screen.getByRole("banner")).getByRole("button", {
+        name: "快速记录",
+      }),
+    ).toBeTruthy();
+  });
+
+  it("keeps the redesigned workbench hero calls to action in React", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    const main = within(screen.getByRole("main"));
+    expect(main.getByRole("button", { name: "快速记录" })).toBeTruthy();
+    expect(main.getByRole("button", { name: "查看进展" })).toBeTruthy();
+
+    await user.click(main.getByRole("button", { name: "查看进展" }));
+    expect(
+      screen.getByRole("heading", { level: 1, name: "趋势，只是辅助判断" }),
+    ).toBeTruthy();
+  });
+
+  it("shows conversation capture and the compact form at the same time", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(navigationButton("记录"));
+
+    expect(screen.getByLabelText("直接描述想记录的内容")).toBeTruthy();
+    expect(screen.getByRole("complementary", { name: "简洁表单" })).toBeTruthy();
+    expect(screen.getByText("写一句也可以")).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "日记" })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "每日状态" })).toBeTruthy();
   });
 
   it("keeps unknown distinct from skipped in anchor controls", async () => {
@@ -122,7 +151,7 @@ describe("Life Console synthetic UI", () => {
 
     const text = "这是一段只用于测试的合成记录。";
     await user.type(screen.getByLabelText("直接描述想记录的内容"), text);
-    await user.click(screen.getByRole("button", { name: "保存到 iCloud" }));
+    await user.click(screen.getByRole("button", { name: "保存记录" }));
 
     expect(screen.getByRole("status").textContent).toContain("合成演示");
     expect(localSet).not.toHaveBeenCalled();
@@ -153,7 +182,7 @@ describe("Life Console synthetic UI", () => {
       screen.getByLabelText("直接描述想记录的内容"),
       "今天去公园散步，很放松。",
     );
-    await user.click(screen.getByRole("button", { name: "保存到 iCloud" }));
+    await user.click(screen.getByRole("button", { name: "保存记录" }));
 
     await waitFor(() => expect(journal).toHaveBeenCalledTimes(1));
     const sent = journal.mock.calls[0][0];
@@ -171,7 +200,6 @@ describe("Life Console synthetic UI", () => {
     const user = userEvent.setup();
     render(<App />);
     await user.click(navigationButton("记录"));
-    await user.click(screen.getByRole("tab", { name: "简洁表单" }));
 
     const details = screen.getByText("补充时间、人物或场景").closest("details");
     expect(details?.hasAttribute("open")).toBe(false);
@@ -259,7 +287,6 @@ describe("Life Console synthetic UI", () => {
     } satisfies LifeConsoleClient;
     render(<App client={client} initialDashboard={syntheticDashboard} />);
     await user.click(navigationButton("记录"));
-    await user.click(screen.getByRole("tab", { name: "简洁表单" }));
     await user.type(screen.getByLabelText("发生了什么"), "合成表单正文");
     await user.type(screen.getByLabelText("当时的感受（可选）"), "轻松");
     await user.click(screen.getByRole("button", { name: "保存日记" }));
@@ -332,7 +359,6 @@ describe("Life Console synthetic UI", () => {
     } satisfies LifeConsoleClient;
     render(<App client={client} initialDashboard={syntheticDashboard} />);
     await user.click(navigationButton("记录"));
-    await user.click(screen.getByRole("tab", { name: "简洁表单" }));
     await user.click(screen.getByRole("tab", { name: "每日状态" }));
     await user.selectOptions(screen.getByLabelText("精力"), "4");
     await user.click(screen.getByRole("button", { name: "更新这些状态" }));
@@ -377,7 +403,7 @@ describe("Life Console synthetic UI", () => {
       screen.getByLabelText("直接描述想记录的内容"),
       "今天去公园散步，很放松。",
     );
-    await user.click(screen.getByRole("button", { name: "保存到 iCloud" }));
+    await user.click(screen.getByRole("button", { name: "保存记录" }));
 
     await waitFor(() => expect(journal).toHaveBeenCalledTimes(1));
     // 保存后自动触发一次整理，无需再手动点击。

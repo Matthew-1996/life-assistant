@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { ApiError, type LifeConsoleClient } from "../../api/client";
 import type { components } from "../../contracts/life-console";
 import type { Dashboard } from "../../data/dashboard";
+import type { PageId } from "../../components/shell/AppShell";
 
 type Anchors = Dashboard["today"]["anchors"];
 type AnchorKey = keyof Anchors;
@@ -45,10 +46,16 @@ const states: Array<{ value: AnchorState; label: string }> = [
 interface TodayPageProps {
   dashboard: Dashboard;
   client?: LifeConsoleClient;
+  onNavigate?: (page: PageId) => void;
   onSaved?: () => boolean | Promise<boolean>;
 }
 
-export function TodayPage({ dashboard, client, onSaved }: TodayPageProps) {
+export function TodayPage({
+  dashboard,
+  client,
+  onNavigate,
+  onSaved,
+}: TodayPageProps) {
   const [anchors, setAnchors] = useState<Anchors>(dashboard.today.anchors);
   const [conflict, setConflict] = useState<components["schemas"]["CheckinConflict"] | null>(null);
   const [pending, setPending] = useState<AnchorKey | null>(null);
@@ -109,22 +116,45 @@ export function TodayPage({ dashboard, client, onSaved }: TodayPageProps) {
     <section aria-labelledby="today-title">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">今天只看必要信息</p>
-          <h1 id="today-title">今日</h1>
+          <p className="eyebrow">工作台总览</p>
+          <h1 id="today-title">今天，只看必要信息</h1>
         </div>
-        <p>先看一个重点，再决定最小行动。</p>
+        <p>不追赶、不误报、不把趋势当结论。</p>
       </div>
 
-      <article className="focus-card">
-        <span>{dashboard.today.focus.phase_label}</span>
-        <h2>{dashboard.today.focus.title || "当前重点等待确认"}</h2>
-        <p>保持可执行，不用完成百分比制造压力。</p>
-      </article>
+      <div className="hero-grid">
+        <article className="focus-card">
+          <span>{dashboard.today.focus.phase_label}</span>
+          <h2>{dashboard.today.focus.title || "当前重点等待确认"}</h2>
+          <p>保持可执行，不用完成百分比制造压力。</p>
+          <div className="hero-actions">
+            <button
+              className="primary-button"
+              onClick={() => onNavigate?.("records")}
+              type="button"
+            >
+              快速记录
+            </button>
+            <button
+              className="secondary-button"
+              onClick={() => onNavigate?.("progress")}
+              type="button"
+            >
+              查看进展
+            </button>
+          </div>
+        </article>
+        <article className="glass-card">
+          <span className="neutral-badge">保存链路</span>
+          <h2>本机读取，iCloud 作为真相源</h2>
+          <p>真实写入必须有明确动作；外部展示待刷新不回滚本地成功。</p>
+        </article>
+      </div>
 
       <section className="section-block" aria-labelledby="action-title">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">一个建议行动</p>
+            <p className="eyebrow">一个行动</p>
             <h2 id="action-title">现在可以做什么</h2>
           </div>
         </div>
@@ -178,6 +208,24 @@ export function TodayPage({ dashboard, client, onSaved }: TodayPageProps) {
           ))}
         </div>
       </section>
+
+      <div className="three-column">
+        <article className="quiet-card">
+          <span>当前重点</span>
+          <strong>{dashboard.today.focus.title || "等待确认"}</strong>
+          <p>只展示一件主项，避免把仪表盘做成压力墙。</p>
+        </article>
+        <article className="quiet-card">
+          <span>建议行动</span>
+          <strong>{dashboard.today.suggested_action?.label ?? "今天可保持空白"}</strong>
+          <p>建议不是待办，也不会自动进入长期目标。</p>
+        </article>
+        <article className="quiet-card">
+          <span>待确认</span>
+          <strong>{dashboard.today.confirmations.length} 项</strong>
+          <p>冲突和外部动作需要用户明确确认。</p>
+        </article>
+      </div>
 
       {status && (
         <p className="save-receipt" role="status">
