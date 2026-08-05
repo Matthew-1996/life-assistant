@@ -20,13 +20,15 @@ export function App({ client, initialDashboard }: AppProps) {
   );
   const [error, setError] = useState(false);
 
-  async function refresh() {
-    if (!client) return;
+  async function refresh(): Promise<boolean> {
+    if (!client) return true;
     try {
       setDashboard(await client.dashboard());
       setError(false);
+      return true;
     } catch {
       setError(true);
+      return false;
     }
   }
 
@@ -56,6 +58,12 @@ export function App({ client, initialDashboard }: AppProps) {
       date={dashboard.date}
       onNavigate={setActivePage}
     >
+      {error && (
+        <div className="service-banner" role="alert">
+          本地服务暂不可用；页面保留上次已读取的状态，不会把新操作误报为已保存。
+          <button onClick={() => void refresh()} type="button">重试</button>
+        </div>
+      )}
       {pages[activePage]}
     </AppShell>
   );

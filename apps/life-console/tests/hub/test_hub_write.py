@@ -40,10 +40,17 @@ class HubWriteTests(unittest.TestCase):
         self.thread.join()
         self.temp.cleanup()
 
-    def post(self, path: str, body: dict, *, csrf: bool = True) -> tuple[int, dict]:
+    def post(
+        self,
+        path: str,
+        body: dict,
+        *,
+        csrf: bool = True,
+        origin: str | None = None,
+    ) -> tuple[int, dict]:
         headers = {
             "Host": self.host,
-            "Origin": f"http://{self.host}",
+            "Origin": origin or f"http://{self.host}",
             "Content-Type": "application/json",
             "Cookie": self.cookie,
         }
@@ -110,7 +117,11 @@ class HubWriteTests(unittest.TestCase):
         self.assertEqual(result["conflict"]["current"]["energy"], 3)
         self.assertEqual(result["conflict"]["submitted"]["mood"], 4)
         self.assertNotIn("note_summary", result["conflict"]["current"])
-        self.connection.request("GET", "/api/v1/confirmations", headers={"Host": self.host})
+        self.connection.request(
+            "GET",
+            "/api/v1/confirmations",
+            headers={"Host": self.host, "Cookie": self.cookie},
+        )
         response = self.connection.getresponse()
         items = json.loads(response.read())["items"]
         self.assertEqual(items[0]["type"], "revision_conflict")
@@ -125,6 +136,45 @@ class HubWriteTests(unittest.TestCase):
         status, result = self.post("/api/v1/checkins/2026-01-12", body, csrf=False)
         self.assertEqual(status, 403)
         self.assertEqual(result["error"]["code"], "INVALID_REQUEST")
+
+    def test_write_rejects_a_different_loopback_origin_port(self) -> None:
+        body = {
+            "schema_version": 1,
+            "idempotency_key": "synthetic_key_origin_01",
+            "expect_revision": None,
+            "fields": {"energy": 3},
+        }
+        wrong_port = self.server.server_port + 1
+        status, result = self.post(
+            "/api/v1/checkins/2026-01-12",
+            body,
+            origin=f"http://127.0.0.1:{wrong_port}",
+        )
+        self.assertEqual(status, 403)
+        self.assertEqual(result["error"]["code"], "INVALID_REQUEST")
+
+    def test_invalid_checkin_field_is_a_non_retryable_bad_request(self) -> None:
+        status, result = self.post("/api/v1/checkins/2026-01-12", {
+            "schema_version": 1,
+            "idempotency_key": "synthetic_key_invalid_01",
+            "expect_revision": None,
+            "fields": {"invented_field": "value"},
+        })
+        self.assertEqual(status, 400)
+        self.assertEqual(result["error"]["code"], "INVALID_REQUEST")
+        self.assertFalse(result["error"]["retryable"])
+
+    def test_invalid_journal_types_are_a_non_retryable_bad_request(self) -> None:
+        status, result = self.post("/api/v1/journals", {
+            "schema_version": 1,
+            "idempotency_key": "synthetic_key_invalid_02",
+            "event_date": 20260112,
+            "time_precision": "unknown",
+            "text": "合成正文",
+        })
+        self.assertEqual(status, 400)
+        self.assertEqual(result["error"]["code"], "INVALID_REQUEST")
+        self.assertFalse(result["error"]["retryable"])
 
     def test_capture_preview_returns_safe_handoff(self) -> None:
         status, result = self.post("/api/v1/capture/preview", {

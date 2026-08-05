@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { App } from "../../src/App";
-import { ApiError, type LifeConsoleClient } from "../../src/api/client";
+import { ApiError, createApiClient, type LifeConsoleClient } from "../../src/api/client";
 import { syntheticDashboard } from "../../src/data/dashboard";
 
 afterEach(() => {
@@ -67,11 +67,23 @@ describe("Life Console synthetic UI", () => {
     const skipped = within(lifeAction).getByRole("button", { name: "跳过" });
 
     expect(unknown.getAttribute("aria-pressed")).toBe("true");
+    expect((unknown as HTMLButtonElement).disabled).toBe(true);
     expect(skipped.getAttribute("aria-pressed")).toBe("false");
 
     await user.click(skipped);
     expect(unknown.getAttribute("aria-pressed")).toBe("false");
     expect(skipped.getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("derives the current weekday from the dashboard date", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(navigationButton("进展"));
+
+    const current = document.querySelector('.week-path li[data-current="true"]');
+    expect(current?.textContent).toContain("周一");
+    expect(current?.textContent).toContain("今天");
+    expect(current?.textContent).toContain("01-12");
   });
 
   it("renders separate trend segments across missing values", async () => {
@@ -122,6 +134,57 @@ describe("Life Console synthetic UI", () => {
 
     expect(screen.getByText("暂不维护")).toBeTruthy();
     expect(screen.getByText("方案待定")).toBeTruthy();
+    expect(screen.getByText("已验证可读取")).toBeTruthy();
+  });
+
+  it("does not show an anchor as saved when the Hub write fails", async () => {
+    const user = userEvent.setup();
+    const client = {
+      dashboard: vi.fn().mockResolvedValue(syntheticDashboard),
+      journal: vi.fn(),
+      checkin: vi.fn().mockRejectedValue(new Error("synthetic hub failure")),
+      preview: vi.fn(),
+    } satisfies LifeConsoleClient;
+    render(<App client={client} initialDashboard={syntheticDashboard} />);
+
+    const group = screen.getByRole("group", { name: "生活动作状态" });
+    const unknown = within(group).getByRole("button", { name: "未记录" });
+    const complete = within(group).getByRole("button", { name: "完成" });
+    await user.click(complete);
+
+    await waitFor(() => expect(client.checkin).toHaveBeenCalledTimes(1));
+    expect(unknown.getAttribute("aria-pressed")).toBe("true");
+    expect(complete.getAttribute("aria-pressed")).toBe("false");
+    expect(screen.getByRole("status").textContent).toContain("保存失败");
+  });
+
+  it("shows a source-confirmed anchor only after the dashboard refresh", async () => {
+    const user = userEvent.setup();
+    const updated = structuredClone(syntheticDashboard);
+    updated.today.anchors.life_action = "complete";
+    updated.today.daily_revision = 4;
+    const client = {
+      dashboard: vi.fn().mockResolvedValue(updated),
+      journal: vi.fn(),
+      checkin: vi.fn().mockResolvedValue({
+        request_id: "req_anchor",
+        command_id: "cmd_anchor",
+        action: "updated" as const,
+        source: { state: "saved" as const, revision: 4 },
+        read_model: "current" as const,
+        message: "已保存到 iCloud",
+      }),
+      preview: vi.fn(),
+    } satisfies LifeConsoleClient;
+    render(<App client={client} initialDashboard={syntheticDashboard} />);
+
+    const group = screen.getByRole("group", { name: "生活动作状态" });
+    const complete = within(group).getByRole("button", { name: "完成" });
+    await user.click(complete);
+
+    await waitFor(() => expect(complete.getAttribute("aria-pressed")).toBe("true"));
+    expect(client.dashboard).toHaveBeenCalled();
+    expect(screen.getByRole("status").textContent).toBe("已保存到 iCloud");
   });
 
   it("submits the journal form through the Hub client", async () => {
@@ -179,6 +242,12 @@ describe("Life Console synthetic UI", () => {
     expect(await screen.findByRole("region", { name: "状态冲突" })).toBeTruthy();
     expect(screen.getByText("当前值")).toBeTruthy();
     expect(screen.getByText("本次提交")).toBeTruthy();
+    expect(within(group).getByRole("button", { name: "未记录" }).getAttribute("aria-pressed")).toBe("true");
+
+    await user.click(screen.getByRole("button", { name: "使用最新记录" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("region", { name: "状态冲突" })).toBeNull();
+    });
   });
 
   it("submits only explicitly filled checkin fields", async () => {
@@ -206,5 +275,43 @@ describe("Life Console synthetic UI", () => {
 
     await waitFor(() => expect(checkin).toHaveBeenCalledTimes(1));
     expect(checkin.mock.calls[0][1].fields).toEqual({ energy: 4 });
+  });
+});
+
+describe("Life Console API session", () => {
+  it("establishes a session before protected reads and refreshes it once on 403", async () => {
+    const session = (suffix: string) => ({
+      schema_version: 1 as const,
+      csrf_token: `synthetic_csrf_token_${suffix}`,
+      expires_at: "2099-01-01T00:00:00Z",
+    });
+    const error = {
+      request_id: "req_expired",
+      error: { code: "INVALID_REQUEST", message: "会话无效", retryable: false },
+    };
+    const responses: Array<readonly [number, unknown]> = [
+      [200, session("first")],
+      [403, error],
+      [200, session("second")],
+      [200, syntheticDashboard],
+    ];
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+      const [status, body] = responses.shift()!;
+      return {
+        ok: status >= 200 && status < 300,
+        status,
+        json: async () => body,
+      } as Response;
+    });
+
+    const result = await createApiClient().dashboard();
+
+    expect(result.date).toBe(syntheticDashboard.date);
+    expect(fetchMock.mock.calls.map(([path]) => path)).toEqual([
+      "/api/v1/session",
+      "/api/v1/dashboard",
+      "/api/v1/session",
+      "/api/v1/dashboard",
+    ]);
   });
 });

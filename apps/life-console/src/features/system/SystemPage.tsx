@@ -14,9 +14,17 @@ export function SystemPage({ dashboard }: SystemPageProps) {
     },
     {
       title: "iCloud 项目",
-      value: dashboard.system.icloud === "ready" ? "可读写" : "部分可用",
-      tone: dashboard.system.icloud === "ready" ? "ready" : "attention",
-      description: "个人记录和状态的唯一真相源。",
+      value: {
+        readable: "已验证可读取",
+        writable: "已验证可读写",
+        partial: "部分可用",
+        unavailable: "不可用",
+      }[dashboard.system.icloud],
+      tone: dashboard.system.icloud === "writable" ? "ready" : "neutral",
+      description:
+        dashboard.system.icloud === "readable"
+          ? "当前只证明白名单快照可读；用户尚未批准真实写入验收。"
+          : "个人记录和状态的唯一真相源。",
     },
     {
       title: "自动化",

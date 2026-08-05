@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { ApiError, type LifeConsoleClient } from "../../api/client";
 import type { components } from "../../contracts/life-console";
@@ -45,28 +45,64 @@ const states: Array<{ value: AnchorState; label: string }> = [
 interface TodayPageProps {
   dashboard: Dashboard;
   client?: LifeConsoleClient;
-  onSaved?: () => void | Promise<void>;
+  onSaved?: () => boolean | Promise<boolean>;
 }
 
 export function TodayPage({ dashboard, client, onSaved }: TodayPageProps) {
   const [anchors, setAnchors] = useState<Anchors>(dashboard.today.anchors);
   const [conflict, setConflict] = useState<components["schemas"]["CheckinConflict"] | null>(null);
+  const [pending, setPending] = useState<AnchorKey | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    setAnchors(dashboard.today.anchors);
+  }, [dashboard.today.anchors]);
 
   async function updateAnchor(key: AnchorKey, value: AnchorState) {
-    setAnchors((current) => ({ ...current, [key]: value }));
-    if (!client || value === null) return;
+    setStatus(null);
+    if (value === null) {
+      setStatus("“未记录”只表示没有数据，不会作为普通更新提交。");
+      return;
+    }
+    if (!client) {
+      setAnchors((current) => ({ ...current, [key]: value }));
+      setStatus("合成演示已更新；未写入真实 iCloud。");
+      return;
+    }
+    setPending(key);
     try {
-      await client.checkin(dashboard.date, {
+      const result = await client.checkin(dashboard.date, {
         schema_version: 1,
         expect_revision: dashboard.today.daily_revision,
         fields: { [key]: value },
       });
-      await onSaved?.();
+      const refreshed = await onSaved?.();
+      setStatus(
+        refreshed === false
+          ? "已保存到 iCloud，但页面暂时无法刷新。"
+          : result.message,
+      );
+      if (refreshed !== false) setConflict(null);
     } catch (error) {
       if (error instanceof ApiError && error.response.conflict) {
         setConflict(error.response.conflict);
+        setStatus("未覆盖已有记录；请先核对最新值。");
+      } else {
+        setStatus("保存失败；页面仍显示原来的真实状态，请稍后重试。");
       }
+    } finally {
+      setPending(null);
     }
+  }
+
+  async function useLatestRecord() {
+    const refreshed = await onSaved?.();
+    if (refreshed === false) {
+      setStatus("暂时无法读取最新记录，冲突仍保留。");
+      return;
+    }
+    setConflict(null);
+    setStatus("已读取最新记录；本次未覆盖。");
   }
 
   return (
@@ -129,6 +165,7 @@ export function TodayPage({ dashboard, client, onSaved }: TodayPageProps) {
                   <button
                     aria-pressed={anchors[anchor.key] === state.value}
                     data-state={state.value ?? "unknown"}
+                    disabled={pending !== null || state.value === null}
                     key={state.label}
                     onClick={() => void updateAnchor(anchor.key, state.value)}
                     type="button"
@@ -141,6 +178,12 @@ export function TodayPage({ dashboard, client, onSaved }: TodayPageProps) {
           ))}
         </div>
       </section>
+
+      {status && (
+        <p className="save-receipt" role="status">
+          {status}
+        </p>
+      )}
 
       {conflict && (
         <section className="conflict-card" aria-label="状态冲突">
@@ -155,7 +198,7 @@ export function TodayPage({ dashboard, client, onSaved }: TodayPageProps) {
               <pre>{JSON.stringify(conflict.submitted, null, 2)}</pre>
             </article>
           </div>
-          <button className="secondary-button" onClick={() => void onSaved?.()} type="button">
+          <button className="secondary-button" onClick={() => void useLatestRecord()} type="button">
             使用最新记录
           </button>
         </section>
@@ -174,7 +217,11 @@ export function TodayPage({ dashboard, client, onSaved }: TodayPageProps) {
               <article className="confirmation-card" key={item.id}>
                 <strong>{item.title}</strong>
                 <p>{item.message}</p>
-                <button className="secondary-button" type="button">
+                <button
+                  className="secondary-button"
+                  onClick={() => void useLatestRecord()}
+                  type="button"
+                >
                   {item.action_label}
                 </button>
               </article>

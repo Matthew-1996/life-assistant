@@ -22,6 +22,80 @@ DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 47321
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 STATIC_ROOT = Path(__file__).resolve().parents[1] / "dist"
+CHECKIN_TIME_FIELDS = {"sleep_time", "wake_time", "out_of_bed_time"}
+CHECKIN_RATING_FIELDS = {"sleep_quality", "energy", "mood", "life_feeling"}
+CHECKIN_ANCHOR_FIELDS = {"wake", "body_light", "life_action", "wind_down"}
+CHECKIN_FIELDS = (
+    CHECKIN_TIME_FIELDS
+    | CHECKIN_RATING_FIELDS
+    | CHECKIN_ANCHOR_FIELDS
+    | {"awake_in_bed", "note_summary"}
+)
+TIME_PATTERN = re.compile(r"(?:[01][0-9]|2[0-3]):[0-5][0-9]")
+
+
+def _valid_date(value: Any) -> bool:
+    if not isinstance(value, str):
+        return False
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date().isoformat() == value
+    except ValueError:
+        return False
+
+
+def _valid_revision(value: Any) -> bool:
+    return value is None or (isinstance(value, int) and not isinstance(value, bool) and value >= 1)
+
+
+def _valid_text(value: Any, *, minimum: int = 1, maximum: int) -> bool:
+    return isinstance(value, str) and minimum <= len(value) <= maximum
+
+
+def _validate_journal(body: dict[str, Any]) -> None:
+    required = {"schema_version", "idempotency_key", "event_date", "time_precision", "text"}
+    allowed = required | {"event_time"}
+    if not required.issubset(body) or not set(body).issubset(allowed):
+        raise ValueError("journal fields")
+    if not _valid_date(body.get("event_date")):
+        raise ValueError("event date")
+    event_time = body.get("event_time")
+    if event_time is not None and (
+        not isinstance(event_time, str) or TIME_PATTERN.fullmatch(event_time) is None
+    ):
+        raise ValueError("event time")
+    if body.get("time_precision") not in {"exact", "approximate", "unknown"}:
+        raise ValueError("time precision")
+    if not _valid_text(body.get("text"), maximum=20_000):
+        raise ValueError("journal text")
+
+
+def _validate_checkin(day: str, body: dict[str, Any]) -> None:
+    if not _valid_date(day):
+        raise ValueError("date")
+    if set(body) != {"schema_version", "idempotency_key", "expect_revision", "fields"}:
+        raise ValueError("fields")
+    if not _valid_revision(body.get("expect_revision")):
+        raise ValueError("revision")
+    fields = body.get("fields")
+    if not isinstance(fields, dict) or not fields or not set(fields).issubset(CHECKIN_FIELDS):
+        raise ValueError("checkin fields")
+    for key, value in fields.items():
+        if key in CHECKIN_TIME_FIELDS and (
+            not isinstance(value, str) or TIME_PATTERN.fullmatch(value) is None
+        ):
+            raise ValueError("time")
+        if key in CHECKIN_RATING_FIELDS and (
+            not isinstance(value, int) or isinstance(value, bool) or not 1 <= value <= 5
+        ):
+            raise ValueError("rating")
+        if key in CHECKIN_ANCHOR_FIELDS and value not in {"complete", "minimum", "skipped"}:
+            raise ValueError("anchor")
+        if key == "awake_in_bed" and value not in {"yes", "no"}:
+            raise ValueError("awake")
+        if key == "note_summary" and (
+            not isinstance(value, str) or len(value) > 160
+        ):
+            raise ValueError("summary")
 
 
 class LifeConsoleServer(ThreadingHTTPServer):
@@ -79,7 +153,7 @@ class LifeConsoleHandler(SimpleHTTPRequestHandler):
             payload["conflict"] = conflict
         self._json(status, payload)
 
-    def _session(self) -> bool:
+    def _session(self, *, require_csrf: bool = False) -> bool:
         cookie = self.headers.get("Cookie", "")
         values = dict(
             item.strip().split("=", 1)
@@ -91,10 +165,17 @@ class LifeConsoleHandler(SimpleHTTPRequestHandler):
         if not state:
             return False
         csrf, expires = state
+        if expires <= datetime.now(timezone.utc):
+            self.server.sessions.pop(session_id or "", None)
+            return False
+        if not require_csrf:
+            return True
         return (
-            expires > datetime.now(timezone.utc)
-            and self.headers.get("X-Life-CSRF") == csrf
-            and valid_origin(self.headers.get("Origin"))
+            self.headers.get("X-Life-CSRF") == csrf
+            and valid_origin(
+                self.headers.get("Origin"),
+                port=self.server.server_port,
+            )
         )
 
     def _body(self) -> dict[str, Any]:
@@ -134,7 +215,7 @@ class LifeConsoleHandler(SimpleHTTPRequestHandler):
         }
 
     def do_GET(self) -> None:
-        if not valid_host(self.headers.get("Host")):
+        if not valid_host(self.headers.get("Host"), port=self.server.server_port):
             self._error(HTTPStatus.BAD_REQUEST, "INVALID_REQUEST", "请求主机无效")
             return
         route = self.path.split("?", 1)[0]
@@ -142,15 +223,18 @@ class LifeConsoleHandler(SimpleHTTPRequestHandler):
             self._json(HTTPStatus.OK, {"status": "ready", "schema_version": 1})
             return
         if route == "/api/v1/session":
-            token = secrets.token_urlsafe(24)
+            csrf = secrets.token_urlsafe(24)
             session_id = secrets.token_urlsafe(24)
             expires = datetime.now(timezone.utc) + timedelta(minutes=30)
-            self.server.sessions[session_id] = (token, expires)
+            self.server.sessions[session_id] = (csrf, expires)
             self._json(
                 HTTPStatus.OK,
-                {"schema_version": 1, "csrf_token": token, "expires_at": expires.isoformat()},
+                {"schema_version": 1, "csrf_token": csrf, "expires_at": expires.isoformat()},
                 cookie=f"life_console_session={session_id}; HttpOnly; SameSite=Strict; Path=/",
             )
+            return
+        if route in {"/api/v1/dashboard", "/api/v1/confirmations"} and not self._session():
+            self._error(HTTPStatus.FORBIDDEN, "INVALID_REQUEST", "本地会话无效")
             return
         if route == "/api/v1/dashboard":
             try:
@@ -173,19 +257,26 @@ class LifeConsoleHandler(SimpleHTTPRequestHandler):
         super().do_GET()
 
     def do_POST(self) -> None:
-        if not valid_host(self.headers.get("Host")) or not self._session():
+        if (
+            not valid_host(self.headers.get("Host"), port=self.server.server_port)
+            or not self._session(require_csrf=True)
+        ):
             self._error(HTTPStatus.FORBIDDEN, "INVALID_REQUEST", "写入会话无效")
             return
+        route = self.path.split("?", 1)[0]
         try:
             body = self._body()
-            route = self.path.split("?", 1)[0]
-            if body.get("schema_version") != 1:
+            if body.get("schema_version") != 1 or isinstance(body.get("schema_version"), bool):
                 raise ValueError("schema version")
             if route == "/api/v1/purge-plans":
                 if set(body) != {"schema_version", "target_type", "target_key"}:
                     raise ValueError("fields")
                 target_type = body["target_type"]
                 target_key = body["target_key"]
+                if target_type not in {"journal", "daily_checkin", "weekly_review", "phase_review"}:
+                    raise ValueError("target type")
+                if not _valid_text(target_key, maximum=200):
+                    raise ValueError("target key")
                 source = self.server.runner.purge_plan(target_type, target_key)
                 if source.get("exists") is False:
                     raise CommandError("SOURCE_INVALID")
@@ -217,8 +308,10 @@ class LifeConsoleHandler(SimpleHTTPRequestHandler):
                 if set(body) != {"schema_version", "text", "context_etag"}:
                     raise ValueError("fields")
                 text = body.get("text")
-                if not isinstance(text, str) or not text.strip() or len(text) > 8000:
+                if not _valid_text(text, maximum=8000) or not text.strip():
                     raise ValueError("text")
+                if not _valid_text(body.get("context_etag"), maximum=200):
+                    raise ValueError("context etag")
                 self._json(HTTPStatus.OK, {
                     "schema_version": 1,
                     "state": "handoff_required",
@@ -243,6 +336,10 @@ class LifeConsoleHandler(SimpleHTTPRequestHandler):
                 self._json(HTTPStatus.OK, cached[1])
                 return
             if route == "/api/v1/capture/commit":
+                if set(body) != {"schema_version", "idempotency_key", "preview_token"}:
+                    raise ValueError("fields")
+                if not _valid_text(body.get("preview_token"), minimum=24, maximum=500):
+                    raise ValueError("preview token")
                 self._error(HTTPStatus.BAD_REQUEST, "PREVIEW_EXPIRED", "当前没有可提交的保存预览")
                 return
             if route == "/api/v1/purge-confirmations":
@@ -253,6 +350,14 @@ class LifeConsoleHandler(SimpleHTTPRequestHandler):
                 }
                 if set(body) != required or body["acknowledge_historical_copies"] is not True:
                     raise ValueError("fields")
+                if (
+                    not _valid_text(body.get("plan_id"), minimum=16, maximum=200)
+                    or not _valid_text(body.get("confirmation_text"), maximum=200)
+                    or not _valid_revision(body.get("expect_revision"))
+                    or body.get("expect_revision") is None
+                    or not _valid_text(body.get("plan_etag"), minimum=16, maximum=200)
+                ):
+                    raise ValueError("purge confirmation")
                 plan = self.server.purge_plans.get(body["plan_id"])
                 if (
                     not plan
@@ -272,14 +377,12 @@ class LifeConsoleHandler(SimpleHTTPRequestHandler):
                 self.server.purge_plans.pop(body["plan_id"], None)
                 journal = plan["target_type"] == "journal"
             elif route == "/api/v1/journals":
-                if set(body) - {"schema_version", "idempotency_key", "event_date", "event_time", "time_precision", "text"}:
-                    raise ValueError("fields")
+                _validate_journal(body)
                 result = self.server.runner.add_journal(body)
                 journal = True
             elif route.startswith("/api/v1/checkins/"):
-                if set(body) != {"schema_version", "idempotency_key", "expect_revision", "fields"}:
-                    raise ValueError("fields")
                 day = route.rsplit("/", 1)[1]
+                _validate_checkin(day, body)
                 result = self.server.runner.upsert_checkin(day, body)
                 journal = False
             else:
@@ -296,7 +399,12 @@ class LifeConsoleHandler(SimpleHTTPRequestHandler):
         except (ValueError, KeyError, json.JSONDecodeError):
             self._error(HTTPStatus.BAD_REQUEST, "INVALID_REQUEST", "请求格式无效")
         except CommandError as error:
-            status = HTTPStatus.CONFLICT if error.code == "REVISION_CONFLICT" else HTTPStatus.SERVICE_UNAVAILABLE
+            status = {
+                "INVALID_REQUEST": HTTPStatus.BAD_REQUEST,
+                "REVISION_CONFLICT": HTTPStatus.CONFLICT,
+                "SOURCE_INVALID": HTTPStatus.SERVICE_UNAVAILABLE,
+                "TOOL_TIMEOUT": HTTPStatus.SERVICE_UNAVAILABLE,
+            }.get(error.code, HTTPStatus.SERVICE_UNAVAILABLE)
             conflict = None
             if error.code == "REVISION_CONFLICT" and route.startswith("/api/v1/checkins/"):
                 day = route.rsplit("/", 1)[1]
@@ -317,7 +425,7 @@ class LifeConsoleHandler(SimpleHTTPRequestHandler):
                     "type": "revision_conflict",
                     "title": "状态已在其他位置更新",
                     "message": "请核对最新记录与本次提交后再决定。",
-                    "action_label": "查看差异",
+                    "action_label": "刷新最新记录",
                 }
             self._error(status, error.code, "记录无法安全保存", conflict=conflict)
 
@@ -330,9 +438,15 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", default=DEFAULT_HOST)
     parser.add_argument("--port", default=DEFAULT_PORT, type=int)
+    parser.add_argument(
+        "--root",
+        default=PROJECT_ROOT,
+        type=Path,
+        help="iCloud life-assistant project root (machine-local launch setting)",
+    )
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    server = create_server(host=args.host, port=args.port)
+    server = create_server(root=args.root, host=args.host, port=args.port)
     LOG.info("Life Hub ready at http://%s:%s", *server.server_address)
     server.serve_forever()
 

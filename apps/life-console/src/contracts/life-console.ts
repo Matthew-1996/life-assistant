@@ -234,7 +234,7 @@ export interface components {
                 /** @enum {string} */
                 hub: "ready" | "unavailable";
                 /** @enum {string} */
-                icloud: "ready" | "partial" | "unavailable";
+                icloud: "readable" | "writable" | "partial" | "unavailable";
                 /** @enum {string} */
                 automation: "ready" | "attention" | "unknown";
                 /** @enum {string} */
@@ -394,6 +394,15 @@ export interface components {
                 "application/json": components["schemas"]["ErrorResponse"];
             };
         };
+        /** @description Local session, CSRF token, or same-origin policy failed. */
+        Forbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
         /** @description Revision or source state conflict. */
         Conflict: {
             headers: {
@@ -493,6 +502,7 @@ export interface operations {
                     "application/json": components["schemas"]["Dashboard"];
                 };
             };
+            403: components["responses"]["Forbidden"];
             503: components["responses"]["ServiceUnavailable"];
         };
     };
@@ -513,6 +523,7 @@ export interface operations {
         responses: {
             200: components["responses"]["CommandSuccess"];
             400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
             503: components["responses"]["ServiceUnavailable"];
         };
@@ -536,6 +547,7 @@ export interface operations {
         responses: {
             200: components["responses"]["CommandSuccess"];
             400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
             503: components["responses"]["ServiceUnavailable"];
         };
@@ -570,6 +582,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
             503: components["responses"]["ServiceUnavailable"];
         };
     };
@@ -595,6 +608,7 @@ export interface operations {
         responses: {
             200: components["responses"]["CommandSuccess"];
             400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
         };
     };
@@ -620,6 +634,7 @@ export interface operations {
                     };
                 };
             };
+            403: components["responses"]["Forbidden"];
         };
     };
     createPurgePlan: {
@@ -653,6 +668,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
         };
     };
@@ -683,6 +699,7 @@ export interface operations {
         responses: {
             200: components["responses"]["CommandSuccess"];
             400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
         };
     };

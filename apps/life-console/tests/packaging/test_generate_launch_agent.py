@@ -23,8 +23,15 @@ class LaunchAgentGeneratorTests(unittest.TestCase):
             self.assertEqual(plist["WorkingDirectory"], str(APP_ROOT.resolve()))
             self.assertIn("127.0.0.1", plist["ProgramArguments"])
             self.assertNotIn("0.0.0.0", plist["ProgramArguments"])
+            self.assertIn("--root", plist["ProgramArguments"])
+            self.assertEqual(
+                plist["ProgramArguments"][plist["ProgramArguments"].index("--root") + 1],
+                str(APP_ROOT.parents[1].resolve()),
+            )
             self.assertTrue(plist["RunAtLoad"])
             self.assertFalse(plist["KeepAlive"])
+            self.assertEqual(Path(plist["StandardOutPath"]).parent, output / "logs")
+            self.assertTrue((output / "logs").is_dir())
             self.assertTrue(launcher_path.stat().st_mode & stat.S_IXUSR)
             self.assertIn("http://127.0.0.1:47321/", launcher_path.read_text())
 
