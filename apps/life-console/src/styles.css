@@ -880,3 +880,26 @@ select {
       color 150ms ease;
   }
 }
+
+.enrichment-control {
+  margin-top: 0.75rem;
+}
+
+.enrichment-control .preview-card {
+  margin-top: 0.5rem;
+}
+
+.disclosure-list {
+  margin: 0.5rem 0 0.75rem;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  color: var(--text-muted, #4b5563);
+}
+
+.enrichment-failed {
+  margin-top: 0.5rem;
+  display: grid;
+  gap: 0.4rem;
+}

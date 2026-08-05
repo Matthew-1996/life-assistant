@@ -6,6 +6,8 @@ export type ErrorResponse = components["schemas"]["ErrorResponse"];
 export type JournalRequest = components["schemas"]["JournalRequest"];
 export type CheckinRequest = components["schemas"]["CheckinRequest"];
 export type CapturePreview = components["schemas"]["CapturePreview"];
+export type EnrichmentPreview = components["schemas"]["EnrichmentPreview"];
+export type EnrichmentJob = components["schemas"]["EnrichmentJob"];
 
 type Session =
   operations["createSession"]["responses"][200]["content"]["application/json"];
@@ -21,6 +23,10 @@ export interface LifeConsoleClient {
   journal(request: Omit<JournalRequest, "idempotency_key">): Promise<CommandReceipt>;
   checkin(date: string, request: Omit<CheckinRequest, "idempotency_key">): Promise<CommandReceipt>;
   preview(text: string, contextEtag: string): Promise<CapturePreview>;
+  enrichmentPreview(journalId: string): Promise<EnrichmentPreview>;
+  enrichmentCommit(previewToken: string): Promise<EnrichmentJob>;
+  enrichmentStatus(jobId: string): Promise<EnrichmentJob>;
+  enrichmentRetry(jobId: string): Promise<EnrichmentJob>;
 }
 
 function idempotencyKey(): string {
@@ -97,6 +103,24 @@ export function createApiClient(): LifeConsoleClient {
         schema_version: 1,
         text,
         context_etag: contextEtag,
+      }),
+    enrichmentPreview: (journalId) =>
+      request<EnrichmentPreview>("/api/v1/journal-enrichments/preview", {
+        schema_version: 1,
+        journal_id: journalId,
+      }),
+    enrichmentCommit: (previewToken) =>
+      request<EnrichmentJob>("/api/v1/journal-enrichments/commit", {
+        schema_version: 1,
+        idempotency_key: idempotencyKey(),
+        preview_token: previewToken,
+      }),
+    enrichmentStatus: (jobId) =>
+      request<EnrichmentJob>(`/api/v1/journal-enrichments/${jobId}`),
+    enrichmentRetry: (jobId) =>
+      request<EnrichmentJob>(`/api/v1/journal-enrichments/${jobId}/retry`, {
+        schema_version: 1,
+        idempotency_key: idempotencyKey(),
       }),
   };
 }

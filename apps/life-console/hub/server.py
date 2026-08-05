@@ -15,6 +15,9 @@ from typing import Any
 from hub.command_runner.runner import CommandError, CommandRunner
 from hub.read_model.dashboard import ReadModelError, build_dashboard, checkin_conflict_projection
 from hub.security.policy import require_loopback_bind, valid_host, valid_origin
+from hub.semantic import EnrichmentValidationError
+from hub.semantic.jobs import JobError, JobNotFound
+from hub.semantic.runtime import EnrichmentRuntime
 
 
 LOG = logging.getLogger("life_console.hub")
@@ -36,6 +39,14 @@ CHECKIN_FIELDS = (
 TIME_PATTERN = re.compile(r"(?:[01][0-9]|2[0-3]):[0-5][0-9]")
 JOURNAL_LINE_FIELDS = {"title": (1, 120), "summary": (1, 240)}
 JOURNAL_LIST_FIELDS = {"facts", "feelings", "people", "places", "themes", "tags"}
+ENRICHMENT_MODELS = {"deepseek-v4-flash", "deepseek-v4-pro"}
+ENRICHMENT_ERROR_STATUS = {
+    "INVALID_REQUEST": HTTPStatus.BAD_REQUEST,
+    "PREVIEW_EXPIRED": HTTPStatus.BAD_REQUEST,
+    "SOURCE_CHANGED": HTTPStatus.CONFLICT,
+    "SOURCE_INVALID": HTTPStatus.SERVICE_UNAVAILABLE,
+    "MODEL_OUTPUT_INVALID": HTTPStatus.SERVICE_UNAVAILABLE,
+}
 
 
 def _valid_date(value: Any) -> bool:
@@ -125,6 +136,9 @@ class LifeConsoleServer(ThreadingHTTPServer):
         root: Path,
         icloud_status: str = "readable",
         automation_status: str = "unknown",
+        enrichment_authorization: str | None = None,
+        enrichment_transport: Any = None,
+        enrichment_synchronous: bool = False,
     ):
         require_loopback_bind(address[0])
         if icloud_status not in ICLOUD_STATUSES:
@@ -139,7 +153,15 @@ class LifeConsoleServer(ThreadingHTTPServer):
         self.idempotency: dict[str, tuple[str, dict[str, Any]]] = {}
         self.purge_plans: dict[str, dict[str, Any]] = {}
         self.confirmations: dict[str, dict[str, Any]] = {}
+        self.enrichment = EnrichmentRuntime(
+            code_root=PROJECT_ROOT,
+            journal_root=self.project_root / "journal",
+            authorization_version=enrichment_authorization,
+            transport=enrichment_transport,
+            synchronous=enrichment_synchronous,
+        )
         super().__init__(address, handler)
+        self.enrichment.recover()
 
 
 class LifeConsoleHandler(SimpleHTTPRequestHandler):
@@ -184,6 +206,15 @@ class LifeConsoleHandler(SimpleHTTPRequestHandler):
         if conflict is not None:
             payload["conflict"] = conflict
         self._json(status, payload)
+
+    def _enrichment_error(self, error: EnrichmentValidationError) -> None:
+        status = ENRICHMENT_ERROR_STATUS.get(error.code, HTTPStatus.SERVICE_UNAVAILABLE)
+        message = {
+            "SOURCE_CHANGED": "日记已变化，未发送旧内容",
+            "PREVIEW_EXPIRED": "预览已过期，请重新生成",
+            "INVALID_REQUEST": "请求无法处理",
+        }.get(error.code, "云端整理暂不可用")
+        self._error(status, error.code, message)
 
     def _session(self, *, require_csrf: bool = False) -> bool:
         cookie = self.headers.get("Cookie", "")
@@ -289,6 +320,18 @@ class LifeConsoleHandler(SimpleHTTPRequestHandler):
                 "items": list(self.server.confirmations.values()),
             })
             return
+        if route.startswith("/api/v1/journal-enrichments/"):
+            job_id = route.rsplit("/", 1)[1]
+            if not job_id or not self._session():
+                self._error(HTTPStatus.FORBIDDEN, "INVALID_REQUEST", "本地会话无效")
+                return
+            try:
+                self._json(HTTPStatus.OK, self.server.enrichment.status(job_id))
+            except JobNotFound:
+                self._error(HTTPStatus.NOT_FOUND, "NOT_FOUND", "作业不存在")
+            except (JobError, EnrichmentValidationError):
+                self._error(HTTPStatus.SERVICE_UNAVAILABLE, "SOURCE_INVALID", "作业状态暂不可用")
+            return
         if route.startswith("/api/"):
             self._error(HTTPStatus.NOT_FOUND, "INVALID_REQUEST", "接口不存在")
             return
@@ -357,6 +400,23 @@ class LifeConsoleHandler(SimpleHTTPRequestHandler):
                     "intent": "unknown",
                 })
                 return
+            if route == "/api/v1/journal-enrichments/preview":
+                if set(body) - {"schema_version", "journal_id", "model"}:
+                    raise ValueError("fields")
+                if not _valid_text(body.get("journal_id"), maximum=120):
+                    raise ValueError("journal id")
+                model = body.get("model")
+                if model is not None and model not in ENRICHMENT_MODELS:
+                    raise ValueError("model")
+                try:
+                    preview = self.server.enrichment.mint_preview(
+                        body["journal_id"], model=model
+                    )
+                except EnrichmentValidationError as error:
+                    self._enrichment_error(error)
+                    return
+                self._json(HTTPStatus.OK, preview)
+                return
             key = body.get("idempotency_key")
             if (
                 not isinstance(key, str)
@@ -379,6 +439,34 @@ class LifeConsoleHandler(SimpleHTTPRequestHandler):
                 if not _valid_text(body.get("preview_token"), minimum=24, maximum=500):
                     raise ValueError("preview token")
                 self._error(HTTPStatus.BAD_REQUEST, "PREVIEW_EXPIRED", "当前没有可提交的保存预览")
+                return
+            if route == "/api/v1/journal-enrichments/commit":
+                if set(body) != {"schema_version", "idempotency_key", "preview_token"}:
+                    raise ValueError("fields")
+                if not _valid_text(body.get("preview_token"), minimum=24, maximum=500):
+                    raise ValueError("preview token")
+                try:
+                    job = self.server.enrichment.commit(body["preview_token"], key)
+                except EnrichmentValidationError as error:
+                    self._enrichment_error(error)
+                    return
+                self._json(HTTPStatus.ACCEPTED, job)
+                return
+            if route.startswith("/api/v1/journal-enrichments/") and route.endswith("/retry"):
+                if set(body) != {"schema_version", "idempotency_key"}:
+                    raise ValueError("fields")
+                job_id = route[len("/api/v1/journal-enrichments/"):-len("/retry")]
+                if not job_id or "/" in job_id:
+                    raise ValueError("job id")
+                try:
+                    job = self.server.enrichment.retry(job_id, key)
+                except JobNotFound:
+                    self._error(HTTPStatus.NOT_FOUND, "NOT_FOUND", "作业不存在")
+                    return
+                except EnrichmentValidationError as error:
+                    self._enrichment_error(error)
+                    return
+                self._json(HTTPStatus.ACCEPTED, job)
                 return
             if route == "/api/v1/purge-confirmations":
                 required = {
@@ -475,6 +563,9 @@ def create_server(
     port: int = DEFAULT_PORT,
     icloud_status: str = "readable",
     automation_status: str = "unknown",
+    enrichment_authorization: str | None = None,
+    enrichment_transport: Any = None,
+    enrichment_synchronous: bool = False,
 ) -> LifeConsoleServer:
     return LifeConsoleServer(
         (host, port),
@@ -482,6 +573,9 @@ def create_server(
         root=root,
         icloud_status=icloud_status,
         automation_status=automation_status,
+        enrichment_authorization=enrichment_authorization,
+        enrichment_transport=enrichment_transport,
+        enrichment_synchronous=enrichment_synchronous,
     )
 
 

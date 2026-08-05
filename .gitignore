@@ -38,6 +38,9 @@ journal/INDEX.md
 journal/insight-decisions.jsonl
 journal/review-policy.json
 journal/.journal.lock
+journal/people-aliases.json
+journal/enrichment-audit.jsonl
+journal/.operations/
 records/*.jsonl
 records/.*.lock
 records/apple-health-latest.txt

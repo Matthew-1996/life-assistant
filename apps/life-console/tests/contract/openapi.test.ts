@@ -148,6 +148,10 @@ describe("Life Console OpenAPI contract", () => {
       "getConfirmations",
       "createPurgePlan",
       "confirmPurge",
+      "previewJournalEnrichment",
+      "commitJournalEnrichment",
+      "getJournalEnrichment",
+      "retryJournalEnrichment",
     ]);
     expect(new Set(operationIds).size).toBe(operationIds.length);
     expect(Object.keys(typedFixtureCoverage)).toEqual([
@@ -168,10 +172,14 @@ describe("Life Console OpenAPI contract", () => {
     ["/api/v1/confirmations", "get", "confirmations.synthetic.json"],
     ["/api/v1/purge-plans", "post", "purge-plan.synthetic.json"],
     ["/api/v1/purge-confirmations", "post", "command-receipt.synthetic.json"],
+    ["/api/v1/journal-enrichments/preview", "post", "enrichment-preview.synthetic.json", "200"],
+    ["/api/v1/journal-enrichments/commit", "post", "enrichment-job.synthetic.json", "202"],
+    ["/api/v1/journal-enrichments/{job_id}", "get", "enrichment-job.synthetic.json", "200"],
+    ["/api/v1/journal-enrichments/{job_id}/retry", "post", "enrichment-job.synthetic.json", "202"],
   ] as const)(
     "validates the primary response for %s",
-    (path, method, fixtureName) => {
-      const validate = createValidator(responseSchema(path, method, "200"));
+    (path, method, fixtureName, status = "200") => {
+      const validate = createValidator(responseSchema(path, method, status));
       expectValid(validate, readFixture(fixtureName));
     },
   );
@@ -182,8 +190,30 @@ describe("Life Console OpenAPI contract", () => {
     ["command-receipt.synthetic.json", "CommandReceipt"],
     ["error-response.synthetic.json", "ErrorResponse"],
     ["revision-conflict.synthetic.json", "ErrorResponse"],
+    ["enrichment-preview.synthetic.json", "EnrichmentPreview"],
+    ["enrichment-job.synthetic.json", "EnrichmentJob"],
   ])("validates %s against component %s", (fixtureName, schemaName) => {
     expectValid(createComponentValidator(schemaName), readFixture(fixtureName));
+  });
+
+  it("rejects unknown enrichment writable fields", () => {
+    const validate = createComponentValidator("EnrichmentPreview");
+    const fixture = readFixture<{ writable_fields: string[] }>(
+      "enrichment-preview.synthetic.json",
+    );
+
+    expect(
+      validate({ ...fixture, writable_fields: [...fixture.writable_fields, "raw"] }),
+    ).toBe(false);
+    expect(validate.errors?.some((error) => error.keyword === "enum")).toBe(true);
+  });
+
+  it("rejects an unknown enrichment failure code", () => {
+    const validate = createComponentValidator("EnrichmentJob");
+    const fixture = readFixture<JsonObject>("enrichment-job.synthetic.json");
+
+    expect(validate({ ...fixture, failure_code: "RAW_LEAKED" })).toBe(false);
+    expect(validate.errors?.some((error) => error.keyword === "enum")).toBe(true);
   });
 
   it("rejects unknown dashboard fields", () => {

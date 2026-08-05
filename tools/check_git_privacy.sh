@@ -40,6 +40,7 @@ is_private_path() {
     automations/*|backups/*|outputs/*|\
     journal/entries/*|journal/reviews/*|journal/index.jsonl|journal/INDEX.md|\
     journal/insight-decisions.jsonl|journal/review-policy.json|\
+    journal/people-aliases.json|journal/enrichment-audit.jsonl|journal/.operations/*|\
     records/*.jsonl|records/apple-health-latest.txt|records/apple-sleep-details-latest.txt|\
     integrations/google-sheets.json|integrations/google-sheets.sync-state.json|\
     web/life-dashboard/.openai/*|web/life-dashboard/PUBLICATION_STATE.json|\
@@ -61,13 +62,15 @@ is_private_path() {
     case "$name" in
       USER.md|MEMORY.md|GOALS.md|PROJECT_CONTEXT.md|PORTABILITY.md|STATUS.md|\
       index.jsonl|insight-decisions.jsonl|review-policy.json|\
+      people-aliases.json|enrichment-audit.jsonl|\
       apple-health-latest.txt|apple-sleep-details-latest.txt|\
       google-sheets.json|google-sheets.sync-state.json)
         return 0
         ;;
     esac
     case "$path" in
-      */journal/entries/*|*/journal/reviews/*|*/records/*.jsonl|*/backups/*)
+      */journal/entries/*|*/journal/reviews/*|*/journal/.operations/*|\
+      */records/*.jsonl|*/backups/*)
         return 0
         ;;
     esac

@@ -1,11 +1,12 @@
 import { type SyntheticEvent, useState } from "react";
 
-import { ApiError, type LifeConsoleClient } from "../../api/client";
+import { ApiError, type EnrichmentJob, type EnrichmentPreview, type LifeConsoleClient } from "../../api/client";
 import type { components } from "../../contracts/life-console";
 import type { Dashboard } from "../../data/dashboard";
 
 type EntryMode = "conversation" | "forms";
 type FormMode = "journal" | "checkin";
+type RecentJournal = Dashboard["records"]["recent_journals"][number];
 
 interface RecordsPageProps {
   dashboard: Dashboard;
@@ -49,6 +50,133 @@ function splitJournalList(value: FormDataEntryValue | null): string[] {
     .split(/[，,、\n]/)
     .map((item) => compactLine(item, 180))
     .filter(Boolean))).slice(0, 12);
+}
+
+type EnrichmentPhase = "idle" | "preview" | "working" | "succeeded" | "failed";
+
+function EnrichmentControl({
+  journal,
+  client,
+}: {
+  journal: RecentJournal;
+  client?: LifeConsoleClient;
+}) {
+  const [phase, setPhase] = useState<EnrichmentPhase>("idle");
+  const [preview, setPreview] = useState<EnrichmentPreview | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+
+  async function pollUntilDone(jobId: string): Promise<void> {
+    if (!client) return;
+    for (let attempt = 0; attempt < 40; attempt += 1) {
+      const job: EnrichmentJob = await client.enrichmentStatus(jobId);
+      if (job.status === "succeeded") {
+        setPhase("succeeded");
+        setNote("结构化整理已保存；原文与时间不变。");
+        return;
+      }
+      if (job.status === "failed") {
+        setPhase("failed");
+        setNote("云端整理未完成；本地原文和索引保持不变，可主动重试。");
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+    setPhase("failed");
+    setNote("云端整理仍在进行，请稍后在此重试。");
+  }
+
+  async function startPreview() {
+    setNote(null);
+    if (!client) {
+      setPhase("preview");
+      setPreview(null);
+      setNote("合成演示：预览不联网，也不会发送任何日记。");
+      return;
+    }
+    try {
+      const result = await client.enrichmentPreview(journal.id);
+      setPreview(result);
+      setPhase("preview");
+    } catch {
+      setPhase("failed");
+      setNote("暂时无法生成发送预览，请稍后重试。");
+    }
+  }
+
+  async function confirmSend() {
+    if (!client || !preview) {
+      setPhase("idle");
+      setNote("合成演示未发送任何数据。");
+      return;
+    }
+    setPhase("working");
+    setNote("已提交；可继续使用工作台。");
+    try {
+      const job = await client.enrichmentCommit(preview.preview_token);
+      await pollUntilDone(job.job_id);
+    } catch (error) {
+      setPhase("failed");
+      setNote(
+        error instanceof ApiError && error.response.error.code === "SOURCE_CHANGED"
+          ? "这篇日记刚刚有改动，未发送旧内容；请重新生成预览。"
+          : "云端整理未成功；本地记录未受影响，可主动重试。",
+      );
+    }
+  }
+
+  return (
+    <div className="enrichment-control">
+      {phase === "idle" && (
+        <button className="secondary-button" type="button" onClick={() => void startPreview()}>
+          用 DeepSeek 整理此篇
+        </button>
+      )}
+
+      {phase === "preview" && (
+        <article className="preview-card" aria-label="云端整理发送预览">
+          <span className="neutral-badge">发送预览（尚未联网）</span>
+          <h3>将这一篇发送给 DeepSeek 做结构化整理</h3>
+          {preview ? (
+            <>
+              <dl>
+                <div><dt>接收方</dt><dd>{preview.provider} · {preview.model}</dd></div>
+                <div><dt>可写回字段</dt><dd>{preview.writable_fields.join("、")}</dd></div>
+                <div><dt>最多重试</dt><dd>{preview.max_retries} 次</dd></div>
+              </dl>
+              <ul className="disclosure-list">
+                {preview.disclosures.map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <p>{note}</p>
+          )}
+          <div className="form-actions">
+            <button className="secondary-button" type="button" onClick={() => { setPhase("idle"); setPreview(null); }}>
+              取消
+            </button>
+            <button className="primary-button" type="button" onClick={() => void confirmSend()}>
+              确认发送
+            </button>
+          </div>
+        </article>
+      )}
+
+      {phase === "working" && <p className="save-receipt" role="status">{note}</p>}
+
+      {phase === "succeeded" && <p className="save-receipt" role="status">{note}</p>}
+
+      {phase === "failed" && (
+        <div className="enrichment-failed" role="status">
+          <p>{note}</p>
+          <button className="secondary-button" type="button" onClick={() => void startPreview()}>
+            重新预览并重试
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
@@ -420,10 +548,11 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
         </div>
         <div className="recent-list">
           {dashboard.records.recent_journals.map((item) => (
-            <article key={`${item.date}-${item.title}`}>
+            <article key={item.id}>
               <time>{item.date}</time>
               <strong>{item.title}</strong>
               <p>{item.summary}</p>
+              <EnrichmentControl journal={item} client={client} />
             </article>
           ))}
         </div>

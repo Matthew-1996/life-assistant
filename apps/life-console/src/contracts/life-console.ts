@@ -164,6 +164,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/journal-enrichments/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Build a per-entry send preview for optional DeepSeek semantic enrichment. This never contacts the network; it only binds a short-lived token to the current entry snapshot, provider, model, writable-field allowlist, prompt version, authorization version, and retry ceiling. */
+        post: operations["previewJournalEnrichment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/journal-enrichments/commit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Confirm a previously issued preview and create an idempotent local background job. Returns 202 immediately; the local saved journal is never blocked. Rejects a drifted source with SOURCE_CHANGED before any send. */
+        post: operations["commitJournalEnrichment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/journal-enrichments/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Fetch a raw-free enrichment job status. */
+        get: operations["getJournalEnrichment"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/journal-enrichments/{job_id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description User-initiated retry of a failed job. Returns immediately; the worker re-validates the source before any send. */
+        post: operations["retryJournalEnrichment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -224,6 +292,7 @@ export interface components {
             };
             records: {
                 recent_journals: {
+                    id: string;
                     /** Format: date */
                     date: string;
                     title: string;
@@ -358,6 +427,44 @@ export interface components {
             confirmation_text: string;
             historical_copies_notice: string;
         };
+        /** @enum {string} */
+        EnrichmentModel: "deepseek-v4-flash" | "deepseek-v4-pro";
+        /** @enum {string} */
+        EnrichmentField: "title" | "summary" | "facts" | "feelings" | "people" | "places" | "themes" | "tags";
+        EnrichmentPreview: {
+            /** @constant */
+            schema_version: 1;
+            preview_token: string;
+            /** Format: date-time */
+            expires_at: string;
+            journal_id: string;
+            /** @constant */
+            provider: "deepseek";
+            model: components["schemas"]["EnrichmentModel"];
+            prompt_version: string;
+            authorization_version: string;
+            max_retries: number;
+            writable_fields: components["schemas"]["EnrichmentField"][];
+            disclosures: string[];
+        };
+        EnrichmentJob: {
+            /** @constant */
+            schema_version: 1;
+            job_id: string;
+            journal_id: string;
+            /** @constant */
+            provider: "deepseek";
+            model: components["schemas"]["EnrichmentModel"];
+            prompt_version: string;
+            /** @enum {string} */
+            status: "queued" | "running" | "succeeded" | "failed";
+            attempts: number;
+            max_retries: number;
+            /** @enum {string|null} */
+            failure_code?: "PROVIDER_UNAVAILABLE" | "MODEL_OUTPUT_INVALID" | "SOURCE_CHANGED" | null;
+            /** Format: date-time */
+            updated_at?: string;
+        };
         CommandReceipt: {
             request_id: string;
             command_id: string;
@@ -377,7 +484,7 @@ export interface components {
             conflict?: components["schemas"]["CheckinConflict"];
             error: {
                 /** @enum {string} */
-                code: "INVALID_REQUEST" | "REVISION_CONFLICT" | "SOURCE_INVALID" | "HUB_UNAVAILABLE" | "TOOL_TIMEOUT" | "PREVIEW_EXPIRED";
+                code: "INVALID_REQUEST" | "REVISION_CONFLICT" | "SOURCE_INVALID" | "SOURCE_CHANGED" | "NOT_FOUND" | "HUB_UNAVAILABLE" | "TOOL_TIMEOUT" | "PREVIEW_EXPIRED";
                 message: string;
                 retryable: boolean;
             };
@@ -413,6 +520,15 @@ export interface components {
         };
         /** @description Revision or source state conflict. */
         Conflict: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description The requested local resource does not exist. */
+        NotFound: {
             headers: {
                 [name: string]: unknown;
             };
@@ -708,6 +824,136 @@ export interface operations {
             200: components["responses"]["CommandSuccess"];
             400: components["responses"]["BadRequest"];
             403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    previewJournalEnrichment: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Life-CSRF": components["parameters"]["CsrfHeader"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @constant */
+                    schema_version: 1;
+                    journal_id: string;
+                    model?: components["schemas"]["EnrichmentModel"];
+                };
+            };
+        };
+        responses: {
+            /** @description Offline send-scope preview with a short-lived preview token. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnrichmentPreview"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    commitJournalEnrichment: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Life-CSRF": components["parameters"]["CsrfHeader"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @constant */
+                    schema_version: 1;
+                    idempotency_key: components["schemas"]["IdempotencyKey"];
+                    preview_token: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Local background job accepted; no external request has been sent yet. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnrichmentJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    getJournalEnrichment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Raw-free job status. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnrichmentJob"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    retryJournalEnrichment: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Life-CSRF": components["parameters"]["CsrfHeader"];
+            };
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @constant */
+                    schema_version: 1;
+                    idempotency_key: components["schemas"]["IdempotencyKey"];
+                };
+            };
+        };
+        responses: {
+            /** @description Retry accepted; no external request has been sent yet. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnrichmentJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
         };
     };

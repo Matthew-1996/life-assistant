@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "preview_token": "synthetic-enrichment-preview-token-0001",
+  "expires_at": "2026-01-12T09:05:00+08:00",
+  "journal_id": "20260112-unknown-000000000000",
+  "provider": "deepseek",
+  "model": "deepseek-v4-flash",
+  "prompt_version": "journal-enrichment-2026-08-05.1",
+  "authorization_version": "synthetic-auth-0",
+  "max_retries": 2,
+  "writable_fields": [
+    "title",
+    "summary",
+    "facts",
+    "feelings",
+    "people",
+    "places",
+    "themes",
+    "tags"
+  ],
+  "disclosures": [
+    "仅发送当前这一篇日记的原文、发生日期与可选时间，以及别名统一所需的最小人物别名表。",
+    "不发送其他日记、苹果健康数据、每日/每周/阶段状态、目标、聊天历史、备份或 API Key。",
+    "接收方为 DeepSeek API，仅通过 HTTPS 访问 api.deepseek.com。",
+    "可写回字段仅限：title、summary、facts、feelings、people、places、themes、tags。",
+    "不修改原文、事件日期/时间、隐私级别、目标、状态、回顾或自动化。",
+    "这是向第三方服务商传输个人日记，不同于本地 local-only；已发送的数据无法通过本地撤回从服务商侧收回。",
+    "最多重试 2 次；取消、撤回、来源变化或授权过期时不再发送。"
+  ]
+}
