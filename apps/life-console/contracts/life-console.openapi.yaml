@@ -211,6 +211,119 @@ paths:
         "400": {$ref: "#/components/responses/BadRequest"}
         "403": {$ref: "#/components/responses/Forbidden"}
         "409": {$ref: "#/components/responses/Conflict"}
+  /api/v1/journal-enrichments/preview:
+    post:
+      operationId: previewJournalEnrichment
+      description: >-
+        Build a per-entry send preview for optional DeepSeek semantic
+        enrichment. This never contacts the network; it only binds a short-lived
+        token to the current entry snapshot, provider, model, writable-field
+        allowlist, prompt version, authorization version, and retry ceiling.
+      parameters:
+        - {$ref: "#/components/parameters/CsrfHeader"}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [schema_version, journal_id]
+              properties:
+                schema_version: {type: integer, const: 1}
+                journal_id: {type: string, minLength: 1, maxLength: 120}
+                model: {$ref: "#/components/schemas/EnrichmentModel"}
+      responses:
+        "200":
+          description: Offline send-scope preview with a short-lived preview token.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/EnrichmentPreview"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "409": {$ref: "#/components/responses/Conflict"}
+        "503": {$ref: "#/components/responses/ServiceUnavailable"}
+  /api/v1/journal-enrichments/commit:
+    post:
+      operationId: commitJournalEnrichment
+      description: >-
+        Confirm a previously issued preview and create an idempotent local
+        background job. Returns 202 immediately; the local saved journal is never
+        blocked. Rejects a drifted source with SOURCE_CHANGED before any send.
+      parameters:
+        - {$ref: "#/components/parameters/CsrfHeader"}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [schema_version, idempotency_key, preview_token]
+              properties:
+                schema_version: {type: integer, const: 1}
+                idempotency_key: {$ref: "#/components/schemas/IdempotencyKey"}
+                preview_token: {type: string, minLength: 24, maxLength: 500}
+      responses:
+        "202":
+          description: Local background job accepted; no external request has been sent yet.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/EnrichmentJob"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "409": {$ref: "#/components/responses/Conflict"}
+        "503": {$ref: "#/components/responses/ServiceUnavailable"}
+  /api/v1/journal-enrichments/{job_id}:
+    get:
+      operationId: getJournalEnrichment
+      description: Fetch a raw-free enrichment job status.
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema: {type: string, minLength: 16, maxLength: 200}
+      responses:
+        "200":
+          description: Raw-free job status.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/EnrichmentJob"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /api/v1/journal-enrichments/{job_id}/retry:
+    post:
+      operationId: retryJournalEnrichment
+      description: >-
+        User-initiated retry of a failed job. Returns immediately; the worker
+        re-validates the source before any send.
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema: {type: string, minLength: 16, maxLength: 200}
+        - {$ref: "#/components/parameters/CsrfHeader"}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [schema_version, idempotency_key]
+              properties:
+                schema_version: {type: integer, const: 1}
+                idempotency_key: {$ref: "#/components/schemas/IdempotencyKey"}
+      responses:
+        "202":
+          description: Retry accepted; no external request has been sent yet.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/EnrichmentJob"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
 components:
   securitySchemes:
     LocalSession:
@@ -490,6 +603,67 @@ components:
         scope_summary: {type: string, maxLength: 600}
         confirmation_text: {type: string, minLength: 1, maxLength: 200}
         historical_copies_notice: {type: string, maxLength: 600}
+    EnrichmentModel:
+      type: string
+      enum: [deepseek-v4-flash, deepseek-v4-pro]
+    EnrichmentField:
+      type: string
+      enum: [title, summary, facts, feelings, people, places, themes, tags]
+    EnrichmentPreview:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          schema_version,
+          preview_token,
+          expires_at,
+          journal_id,
+          provider,
+          model,
+          prompt_version,
+          authorization_version,
+          max_retries,
+          writable_fields,
+          disclosures,
+        ]
+      properties:
+        schema_version: {type: integer, const: 1}
+        preview_token: {type: string, minLength: 24, maxLength: 500}
+        expires_at: {type: string, format: date-time}
+        journal_id: {type: string, minLength: 1, maxLength: 120}
+        provider: {type: string, const: deepseek}
+        model: {$ref: "#/components/schemas/EnrichmentModel"}
+        prompt_version: {type: string, minLength: 1, maxLength: 40}
+        authorization_version: {type: string, minLength: 1, maxLength: 40}
+        max_retries: {type: integer, minimum: 0, maximum: 2}
+        writable_fields:
+          type: array
+          minItems: 1
+          maxItems: 8
+          items: {$ref: "#/components/schemas/EnrichmentField"}
+        disclosures:
+          type: array
+          minItems: 1
+          maxItems: 12
+          items: {type: string, minLength: 1, maxLength: 240}
+    EnrichmentJob:
+      type: object
+      additionalProperties: false
+      required: [schema_version, job_id, journal_id, provider, model, prompt_version, status, attempts, max_retries]
+      properties:
+        schema_version: {type: integer, const: 1}
+        job_id: {type: string, minLength: 16, maxLength: 200}
+        journal_id: {type: string, minLength: 1, maxLength: 120}
+        provider: {type: string, const: deepseek}
+        model: {$ref: "#/components/schemas/EnrichmentModel"}
+        prompt_version: {type: string, minLength: 1, maxLength: 40}
+        status: {type: string, enum: [queued, running, succeeded, failed]}
+        attempts: {type: integer, minimum: 0, maximum: 3}
+        max_retries: {type: integer, minimum: 0, maximum: 2}
+        failure_code:
+          type: [string, "null"]
+          enum: [PROVIDER_UNAVAILABLE, MODEL_OUTPUT_INVALID, SOURCE_CHANGED, null]
+        updated_at: {type: string, format: date-time}
     CommandReceipt:
       type: object
       additionalProperties: false
@@ -521,7 +695,7 @@ components:
           properties:
             code:
               type: string
-              enum: [INVALID_REQUEST, REVISION_CONFLICT, SOURCE_INVALID, HUB_UNAVAILABLE, TOOL_TIMEOUT, PREVIEW_EXPIRED]
+              enum: [INVALID_REQUEST, REVISION_CONFLICT, SOURCE_INVALID, SOURCE_CHANGED, NOT_FOUND, HUB_UNAVAILABLE, TOOL_TIMEOUT, PREVIEW_EXPIRED]
             message: {type: string, maxLength: 240}
             retryable: {type: boolean}
   responses:
@@ -542,6 +716,11 @@ components:
           schema: {$ref: "#/components/schemas/ErrorResponse"}
     Conflict:
       description: Revision or source state conflict.
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ErrorResponse"}
+    NotFound:
+      description: The requested local resource does not exist.
       content:
         application/json:
           schema: {$ref: "#/components/schemas/ErrorResponse"}

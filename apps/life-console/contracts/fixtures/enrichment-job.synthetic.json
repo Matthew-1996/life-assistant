@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "job_id": "job_synthetic_enrichment_0001",
+  "journal_id": "20260112-unknown-000000000000",
+  "provider": "deepseek",
+  "model": "deepseek-v4-flash",
+  "prompt_version": "journal-enrichment-2026-08-05.1",
+  "status": "queued",
+  "attempts": 0,
+  "max_retries": 2,
+  "failure_code": null,
+  "updated_at": "2026-01-12T09:06:00+08:00"
+}
