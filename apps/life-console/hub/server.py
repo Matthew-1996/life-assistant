@@ -34,6 +34,8 @@ CHECKIN_FIELDS = (
     | {"awake_in_bed", "note_summary"}
 )
 TIME_PATTERN = re.compile(r"(?:[01][0-9]|2[0-3]):[0-5][0-9]")
+JOURNAL_LINE_FIELDS = {"title": (1, 120), "summary": (1, 240)}
+JOURNAL_LIST_FIELDS = {"facts", "feelings", "people", "places", "themes", "tags"}
 
 
 def _valid_date(value: Any) -> bool:
@@ -53,9 +55,17 @@ def _valid_text(value: Any, *, minimum: int = 1, maximum: int) -> bool:
     return isinstance(value, str) and minimum <= len(value) <= maximum
 
 
+def _valid_journal_list(value: Any) -> bool:
+    return (
+        isinstance(value, list)
+        and len(value) <= 12
+        and all(_valid_text(item, maximum=180) for item in value)
+    )
+
+
 def _validate_journal(body: dict[str, Any]) -> None:
     required = {"schema_version", "idempotency_key", "event_date", "time_precision", "text"}
-    allowed = required | {"event_time"}
+    allowed = required | {"event_time", *JOURNAL_LINE_FIELDS, *JOURNAL_LIST_FIELDS}
     if not required.issubset(body) or not set(body).issubset(allowed):
         raise ValueError("journal fields")
     if not _valid_date(body.get("event_date")):
@@ -69,6 +79,12 @@ def _validate_journal(body: dict[str, Any]) -> None:
         raise ValueError("time precision")
     if not _valid_text(body.get("text"), maximum=20_000):
         raise ValueError("journal text")
+    for field, (minimum, maximum) in JOURNAL_LINE_FIELDS.items():
+        if field in body and not _valid_text(body[field], minimum=minimum, maximum=maximum):
+            raise ValueError(f"journal {field}")
+    for field in JOURNAL_LIST_FIELDS:
+        if field in body and not _valid_journal_list(body[field]):
+            raise ValueError(f"journal {field}")
 
 
 def _validate_checkin(day: str, body: dict[str, Any]) -> None:

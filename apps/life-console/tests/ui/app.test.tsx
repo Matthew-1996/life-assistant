@@ -122,7 +122,7 @@ describe("Life Console synthetic UI", () => {
     await user.click(navigationButton("记录"));
     await user.click(screen.getByRole("tab", { name: "简洁表单" }));
 
-    const details = screen.getByText("补充时间信息").closest("details");
+    const details = screen.getByText("补充时间、人物或场景").closest("details");
     expect(details?.hasAttribute("open")).toBe(false);
     expect(screen.getByRole("button", { name: "保存日记" })).toBeTruthy();
   });
@@ -206,10 +206,18 @@ describe("Life Console synthetic UI", () => {
     render(<App client={client} initialDashboard={syntheticDashboard} />);
     await user.click(navigationButton("记录"));
     await user.click(screen.getByRole("tab", { name: "简洁表单" }));
-    await user.type(screen.getByLabelText("正文"), "合成表单正文");
+    await user.type(screen.getByLabelText("发生了什么"), "合成表单正文");
+    await user.type(screen.getByLabelText("当时的感受（可选）"), "轻松");
     await user.click(screen.getByRole("button", { name: "保存日记" }));
 
     await waitFor(() => expect(journal).toHaveBeenCalledTimes(1));
+    expect(journal).toHaveBeenCalledWith(expect.objectContaining({
+      title: "合成表单正文",
+      summary: "合成表单正文；感到轻松",
+      facts: ["合成表单正文"],
+      feelings: ["轻松"],
+      text: "合成表单正文\n\n感受：轻松",
+    }));
     expect(screen.getByRole("status").textContent).toBe("已保存到 iCloud");
   });
 

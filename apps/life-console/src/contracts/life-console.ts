@@ -258,6 +258,14 @@ export interface components {
             /** @enum {string} */
             time_precision: "exact" | "approximate" | "unknown";
             text: string;
+            title?: string;
+            summary?: string;
+            facts?: string[];
+            feelings?: string[];
+            people?: string[];
+            places?: string[];
+            themes?: string[];
+            tags?: string[];
         };
         CheckinRequest: {
             /** @constant */

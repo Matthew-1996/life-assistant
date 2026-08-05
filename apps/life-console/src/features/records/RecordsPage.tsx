@@ -31,6 +31,26 @@ const anchorFields = [
   ["wind_down", "晚间降速"],
 ] as const;
 
+function compactLine(value: string, maximum: number): string {
+  const normalized = value.replace(/\s+/g, " ").trim();
+  return normalized.length > maximum
+    ? `${normalized.slice(0, maximum - 1).trimEnd()}…`
+    : normalized;
+}
+
+function firstSentence(value: string, maximum: number): string {
+  const first = value.split(/[。！？\n]/, 1)[0]
+    .replace(/^(?:记录一下|日记(?:记录)?)[：:,，\s]*/, "");
+  return compactLine(first || "一则生活记录", maximum);
+}
+
+function splitJournalList(value: FormDataEntryValue | null): string[] {
+  return Array.from(new Set(String(value ?? "")
+    .split(/[，,、\n]/)
+    .map((item) => compactLine(item, 180))
+    .filter(Boolean))).slice(0, 12);
+}
+
 export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
   const [entryMode, setEntryMode] = useState<EntryMode>("conversation");
   const [formMode, setFormMode] = useState<FormMode>("journal");
@@ -82,12 +102,29 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
     try {
       if (formMode === "journal") {
         const time = String(values.get("time") ?? "");
+        const eventText = String(values.get("event") ?? "").trim();
+        const feeling = compactLine(String(values.get("feeling") ?? ""), 180);
+        const fact = firstSentence(eventText, 180);
+        const title = firstSentence(eventText, 120);
+        const summary = compactLine(
+          feeling ? `${fact}；感到${feeling}` : fact,
+          240,
+        );
+        const raw = feeling ? `${eventText}\n\n感受：${feeling}` : eventText;
         const result = await client.journal({
           schema_version: 1,
           event_date: String(values.get("date")),
           event_time: time || null,
           time_precision: String(values.get("precision")) as "exact" | "approximate" | "unknown",
-          text: String(values.get("text")),
+          text: raw,
+          title,
+          summary,
+          facts: [fact],
+          feelings: feeling ? [feeling] : [],
+          people: splitJournalList(values.get("people")),
+          places: splitJournalList(values.get("places")),
+          themes: splitJournalList(values.get("themes")),
+          tags: splitJournalList(values.get("tags")),
         });
         setReceipt(result.message);
       } else {
@@ -237,8 +274,22 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
 
           {formMode === "journal" ? (
             <form className="stacked-form" onSubmit={(event) => void saveForm(event)}>
-              <label htmlFor="journal-text">正文</label>
-              <textarea id="journal-text" name="text" required />
+              <label htmlFor="journal-event">发生了什么</label>
+              <textarea
+                id="journal-event"
+                name="event"
+                placeholder="例如：和双双去看了展，回来路上聊得很开心。"
+                required
+              />
+              <label htmlFor="journal-feeling">当时的感受（可选）</label>
+              <input
+                id="journal-feeling"
+                maxLength={180}
+                name="feeling"
+                placeholder="例如：轻松、开心、疲惫"
+                type="text"
+              />
+              <p className="form-hint">会立刻生成标题、摘要、事实和感受；不会调用外部 AI。</p>
               <label htmlFor="journal-date">事件日期</label>
               <input
                 defaultValue={dashboard.date}
@@ -247,7 +298,7 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
                 type="date"
               />
               <details>
-                <summary>补充时间信息</summary>
+                <summary>补充时间、人物或场景</summary>
                 <div className="advanced-fields">
                   <label htmlFor="journal-time">事件时间</label>
                   <input id="journal-time" name="time" type="time" />
@@ -261,6 +312,14 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
                     <option value="approximate">大约</option>
                     <option value="unknown">未知</option>
                   </select>
+                  <label htmlFor="journal-people">人物（可选，逗号分隔）</label>
+                  <input id="journal-people" maxLength={360} name="people" type="text" />
+                  <label htmlFor="journal-places">地点或场景（可选，逗号分隔）</label>
+                  <input id="journal-places" maxLength={360} name="places" type="text" />
+                  <label htmlFor="journal-themes">主题（可选，逗号分隔）</label>
+                  <input id="journal-themes" maxLength={360} name="themes" type="text" />
+                  <label htmlFor="journal-tags">标签（可选，逗号分隔）</label>
+                  <input id="journal-tags" maxLength={360} name="tags" type="text" />
                 </div>
               </details>
               <button className="primary-button" type="submit">

@@ -361,6 +361,32 @@ components:
         event_time: {type: [string, "null"], pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$"}
         time_precision: {type: string, enum: [exact, approximate, unknown]}
         text: {type: string, minLength: 1, maxLength: 20000}
+        title: {type: string, minLength: 1, maxLength: 120}
+        summary: {type: string, minLength: 1, maxLength: 240}
+        facts:
+          type: array
+          maxItems: 12
+          items: {type: string, minLength: 1, maxLength: 180}
+        feelings:
+          type: array
+          maxItems: 12
+          items: {type: string, minLength: 1, maxLength: 180}
+        people:
+          type: array
+          maxItems: 12
+          items: {type: string, minLength: 1, maxLength: 180}
+        places:
+          type: array
+          maxItems: 12
+          items: {type: string, minLength: 1, maxLength: 180}
+        themes:
+          type: array
+          maxItems: 12
+          items: {type: string, minLength: 1, maxLength: 180}
+        tags:
+          type: array
+          maxItems: 12
+          items: {type: string, minLength: 1, maxLength: 180}
     CheckinRequest:
       type: object
       additionalProperties: false
