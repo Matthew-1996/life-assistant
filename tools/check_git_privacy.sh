@@ -43,6 +43,7 @@ is_private_path() {
     journal/people-aliases.json|journal/enrichment-audit.jsonl|journal/.operations/*|\
     records/*.jsonl|records/apple-health-latest.txt|records/apple-sleep-details-latest.txt|\
     integrations/google-sheets.json|integrations/google-sheets.sync-state.json|\
+    integrations/journal-enrichment.json|\
     web/life-dashboard/.openai/*|web/life-dashboard/PUBLICATION_STATE.json|\
     web/life-dashboard/README.md|web/life-dashboard/personal.config.js|\
     web/life-dashboard/app/life-plan.js|web/life-dashboard/app/page.tsx|\
@@ -64,7 +65,7 @@ is_private_path() {
       index.jsonl|insight-decisions.jsonl|review-policy.json|\
       people-aliases.json|enrichment-audit.jsonl|\
       apple-health-latest.txt|apple-sleep-details-latest.txt|\
-      google-sheets.json|google-sheets.sync-state.json)
+      google-sheets.json|google-sheets.sync-state.json|journal-enrichment.json)
         return 0
         ;;
     esac

@@ -6,6 +6,7 @@ import json
 import logging
 import re
 import secrets
+import sys
 from datetime import datetime, timedelta, timezone
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -579,6 +580,25 @@ def create_server(
     )
 
 
+def _launch_enrichment_authorization(root: Path) -> str | None:
+    """从可迁移配置解析云端整理授权版本；任何异常都 fail-safe 返回 None。
+
+    配置工具位于项目根 ``tools/``，用 iCloud 项目内的
+    ``integrations/journal-enrichment.json`` 决定是否启用；缺失/暂停/损坏都
+    不授权（不外发）。这里只读授权版本，不接触 API Key 或日记内容。
+    """
+
+    tools_dir = PROJECT_ROOT / "tools"
+    if str(tools_dir) not in sys.path:
+        sys.path.insert(0, str(tools_dir))
+    try:
+        import journal_enrichment_state as state
+    except ImportError:
+        LOG.warning("enrichment launch config tool unavailable; cloud enrichment stays disabled")
+        return None
+    return state.resolve_authorization(root)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", default=DEFAULT_HOST)
@@ -593,14 +613,20 @@ def main() -> None:
     parser.add_argument("--automation-status", choices=sorted(AUTOMATION_STATUSES), default="unknown")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    authorization = _launch_enrichment_authorization(args.root.resolve())
     server = create_server(
         root=args.root,
         host=args.host,
         port=args.port,
         icloud_status=args.icloud_status,
         automation_status=args.automation_status,
+        enrichment_authorization=authorization,
     )
-    LOG.info("Life Hub ready at http://%s:%s", *server.server_address)
+    LOG.info(
+        "Life Hub ready at http://%s:%s (cloud enrichment %s)",
+        *server.server_address,
+        "enabled" if authorization else "disabled",
+    )
     server.serve_forever()
 
 

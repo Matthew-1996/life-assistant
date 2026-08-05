@@ -55,6 +55,7 @@ STATUS.md
 # External service bindings and sync receipts
 integrations/google-sheets.json
 integrations/google-sheets.sync-state.json
+integrations/journal-enrichment.json
 web/life-dashboard/.openai/
 
 # Personalized dashboard copy/config and workbook implementation (iCloud only)
