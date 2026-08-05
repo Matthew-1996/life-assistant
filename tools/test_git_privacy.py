@@ -92,6 +92,28 @@ class GitPrivacyTests(unittest.TestCase):
         self.assertIn("USER.md", result.stderr)
         self.assertNotIn(sentinel, result.stdout + result.stderr)
 
+    def test_nested_life_console_private_path_is_rejected(self) -> None:
+        sentinel = "NESTED-PRIVATE-CONTENT-MUST-NOT-BE-PRINTED"
+        private_path = "apps/life-console/contracts/fixtures/USER.md"
+        self._write(private_path, sentinel)
+        self._add(private_path)
+
+        result = self._check()
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(private_path, result.stderr)
+        self.assertNotIn(sentinel, result.stdout + result.stderr)
+
+    def test_nested_life_console_record_is_rejected(self) -> None:
+        private_path = "apps/life-console/tests/fixtures/records/daily-checkins.jsonl"
+        self._write(private_path, '{"synthetic": true}\n')
+        self._add(private_path)
+
+        result = self._check()
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(private_path, result.stderr)
+
     def test_secret_content_is_rejected_without_echo(self) -> None:
         secret = "ghp_" + ("a" * 24)
         self._write("tools/example.txt", secret)
@@ -102,6 +124,17 @@ class GitPrivacyTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("高置信凭据", result.stderr)
         self.assertNotIn(secret, result.stdout + result.stderr)
+
+    def test_machine_specific_absolute_path_is_rejected_without_echo(self) -> None:
+        machine_path = "/" + "Users/example-person/private-project/"
+        self._write("tools/example.txt", machine_path)
+        self._add("tools/example.txt")
+
+        result = self._check()
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("机器专属绝对路径", result.stderr)
+        self.assertNotIn(machine_path, result.stdout + result.stderr)
 
     def test_history_scan_rejects_added_then_deleted_private_file(self) -> None:
         # 首个干净提交作为 base。
