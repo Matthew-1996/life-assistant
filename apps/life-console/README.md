@@ -12,11 +12,12 @@ Implemented in the foundation package:
 - the frozen `/api/v1` OpenAPI contract;
 - shared TypeScript contract types;
 - synthetic dashboard, receipt, and error fixtures;
-- contract tests for schema validity and localhost-only configuration.
+- contract tests for schema validity and localhost-only configuration;
+- Mac desktop pages for Today, Progress, Records, and System;
+- in-memory anchor, trend, handoff, and fallback form interactions.
 
-Not implemented here:
+Not implemented yet:
 
-- product pages and feature components;
 - the Life Hub HTTP server or real source reads and writes;
 - LaunchAgent packaging, deployment, mobile access, or remote access;
 - Google Sheets synchronization or a new Todo source of truth.
