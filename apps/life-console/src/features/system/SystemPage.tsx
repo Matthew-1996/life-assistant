@@ -56,8 +56,8 @@ export function SystemPage({ dashboard }: SystemPageProps) {
     <section aria-labelledby="system-title">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">正常时保持安静</p>
-          <h1 id="system-title">系统</h1>
+          <p className="eyebrow">系统边界</p>
+          <h1 id="system-title">正常时，系统保持安静</h1>
         </div>
         <p>本机保存成功是一期的完成标准。</p>
       </div>
@@ -81,6 +81,21 @@ export function SystemPage({ dashboard }: SystemPageProps) {
           不开放局域网或公网，不使用云数据库，不从 Google 或浏览器缓存反向补写。
         </p>
       </article>
+
+      <div className="system-two-column">
+        <article className="boundary-card">
+          <h2>权限流程</h2>
+          <ol className="flow-list">
+            <li>读取：只读当前白名单投影。</li>
+            <li>预览：展示将要写入的字段。</li>
+            <li>确认写入：用户明确动作后才保存。</li>
+          </ol>
+        </article>
+        <article className="boundary-card">
+          <h2>冲突处理</h2>
+          <p>不覆盖已有记录，先展示当前值与本次提交，再允许使用最新记录。</p>
+        </article>
+      </div>
     </section>
   );
 }

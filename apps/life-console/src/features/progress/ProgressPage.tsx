@@ -61,10 +61,10 @@ export function ProgressPage({ dashboard }: ProgressPageProps) {
     <section aria-labelledby="progress-title">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">计划与变化放在一起看</p>
-          <h1 id="progress-title">进展</h1>
+          <p className="eyebrow">进展洞察</p>
+          <h1 id="progress-title">趋势，只是辅助判断</h1>
         </div>
-        <p>趋势只描述已有样本，不替代生活判断。</p>
+        <p>缺失不惩罚，样本不推断人格。</p>
       </div>
 
       <section className="section-block" aria-labelledby="week-title">
@@ -188,6 +188,14 @@ export function ProgressPage({ dashboard }: ProgressPageProps) {
           ))}
         </div>
       </section>
+
+      <article className="design-note-card">
+        <span className="neutral-badge">设计判断</span>
+        <h2>这里不制造完成百分比</h2>
+        <p>
+          进展页只呈现可追溯样本和自然周路径，不把趋势解释成评价，也不把缺失转换成失败。
+        </p>
+      </article>
     </section>
   );
 }

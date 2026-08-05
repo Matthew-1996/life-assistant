@@ -46,7 +46,14 @@ export function App({ client, initialDashboard }: AppProps) {
   }
 
   const pages = {
-    today: <TodayPage dashboard={dashboard} client={client} onSaved={refresh} />,
+    today: (
+      <TodayPage
+        dashboard={dashboard}
+        client={client}
+        onNavigate={setActivePage}
+        onSaved={refresh}
+      />
+    ),
     progress: <ProgressPage dashboard={dashboard} />,
     records: <RecordsPage dashboard={dashboard} client={client} onSaved={refresh} />,
     system: <SystemPage dashboard={dashboard} />,
