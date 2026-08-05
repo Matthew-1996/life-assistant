@@ -1,0 +1,8 @@
+{
+  "request_id": "req_synthetic_02",
+  "error": {
+    "code": "REVISION_CONFLICT",
+    "message": "记录已在其他位置更新，请核对最新值",
+    "retryable": false
+  }
+}

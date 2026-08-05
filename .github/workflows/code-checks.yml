@@ -64,9 +64,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/life-console/package-lock.json
       - name: Run reusable Node tests (dashboard date/state logic + Google Sheets payload tooling)
         run: >-
           node --test
           web/life-dashboard/tests/life-date.test.mjs
           tools/test_life_plan_records.mjs
           tools/test_google_sheets_payload.mjs
+      - name: Install Life Console dependencies
+        working-directory: apps/life-console
+        run: npm ci
+      - name: Check Life Console generated contract, tests, and build
+        working-directory: apps/life-console
+        run: npm test && npm run build

@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-01-12T09:00:00+08:00",
+  "date": "2026-01-12",
+  "today": {
+    "focus": {
+      "title": "",
+      "phase_label": "等待确认"
+    },
+    "suggested_action": null,
+    "anchors": {
+      "wake": null,
+      "body_light": null,
+      "life_action": null,
+      "wind_down": null
+    },
+    "daily_revision": null,
+    "confirmations": []
+  },
+  "progress": {
+    "ratings": [],
+    "sleep": [],
+    "sample_counts": {
+      "daily": 0,
+      "missing": 7
+    }
+  },
+  "records": {
+    "recent_journals": []
+  },
+  "system": {
+    "hub": "ready",
+    "icloud": "partial",
+    "automation": "unknown",
+    "backup": "unknown",
+    "google": "paused",
+    "mobile": "pending"
+  },
+  "source_revisions": {}
+}

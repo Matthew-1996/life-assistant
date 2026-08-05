@@ -1,0 +1,472 @@
+openapi: 3.1.0
+info:
+  title: Life Console Local API
+  version: 1.0.0
+  description: Mac-only localhost contract. Examples are synthetic and contain no real personal data.
+servers:
+  - url: http://127.0.0.1:47321
+security:
+  - LocalSession: []
+paths:
+  /api/v1/health:
+    get:
+      operationId: getHealth
+      security: []
+      responses:
+        "200":
+          description: Hub is ready without reading personal content.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [status, schema_version]
+                properties:
+                  status: {type: string, const: ready}
+                  schema_version: {type: integer, const: 1}
+  /api/v1/session:
+    get:
+      operationId: createSession
+      security: []
+      responses:
+        "200":
+          description: Same-origin local session. Response must use Cache-Control no-store.
+          headers:
+            Set-Cookie:
+              description: HttpOnly SameSite=Strict local session cookie.
+              schema: {type: string}
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [schema_version, csrf_token, expires_at]
+                properties:
+                  schema_version: {type: integer, const: 1}
+                  csrf_token: {type: string, minLength: 16, maxLength: 200}
+                  expires_at: {type: string, format: date-time}
+  /api/v1/dashboard:
+    get:
+      operationId: getDashboard
+      responses:
+        "200":
+          description: Whitelisted local dashboard snapshot.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Dashboard"}
+        "503": {$ref: "#/components/responses/ServiceUnavailable"}
+  /api/v1/journals:
+    post:
+      operationId: createJournal
+      parameters:
+        - {$ref: "#/components/parameters/CsrfHeader"}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/JournalRequest"}
+      responses:
+        "200": {$ref: "#/components/responses/CommandSuccess"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "409": {$ref: "#/components/responses/Conflict"}
+        "503": {$ref: "#/components/responses/ServiceUnavailable"}
+  /api/v1/checkins/{date}:
+    post:
+      operationId: upsertCheckin
+      parameters:
+        - name: date
+          in: path
+          required: true
+          schema: {type: string, format: date}
+        - {$ref: "#/components/parameters/CsrfHeader"}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/CheckinRequest"}
+      responses:
+        "200": {$ref: "#/components/responses/CommandSuccess"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "409": {$ref: "#/components/responses/Conflict"}
+        "503": {$ref: "#/components/responses/ServiceUnavailable"}
+  /api/v1/capture/preview:
+    post:
+      operationId: previewCapture
+      parameters:
+        - {$ref: "#/components/parameters/CsrfHeader"}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [schema_version, text, context_etag]
+              properties:
+                schema_version: {type: integer, const: 1}
+                text: {type: string, minLength: 1, maxLength: 8000}
+                context_etag: {type: string, minLength: 1, maxLength: 200}
+      responses:
+        "200":
+          description: Preview or safe handoff state.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/CapturePreview"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "503": {$ref: "#/components/responses/ServiceUnavailable"}
+  /api/v1/capture/commit:
+    post:
+      operationId: commitCapture
+      parameters:
+        - {$ref: "#/components/parameters/CsrfHeader"}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [schema_version, idempotency_key, preview_token]
+              properties:
+                schema_version: {type: integer, const: 1}
+                idempotency_key: {$ref: "#/components/schemas/IdempotencyKey"}
+                preview_token: {type: string, minLength: 24, maxLength: 500}
+      responses:
+        "200": {$ref: "#/components/responses/CommandSuccess"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /api/v1/confirmations:
+    get:
+      operationId: getConfirmations
+      responses:
+        "200":
+          description: Safe confirmation projections without raw content.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [schema_version, items]
+                properties:
+                  schema_version: {type: integer, const: 1}
+                  items:
+                    type: array
+                    maxItems: 20
+                    items: {$ref: "#/components/schemas/Confirmation"}
+  /api/v1/purge-plans:
+    post:
+      operationId: createPurgePlan
+      parameters:
+        - {$ref: "#/components/parameters/CsrfHeader"}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [schema_version, target_type, target_key]
+              properties:
+                schema_version: {type: integer, const: 1}
+                target_type: {type: string, enum: [journal, daily_checkin, weekly_review, phase_review]}
+                target_key: {type: string, minLength: 1, maxLength: 200}
+      responses:
+        "200":
+          description: Safe deletion scope preview without raw content.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/PurgePlan"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /api/v1/purge-confirmations:
+    post:
+      operationId: confirmPurge
+      parameters:
+        - {$ref: "#/components/parameters/CsrfHeader"}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [schema_version, idempotency_key, plan_id, confirmation_text, expect_revision, plan_etag, acknowledge_historical_copies]
+              properties:
+                schema_version: {type: integer, const: 1}
+                idempotency_key: {$ref: "#/components/schemas/IdempotencyKey"}
+                plan_id: {type: string, minLength: 16, maxLength: 200}
+                confirmation_text: {type: string, minLength: 1, maxLength: 200}
+                expect_revision: {type: integer, minimum: 1}
+                plan_etag: {type: string, minLength: 16, maxLength: 200}
+                acknowledge_historical_copies: {type: boolean, const: true}
+      responses:
+        "200": {$ref: "#/components/responses/CommandSuccess"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "409": {$ref: "#/components/responses/Conflict"}
+components:
+  securitySchemes:
+    LocalSession:
+      type: apiKey
+      in: cookie
+      name: life_console_session
+  parameters:
+    CsrfHeader:
+      name: X-Life-CSRF
+      in: header
+      required: true
+      schema: {type: string, minLength: 16, maxLength: 200}
+  schemas:
+    IdempotencyKey:
+      type: string
+      pattern: "^[A-Za-z0-9_-]{16,100}$"
+    AnchorState:
+      type: [string, "null"]
+      enum: [complete, minimum, skipped, null]
+    AnchorValue:
+      type: string
+      enum: [complete, minimum, skipped]
+    Rating:
+      type: [integer, "null"]
+      minimum: 1
+      maximum: 5
+    RatingValue:
+      type: integer
+      minimum: 1
+      maximum: 5
+    Dashboard:
+      type: object
+      additionalProperties: false
+      required: [schema_version, generated_at, date, today, progress, records, system, source_revisions]
+      properties:
+        schema_version: {type: integer, const: 1}
+        generated_at: {type: string, format: date-time}
+        date: {type: string, format: date}
+        today:
+          type: object
+          additionalProperties: false
+          required: [focus, suggested_action, anchors, daily_revision, confirmations]
+          properties:
+            focus:
+              type: object
+              additionalProperties: false
+              required: [title, phase_label]
+              properties:
+                title: {type: string, maxLength: 160}
+                phase_label: {type: string, maxLength: 80}
+            suggested_action:
+              type: [object, "null"]
+              additionalProperties: false
+              required: [id, label, writable]
+              properties:
+                id: {type: string, maxLength: 120}
+                label: {type: string, maxLength: 160}
+                writable: {type: boolean}
+            anchors:
+              type: object
+              additionalProperties: false
+              required: [wake, body_light, life_action, wind_down]
+              properties:
+                wake: {$ref: "#/components/schemas/AnchorState"}
+                body_light: {$ref: "#/components/schemas/AnchorState"}
+                life_action: {$ref: "#/components/schemas/AnchorState"}
+                wind_down: {$ref: "#/components/schemas/AnchorState"}
+            daily_revision: {type: [integer, "null"], minimum: 1}
+            confirmations:
+              type: array
+              maxItems: 10
+              items: {$ref: "#/components/schemas/Confirmation"}
+        progress:
+          type: object
+          additionalProperties: false
+          required: [ratings, sleep, sample_counts]
+          properties:
+            ratings:
+              type: array
+              maxItems: 31
+              items:
+                type: object
+                additionalProperties: false
+                required: [date, sleep_quality, energy, mood, life_feeling]
+                properties:
+                  date: {type: string, format: date}
+                  sleep_quality: {$ref: "#/components/schemas/Rating"}
+                  energy: {$ref: "#/components/schemas/Rating"}
+                  mood: {$ref: "#/components/schemas/Rating"}
+                  life_feeling: {$ref: "#/components/schemas/Rating"}
+            sleep:
+              type: array
+              maxItems: 31
+              items:
+                type: object
+                additionalProperties: false
+                required: [date, sleep_time, wake_time, out_of_bed_time]
+                properties:
+                  date: {type: string, format: date}
+                  sleep_time: {type: [string, "null"], pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$"}
+                  wake_time: {type: [string, "null"], pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$"}
+                  out_of_bed_time: {type: [string, "null"], pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$"}
+            sample_counts:
+              type: object
+              additionalProperties: false
+              required: [daily, missing]
+              properties:
+                daily: {type: integer, minimum: 0, maximum: 31}
+                missing: {type: integer, minimum: 0, maximum: 31}
+        records:
+          type: object
+          additionalProperties: false
+          required: [recent_journals]
+          properties:
+            recent_journals:
+              type: array
+              maxItems: 10
+              items:
+                type: object
+                additionalProperties: false
+                required: [date, title, summary]
+                properties:
+                  date: {type: string, format: date}
+                  title: {type: string, maxLength: 100}
+                  summary: {type: string, maxLength: 240}
+        system:
+          type: object
+          additionalProperties: false
+          required: [hub, icloud, automation, backup, google, mobile]
+          properties:
+            hub: {type: string, enum: [ready, unavailable]}
+            icloud: {type: string, enum: [ready, partial, unavailable]}
+            automation: {type: string, enum: [ready, attention, unknown]}
+            backup: {type: string, enum: [ready, attention, unknown]}
+            google: {type: string, enum: [paused, on_demand]}
+            mobile: {type: string, enum: [pending]}
+        source_revisions:
+          type: object
+          additionalProperties: {type: string}
+    JournalRequest:
+      type: object
+      additionalProperties: false
+      required: [schema_version, idempotency_key, event_date, text, time_precision]
+      properties:
+        schema_version: {type: integer, const: 1}
+        idempotency_key: {$ref: "#/components/schemas/IdempotencyKey"}
+        event_date: {type: string, format: date}
+        event_time: {type: [string, "null"], pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$"}
+        time_precision: {type: string, enum: [exact, approximate, unknown]}
+        text: {type: string, minLength: 1, maxLength: 20000}
+    CheckinRequest:
+      type: object
+      additionalProperties: false
+      required: [schema_version, idempotency_key, expect_revision, fields]
+      properties:
+        schema_version: {type: integer, const: 1}
+        idempotency_key: {$ref: "#/components/schemas/IdempotencyKey"}
+        expect_revision: {type: [integer, "null"], minimum: 1}
+        fields:
+          type: object
+          additionalProperties: false
+          minProperties: 1
+          properties:
+            sleep_time: {type: string, pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$"}
+            wake_time: {type: string, pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$"}
+            out_of_bed_time: {type: string, pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$"}
+            sleep_quality: {$ref: "#/components/schemas/RatingValue"}
+            energy: {$ref: "#/components/schemas/RatingValue"}
+            mood: {$ref: "#/components/schemas/RatingValue"}
+            life_feeling: {$ref: "#/components/schemas/RatingValue"}
+            awake_in_bed: {type: string, enum: [yes, no]}
+            wake: {$ref: "#/components/schemas/AnchorValue"}
+            body_light: {$ref: "#/components/schemas/AnchorValue"}
+            life_action: {$ref: "#/components/schemas/AnchorValue"}
+            wind_down: {$ref: "#/components/schemas/AnchorValue"}
+            note_summary: {type: string, maxLength: 160}
+    CapturePreview:
+      type: object
+      additionalProperties: false
+      required: [schema_version, state, message]
+      properties:
+        schema_version: {type: integer, const: 1}
+        state: {type: string, enum: [available, handoff_required, unavailable]}
+        message: {type: string, maxLength: 240}
+        preview_token: {type: string, minLength: 24, maxLength: 500}
+        intent: {type: string, enum: [journal, checkin, mixed, unknown]}
+        preview:
+          type: object
+          additionalProperties: true
+    Confirmation:
+      type: object
+      additionalProperties: false
+      required: [id, type, title, message, action_label]
+      properties:
+        id: {type: string, maxLength: 160}
+        type: {type: string, enum: [revision_conflict, health_conflict, purge_plan, goal_change, service_issue]}
+        title: {type: string, maxLength: 120}
+        message: {type: string, maxLength: 300}
+        action_label: {type: string, maxLength: 80}
+    PurgePlan:
+      type: object
+      additionalProperties: false
+      required: [schema_version, plan_id, target_type, target_key, expect_revision, plan_etag, scope_summary, confirmation_text, historical_copies_notice]
+      properties:
+        schema_version: {type: integer, const: 1}
+        plan_id: {type: string, minLength: 16, maxLength: 200}
+        target_type: {type: string, enum: [journal, daily_checkin, weekly_review, phase_review]}
+        target_key: {type: string, minLength: 1, maxLength: 200}
+        expect_revision: {type: integer, minimum: 1}
+        plan_etag: {type: string, minLength: 16, maxLength: 200}
+        scope_summary: {type: string, maxLength: 600}
+        confirmation_text: {type: string, minLength: 1, maxLength: 200}
+        historical_copies_notice: {type: string, maxLength: 600}
+    CommandReceipt:
+      type: object
+      additionalProperties: false
+      required: [request_id, command_id, action, source, read_model, message]
+      properties:
+        request_id: {type: string}
+        command_id: {type: string}
+        action: {type: string, enum: [created, updated, unchanged]}
+        source:
+          type: object
+          additionalProperties: false
+          required: [state, revision]
+          properties:
+            state: {type: string, const: saved}
+            revision: {type: [integer, "null"]}
+        read_model: {type: string, enum: [current, pending_refresh]}
+        message: {type: string}
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [request_id, error]
+      properties:
+        request_id: {type: string}
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message, retryable]
+          properties:
+            code:
+              type: string
+              enum: [INVALID_REQUEST, REVISION_CONFLICT, SOURCE_INVALID, HUB_UNAVAILABLE, TOOL_TIMEOUT, PREVIEW_EXPIRED]
+            message: {type: string, maxLength: 240}
+            retryable: {type: boolean}
+  responses:
+    CommandSuccess:
+      description: Source write completed or was idempotently unchanged.
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/CommandReceipt"}
+    BadRequest:
+      description: Request failed schema or policy validation.
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ErrorResponse"}
+    Conflict:
+      description: Revision or source state conflict.
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ErrorResponse"}
+    ServiceUnavailable:
+      description: Hub or iCloud source is unavailable.
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ErrorResponse"}
