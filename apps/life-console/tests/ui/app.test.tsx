@@ -47,6 +47,17 @@ describe("Life Console synthetic UI", () => {
     ).toBeTruthy();
   });
 
+  it("renders a stable brand mark and one icon for every main tab", () => {
+    const { container } = render(<App />);
+
+    expect(container.querySelector('[data-icon="life"]')).toBeTruthy();
+    for (const name of ["today", "progress", "records", "system"]) {
+      expect(
+        container.querySelector(`nav [data-icon="${name}"]`),
+      ).toBeTruthy();
+    }
+  });
+
   it("keeps unknown distinct from skipped in anchor controls", async () => {
     const user = userEvent.setup();
     render(<App />);
