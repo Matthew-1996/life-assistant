@@ -40,6 +40,10 @@ def generate(
             "--root", str(source),
         ],
         "WorkingDirectory": str(application),
+        # launchd does not reliably put WorkingDirectory on Python's import
+        # path, especially for applications stored under iCloud Drive.  Keep
+        # the portable module invocation and make its import root explicit.
+        "EnvironmentVariables": {"PYTHONPATH": str(application)},
         "RunAtLoad": True,
         "KeepAlive": False,
         "StandardOutPath": str(logs / "hub.stdout.log"),

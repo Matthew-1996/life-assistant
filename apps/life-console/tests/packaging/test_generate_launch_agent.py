@@ -21,6 +21,10 @@ class LaunchAgentGeneratorTests(unittest.TestCase):
             plist_path, launcher_path = generate(output, root=APP_ROOT)
             plist = plistlib.loads(plist_path.read_bytes())
             self.assertEqual(plist["WorkingDirectory"], str(APP_ROOT.resolve()))
+            self.assertEqual(
+                plist["EnvironmentVariables"]["PYTHONPATH"],
+                str(APP_ROOT.resolve()),
+            )
             self.assertIn("127.0.0.1", plist["ProgramArguments"])
             self.assertNotIn("0.0.0.0", plist["ProgramArguments"])
             self.assertIn("--root", plist["ProgramArguments"])
