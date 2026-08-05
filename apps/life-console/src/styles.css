@@ -898,8 +898,76 @@ select {
   color: var(--text-muted, #4b5563);
 }
 
-.enrichment-failed {
-  margin-top: 0.5rem;
+.journal-card {
   display: grid;
   gap: 0.4rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 12px;
+  background: var(--surface, #fff);
+}
+
+.journal-card--removed {
+  opacity: 0.7;
+}
+
+.journal-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.enrichment-badge {
+  font-size: 0.78rem;
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.enrichment-badge--raw {
+  color: #4b5563;
+  background: #f1f5f9;
+}
+
+.enrichment-badge--working {
+  color: #1d4ed8;
+  background: #e0ecff;
+}
+
+.enrichment-badge--enriched {
+  color: #047857;
+  background: #d1fae5;
+}
+
+.enrichment-badge--failed {
+  color: #b91c1c;
+  background: #fee2e2;
+}
+
+.journal-card-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.2rem;
+}
+
+.secondary-button.danger {
+  color: #b91c1c;
+  border-color: #fca5a5;
+}
+
+.primary-button.danger {
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
+.confirm-dialog {
+  margin-top: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid #fca5a5;
+  border-radius: 10px;
+  background: #fff5f5;
+  display: grid;
+  gap: 0.5rem;
 }

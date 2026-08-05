@@ -134,6 +134,31 @@ class EnrichmentRuntime:
     def status(self, job_id: str) -> dict[str, Any]:
         return jobs.public_view(jobs.load_job(self.journal_root, job_id))
 
+    def status_for_journal(self, journal_id: str) -> dict[str, Any]:
+        """返回某篇日记的整理状态投影：none / 最近作业的公共视图。"""
+
+        job = jobs.latest_for_journal(self.journal_root, journal_id)
+        if job is None:
+            return {"schema_version": 1, "journal_id": journal_id, "status": "none"}
+        return jobs.public_view(job)
+
+    def journal_states(self) -> dict[str, str]:
+        """返回 {journal_id: 最近作业状态}，供看板叠加每条整理状态（只读）。"""
+
+        return jobs.journal_states(self.journal_root)
+
+    def enrich_now(self, journal_id: str, idempotency_key: str) -> dict[str, Any]:
+        """一步整理：内部生成预览并立即提交（供保存后自动整理与手动"整理"）。
+
+        仍复用来源指纹核对与授权门控；未授权抛 NotAuthorized。不做面向用户的
+        预览确认——调用方（自动保存/手动整理按钮）已代表用户意图。
+        """
+
+        if self.authorization_version is None:
+            raise NotAuthorized()
+        preview = self.mint_preview(journal_id)
+        return self.commit(preview["preview_token"], idempotency_key)
+
     def retry(self, job_id: str, idempotency_key: str) -> dict[str, Any]:
         job = jobs.load_job(self.journal_root, job_id)  # raises JobNotFound
         if job["status"] != "failed":

@@ -152,6 +152,9 @@ describe("Life Console OpenAPI contract", () => {
       "commitJournalEnrichment",
       "getJournalEnrichment",
       "retryJournalEnrichment",
+      "enrichJournalNow",
+      "getJournalEnrichmentByJournal",
+      "deleteJournal",
     ]);
     expect(new Set(operationIds).size).toBe(operationIds.length);
     expect(Object.keys(typedFixtureCoverage)).toEqual([

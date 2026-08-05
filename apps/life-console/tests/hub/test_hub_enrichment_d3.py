@@ -210,6 +210,87 @@ class HubEnrichmentD3Tests(unittest.TestCase):
         }, csrf=False)
         self.assertEqual(status, 403)
 
+    # --- D6: one-step enrich, per-journal status, dashboard overlay -----
+    def test_enrich_now_one_step_succeeds_and_status_reflects_it(self) -> None:
+        self._start(authorization="auth-1", transport=lambda _r: _reply({"title": "一步整理"}))
+        status, job = self.post("/api/v1/journal-enrichments/enrich", {
+            "schema_version": 1, "idempotency_key": "d6_enrich_now_0001",
+            "journal_id": self.journal_id,
+        })
+        self.assertEqual(status, 202)
+        self.assertEqual(job["journal_id"], self.journal_id)
+        self.assertEqual(self._title(), "一步整理")
+        # per-journal status projection
+        code, view = self.get(f"/api/v1/journal-enrichments/by-journal/{self.journal_id}")
+        self.assertEqual(code, 200)
+        self.assertEqual(view["status"], "succeeded")
+
+    def test_enrich_now_without_authorization_is_rejected(self) -> None:
+        self._start(authorization=None)
+        status, result = self.post("/api/v1/journal-enrichments/enrich", {
+            "schema_version": 1, "idempotency_key": "d6_enrich_now_0002",
+            "journal_id": self.journal_id,
+        })
+        self.assertEqual(status, 400)
+        self.assertEqual(result["error"]["code"], "INVALID_REQUEST")
+
+    def test_by_journal_status_is_none_before_any_job(self) -> None:
+        self._start(authorization="auth-1")
+        code, view = self.get(f"/api/v1/journal-enrichments/by-journal/{self.journal_id}")
+        self.assertEqual(code, 200)
+        self.assertEqual(view["status"], "none")
+
+    def test_dashboard_overlays_enrichment_state(self) -> None:
+        self._start(authorization="auth-1", transport=lambda _r: _reply({"title": "已整理标题"}))
+        # before any job: raw
+        code, snap = self.get("/api/v1/dashboard")
+        self.assertEqual(code, 200)
+        entry = next(x for x in snap["records"]["recent_journals"] if x["id"] == self.journal_id)
+        self.assertEqual(entry["enrichment_state"], "raw")
+        # after a successful enrich: enriched
+        self.post("/api/v1/journal-enrichments/enrich", {
+            "schema_version": 1, "idempotency_key": "d6_overlay_key_0001",
+            "journal_id": self.journal_id,
+        })
+        _, snap2 = self.get("/api/v1/dashboard")
+        entry2 = next(x for x in snap2["records"]["recent_journals"] if x["id"] == self.journal_id)
+        self.assertEqual(entry2["enrichment_state"], "enriched")
+
+    def test_failed_enrich_shows_failed_state_and_keeps_local_record(self) -> None:
+        self._start(authorization="auth-1", transport=lambda _r: ProviderResponse(503, {}))
+        self.post("/api/v1/journal-enrichments/enrich", {
+            "schema_version": 1, "idempotency_key": "d6_fail_key_00001",
+            "journal_id": self.journal_id,
+        })
+        _, snap = self.get("/api/v1/dashboard")
+        entry = next(x for x in snap["records"]["recent_journals"] if x["id"] == self.journal_id)
+        self.assertEqual(entry["enrichment_state"], "failed")
+        # local record untouched
+        self.assertEqual(self._title(), "2026-01-12 日记")
+
+    # --- D6: delete with confirm ---------------------------------------
+    def test_delete_removes_entry_with_matching_confirm(self) -> None:
+        self._start(authorization="auth-1")
+        status, receipt = self.post(f"/api/v1/journals/{self.journal_id}/delete", {
+            "schema_version": 1, "idempotency_key": "d6_delete_key_0001",
+            "confirm": self.journal_id,
+        })
+        self.assertEqual(status, 200)
+        self.assertEqual(receipt["action"], "deleted")
+        index = (self.root / "journal/index.jsonl").read_text(encoding="utf-8")
+        self.assertNotIn(self.journal_id, index)
+
+    def test_delete_rejects_mismatched_confirm(self) -> None:
+        self._start(authorization="auth-1")
+        status, _result = self.post(f"/api/v1/journals/{self.journal_id}/delete", {
+            "schema_version": 1, "idempotency_key": "d6_delete_key_0002",
+            "confirm": "not-the-id",
+        })
+        self.assertEqual(status, 400)
+        # entry still present
+        index = (self.root / "journal/index.jsonl").read_text(encoding="utf-8")
+        self.assertIn(self.journal_id, index)
+
 
 if __name__ == "__main__":
     unittest.main()

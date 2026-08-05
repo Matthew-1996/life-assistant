@@ -256,6 +256,48 @@ def iter_recoverable(journal_root: Path) -> Iterable[dict[str, Any]]:
     return jobs
 
 
+def latest_for_journal(journal_root: Path, journal_id: str) -> dict[str, Any] | None:
+    """返回某篇日记最近一次（按 updated_at）作业，无则 None。
+
+    供只读的 per-entry 状态投影使用；不含来源/结果指纹。
+    """
+
+    directory = _jobs_dir(journal_root)
+    if not directory.exists():
+        return None
+    latest: dict[str, Any] | None = None
+    for path in sorted(directory.glob("*.json")):
+        if path.is_symlink():
+            continue
+        job = _try_load(journal_root, path.stem)
+        if job is None or job.get("journal_id") != journal_id:
+            continue
+        if latest is None or str(job.get("updated_at", "")) > str(latest.get("updated_at", "")):
+            latest = job
+    return latest
+
+
+def journal_states(journal_root: Path) -> dict[str, str]:
+    """返回 {journal_id: 最近作业状态} 的映射，供看板叠加每条整理状态。"""
+
+    directory = _jobs_dir(journal_root)
+    if not directory.exists():
+        return {}
+    latest: dict[str, tuple[str, str]] = {}
+    for path in sorted(directory.glob("*.json")):
+        if path.is_symlink():
+            continue
+        job = _try_load(journal_root, path.stem)
+        if job is None:
+            continue
+        jid = str(job.get("journal_id", ""))
+        updated = str(job.get("updated_at", ""))
+        if jid and (jid not in latest or updated > latest[jid][1]):
+            latest[jid] = (job["status"], updated)
+    return {jid: status for jid, (status, _) in latest.items()}
+
+
+
 def _audit(journal_root: Path, job: dict[str, Any], *, event: str) -> None:
     """追加一行无原文、无正文的审计记录。"""
 
