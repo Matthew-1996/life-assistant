@@ -70,15 +70,16 @@ def _validate_config(value: dict[str, Any]) -> dict[str, Any]:
         "account_scope": "personal",
         "access": "private_owner_only",
         "direction": "icloud_to_google_only",
-        "sync_cadence": "every_record",
         "external_scope": "full_existing_views_without_raw_sources",
         "title": "生活计划表",
         "folder_name": "生活助手",
     }
     if any(value[key] != expected_value for key, expected_value in expected.items()):
         raise GoogleSheetsStateError("Google 表格配置策略与已确认选择不一致")
-    if value["lifecycle_state"] not in {"pending_connection", "active"}:
+    if value["lifecycle_state"] not in {"pending_connection", "active", "paused"}:
         raise GoogleSheetsStateError("Google 表格生命周期状态无效")
+    if value["sync_cadence"] not in {"every_record", "on_demand"}:
+        raise GoogleSheetsStateError("Google 表格同步节奏无效")
     expected_sheets = ["总览", "阶段路线", "两周行动", "每日记录", "每周复盘", "使用说明", "扩展规划", "日记索引"]
     if value["managed_sheets"] != expected_sheets:
         raise GoogleSheetsStateError("Google 表格受管页面集合无效")
@@ -145,9 +146,19 @@ def _validate_receipt(value: dict[str, Any], config: dict[str, Any]) -> dict[str
 
 def inspect_state(root: Path = DEFAULT_ROOT) -> dict[str, Any]:
     config = _validate_config(_read_json(root / CONFIG_PATH, required=True) or {})
-    current_sources = _source_snapshots(root)
     if config["lifecycle_state"] != "active":
-        return {"state": "pending_connection", "configured": True, "current": False, "receipt_present": False}
+        if config["lifecycle_state"] == "pending_connection":
+            return {"state": "pending_connection", "configured": True, "current": False, "receipt_present": False}
+        receipt_value = _read_json(root / RECEIPT_PATH, required=False)
+        receipt = _validate_receipt(receipt_value, config) if receipt_value is not None else None
+        result = {
+            "state": "paused", "configured": True, "current": False,
+            "receipt_present": receipt is not None,
+        }
+        if receipt is not None:
+            result["synced_at"] = receipt["synced_at"]
+        return result
+    current_sources = _source_snapshots(root)
     receipt_value = _read_json(root / RECEIPT_PATH, required=False)
     if receipt_value is None:
         return {"state": "pending_initial_sync", "configured": True, "current": False, "receipt_present": False}
@@ -204,6 +215,32 @@ def activate(root: Path, payload: dict[str, Any]) -> dict[str, Any]:
     return {"action": "activated", "display_backend": "google_sheets", "access": candidate["access"]}
 
 
+def set_mode(root: Path, payload: dict[str, Any]) -> dict[str, Any]:
+    required = {
+        "lifecycle_state", "sync_cadence",
+        "expect_lifecycle_state", "expect_sync_cadence",
+    }
+    if set(payload) != required:
+        raise GoogleSheetsStateError("set-mode 输入字段集无效")
+    target = (payload["lifecycle_state"], payload["sync_cadence"])
+    if target not in {("active", "every_record"), ("paused", "on_demand")}:
+        raise GoogleSheetsStateError("Google 表格目标模式无效")
+    config = _validate_config(_read_json(root / CONFIG_PATH, required=True) or {})
+    current = (config["lifecycle_state"], config["sync_cadence"])
+    expected = (payload["expect_lifecycle_state"], payload["expect_sync_cadence"])
+    if current != expected:
+        raise GoogleSheetsStateError("Google 表格模式已变化；请重新读取后再试")
+    candidate = dict(config)
+    candidate["lifecycle_state"], candidate["sync_cadence"] = target
+    _validate_config(candidate)
+    _atomic_json(root / CONFIG_PATH, candidate)
+    return {
+        "action": "mode_updated" if current != target else "unchanged",
+        "lifecycle_state": candidate["lifecycle_state"],
+        "sync_cadence": candidate["sync_cadence"],
+    }
+
+
 def mark_success(root: Path, payload: dict[str, Any]) -> dict[str, Any]:
     if set(payload) != {"spreadsheet_id", "payload_sha256", "sources"}:
         raise GoogleSheetsStateError("mark-success 输入字段集无效")
@@ -233,6 +270,7 @@ def main() -> int:
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("status")
     subparsers.add_parser("activate")
+    subparsers.add_parser("set-mode")
     subparsers.add_parser("mark-success")
     args = parser.parse_args()
     root = args.root.resolve()
@@ -241,6 +279,8 @@ def main() -> int:
             result = inspect_state(root)
         elif args.command == "activate":
             result = activate(root, _stdin_json())
+        elif args.command == "set-mode":
+            result = set_mode(root, _stdin_json())
         else:
             result = mark_success(root, _stdin_json())
     except (GoogleSheetsStateError, OSError) as error:

@@ -5,7 +5,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tools.google_sheets_state import GoogleSheetsStateError, activate, inspect_state, mark_success
+from tools.google_sheets_state import (
+    GoogleSheetsStateError,
+    activate,
+    inspect_state,
+    mark_success,
+    set_mode,
+)
 
 
 class GoogleSheetsStateTests(unittest.TestCase):
@@ -88,6 +94,31 @@ class GoogleSheetsStateTests(unittest.TestCase):
                 "spreadsheet_id": "other_sheet_1234567890",
                 "payload_sha256": "b" * 64,
                 "sources": self._sources(),
+            })
+
+    def test_paused_on_demand_mode_preserves_binding_without_sync_due(self) -> None:
+        activate(self.root, {
+            "spreadsheet_id": "sheet_id_1234567890",
+            "spreadsheet_url": "https://docs.google.com/spreadsheets/d/sheet_id_1234567890/edit",
+        })
+        result = set_mode(self.root, {
+            "lifecycle_state": "paused",
+            "sync_cadence": "on_demand",
+            "expect_lifecycle_state": "active",
+            "expect_sync_cadence": "every_record",
+        })
+        self.assertEqual(result["action"], "mode_updated")
+        self.assertEqual(inspect_state(self.root)["state"], "paused")
+        saved = json.loads(self.config_path.read_text(encoding="utf-8"))
+        self.assertEqual(saved["spreadsheet_id"], "sheet_id_1234567890")
+        self.assertEqual(saved["sync_cadence"], "on_demand")
+
+        with self.assertRaises(GoogleSheetsStateError):
+            set_mode(self.root, {
+                "lifecycle_state": "active",
+                "sync_cadence": "every_record",
+                "expect_lifecycle_state": "active",
+                "expect_sync_cadence": "every_record",
             })
 
 

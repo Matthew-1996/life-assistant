@@ -551,10 +551,10 @@ def _inspect_google_display_state(
     name = state["state"]
     metrics = {
         "display_backend": "google_sheets",
-        "google_sheet_sync_due": name != "current",
+        "google_sheet_sync_due": name not in {"current", "paused"},
         "google_sheet_sync_state": name,
     }
-    if name == "current":
+    if name in {"current", "paused"}:
         return metrics, None
     if name == "pending_connection":
         return metrics, (
