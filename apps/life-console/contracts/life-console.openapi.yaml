@@ -444,8 +444,9 @@ components:
               items:
                 type: object
                 additionalProperties: false
-                required: [date, title, summary]
+                required: [id, date, title, summary]
                 properties:
+                  id: {type: string, minLength: 1, maxLength: 120}
                   date: {type: string, format: date}
                   title: {type: string, maxLength: 100}
                   summary: {type: string, maxLength: 240}

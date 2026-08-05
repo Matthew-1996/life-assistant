@@ -76,7 +76,7 @@ def _assert_allowed(url: str) -> None:
         raise ProviderError("目标 endpoint 不在允许白名单内")
 
 
-def _https_transport(api_key: str) -> Transport:
+def _https_transport(credential: str) -> Transport:
     context = ssl.create_default_context()
 
     def send(request: ProviderRequest) -> ProviderResponse:
@@ -88,7 +88,7 @@ def _https_transport(api_key: str) -> Transport:
             method="POST",
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {api_key}",
+                "Authorization": f"Bearer {credential}",
                 "Accept": "application/json",
             },
         )
@@ -137,22 +137,22 @@ def request_enrichment(
     *,
     raw_text: str,
     model: str,
-    api_key: str | None = None,
+    credential: str | None = None,
     transport: Transport | None = None,
     timeout: float = DEFAULT_TIMEOUT,
     url: str = ALLOWED_ENDPOINT,
 ) -> str:
     """向 DeepSeek 请求一次非流式 JSON 整理，返回模型 content 字符串。
 
-    生产路径要求 ``api_key``（来自 Keychain）；测试路径注入 ``transport`` 且
-    不需要 Key。任何异常都是 ``ProviderError``，不泄露 Key 或完整响应。
+    生产路径要求 ``credential``（来自 Keychain）；测试路径注入 ``transport`` 且
+    不需要凭据。任何异常都是 ``ProviderError``，不泄露凭据或完整响应。
     """
 
     _assert_allowed(url)
     if transport is None:
-        if not api_key:
-            raise ProviderError("缺少 API Key，无法访问 provider")
-        transport = _https_transport(api_key)
+        if not credential:
+            raise ProviderError("缺少访问凭据，无法访问 provider")
+        transport = _https_transport(credential)
     request = ProviderRequest(
         url=url,
         model=model,

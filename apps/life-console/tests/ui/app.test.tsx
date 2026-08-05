@@ -20,6 +20,17 @@ function navigationButton(name: string) {
   );
 }
 
+// The enrichment surface is exercised in dedicated Hub tests; UI mocks only
+// need these stubs to satisfy the client contract for unrelated flows.
+function enrichmentStubs() {
+  return {
+    enrichmentPreview: vi.fn(),
+    enrichmentCommit: vi.fn(),
+    enrichmentStatus: vi.fn(),
+    enrichmentRetry: vi.fn(),
+  };
+}
+
 describe("Life Console synthetic UI", () => {
   it("navigates all four pages with keyboard-accessible controls", async () => {
     const user = userEvent.setup();
@@ -144,6 +155,7 @@ describe("Life Console synthetic UI", () => {
       journal: vi.fn(),
       checkin: vi.fn().mockRejectedValue(new Error("synthetic hub failure")),
       preview: vi.fn(),
+      ...enrichmentStubs(),
     } satisfies LifeConsoleClient;
     render(<App client={client} initialDashboard={syntheticDashboard} />);
 
@@ -175,6 +187,7 @@ describe("Life Console synthetic UI", () => {
         message: "已保存到 iCloud",
       }),
       preview: vi.fn(),
+      ...enrichmentStubs(),
     } satisfies LifeConsoleClient;
     render(<App client={client} initialDashboard={syntheticDashboard} />);
 
@@ -202,6 +215,7 @@ describe("Life Console synthetic UI", () => {
       journal,
       checkin: vi.fn(),
       preview: vi.fn(),
+      ...enrichmentStubs(),
     } satisfies LifeConsoleClient;
     render(<App client={client} initialDashboard={syntheticDashboard} />);
     await user.click(navigationButton("记录"));
@@ -242,6 +256,7 @@ describe("Life Console synthetic UI", () => {
       journal: vi.fn(),
       checkin: vi.fn().mockRejectedValue(new ApiError(response, 409)),
       preview: vi.fn(),
+      ...enrichmentStubs(),
     } satisfies LifeConsoleClient;
     render(<App client={client} initialDashboard={syntheticDashboard} />);
     const group = screen.getByRole("group", { name: "生活动作状态" });
@@ -273,6 +288,7 @@ describe("Life Console synthetic UI", () => {
       journal: vi.fn(),
       checkin,
       preview: vi.fn(),
+      ...enrichmentStubs(),
     } satisfies LifeConsoleClient;
     render(<App client={client} initialDashboard={syntheticDashboard} />);
     await user.click(navigationButton("记录"));
@@ -283,6 +299,57 @@ describe("Life Console synthetic UI", () => {
 
     await waitFor(() => expect(checkin).toHaveBeenCalledTimes(1));
     expect(checkin.mock.calls[0][1].fields).toEqual({ energy: 4 });
+  });
+
+  it("previews before sending and only enriches after explicit confirmation", async () => {
+    const user = userEvent.setup();
+    const enrichmentPreview = vi.fn().mockResolvedValue({
+      schema_version: 1,
+      preview_token: "synthetic-enrichment-preview-token-1234",
+      expires_at: "2099-01-01T00:00:00Z",
+      journal_id: "20260111-unknown-000000000000",
+      provider: "deepseek",
+      model: "deepseek-v4-flash",
+      prompt_version: "journal-enrichment-2026-08-05.1",
+      authorization_version: "auth-1",
+      max_retries: 2,
+      writable_fields: ["title", "summary", "facts", "feelings", "people", "places", "themes", "tags"],
+      disclosures: ["仅发送当前这一篇日记的原文。", "不发送其他日记、健康数据、目标或状态。"],
+    });
+    const enrichmentCommit = vi.fn().mockResolvedValue({
+      schema_version: 1, job_id: "job_ui_0001", journal_id: "20260111-unknown-000000000000",
+      provider: "deepseek", model: "deepseek-v4-flash",
+      prompt_version: "journal-enrichment-2026-08-05.1", status: "queued", attempts: 0, max_retries: 2,
+    });
+    const enrichmentStatus = vi.fn().mockResolvedValue({
+      schema_version: 1, job_id: "job_ui_0001", journal_id: "20260111-unknown-000000000000",
+      provider: "deepseek", model: "deepseek-v4-flash",
+      prompt_version: "journal-enrichment-2026-08-05.1", status: "succeeded", attempts: 1, max_retries: 2,
+    });
+    const client = {
+      dashboard: vi.fn().mockResolvedValue(syntheticDashboard),
+      journal: vi.fn(),
+      checkin: vi.fn(),
+      preview: vi.fn(),
+      enrichmentPreview,
+      enrichmentCommit,
+      enrichmentStatus,
+      enrichmentRetry: vi.fn(),
+    } satisfies LifeConsoleClient;
+    render(<App client={client} initialDashboard={syntheticDashboard} />);
+    await user.click(navigationButton("记录"));
+
+    await user.click(screen.getByRole("button", { name: "用 DeepSeek 整理此篇" }));
+    // 第一次点击只生成预览，绝不联网发送。
+    await waitFor(() => expect(enrichmentPreview).toHaveBeenCalledTimes(1));
+    expect(enrichmentCommit).not.toHaveBeenCalled();
+    expect(screen.getByText("仅发送当前这一篇日记的原文。")).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "确认发送" }));
+    await waitFor(() => expect(enrichmentCommit).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(screen.getByRole("status").textContent).toContain("结构化整理已保存"),
+    );
   });
 });
 

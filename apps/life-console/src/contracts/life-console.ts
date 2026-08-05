@@ -292,6 +292,7 @@ export interface components {
             };
             records: {
                 recent_journals: {
+                    id: string;
                     /** Format: date */
                     date: string;
                     title: string;

@@ -150,7 +150,12 @@ def build_dashboard(root: Path, *, today: date | None = None) -> dict[str, Any]:
         for day, row in zip(window_dates, recent)
     ]
     safe_journals = [
-        {"date": row["date"], "title": row["title"], "summary": row["summary"]}
+        {
+            "id": row["id"],
+            "date": row["date"],
+            "title": row["title"],
+            "summary": row["summary"],
+        }
         for row in reversed(journals)
         if row.get("status") == "active"
     ][:10]

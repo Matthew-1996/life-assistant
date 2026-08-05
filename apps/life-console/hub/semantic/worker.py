@@ -99,13 +99,13 @@ def process_once(
         )
 
     try:
-        api_key: str | None = None
+        provider_key: str | None = None
         if transport is None:
-            api_key = load_api_key()
+            provider_key = load_api_key()
         content = request_enrichment(
             raw_text=source["raw"],
             model=job["model"],
-            api_key=api_key,
+            credential=provider_key,
             transport=transport,
         )
     except (ProviderError, KeyUnavailable):

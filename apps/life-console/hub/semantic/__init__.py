@@ -44,6 +44,7 @@ from .schema import (
     parse_model_output,
 )
 from .source import SourceChanged, SourceUnavailable, assert_fingerprint, read_source
+from .runtime import EnrichmentRuntime, NotAuthorized, PreviewExpired
 from .worker import SingleConcurrencyWorker, process_once, run_with_retry
 
 __all__ = [
@@ -75,6 +76,9 @@ __all__ = [
     "SourceUnavailable",
     "assert_fingerprint",
     "read_source",
+    "EnrichmentRuntime",
+    "NotAuthorized",
+    "PreviewExpired",
     "SingleConcurrencyWorker",
     "process_once",
     "run_with_retry",

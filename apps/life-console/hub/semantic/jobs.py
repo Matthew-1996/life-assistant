@@ -219,6 +219,26 @@ def update_job(
     return job
 
 
+def reset_for_retry(journal_root: Path, job_id: str) -> dict[str, Any]:
+    """把一个 failed 作业重置回 queued，供用户主动发起新一轮重试。
+
+    用户主动重试是一次全新机会：尝试次数归零，让 worker 重新按 max_retries
+    退避；来源指纹保留（提交/重试前仍会核对），失败码清空。
+    """
+
+    job = load_job(journal_root, job_id)
+    if job["status"] != "failed":
+        raise JobError("只能重试失败的作业")
+    job["status"] = "queued"
+    job["attempts"] = 0
+    job["failure_code"] = None
+    job["updated_at"] = _now()
+    _validate(job)
+    _persist(journal_root, job)
+    _audit(journal_root, job, event="retry_requested")
+    return job
+
+
 def iter_recoverable(journal_root: Path) -> Iterable[dict[str, Any]]:
     """按创建时间列出 queued/running 作业，供 Hub 重启后恢复。"""
 
