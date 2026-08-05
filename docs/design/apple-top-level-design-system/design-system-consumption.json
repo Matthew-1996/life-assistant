@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "tokenSource": "css.json",
+  "tokenCSS": "colors_and_type.css",
+  "componentsCSS": "components.css",
+  "componentIndex": "components/index.json",
+  "recommendedReadOrder": [
+    "README.md",
+    "css.json",
+    "components/index.json",
+    "components/{slug}.json",
+    "preview/component-{slug}.html",
+    "components.css",
+    "ui_kits/website/index.html"
+  ],
+  "coreComponents": [
+    "button",
+    "input",
+    "card",
+    "navigation"
+  ],
+  "supportComponents": [
+    "product-grid",
+    "comparison-table"
+  ],
+  "uiKits": [
+    {
+      "type": "website",
+      "entry": "ui_kits/website/index.html"
+    }
+  ],
+  "componentContractKind": "legacy-json",
+  "previewFiles": [
+    "preview/component-button.html",
+    "preview/component-card.html",
+    "preview/component-comparison-table.html",
+    "preview/component-input.html",
+    "preview/component-navigation.html",
+    "preview/component-product-grid.html"
+  ],
+  "allowedComponents": [
+    "button",
+    "card",
+    "comparison-table",
+    "input",
+    "navigation",
+    "product-grid"
+  ],
+  "projectConsumption": {
+    "role": "top-level design system for Life Console UI work",
+    "tokenCSS": "colors_and_type.css",
+    "componentCSS": "components.css",
+    "prototypePackage": "../life-console-apple-redesign",
+    "uiGuidelines": "../life-console-apple-ui-ue-guidelines.md"
+  }
+}

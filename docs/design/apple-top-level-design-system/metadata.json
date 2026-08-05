@@ -1,0 +1,8 @@
+{
+  "id": "apple",
+  "design_library_id": "apple",
+  "name": "Apple",
+  "version": 1,
+  "source": "accepted-top-level-design-system",
+  "projectRole": "Life Console top-level UI design system"
+}
