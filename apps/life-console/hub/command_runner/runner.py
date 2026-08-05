@@ -48,15 +48,20 @@ class CommandRunner:
 
     def add_journal(self, request: dict[str, Any]) -> dict[str, Any]:
         event_date = request["event_date"]
+        raw = request["text"]
         payload = {
             "date": event_date,
             "time": request.get("event_time"),
             "time_precision": request["time_precision"],
-            "title": f"{event_date} 日记",
-            "raw": request["text"],
+            "title": request.get("title") or f"{event_date} 日记",
+            "summary": request.get("summary", ""),
+            "raw": raw,
             "source": "explicit",
             "privacy": "local-only",
         }
+        for field in ("facts", "feelings", "people", "places", "themes", "tags"):
+            if field in request:
+                payload[field] = request[field]
         return self._run(
             [
                 sys.executable,

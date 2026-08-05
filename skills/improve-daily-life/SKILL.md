@@ -33,7 +33,7 @@ description: 将模糊的生活目标转化为低打扰、可执行、可复盘�
 
 ## 对话式生活日记
 
-普通新增日记优先按项目内 `journal/QUICK_CAPTURE.md` 快速入库：先把 iCloud 项目原子保存为唯一真相源，再立即短回执；若私密 Google 表格展示层已连接，则随后刷新轻量日记索引。Google 同步失败不得回滚或延迟本地成功，只记为待重试；普通新增不刷新状态、做完整校验或备份。只有更正、撤回、恢复、删除、回顾、发布、隐私问题或复杂歧义才读取并遵循 [journaling.md](references/journaling.md)。用户没有使用触发词、但明显在叙述一段希望保留的亲身经历时，可以按隐式触发处理；必须在回执中明确说明已经记录，并允许用户说“不要记刚才那条”撤回。
+普通新增日记优先按项目内 `journal/QUICK_CAPTURE.md` 快速入库：先把 iCloud 项目原子保存为唯一真相源，再立即短回执；只有私密 Google 表格为 active/every_record 时才随后刷新轻量日记索引，paused/on_demand 不自动同步。active/every_record 下 Google 同步失败不得回滚或延迟本地成功，只记为待重试；普通新增不刷新状态、做完整校验或备份。只有更正、撤回、恢复、删除、回顾、发布、隐私问题或复杂歧义才读取并遵循 [journaling.md](references/journaling.md)。用户没有使用触发词、但明显在叙述一段希望保留的亲身经历时，可以按隐式触发处理；必须在回执中明确说明已经记录，并允许用户说“不要记刚才那条”撤回。
 
 孤立状态、普通提问、假设、转发材料和工作排障默认不自动写日记。例如“我现在放下手机准备睡觉了”只作为当下交流，不因一句状态而自动留存；用户显式说“日记：我现在放下手机准备睡觉了”时才记录。原始日记和长期记忆是两层数据：原文归档副本保存在当前 iCloud 项目，日记工具不自动发布网页，也不因反复出现就直接写入 `USER.md` 或 `MEMORY.md`。对话保留、iCloud 同步与备份副本的准确边界见 `journal/PRIVACY.md`。只有经用户确认的稳定偏好、长期事实或重要决定才进入长期记忆。
 
@@ -41,7 +41,7 @@ description: 将模糊的生活目标转化为低打扰、可执行、可复盘�
 
 ## 对话式状态回访
 
-用户回复定时生活回访时，不要让用户再打开大文档填写。只保留明确回答的结构化字段和最多一句去敏摘要，用 `tools/daily_checkin.py upsert` 按 `Asia/Shanghai` 当地日期合并；同日补充不创建第二条。本地成功后生成 `tools/google_sheets_payload.mjs` 的确定性载荷，并在已连接时刷新私密 Google 表格；失败保留本地结果、留待下次写入重试。“每日记录”D:P 是台账的只读派生视图，缺项保持未知，不从 Google 表格或归档 XLSX 反向补值，也不把整段对话、日记原文、Prompt 或任务标识写入状态台账。
+用户回复定时生活回访时，不要让用户再打开大文档填写。只保留明确回答的结构化字段和最多一句去敏摘要，用 `tools/daily_checkin.py upsert` 按 `Asia/Shanghai` 当地日期合并；同日补充不创建第二条。只有 Google 配置为 active/every_record 时，本地成功后才生成 `tools/google_sheets_payload.mjs` 的确定性载荷并刷新私密 Google 表格；paused/on_demand 时保留绑定但不自动同步，也不制造待刷新事项。外部失败保留本地结果、留待下次写入重试。“每日记录”D:P 是台账的只读派生视图，缺项保持未知，不从 Google 表格或归档 XLSX 反向补值，也不把整段对话、日记原文、Prompt 或任务标识写入状态台账。
 
 苹果健康睡眠时间必须先用 `tools/apple_health_sleep.py resolve` 做只读、逐字段校准。六行摘要的起止串日、跨度超过 18 小时或字段异常时，工具自动回退最近两日睡眠明细并去重重建最近一晚；一个字段异常不得牵连另一个有效字段。`sleep_start` 只映射 `sleep_time`，`sleep_end` 只映射最终醒来的 `wake_time`，设备绝不填写 `out_of_bed_time`。用户说“约、左右、大概”时，设备与用户同类时间差 `≤60` 分钟采用设备精确值，`61–119` 分钟保留用户值，`≥120` 分钟先确认且不覆盖；用户明确时间精确时使用 `exact` 精度，否定设备或要求以自己为准时传对应的 `--sleep-user-priority` / `--wake-user-priority` 并保留用户值。“起床”未进一步说明时按离床理解。醒来是日常重点字段；离床底层独立保存，但只在用户明确提供或确有差异时按需记录，不要求每天填写。
 
@@ -49,9 +49,9 @@ description: 将模糊的生活目标转化为低打扰、可执行、可复盘�
 
 用户要求删除某天的结构化回访时，先按 `records/README.md` 运行只读 `purge-plan`，只展示日期、稳定键和当前项目/历史副本边界。删除是不可逆的当前项目动作：取得当次明确确认后，使用计划返回的 revision 与内容哈希运行 `purge`；若 Google 展示层已连接，再刷新并确认对应 D:P 已清空。外部刷新失败不恢复已删除的 iCloud 源记录，但必须明确待重试。旧 ZIP、聊天和 iCloud/设备历史不在该命令范围内。
 
-周日轻复盘固定覆盖周一至周日自然周。先用 `tools/daily_checkin.py week-summary` 获取不含自由文本备注的结构化汇总；不得读取、引用或复述每日台账的 `note_summary` 或 Google 表格“每日记录”P 列。用户对“变好事实、反复摩擦、下周实验、停止/减少、目标意向”的明确回答，通过 stdin 用 `tools/weekly_review.py upsert` 写入独立周台账；延迟回复仍归原回访所属自然周，不按回复日期重算。周回答不是每日状态，除非用户另行明确提供当日状态或要求兼作当日状态。本地成功后按同一非阻塞规则刷新 Google 表格“每周复盘”；没有回答保持空白，不从日记、均值或助手推断反向填充。
+周日轻复盘固定覆盖周一至周日自然周。先用 `tools/daily_checkin.py week-summary` 获取不含自由文本备注的结构化汇总；不得读取、引用或复述每日台账的 `note_summary` 或 Google 表格“每日记录”P 列。用户对“变好事实、反复摩擦、下周实验、停止/减少、目标意向”的明确回答，通过 stdin 用 `tools/weekly_review.py upsert` 写入独立周台账；延迟回复仍归原回访所属自然周，不按回复日期重算。周回答不是每日状态，除非用户另行明确提供当日状态或要求兼作当日状态。本地成功后只在 Google 为 active/every_record 时按同一非阻塞规则刷新“每周复盘”；paused/on_demand 不自动刷新。没有回答保持空白，不从日记、均值或助手推断反向填充。
 
-周复盘意向不自动修改 `GOALS.md`。删除某周回答时使用周工具的 `purge-plan` 和精确 `purge`，再按已连接状态刷新并确认 Google 派生列已清空；日记、每日状态、目标、聊天、旧 ZIP 和 iCloud/设备历史不随该命令删除。
+周复盘意向不自动修改 `GOALS.md`。删除某周回答时使用周工具的 `purge-plan` 和精确 `purge`；只有 Google 为 active/every_record 时才刷新并确认派生列已清空，paused/on_demand 保持外部历史快照不变。日记、每日状态、目标、聊天、旧 ZIP 和 iCloud/设备历史不随该命令删除。
 
 用户回答已发起的阶段复盘时，读取 `records/README.md` 并将明确回答通过 stdin 幂等写入 `tools/phase_review.py`；延迟回复仍使用原复盘日。`life_experience_signal` 只保存用户明确描述的真实补充，缺项保持未知，不因睡眠改善就推断生活体验已恢复。阶段台账仅保存回答；成功后用 `tools/phase_actions.py plan`形成可恢复动作，再用纯只读 `apply-plan` 获取待执行/可重试项。`exact_change` 展示精确变更并再确认，`schedule_details` 补齐日期、当地时间和目标后取得当次同意；实际动作验证后才用 revision/etag `mark` 为 applied，失败记通用 failure_code，不做记 dismissed。动作台账自身不修改目标、策略、提醒或网页；回答来源变化使旧动作 superseded，不静默回滚已应用的外部效果。
 

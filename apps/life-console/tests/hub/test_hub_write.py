@@ -77,6 +77,29 @@ class HubWriteTests(unittest.TestCase):
         self.assertEqual(index.count('"id":'), 1)
         self.assertNotIn(text, index)
 
+    def test_journal_accepts_form_projection_without_exposing_raw_index_text(self) -> None:
+        body = {
+            "schema_version": 1,
+            "idempotency_key": "synthetic_form_projection_01",
+            "event_date": "2026-01-12",
+            "time_precision": "unknown",
+            "text": "合成原文，不应进入轻量索引",
+            "title": "合成上线记录",
+            "summary": "一次合成上线，感到开心。",
+            "facts": ["完成合成上线。"],
+            "feelings": ["开心。"],
+            "people": ["合成同伴"],
+            "places": ["合成场景"],
+            "themes": ["合成主题"],
+            "tags": ["合成标签"],
+        }
+        status, _ = self.post("/api/v1/journals", body)
+        self.assertEqual(status, 200)
+        record = json.loads((self.root / "journal/index.jsonl").read_text(encoding="utf-8"))
+        self.assertEqual(record["title"], "合成上线记录")
+        self.assertEqual(record["facts"], ["完成合成上线。"])
+        self.assertNotIn(body["text"], json.dumps(record, ensure_ascii=False))
+
     def test_idempotency_key_rejects_changed_body(self) -> None:
         body = {
             "schema_version": 1,

@@ -25,6 +25,8 @@ STATIC_ROOT = Path(__file__).resolve().parents[1] / "dist"
 CHECKIN_TIME_FIELDS = {"sleep_time", "wake_time", "out_of_bed_time"}
 CHECKIN_RATING_FIELDS = {"sleep_quality", "energy", "mood", "life_feeling"}
 CHECKIN_ANCHOR_FIELDS = {"wake", "body_light", "life_action", "wind_down"}
+ICLOUD_STATUSES = {"readable", "writable", "partial", "unavailable"}
+AUTOMATION_STATUSES = {"ready", "attention", "unknown"}
 CHECKIN_FIELDS = (
     CHECKIN_TIME_FIELDS
     | CHECKIN_RATING_FIELDS
@@ -32,6 +34,8 @@ CHECKIN_FIELDS = (
     | {"awake_in_bed", "note_summary"}
 )
 TIME_PATTERN = re.compile(r"(?:[01][0-9]|2[0-3]):[0-5][0-9]")
+JOURNAL_LINE_FIELDS = {"title": (1, 120), "summary": (1, 240)}
+JOURNAL_LIST_FIELDS = {"facts", "feelings", "people", "places", "themes", "tags"}
 
 
 def _valid_date(value: Any) -> bool:
@@ -51,9 +55,17 @@ def _valid_text(value: Any, *, minimum: int = 1, maximum: int) -> bool:
     return isinstance(value, str) and minimum <= len(value) <= maximum
 
 
+def _valid_journal_list(value: Any) -> bool:
+    return (
+        isinstance(value, list)
+        and len(value) <= 12
+        and all(_valid_text(item, maximum=180) for item in value)
+    )
+
+
 def _validate_journal(body: dict[str, Any]) -> None:
     required = {"schema_version", "idempotency_key", "event_date", "time_precision", "text"}
-    allowed = required | {"event_time"}
+    allowed = required | {"event_time", *JOURNAL_LINE_FIELDS, *JOURNAL_LIST_FIELDS}
     if not required.issubset(body) or not set(body).issubset(allowed):
         raise ValueError("journal fields")
     if not _valid_date(body.get("event_date")):
@@ -67,6 +79,12 @@ def _validate_journal(body: dict[str, Any]) -> None:
         raise ValueError("time precision")
     if not _valid_text(body.get("text"), maximum=20_000):
         raise ValueError("journal text")
+    for field, (minimum, maximum) in JOURNAL_LINE_FIELDS.items():
+        if field in body and not _valid_text(body[field], minimum=minimum, maximum=maximum):
+            raise ValueError(f"journal {field}")
+    for field in JOURNAL_LIST_FIELDS:
+        if field in body and not _valid_journal_list(body[field]):
+            raise ValueError(f"journal {field}")
 
 
 def _validate_checkin(day: str, body: dict[str, Any]) -> None:
@@ -99,9 +117,23 @@ def _validate_checkin(day: str, body: dict[str, Any]) -> None:
 
 
 class LifeConsoleServer(ThreadingHTTPServer):
-    def __init__(self, address: tuple[str, int], handler: type[SimpleHTTPRequestHandler], *, root: Path):
+    def __init__(
+        self,
+        address: tuple[str, int],
+        handler: type[SimpleHTTPRequestHandler],
+        *,
+        root: Path,
+        icloud_status: str = "readable",
+        automation_status: str = "unknown",
+    ):
         require_loopback_bind(address[0])
+        if icloud_status not in ICLOUD_STATUSES:
+            raise ValueError("invalid iCloud status")
+        if automation_status not in AUTOMATION_STATUSES:
+            raise ValueError("invalid automation status")
         self.project_root = root.resolve()
+        self.icloud_status = icloud_status
+        self.automation_status = automation_status
         self.runner = CommandRunner(PROJECT_ROOT, self.project_root)
         self.sessions: dict[str, tuple[str, datetime]] = {}
         self.idempotency: dict[str, tuple[str, dict[str, Any]]] = {}
@@ -239,10 +271,16 @@ class LifeConsoleHandler(SimpleHTTPRequestHandler):
         if route == "/api/v1/dashboard":
             try:
                 snapshot = build_dashboard(self.server.project_root)
-            except (ReadModelError, UnicodeError, KeyError, TypeError, ValueError):
+            except (ReadModelError, UnicodeError, KeyError, TypeError, ValueError) as error:
+                LOG.exception(
+                    "dashboard source unavailable error=%s",
+                    error.__class__.__name__,
+                )
                 self._error(HTTPStatus.SERVICE_UNAVAILABLE, "SOURCE_INVALID", "本地来源暂不可用")
                 return
             snapshot["today"]["confirmations"] = list(self.server.confirmations.values())
+            snapshot["system"]["icloud"] = self.server.icloud_status
+            snapshot["system"]["automation"] = self.server.automation_status
             self._json(HTTPStatus.OK, snapshot)
             return
         if route == "/api/v1/confirmations":
@@ -430,8 +468,21 @@ class LifeConsoleHandler(SimpleHTTPRequestHandler):
             self._error(status, error.code, "记录无法安全保存", conflict=conflict)
 
 
-def create_server(*, root: Path = PROJECT_ROOT, host: str = DEFAULT_HOST, port: int = DEFAULT_PORT) -> LifeConsoleServer:
-    return LifeConsoleServer((host, port), LifeConsoleHandler, root=root)
+def create_server(
+    *,
+    root: Path = PROJECT_ROOT,
+    host: str = DEFAULT_HOST,
+    port: int = DEFAULT_PORT,
+    icloud_status: str = "readable",
+    automation_status: str = "unknown",
+) -> LifeConsoleServer:
+    return LifeConsoleServer(
+        (host, port),
+        LifeConsoleHandler,
+        root=root,
+        icloud_status=icloud_status,
+        automation_status=automation_status,
+    )
 
 
 def main() -> None:
@@ -444,9 +495,17 @@ def main() -> None:
         type=Path,
         help="iCloud life-assistant project root (machine-local launch setting)",
     )
+    parser.add_argument("--icloud-status", choices=sorted(ICLOUD_STATUSES), default="readable")
+    parser.add_argument("--automation-status", choices=sorted(AUTOMATION_STATUSES), default="unknown")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    server = create_server(root=args.root, host=args.host, port=args.port)
+    server = create_server(
+        root=args.root,
+        host=args.host,
+        port=args.port,
+        icloud_status=args.icloud_status,
+        automation_status=args.automation_status,
+    )
     LOG.info("Life Hub ready at http://%s:%s", *server.server_address)
     server.serve_forever()
 

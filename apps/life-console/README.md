@@ -18,18 +18,19 @@ Implemented in phase one:
 - a Python standard-library Life Hub with authenticated localhost reads;
 - whitelisted journal and daily-checkin writes through existing atomic tools;
 - revision-conflict, idempotency, purge-plan, and partial-refresh handling;
-- rebuildable LaunchAgent and local launcher generation.
+- rebuildable LaunchAgent and local launcher generation;
+- a dedicated, ad-hoc-signed Mac app launcher so launchd-owned Python work can
+  inherit the product's user-approved protected-file access.
 
 Not enabled or included in phase one:
 
-- an approved write against a user's current iCloud source of truth;
 - automatic LaunchAgent installation, mobile access, or remote access;
 - Google Sheets synchronization or a new Todo source of truth.
 
-Passing synthetic write tests proves the adapter behavior. It does not prove
-that a particular iCloud project is writable. The System page reports
-`readable` until a separately approved real write has been completed and
-verified.
+Passing synthetic write tests proves only the adapter behavior. Each machine
+must still complete a separately approved, reversible real-write acceptance
+before its generated runtime may report iCloud as `writable` and automation as
+`ready`.
 
 ## Requirements
 
@@ -66,13 +67,30 @@ is used. The server rejects non-loopback bind addresses, requires a short-lived
 local session for personal-data reads, requires same-port Origin plus CSRF for
 writes, reads only whitelisted Dashboard fields, and serves `dist/`.
 
-Generate, but do not install, machine-local launch files with:
+On macOS, build the dedicated background app first:
+
+```bash
+python3 packaging/build_macos_app.py \
+  --output '/path/to/private/runtime/Life Console.app'
+```
+
+Rebuilding an existing dedicated bundle requires the explicit `--replace`
+flag; unrelated app-bundle names are rejected.
+
+Then generate, but do not install, machine-local launch files with:
 
 ```bash
 python3 packaging/generate_launch_agent.py \
   --output-dir /path/to/private/runtime \
-  --project-root /path/to/private/icloud-project
+  --app-root /path/to/staged/life-console \
+  --project-root /path/to/private/icloud-project \
+  --program '/path/to/private/runtime/Life Console.app/Contents/MacOS/LifeConsoleLauncher' \
+  --python-executable /absolute/path/to/python3
 ```
+
+Only after the installed LaunchAgent has passed a real read, idempotent write,
+read-back, logical withdrawal, and integrity check should the same command add
+`--icloud-status writable --automation-status ready`.
 
 The generated plist and `.command` launcher contain paths for the current
 machine. Logs stay inside the permission-restricted runtime directory. These
