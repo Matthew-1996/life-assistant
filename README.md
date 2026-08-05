@@ -31,6 +31,7 @@ tools/setup_git_collaboration.sh
 
 - `skills/improve-daily-life/`：生活助手核心 Skill 与引用资料；
 - `tools/`：可迁移的数据工具、校验器与测试；
+- `docs/design/`：UI 设计治理入口，包含顶层设计系统、已验收前端重构原型和长期 UI/UE 规范；
 - `journal/`、`records/`：只提交通用说明和示例，真实数据不进入 Git；
 - `research/`：公开来源调研与实现审计；
 - `plans/`：只提交无真实个人信息的通用模板。

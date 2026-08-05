@@ -105,6 +105,24 @@ REQUIRED_FILES = [
     "web/life-dashboard/postcss.config.mjs",
     "web/life-dashboard/tsconfig.json",
     "web/life-dashboard/vite.config.ts",
+    "docs/design/README.md",
+    "docs/design/apple-top-level-design-system/README.md",
+    "docs/design/apple-top-level-design-system/usage-guide.md",
+    "docs/design/apple-top-level-design-system/metadata.json",
+    "docs/design/apple-top-level-design-system/design-system-consumption.json",
+    "docs/design/apple-top-level-design-system/colors_and_type.css",
+    "docs/design/apple-top-level-design-system/components.css",
+    "docs/design/apple-top-level-design-system/css.json",
+    "docs/design/apple-top-level-design-system/components/index.json",
+    "docs/design/apple-top-level-design-system/preview/component-button.html",
+    "docs/design/apple-top-level-design-system/ui_kits/website/index.html",
+    "docs/design/life-console-apple-redesign/README.md",
+    "docs/design/life-console-apple-redesign/colors_and_type.css",
+    "docs/design/life-console-apple-redesign/pages/overview.html",
+    "docs/design/life-console-apple-redesign/pages/capture.html",
+    "docs/design/life-console-apple-redesign/pages/insights.html",
+    "docs/design/life-console-apple-redesign/pages/system.html",
+    "docs/design/life-console-apple-ui-ue-guidelines.md",
     "skills/improve-daily-life/SKILL.md",
     "skills/improve-daily-life/agents/openai.yaml",
     "skills/improve-daily-life/references/core-system-prompt.md",
@@ -627,6 +645,76 @@ def validate_site_hosting_metadata(errors: list[str]) -> None:
             errors.append(f"移动端托管元数据 {field} 绑定无效")
 
 
+def validate_design_governance(errors: list[str]) -> None:
+    design_root = ROOT / "docs" / "design"
+    top_system = design_root / "apple-top-level-design-system"
+    prototype = design_root / "life-console-apple-redesign"
+    guideline = design_root / "life-console-apple-ui-ue-guidelines.md"
+
+    consumption_path = top_system / "design-system-consumption.json"
+    metadata_path = top_system / "metadata.json"
+    try:
+        consumption = json.loads(consumption_path.read_text(encoding="utf-8"))
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        errors.append("UI 顶层设计系统配置无法安全读取")
+        return
+
+    if not isinstance(metadata, dict) or metadata.get("projectRole") != (
+        "Life Console top-level UI design system"
+    ):
+        errors.append("UI 顶层设计系统元数据缺少项目角色")
+    project_consumption = consumption.get("projectConsumption")
+    if not isinstance(project_consumption, dict):
+        errors.append("UI 顶层设计系统缺少项目消费配置")
+        return
+    expected_links = {
+        "prototypePackage": "../life-console-apple-redesign",
+        "uiGuidelines": "../life-console-apple-ui-ue-guidelines.md",
+        "tokenCSS": "colors_and_type.css",
+        "componentCSS": "components.css",
+    }
+    for field, expected in expected_links.items():
+        if project_consumption.get(field) != expected:
+            errors.append(f"UI 顶层设计系统消费配置字段无效：{field}")
+
+    required_prototype_pages = {
+        "overview.html",
+        "capture.html",
+        "insights.html",
+        "system.html",
+    }
+    actual_pages = {
+        path.name
+        for path in (prototype / "pages").glob("*.html")
+        if path.is_file() and not path.is_symlink()
+    }
+    if actual_pages != required_prototype_pages:
+        errors.append("Life Console 已验收原型页面集合无效")
+
+    try:
+        governance_text = (design_root / "README.md").read_text(encoding="utf-8")
+        guideline_text = guideline.read_text(encoding="utf-8")
+    except (OSError, UnicodeError):
+        errors.append("UI 设计治理文档无法安全读取")
+        return
+    for snippet, label in {
+        "apple-top-level-design-system": "顶层设计系统入口",
+        "life-console-apple-redesign": "已验收原型入口",
+        "life-console-apple-ui-ue-guidelines.md": "长期 UI/UE 规范入口",
+    }.items():
+        if snippet not in governance_text:
+            errors.append(f"UI 设计治理文档缺少：{label}")
+    for snippet, label in {
+        "降低认知负担": "低认知负担原则",
+        "保留用户控制感": "用户确认原则",
+        "守住真相源边界": "真相源边界",
+        "避免压力型反馈": "非压力反馈原则",
+    }.items():
+        if snippet not in guideline_text:
+            errors.append(f"UI/UE 长期规范缺少：{label}")
+
+
 def validate_automation_registry(errors: list[str]) -> None:
     registry_path = ROOT / AUTOMATION_REGISTRY
     if not registry_path.is_file() or registry_path.is_symlink():
@@ -875,6 +963,7 @@ def validate() -> list[str]:
     validate_optional_phase_reviews(errors)
     validate_optional_insight_ledger(errors)
     validate_optional_phase_actions(errors)
+    validate_design_governance(errors)
     validate_site_hosting_metadata(errors)
     validate_site_publication_state(errors)
 
