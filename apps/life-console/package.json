@@ -11,9 +11,9 @@
     "build": "tsc -b && vite build",
     "generate:contracts": "openapi-typescript contracts/life-console.openapi.yaml -o src/contracts/life-console.ts",
     "check:contracts": "npm run generate:contracts && git diff --exit-code -- src/contracts/life-console.ts",
-    "test": "npm run check:contracts && vitest run && npm run test:hub",
+    "test": "npm run check:contracts && vitest run && npm run test:python",
     "test:contracts": "npm run check:contracts && vitest run tests/contract",
-    "test:hub": "python3 -m unittest discover -v -s tests/hub -p 'test_*.py'"
+    "test:python": "python3 -m unittest discover -v -s tests/hub -p 'test_*.py' && python3 -m unittest discover -v -s tests/packaging -p 'test_*.py' && python3 -m unittest discover -v -s tests/e2e -p 'test_*.py'"
   },
   "dependencies": {
     "react": "^19.1.1",
