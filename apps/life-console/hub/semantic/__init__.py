@@ -16,6 +16,16 @@
 
 from __future__ import annotations
 
+from . import jobs
+from .aliases import load_aliases
+from .deepseek_client import (
+    ALLOWED_ENDPOINT,
+    ProviderError,
+    ProviderRequest,
+    ProviderResponse,
+    request_enrichment,
+)
+from .keychain import KeyUnavailable, load_api_key
 from .preview import (
     ALLOWED_MODELS,
     DEFAULT_MODEL,
@@ -33,6 +43,8 @@ from .schema import (
     merge_enrichment,
     parse_model_output,
 )
+from .source import SourceChanged, SourceUnavailable, assert_fingerprint, read_source
+from .worker import SingleConcurrencyWorker, process_once, run_with_retry
 
 __all__ = [
     "PROMPT_VERSION",
@@ -50,4 +62,20 @@ __all__ = [
     "build_preview",
     "resolve_model",
     "source_fingerprint",
+    "jobs",
+    "load_aliases",
+    "ALLOWED_ENDPOINT",
+    "ProviderError",
+    "ProviderRequest",
+    "ProviderResponse",
+    "request_enrichment",
+    "KeyUnavailable",
+    "load_api_key",
+    "SourceChanged",
+    "SourceUnavailable",
+    "assert_fingerprint",
+    "read_source",
+    "SingleConcurrencyWorker",
+    "process_once",
+    "run_with_retry",
 ]
