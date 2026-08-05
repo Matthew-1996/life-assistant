@@ -133,6 +133,69 @@ class HubWriteTests(unittest.TestCase):
         self.assertEqual(result["read_model"], "pending_refresh")
         self.assertTrue((self.root / "journal/index.jsonl").exists())
 
+    def test_daily_purge_requires_exact_plan_and_confirmation(self) -> None:
+        create = {
+            "schema_version": 1,
+            "idempotency_key": "synthetic_key_0007",
+            "expect_revision": None,
+            "fields": {"energy": 3},
+        }
+        self.assertEqual(self.post("/api/v1/checkins/2026-01-12", create)[0], 200)
+        status, plan = self.post("/api/v1/purge-plans", {
+            "schema_version": 1,
+            "target_type": "daily_checkin",
+            "target_key": "2026-01-12",
+        })
+        self.assertEqual(status, 200)
+        wrong = {
+            "schema_version": 1,
+            "idempotency_key": "synthetic_key_0008",
+            "plan_id": plan["plan_id"],
+            "confirmation_text": "错误确认",
+            "expect_revision": plan["expect_revision"],
+            "plan_etag": plan["plan_etag"],
+            "acknowledge_historical_copies": True,
+        }
+        self.assertEqual(self.post("/api/v1/purge-confirmations", wrong)[0], 409)
+        exact = {**wrong, "idempotency_key": "synthetic_key_0009", "confirmation_text": plan["confirmation_text"]}
+        status, result = self.post("/api/v1/purge-confirmations", exact)
+        self.assertEqual(status, 200)
+        self.assertEqual(result["source"]["state"], "saved")
+        self.assertEqual((self.root / "records/daily-checkins.jsonl").read_text(), "")
+
+    def test_purge_plan_rejects_source_drift(self) -> None:
+        create = {
+            "schema_version": 1,
+            "idempotency_key": "synthetic_key_0010",
+            "expect_revision": None,
+            "fields": {"energy": 3},
+        }
+        self.post("/api/v1/checkins/2026-01-12", create)
+        _, plan = self.post("/api/v1/purge-plans", {
+            "schema_version": 1,
+            "target_type": "daily_checkin",
+            "target_key": "2026-01-12",
+        })
+        update = {
+            "schema_version": 1,
+            "idempotency_key": "synthetic_key_0011",
+            "expect_revision": 1,
+            "fields": {"mood": 4},
+        }
+        self.assertEqual(self.post("/api/v1/checkins/2026-01-12", update)[0], 200)
+        confirm = {
+            "schema_version": 1,
+            "idempotency_key": "synthetic_key_0012",
+            "plan_id": plan["plan_id"],
+            "confirmation_text": plan["confirmation_text"],
+            "expect_revision": plan["expect_revision"],
+            "plan_etag": plan["plan_etag"],
+            "acknowledge_historical_copies": True,
+        }
+        status, result = self.post("/api/v1/purge-confirmations", confirm)
+        self.assertEqual(status, 409)
+        self.assertEqual(result["error"]["code"], "REVISION_CONFLICT")
+
 
 if __name__ == "__main__":
     unittest.main()

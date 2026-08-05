@@ -30,6 +30,7 @@ class LifeConsoleServer(ThreadingHTTPServer):
         self.runner = CommandRunner(PROJECT_ROOT, self.project_root)
         self.sessions: dict[str, tuple[str, datetime]] = {}
         self.idempotency: dict[str, tuple[str, dict[str, Any]]] = {}
+        self.purge_plans: dict[str, dict[str, Any]] = {}
         super().__init__(address, handler)
 
 
@@ -161,6 +162,38 @@ class LifeConsoleHandler(SimpleHTTPRequestHandler):
         try:
             body = self._body()
             route = self.path.split("?", 1)[0]
+            if route == "/api/v1/purge-plans":
+                if set(body) != {"schema_version", "target_type", "target_key"}:
+                    raise ValueError("fields")
+                target_type = body["target_type"]
+                target_key = body["target_key"]
+                source = self.server.runner.purge_plan(target_type, target_key)
+                if source.get("exists") is False:
+                    raise CommandError("SOURCE_INVALID")
+                source_hash = hashlib.sha256(
+                    json.dumps(source, ensure_ascii=False, sort_keys=True).encode()
+                ).hexdigest()
+                plan_id = f"plan_{secrets.token_hex(16)}"
+                revision = source.get("revision") or 1
+                source_etag = source.get("record_etag") or source_hash
+                confirmation = source.get("required_confirmation") or target_key
+                plan = {
+                    "schema_version": 1,
+                    "plan_id": plan_id,
+                    "target_type": target_type,
+                    "target_key": target_key,
+                    "expect_revision": revision,
+                    "plan_etag": source_hash,
+                    "scope_summary": f"删除当前项目中的 1 条 {target_type} 源记录。",
+                    "confirmation_text": confirmation,
+                    "historical_copies_notice": "聊天、旧 ZIP 和 iCloud/设备历史不在本次删除范围内。",
+                }
+                self.server.purge_plans[plan_id] = {
+                    **plan, "source_etag": source_etag,
+                    "expires_at": datetime.now(timezone.utc) + timedelta(minutes=10),
+                }
+                self._json(HTTPStatus.OK, plan)
+                return
             key = body.get("idempotency_key")
             if not isinstance(key, str) or not 16 <= len(key) <= 100:
                 raise ValueError("idempotency")
@@ -174,7 +207,33 @@ class LifeConsoleHandler(SimpleHTTPRequestHandler):
                     return
                 self._json(HTTPStatus.OK, cached[1])
                 return
-            if route == "/api/v1/journals":
+            if route == "/api/v1/purge-confirmations":
+                required = {
+                    "schema_version", "idempotency_key", "plan_id",
+                    "confirmation_text", "expect_revision", "plan_etag",
+                    "acknowledge_historical_copies",
+                }
+                if set(body) != required or body["acknowledge_historical_copies"] is not True:
+                    raise ValueError("fields")
+                plan = self.server.purge_plans.get(body["plan_id"])
+                if (
+                    not plan
+                    or plan["expires_at"] <= datetime.now(timezone.utc)
+                    or body["confirmation_text"] != plan["confirmation_text"]
+                    or body["expect_revision"] != plan["expect_revision"]
+                    or body["plan_etag"] != plan["plan_etag"]
+                ):
+                    raise CommandError("REVISION_CONFLICT")
+                latest = self.server.runner.purge_plan(plan["target_type"], plan["target_key"])
+                latest_hash = hashlib.sha256(
+                    json.dumps(latest, ensure_ascii=False, sort_keys=True).encode()
+                ).hexdigest()
+                if latest_hash != plan["plan_etag"]:
+                    raise CommandError("REVISION_CONFLICT")
+                result = self.server.runner.purge(plan["target_type"], plan["target_key"], plan)
+                self.server.purge_plans.pop(body["plan_id"], None)
+                journal = plan["target_type"] == "journal"
+            elif route == "/api/v1/journals":
                 if set(body) - {"schema_version", "idempotency_key", "event_date", "event_time", "time_precision", "text"}:
                     raise ValueError("fields")
                 result = self.server.runner.add_journal(body)

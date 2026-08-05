@@ -91,3 +91,37 @@ class CommandRunner:
                 raise CommandError("INVALID_REQUEST")
             argv.extend([field_flags[field], str(value)])
         return self._run(argv)
+
+    def purge_plan(self, target_type: str, target_key: str) -> dict[str, Any]:
+        if target_type == "daily_checkin":
+            return self._run([
+                sys.executable, str(self.code_root / "tools/daily_checkin.py"),
+                "purge-plan", "--root", str(self.data_root / "records"),
+                "--date", target_key,
+            ])
+        if target_type == "journal":
+            return self._run([
+                sys.executable, str(self.code_root / "tools/journal_manager.py"),
+                "purge-plan", "--root", str(self.data_root / "journal"),
+                "--id", target_key,
+            ])
+        raise CommandError("INVALID_REQUEST")
+
+    def purge(self, target_type: str, target_key: str, plan: dict[str, Any]) -> dict[str, Any]:
+        if target_type == "daily_checkin":
+            return self._run([
+                sys.executable, str(self.code_root / "tools/daily_checkin.py"),
+                "purge", "--root", str(self.data_root / "records"),
+                "--date", target_key, "--confirm", plan["confirmation_text"],
+                "--expect-revision", str(plan["expect_revision"]),
+                "--expect-record-etag", plan["source_etag"],
+                "--acknowledge-historical-copies",
+            ])
+        if target_type == "journal":
+            return self._run([
+                sys.executable, str(self.code_root / "tools/journal_manager.py"),
+                "purge", "--root", str(self.data_root / "journal"),
+                "--id", target_key, "--confirm", target_key,
+                "--acknowledge-historical-copies",
+            ])
+        raise CommandError("INVALID_REQUEST")
