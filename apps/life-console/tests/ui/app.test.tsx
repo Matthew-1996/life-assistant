@@ -111,7 +111,7 @@ describe("Life Console synthetic UI", () => {
     expect(within(moodCard!).getByText("样本 2 · 缺失 1")).toBeTruthy();
   });
 
-  it("shows conversation handoff without browser persistence", async () => {
+  it("saves conversation capture without browser persistence in demo mode", async () => {
     const user = userEvent.setup();
     const localSet = vi.spyOn(Storage.prototype, "setItem");
     render(<App />);
@@ -119,12 +119,49 @@ describe("Life Console synthetic UI", () => {
 
     const text = "这是一段只用于测试的合成记录。";
     await user.type(screen.getByLabelText("直接描述想记录的内容"), text);
-    await user.click(
-      screen.getByRole("button", { name: "生成保存预览" }),
-    );
+    await user.click(screen.getByRole("button", { name: "保存到 iCloud" }));
 
-    expect(screen.getByText("前往现有生活助手对话继续")).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toContain("合成演示");
     expect(localSet).not.toHaveBeenCalled();
+  });
+
+  it("saves conversation capture through the Hub client and refreshes", async () => {
+    const user = userEvent.setup();
+    const journal = vi.fn().mockResolvedValue({
+      request_id: "req_conv",
+      command_id: "cmd_conv",
+      action: "created",
+      source: { state: "saved", revision: null },
+      read_model: "current",
+      message: "已保存到 iCloud",
+    });
+    const dashboard = vi.fn().mockResolvedValue(syntheticDashboard);
+    const client = {
+      dashboard,
+      journal,
+      checkin: vi.fn(),
+      preview: vi.fn(),
+      ...enrichmentStubs(),
+    } satisfies LifeConsoleClient;
+    render(<App client={client} initialDashboard={syntheticDashboard} />);
+    await user.click(navigationButton("记录"));
+
+    await user.type(
+      screen.getByLabelText("直接描述想记录的内容"),
+      "今天去公园散步，很放松。",
+    );
+    await user.click(screen.getByRole("button", { name: "保存到 iCloud" }));
+
+    await waitFor(() => expect(journal).toHaveBeenCalledTimes(1));
+    const sent = journal.mock.calls[0][0];
+    expect(sent.text).toBe("今天去公园散步，很放松。");
+    expect(sent.time_precision).toBe("unknown");
+    expect(sent.event_date).toBe(syntheticDashboard.date);
+    await waitFor(() =>
+      expect(screen.getByRole("status").textContent).toBe("已保存到 iCloud"),
+    );
+    // Refreshed the dashboard so the new card (with enrich button) appears.
+    expect(dashboard).toHaveBeenCalled();
   });
 
   it("keeps advanced form fields collapsed by default", async () => {

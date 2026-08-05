@@ -183,27 +183,47 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
   const [entryMode, setEntryMode] = useState<EntryMode>("conversation");
   const [formMode, setFormMode] = useState<FormMode>("journal");
   const [captureText, setCaptureText] = useState("");
-  const [previewReady, setPreviewReady] = useState(false);
+  const [captureSaving, setCaptureSaving] = useState(false);
   const [receipt, setReceipt] = useState<string | null>(null);
-  const [previewMessage, setPreviewMessage] = useState("前往现有生活助手对话继续");
   const [conflict, setConflict] = useState<components["schemas"]["CheckinConflict"] | null>(null);
 
-  async function previewCapture(event: SyntheticEvent<HTMLFormElement, SubmitEvent>) {
+  async function saveConversation(event: SyntheticEvent<HTMLFormElement, SubmitEvent>) {
     event.preventDefault();
-    if (!captureText.trim()) return;
+    const eventText = captureText.trim();
+    if (!eventText) return;
     setReceipt(null);
-    if (client) {
-      try {
-        const preview = await client.preview(
-          captureText,
-          dashboard.source_revisions.journal ?? "empty",
-        );
-        setPreviewMessage(preview.message);
-      } catch {
-        setPreviewMessage("本地服务暂不可用，请稍后重试");
-      }
+    if (!client) {
+      setReceipt("合成演示已完成；未写入真实 iCloud");
+      setCaptureText("");
+      return;
     }
-    setPreviewReady(true);
+    const fact = firstSentence(eventText, 180);
+    const title = firstSentence(eventText, 120);
+    setCaptureSaving(true);
+    try {
+      const result = await client.journal({
+        schema_version: 1,
+        event_date: dashboard.date,
+        event_time: null,
+        time_precision: "unknown",
+        text: eventText,
+        title,
+        summary: compactLine(fact, 240),
+        facts: [fact],
+        feelings: [],
+        people: [],
+        places: [],
+        themes: [],
+        tags: [],
+      });
+      setReceipt(result.message);
+      setCaptureText("");
+      await onSaved?.();
+    } catch {
+      setReceipt("保存失败，请保留当前内容并重试");
+    } finally {
+      setCaptureSaving(false);
+    }
   }
 
   async function useLatestRecord() {
@@ -331,53 +351,25 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
 
       {entryMode === "conversation" ? (
         <section className="record-panel" aria-label="对话式记录面板">
-          <form onSubmit={previewCapture}>
+          <form onSubmit={saveConversation}>
             <label htmlFor="capture-text">直接描述想记录的内容</label>
             <textarea
               id="capture-text"
-              onChange={(event) => {
-                setCaptureText(event.target.value);
-                setPreviewReady(false);
-              }}
+              onChange={(event) => setCaptureText(event.target.value)}
               placeholder="例如：今天散步后感觉轻松一些……"
               value={captureText}
             />
             <div className="form-actions">
-              <span>正文只保留在当前页面内存。</span>
-              <button className="primary-button" type="submit">
-                生成保存预览
+              <span>先原样保存到 iCloud；之后可在下方记录卡片选择用 DeepSeek 整理。</span>
+              <button
+                className="primary-button"
+                type="submit"
+                disabled={captureSaving || !captureText.trim()}
+              >
+                {captureSaving ? "保存中…" : "保存到 iCloud"}
               </button>
             </div>
           </form>
-          {previewReady && (
-            <article className="preview-card" aria-live="polite">
-              <span className="neutral-badge">需要转交</span>
-              <h2>{previewMessage}</h2>
-              <dl>
-                <div>
-                  <dt>意图</dt>
-                  <dd>等待生活助手识别</dd>
-                </div>
-                <div>
-                  <dt>日期</dt>
-                  <dd>{dashboard.date}</dd>
-                </div>
-                <div>
-                  <dt>隐私</dt>
-                  <dd>当前工作台不保存或持久化这段正文</dd>
-                </div>
-              </dl>
-              <button
-                className="secondary-button"
-                onClick={() =>
-                  setReceipt("已准备转交；合成演示未访问剪贴板或外部服务")
-                }
-                type="button"
-              >
-                模拟转交
-              </button>
-            </article>
-          )}
         </section>
       ) : (
         <section className="record-panel" aria-label="简洁表单面板">
