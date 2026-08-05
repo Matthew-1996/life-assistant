@@ -145,6 +145,15 @@ class MergeTests(unittest.TestCase):
         )
         self.assertEqual(merged["facts"], ["完成了一次合成散步", "还读了一本书"])
 
+    def test_punctuation_only_near_duplicates_collapse(self) -> None:
+        # 模型给出的仅标点/空白差异版本不应堆叠成近重复项。
+        merged = merge_enrichment(
+            {**SYNTHETIC_RECORD, "feelings": ["开心"], "facts": ["完成了一次合成散步"]},
+            {"feelings": ["开心。", " 开心 "], "facts": ["完成了一次合成散步。"]},
+        )
+        self.assertEqual(merged["feelings"], ["开心"])
+        self.assertEqual(merged["facts"], ["完成了一次合成散步"])
+
     def test_alias_normalization_does_not_merge_distinct_people(self) -> None:
         merged = merge_enrichment(
             {**SYNTHETIC_RECORD, "people": ["规范甲"]},

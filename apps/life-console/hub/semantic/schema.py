@@ -29,6 +29,14 @@ LIST_ITEM_MAX = 180
 FORCED_EMPTY_FIELDS: tuple[str, ...] = ("planning_clues", "inferences")
 
 _WHITESPACE = re.compile(r"\s+")
+# 归一化去重键：忽略首尾常见标点与全部空白、大小写，
+# 使“开心。”与“开心”“ 开心 ”视为同一项，避免近重复堆叠。
+_EDGE_PUNCTUATION = " \t\r\n。．.，,、；;：:！!？?…·「」『』\"'（）()《》〈〉"
+
+
+def _dedup_key(value: str) -> str:
+    collapsed = _WHITESPACE.sub("", value)
+    return collapsed.strip(_EDGE_PUNCTUATION).casefold()
 
 
 class EnrichmentValidationError(ValueError):
@@ -167,13 +175,22 @@ def merge_enrichment(
 
     for field in ENRICHMENT_LIST_FIELDS:
         base_items = _string_list(list(existing.get(field, []) or []), field)
-        if field in locked or field not in candidate:
-            items = list(base_items)
-        else:
-            items = list(base_items)
+        # 先对已有条目做一次规范化去重，修复历史上遗留的近重复；
+        # 保留先出现的写法。
+        items: list[str] = []
+        seen: set[str] = set()
+        for item in base_items:
+            key = _dedup_key(item)
+            if key and key not in seen:
+                items.append(item)
+                seen.add(key)
+        if field not in locked and field in candidate:
+            # 未锁定字段允许模型补充；同样按规范化键去重，只补不覆盖。
             for item in candidate.get(field, []):
-                if item not in items:
+                key = _dedup_key(item)
+                if key and key not in seen:
                     items.append(item)
+                    seen.add(key)
         if field == "people":
             items = _canonicalize_people(items, aliases)
         merged[field] = items[:LIST_MAX_ITEMS]
