@@ -111,7 +111,12 @@ class HubReadTests(unittest.TestCase):
             create_server(root=self.root, host="0.0.0.0", port=0)
 
     def test_health_session_dashboard_and_host_policy(self) -> None:
-        server = create_server(root=self.root, port=0)
+        server = create_server(
+            root=self.root,
+            port=0,
+            icloud_status="writable",
+            automation_status="ready",
+        )
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
         try:
@@ -141,7 +146,10 @@ class HubReadTests(unittest.TestCase):
             )
             response = connection.getresponse()
             self.assertEqual(response.status, 200)
-            self.assertEqual(json.loads(response.read())["date"], date.today().isoformat())
+            dashboard = json.loads(response.read())
+            self.assertEqual(dashboard["date"], date.today().isoformat())
+            self.assertEqual(dashboard["system"]["icloud"], "writable")
+            self.assertEqual(dashboard["system"]["automation"], "ready")
 
             connection.request("GET", "/api/v1/dashboard", headers={"Host": "malicious.example"})
             response = connection.getresponse()

@@ -44,6 +44,28 @@ class LaunchAgentGeneratorTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 generate(Path(temp) / "output", root=Path(temp))
 
+    def test_supports_app_bundled_launcher_with_explicit_python(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            output = Path(temp) / "runtime"
+            launcher = Path(temp) / "Life Console.app/Contents/MacOS/LifeConsoleLauncher"
+            python = Path(temp) / "python3"
+            plist_path, _ = generate(
+                output,
+                root=APP_ROOT,
+                program=launcher,
+                python_executable=python,
+                icloud_status="writable",
+                automation_status="ready",
+            )
+            plist = plistlib.loads(plist_path.read_bytes())
+            self.assertEqual(plist["ProgramArguments"][0], str(launcher.resolve()))
+            self.assertEqual(
+                plist["EnvironmentVariables"]["LIFE_CONSOLE_PYTHON"],
+                str(python.resolve()),
+            )
+            self.assertIn("writable", plist["ProgramArguments"])
+            self.assertIn("ready", plist["ProgramArguments"])
+
 
 if __name__ == "__main__":
     unittest.main()

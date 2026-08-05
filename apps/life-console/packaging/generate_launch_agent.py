@@ -9,6 +9,8 @@ from pathlib import Path
 
 
 LABEL = "local.life-assistant.life-console"
+ICLOUD_STATUSES = {"readable", "writable", "partial", "unavailable"}
+AUTOMATION_STATUSES = {"ready", "attention", "unknown"}
 
 
 def app_root() -> Path:
@@ -20,11 +22,21 @@ def generate(
     *,
     root: Path | None = None,
     project_root: Path | None = None,
+    program: Path | None = None,
+    python_executable: Path | None = None,
+    icloud_status: str = "readable",
+    automation_status: str = "unknown",
 ) -> tuple[Path, Path]:
     application = (root or app_root()).resolve()
     if not (application / "hub/server.py").is_file():
         raise ValueError("Life Console application root is invalid")
     source = (project_root or application.parents[1]).resolve()
+    python = (python_executable or Path(sys.executable)).resolve()
+    launcher = (program or python).resolve()
+    if icloud_status not in ICLOUD_STATUSES:
+        raise ValueError("invalid iCloud status")
+    if automation_status not in AUTOMATION_STATUSES:
+        raise ValueError("invalid automation status")
     output_dir.mkdir(parents=True, exist_ok=True)
     output_dir.chmod(0o700)
     plist_path = output_dir / f"{LABEL}.plist"
@@ -36,14 +48,18 @@ def generate(
     plist = {
         "Label": LABEL,
         "ProgramArguments": [
-            sys.executable, "-m", "hub.server", "--host", "127.0.0.1", "--port", "47321",
-            "--root", str(source),
+            str(launcher), "-m", "hub.server", "--host", "127.0.0.1", "--port", "47321",
+            "--root", str(source), "--icloud-status", icloud_status,
+            "--automation-status", automation_status,
         ],
         "WorkingDirectory": str(application),
         # launchd does not reliably put WorkingDirectory on Python's import
         # path, especially for applications stored under iCloud Drive.  Keep
         # the portable module invocation and make its import root explicit.
-        "EnvironmentVariables": {"PYTHONPATH": str(application)},
+        "EnvironmentVariables": {
+            "PYTHONPATH": str(application),
+            **({"LIFE_CONSOLE_PYTHON": str(python)} if launcher != python else {}),
+        },
         "RunAtLoad": True,
         "KeepAlive": False,
         "StandardOutPath": str(logs / "hub.stdout.log"),
@@ -65,12 +81,24 @@ def main() -> int:
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--app-root", type=Path)
     parser.add_argument("--project-root", type=Path)
+    parser.add_argument("--program", type=Path)
+    parser.add_argument("--python-executable", type=Path)
+    parser.add_argument("--icloud-status", choices=sorted(ICLOUD_STATUSES), default="readable")
+    parser.add_argument(
+        "--automation-status",
+        choices=sorted(AUTOMATION_STATUSES),
+        default="unknown",
+    )
     args = parser.parse_args()
     try:
         plist_path, launcher_path = generate(
             args.output_dir,
             root=args.app_root,
             project_root=args.project_root,
+            program=args.program,
+            python_executable=args.python_executable,
+            icloud_status=args.icloud_status,
+            automation_status=args.automation_status,
         )
     except (OSError, ValueError) as error:
         print(f"error: {error}", file=sys.stderr)
