@@ -392,6 +392,46 @@ components:
         preview:
           type: object
           additionalProperties: true
+    CheckinConflict:
+      type: object
+      additionalProperties: false
+      required: [target_key, current_revision, current, submitted]
+      properties:
+        target_key: {type: string, format: date}
+        current_revision: {type: [integer, "null"], minimum: 1}
+        current:
+          type: object
+          additionalProperties: false
+          properties:
+            sleep_time: {type: [string, "null"]}
+            wake_time: {type: [string, "null"]}
+            out_of_bed_time: {type: [string, "null"]}
+            sleep_quality: {$ref: "#/components/schemas/Rating"}
+            energy: {$ref: "#/components/schemas/Rating"}
+            mood: {$ref: "#/components/schemas/Rating"}
+            life_feeling: {$ref: "#/components/schemas/Rating"}
+            awake_in_bed: {type: [string, "null"], enum: [yes, no, null]}
+            wake: {$ref: "#/components/schemas/AnchorState"}
+            body_light: {$ref: "#/components/schemas/AnchorState"}
+            life_action: {$ref: "#/components/schemas/AnchorState"}
+            wind_down: {$ref: "#/components/schemas/AnchorState"}
+        submitted:
+          type: object
+          additionalProperties: false
+          minProperties: 1
+          properties:
+            sleep_time: {type: string}
+            wake_time: {type: string}
+            out_of_bed_time: {type: string}
+            sleep_quality: {$ref: "#/components/schemas/RatingValue"}
+            energy: {$ref: "#/components/schemas/RatingValue"}
+            mood: {$ref: "#/components/schemas/RatingValue"}
+            life_feeling: {$ref: "#/components/schemas/RatingValue"}
+            awake_in_bed: {type: string, enum: [yes, no]}
+            wake: {$ref: "#/components/schemas/AnchorValue"}
+            body_light: {$ref: "#/components/schemas/AnchorValue"}
+            life_action: {$ref: "#/components/schemas/AnchorValue"}
+            wind_down: {$ref: "#/components/schemas/AnchorValue"}
     Confirmation:
       type: object
       additionalProperties: false
@@ -439,6 +479,7 @@ components:
       required: [request_id, error]
       properties:
         request_id: {type: string}
+        conflict: {$ref: "#/components/schemas/CheckinConflict"}
         error:
           type: object
           additionalProperties: false

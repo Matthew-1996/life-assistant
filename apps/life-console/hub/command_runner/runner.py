@@ -105,6 +105,14 @@ class CommandRunner:
                 "purge-plan", "--root", str(self.data_root / "journal"),
                 "--id", target_key,
             ])
+        if target_type in {"weekly_review", "phase_review"}:
+            tool = "weekly_review.py" if target_type == "weekly_review" else "phase_review.py"
+            key_flag = "--week-start" if target_type == "weekly_review" else "--review-date"
+            return self._run([
+                sys.executable, str(self.code_root / f"tools/{tool}"),
+                "purge-plan", "--root", str(self.data_root / "records"),
+                key_flag, target_key,
+            ])
         raise CommandError("INVALID_REQUEST")
 
     def purge(self, target_type: str, target_key: str, plan: dict[str, Any]) -> dict[str, Any]:
@@ -122,6 +130,17 @@ class CommandRunner:
                 sys.executable, str(self.code_root / "tools/journal_manager.py"),
                 "purge", "--root", str(self.data_root / "journal"),
                 "--id", target_key, "--confirm", target_key,
+                "--acknowledge-historical-copies",
+            ])
+        if target_type in {"weekly_review", "phase_review"}:
+            tool = "weekly_review.py" if target_type == "weekly_review" else "phase_review.py"
+            key_flag = "--week-start" if target_type == "weekly_review" else "--review-date"
+            return self._run([
+                sys.executable, str(self.code_root / f"tools/{tool}"),
+                "purge", "--root", str(self.data_root / "records"),
+                key_flag, target_key, "--confirm", plan["confirmation_text"],
+                "--expect-revision", str(plan["expect_revision"]),
+                "--expect-record-etag", plan["source_etag"],
                 "--acknowledge-historical-copies",
             ])
         raise CommandError("INVALID_REQUEST")

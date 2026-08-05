@@ -77,6 +77,21 @@ def _etag(raw: bytes) -> str:
     return hashlib.sha256(raw).hexdigest()
 
 
+def checkin_conflict_projection(root: Path, day: str) -> tuple[int | None, dict[str, Any]]:
+    _, rows = _json_lines(root / "records/daily-checkins.jsonl", DAILY_FIELDS)
+    row = next((item for item in rows if item.get("date") == day), None)
+    if row is None:
+        return None, {}
+    return row["revision"], {
+        "sleep_time": row["sleep_time"],
+        "wake_time": row["wake_time"],
+        "out_of_bed_time": row["out_of_bed_time"],
+        **row["ratings"],
+        "awake_in_bed": row["awake_in_bed"],
+        **row["anchors"],
+    }
+
+
 def build_dashboard(root: Path, *, today: date | None = None) -> dict[str, Any]:
     current = today or date.today()
     daily_raw, daily = _json_lines(root / "records/daily-checkins.jsonl", DAILY_FIELDS)

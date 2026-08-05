@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { App } from "../../src/App";
+import { ApiError, type LifeConsoleClient } from "../../src/api/client";
+import { syntheticDashboard } from "../../src/data/dashboard";
 
 afterEach(() => {
   cleanup();
@@ -43,6 +45,17 @@ describe("Life Console synthetic UI", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "系统" }),
     ).toBeTruthy();
+  });
+
+  it("renders a stable brand mark and one icon for every main tab", () => {
+    const { container } = render(<App />);
+
+    expect(container.querySelector('[data-icon="life"]')).toBeTruthy();
+    for (const name of ["today", "progress", "records", "system"]) {
+      expect(
+        container.querySelector(`nav [data-icon="${name}"]`),
+      ).toBeTruthy();
+    }
   });
 
   it("keeps unknown distinct from skipped in anchor controls", async () => {
@@ -109,5 +122,89 @@ describe("Life Console synthetic UI", () => {
 
     expect(screen.getByText("暂不维护")).toBeTruthy();
     expect(screen.getByText("方案待定")).toBeTruthy();
+  });
+
+  it("submits the journal form through the Hub client", async () => {
+    const user = userEvent.setup();
+    const journal = vi.fn().mockResolvedValue({
+      request_id: "req_test",
+      command_id: "cmd_test",
+      action: "created",
+      source: { state: "saved", revision: null },
+      read_model: "current",
+      message: "已保存到 iCloud",
+    });
+    const client = {
+      dashboard: vi.fn().mockResolvedValue(syntheticDashboard),
+      journal,
+      checkin: vi.fn(),
+      preview: vi.fn(),
+    } satisfies LifeConsoleClient;
+    render(<App client={client} initialDashboard={syntheticDashboard} />);
+    await user.click(navigationButton("记录"));
+    await user.click(screen.getByRole("tab", { name: "简洁表单" }));
+    await user.type(screen.getByLabelText("正文"), "合成表单正文");
+    await user.click(screen.getByRole("button", { name: "保存日记" }));
+
+    await waitFor(() => expect(journal).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole("status").textContent).toBe("已保存到 iCloud");
+  });
+
+  it("compares current and submitted values on revision conflict", async () => {
+    const user = userEvent.setup();
+    const response = {
+      request_id: "req_conflict",
+      error: {
+        code: "REVISION_CONFLICT" as const,
+        message: "记录已更新",
+        retryable: false,
+      },
+      conflict: {
+        target_key: syntheticDashboard.date,
+        current_revision: 2,
+        current: { life_action: "complete" as const },
+        submitted: { life_action: "minimum" as const },
+      },
+    };
+    const client = {
+      dashboard: vi.fn().mockResolvedValue(syntheticDashboard),
+      journal: vi.fn(),
+      checkin: vi.fn().mockRejectedValue(new ApiError(response, 409)),
+      preview: vi.fn(),
+    } satisfies LifeConsoleClient;
+    render(<App client={client} initialDashboard={syntheticDashboard} />);
+    const group = screen.getByRole("group", { name: "生活动作状态" });
+    await user.click(within(group).getByRole("button", { name: "最低版" }));
+
+    expect(await screen.findByRole("region", { name: "状态冲突" })).toBeTruthy();
+    expect(screen.getByText("当前值")).toBeTruthy();
+    expect(screen.getByText("本次提交")).toBeTruthy();
+  });
+
+  it("submits only explicitly filled checkin fields", async () => {
+    const user = userEvent.setup();
+    const checkin = vi.fn().mockResolvedValue({
+      request_id: "req_checkin",
+      command_id: "cmd_checkin",
+      action: "updated",
+      source: { state: "saved", revision: 2 },
+      read_model: "current",
+      message: "已保存到 iCloud",
+    });
+    const client = {
+      dashboard: vi.fn().mockResolvedValue(syntheticDashboard),
+      journal: vi.fn(),
+      checkin,
+      preview: vi.fn(),
+    } satisfies LifeConsoleClient;
+    render(<App client={client} initialDashboard={syntheticDashboard} />);
+    await user.click(navigationButton("记录"));
+    await user.click(screen.getByRole("tab", { name: "简洁表单" }));
+    await user.click(screen.getByRole("tab", { name: "每日状态" }));
+    await user.selectOptions(screen.getByLabelText("精力"), "4");
+    await user.click(screen.getByRole("button", { name: "更新这些状态" }));
+
+    await waitFor(() => expect(checkin).toHaveBeenCalledTimes(1));
+    expect(checkin.mock.calls[0][1].fields).toEqual({ energy: 4 });
   });
 });

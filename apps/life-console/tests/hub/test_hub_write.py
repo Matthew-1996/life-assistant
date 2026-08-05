@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import http.client
 import json
+import subprocess
 import sys
 import tempfile
 import threading
@@ -106,6 +107,13 @@ class HubWriteTests(unittest.TestCase):
         status, result = self.post("/api/v1/checkins/2026-01-12", stale)
         self.assertEqual(status, 409)
         self.assertEqual(result["error"]["code"], "REVISION_CONFLICT")
+        self.assertEqual(result["conflict"]["current"]["energy"], 3)
+        self.assertEqual(result["conflict"]["submitted"]["mood"], 4)
+        self.assertNotIn("note_summary", result["conflict"]["current"])
+        self.connection.request("GET", "/api/v1/confirmations", headers={"Host": self.host})
+        response = self.connection.getresponse()
+        items = json.loads(response.read())["items"]
+        self.assertEqual(items[0]["type"], "revision_conflict")
 
     def test_write_requires_csrf(self) -> None:
         body = {
@@ -117,6 +125,33 @@ class HubWriteTests(unittest.TestCase):
         status, result = self.post("/api/v1/checkins/2026-01-12", body, csrf=False)
         self.assertEqual(status, 403)
         self.assertEqual(result["error"]["code"], "INVALID_REQUEST")
+
+    def test_capture_preview_returns_safe_handoff(self) -> None:
+        status, result = self.post("/api/v1/capture/preview", {
+            "schema_version": 1,
+            "text": "合成对话记录",
+            "context_etag": "synthetic-context",
+        })
+        self.assertEqual(status, 200)
+        self.assertEqual(result["state"], "handoff_required")
+        self.assertNotIn("合成对话记录", json.dumps(result, ensure_ascii=False))
+
+    def test_higher_schema_and_unavailable_commit_are_rejected(self) -> None:
+        status, result = self.post("/api/v1/checkins/2026-01-12", {
+            "schema_version": 2,
+            "idempotency_key": "synthetic_key_0030",
+            "expect_revision": None,
+            "fields": {"energy": 3},
+        })
+        self.assertEqual(status, 400)
+        self.assertEqual(result["error"]["code"], "INVALID_REQUEST")
+        status, result = self.post("/api/v1/capture/commit", {
+            "schema_version": 1,
+            "idempotency_key": "synthetic_key_0031",
+            "preview_token": "synthetic_preview_token_0001",
+        })
+        self.assertEqual(status, 400)
+        self.assertEqual(result["error"]["code"], "PREVIEW_EXPIRED")
 
     def test_source_success_survives_snapshot_refresh_failure(self) -> None:
         (self.root / "GOALS.md").write_bytes(b"\xff")
@@ -195,6 +230,34 @@ class HubWriteTests(unittest.TestCase):
         status, result = self.post("/api/v1/purge-confirmations", confirm)
         self.assertEqual(status, 409)
         self.assertEqual(result["error"]["code"], "REVISION_CONFLICT")
+
+    def test_weekly_and_phase_purge_adapters(self) -> None:
+        repo = APP_ROOT.parents[1]
+        fixtures = [
+            (
+                "weekly_review.py", ["upsert", "--root", str(self.root / "records"), "--week-start", "2026-01-05", "--input", "-"],
+                {"better_summary": "合成周复盘"}, "weekly_review", "2026-01-05",
+            ),
+            (
+                "phase_review.py", ["upsert", "--root", str(self.root / "records"), "--review-date", "2026-01-12", "--input", "-"],
+                {"recovery_change": "合成阶段复盘"}, "phase_review", "2026-01-12",
+            ),
+        ]
+        for index, (tool, arguments, payload, target_type, target_key) in enumerate(fixtures, start=20):
+            subprocess.run(
+                [sys.executable, str(repo / "tools" / tool), *arguments],
+                input=json.dumps(payload), text=True, capture_output=True, check=True,
+            )
+            _, plan = self.post("/api/v1/purge-plans", {
+                "schema_version": 1, "target_type": target_type, "target_key": target_key,
+            })
+            confirm = {
+                "schema_version": 1, "idempotency_key": f"synthetic_key_{index:04d}",
+                "plan_id": plan["plan_id"], "confirmation_text": plan["confirmation_text"],
+                "expect_revision": plan["expect_revision"], "plan_etag": plan["plan_etag"],
+                "acknowledge_historical_copies": True,
+            }
+            self.assertEqual(self.post("/api/v1/purge-confirmations", confirm)[0], 200)
 
 
 if __name__ == "__main__":

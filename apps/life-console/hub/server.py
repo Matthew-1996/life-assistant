@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 import logging
+import re
 import secrets
 from datetime import datetime, timedelta, timezone
 from http import HTTPStatus
@@ -12,7 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from hub.command_runner.runner import CommandError, CommandRunner
-from hub.read_model.dashboard import ReadModelError, build_dashboard
+from hub.read_model.dashboard import ReadModelError, build_dashboard, checkin_conflict_projection
 from hub.security.policy import require_loopback_bind, valid_host, valid_origin
 
 
@@ -31,6 +32,7 @@ class LifeConsoleServer(ThreadingHTTPServer):
         self.sessions: dict[str, tuple[str, datetime]] = {}
         self.idempotency: dict[str, tuple[str, dict[str, Any]]] = {}
         self.purge_plans: dict[str, dict[str, Any]] = {}
+        self.confirmations: dict[str, dict[str, Any]] = {}
         super().__init__(address, handler)
 
 
@@ -46,7 +48,8 @@ class LifeConsoleHandler(SimpleHTTPRequestHandler):
         self.send_header("Referrer-Policy", "no-referrer")
         super().end_headers()
 
-    def log_message(self, format: str, *args: Any) -> None:
+    def log_message(self, _format: str, *args: Any) -> None:
+        del _format
         LOG.info("request method=%s path=%s status=%s", self.command, self.path.split("?", 1)[0], args[1] if len(args) > 1 else "unknown")
 
     def _json(self, status: HTTPStatus, payload: dict[str, Any], *, cookie: str | None = None) -> None:
@@ -60,11 +63,21 @@ class LifeConsoleHandler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def _error(self, status: HTTPStatus, code: str, message: str) -> None:
-        self._json(status, {
+    def _error(
+        self,
+        status: HTTPStatus,
+        code: str,
+        message: str,
+        *,
+        conflict: dict[str, Any] | None = None,
+    ) -> None:
+        payload = {
             "request_id": f"req_{secrets.token_hex(8)}",
             "error": {"code": code, "message": message, "retryable": status >= 500},
-        })
+        }
+        if conflict is not None:
+            payload["conflict"] = conflict
+        self._json(status, payload)
 
     def _session(self) -> bool:
         cookie = self.headers.get("Cookie", "")
@@ -145,10 +158,14 @@ class LifeConsoleHandler(SimpleHTTPRequestHandler):
             except (ReadModelError, UnicodeError, KeyError, TypeError, ValueError):
                 self._error(HTTPStatus.SERVICE_UNAVAILABLE, "SOURCE_INVALID", "本地来源暂不可用")
                 return
+            snapshot["today"]["confirmations"] = list(self.server.confirmations.values())
             self._json(HTTPStatus.OK, snapshot)
             return
         if route == "/api/v1/confirmations":
-            self._json(HTTPStatus.OK, {"schema_version": 1, "items": []})
+            self._json(HTTPStatus.OK, {
+                "schema_version": 1,
+                "items": list(self.server.confirmations.values()),
+            })
             return
         if route.startswith("/api/"):
             self._error(HTTPStatus.NOT_FOUND, "INVALID_REQUEST", "接口不存在")
@@ -162,6 +179,8 @@ class LifeConsoleHandler(SimpleHTTPRequestHandler):
         try:
             body = self._body()
             route = self.path.split("?", 1)[0]
+            if body.get("schema_version") != 1:
+                raise ValueError("schema version")
             if route == "/api/v1/purge-plans":
                 if set(body) != {"schema_version", "target_type", "target_key"}:
                     raise ValueError("fields")
@@ -194,8 +213,24 @@ class LifeConsoleHandler(SimpleHTTPRequestHandler):
                 }
                 self._json(HTTPStatus.OK, plan)
                 return
+            if route == "/api/v1/capture/preview":
+                if set(body) != {"schema_version", "text", "context_etag"}:
+                    raise ValueError("fields")
+                text = body.get("text")
+                if not isinstance(text, str) or not text.strip() or len(text) > 8000:
+                    raise ValueError("text")
+                self._json(HTTPStatus.OK, {
+                    "schema_version": 1,
+                    "state": "handoff_required",
+                    "message": "请前往现有生活助手对话继续",
+                    "intent": "unknown",
+                })
+                return
             key = body.get("idempotency_key")
-            if not isinstance(key, str) or not 16 <= len(key) <= 100:
+            if (
+                not isinstance(key, str)
+                or re.fullmatch(r"[A-Za-z0-9_-]{16,100}", key) is None
+            ):
                 raise ValueError("idempotency")
             fingerprint = hashlib.sha256(
                 json.dumps(body, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
@@ -206,6 +241,9 @@ class LifeConsoleHandler(SimpleHTTPRequestHandler):
                     self._error(HTTPStatus.CONFLICT, "INVALID_REQUEST", "幂等键已用于其他请求")
                     return
                 self._json(HTTPStatus.OK, cached[1])
+                return
+            if route == "/api/v1/capture/commit":
+                self._error(HTTPStatus.BAD_REQUEST, "PREVIEW_EXPIRED", "当前没有可提交的保存预览")
                 return
             if route == "/api/v1/purge-confirmations":
                 required = {
@@ -259,7 +297,29 @@ class LifeConsoleHandler(SimpleHTTPRequestHandler):
             self._error(HTTPStatus.BAD_REQUEST, "INVALID_REQUEST", "请求格式无效")
         except CommandError as error:
             status = HTTPStatus.CONFLICT if error.code == "REVISION_CONFLICT" else HTTPStatus.SERVICE_UNAVAILABLE
-            self._error(status, error.code, "记录无法安全保存")
+            conflict = None
+            if error.code == "REVISION_CONFLICT" and route.startswith("/api/v1/checkins/"):
+                day = route.rsplit("/", 1)[1]
+                revision, current = checkin_conflict_projection(self.server.project_root, day)
+                submitted = {
+                    key: value for key, value in body.get("fields", {}).items()
+                    if key != "note_summary"
+                }
+                conflict = {
+                    "target_key": day,
+                    "current_revision": revision,
+                    "current": current,
+                    "submitted": submitted,
+                }
+                confirmation_id = f"conflict:{day}"
+                self.server.confirmations[confirmation_id] = {
+                    "id": confirmation_id,
+                    "type": "revision_conflict",
+                    "title": "状态已在其他位置更新",
+                    "message": "请核对最新记录与本次提交后再决定。",
+                    "action_label": "查看差异",
+                }
+            self._error(status, error.code, "记录无法安全保存", conflict=conflict)
 
 
 def create_server(*, root: Path = PROJECT_ROOT, host: str = DEFAULT_HOST, port: int = DEFAULT_PORT) -> LifeConsoleServer:
