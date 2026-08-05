@@ -83,7 +83,7 @@ summary:focus-visible {
 .brand-mark .app-icon {
   width: 23px;
   height: 23px;
-  transform: translateY(1.5px);
+  transform: translateY(6px);
 }
 
 .brand strong,
