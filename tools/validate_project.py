@@ -1098,6 +1098,7 @@ def validate() -> list[str]:
             'subparsers.add_parser("list"': "按日期范围只读",
             'f"apple-health-summary:{record_date}"': "同日稳定键",
             '"--expect-date"': "陈旧摘要防护",
+            '"--expect-today"': "无模型每日归档",
             '_records_lock': "并发文件锁",
             '_atomic_replace_if_unchanged': "写入前比较与原子替换",
             'MAX_SOURCE_BYTES': "不可信输入大小边界",

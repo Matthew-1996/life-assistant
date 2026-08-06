@@ -4,7 +4,9 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 
 SCRIPT = Path(__file__).resolve().parent / "apple_health_history.py"
@@ -141,6 +143,13 @@ class AppleHealthHistoryTests(unittest.TestCase):
         self.source.symlink_to(actual)
         result = self.run_tool(expect=2)
         self.assertIn("普通文件", result.stderr)
+
+    def test_expect_today_supports_a_model_free_daily_runner(self):
+        today = datetime.now(ZoneInfo("Asia/Shanghai")).date()
+        generated = f"{today.year}年{today.month}月{today.day}日 11:05"
+        self.write_source(generated=generated)
+        result = self.run_tool("--expect-today")
+        self.assertEqual(json.loads(result.stdout)["date"], today.isoformat())
 
 
 if __name__ == "__main__":

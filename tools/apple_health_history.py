@@ -383,7 +383,13 @@ def _build_parser() -> argparse.ArgumentParser:
     ingest_parser = subparsers.add_parser("ingest", help="归档最新六行摘要")
     ingest_parser.add_argument("--root", type=Path, default=Path("records"))
     ingest_parser.add_argument("--source", type=Path)
-    ingest_parser.add_argument("--expect-date")
+    expected = ingest_parser.add_mutually_exclusive_group()
+    expected.add_argument("--expect-date")
+    expected.add_argument(
+        "--expect-today",
+        action="store_true",
+        help="只归档 Asia/Shanghai 当天生成的摘要",
+    )
 
     list_parser = subparsers.add_parser("list", help="按日期范围读取客观历史")
     list_parser.add_argument("--root", type=Path, default=Path("records"))
@@ -397,7 +403,12 @@ def main() -> int:
     try:
         if args.command == "ingest":
             source_path = args.source if args.source is not None else args.root / SOURCE_FILE
-            result = ingest(args.root, source_path, args.expect_date)
+            expected_date = (
+                datetime.now(LOCAL_ZONE).date().isoformat()
+                if args.expect_today
+                else args.expect_date
+            )
+            result = ingest(args.root, source_path, expected_date)
         else:
             result = list_records(args.root, args.start, args.end)
     except (HealthHistoryError, OSError) as error:

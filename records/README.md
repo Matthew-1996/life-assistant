@@ -20,6 +20,8 @@
 python3 tools/apple_health_history.py ingest --expect-date YYYY-MM-DD
 ```
 
+不调用模型的本机定时任务使用 `--expect-today`，只归档 `Asia/Shanghai` 当天生成的摘要，避免将未刷新的旧文件误记到长期历史。
+
 稳定键为 `apple-health-summary:YYYY-MM-DD`；同日同值返回 `unchanged`，同日更晚生成的摘要更新原行并增加 `revision`，更早的旧摘要不得覆盖新版。每行只保存规范化的 `generated_at`、`steps`、`active_energy`、`exercise_minutes`、`sleep_start`、`sleep_end` 及修订元数据；未知值为 `null`。工具忽略六个固定键之外的任何文字，重复键、损坏旧台账、陈旧日期或异常数值都会停止写入。
 
 这份历史保留快捷指令当时产生的设备源值，不会自行重解释异常的睡眠起止组合。每日状态中的入睡与醒来仍由 `apple_health_sleep.py resolve` 独立校准，两者因此可分别表示“设备当时的摘要”与“经规则核对后的每日状态”。长期摘要不用于推断睡眠质量、精力、情绪、生活实感或行动锚点，也不进入 Google 表格、网页、连接器或 Git。需要分析时可按日期范围只读获取：
