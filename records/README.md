@@ -1,6 +1,6 @@
 # 对话式生活状态台账
 
-`records/` 保存三类彼此独立、只由对话触发的低暴露结构化回答：`daily-checkins.jsonl` 是每日状态，`weekly-reviews.jsonl` 是用户对完整自然周轻复盘问题的明确回答，`phase-reviews.jsonl` 是用户对某个阶段复盘日的明确回答。`phase-actions.jsonl` 则是从阶段回答派生的可恢复执行台账，不是第四份用户回答。这些层不复制原始对话或日记原文，也不互相反向补值。
+`records/` 保存三类彼此独立、只由对话触发的低暴露结构化回答：`daily-checkins.jsonl` 是每日状态，`weekly-reviews.jsonl` 是用户对完整自然周轻复盘问题的明确回答，`phase-reviews.jsonl` 是用户对某个阶段复盘日的明确回答。`phase-actions.jsonl` 则是从阶段回答派生的可恢复执行台账，不是第四份用户回答。`apple-health-history.jsonl` 另外保存用户已授权的最小客观设备摘要，不是用户的主观回答。这些层不复制原始对话或日记原文，也不互相反向补值。
 
 ## 可选苹果健康摘要：`apple-health-latest.txt`
 
@@ -11,6 +11,22 @@
 每日定时回访发起前可以读取最近一次睡眠和快捷指令查询的最近 24 小时活动；活动窗口不是严格的前一自然日，不能据此推断用户是否完成任何行动锚点。设备数据只辅助客观信息：`sleep_start` 只对应 `sleep_time`，`sleep_end` 只对应最终醒来的 `wake_time`；真正离床的 `out_of_bed_time` 永远只采用用户表达。用户没有表达入睡或醒来时刻时，可用有效设备值补充；用户给出“约、左右、大概”等近似时间时逐字段比较，差值 `≤60` 分钟采用设备精确值，`61–119` 分钟保留用户值，`≥120` 分钟先询问一次、确认前不覆盖该字段。用户明确说时间精确时把对应 precision 设为 `exact`；用户要求以自己为准或否定设备时传对应的 `--sleep-user-priority` / `--wake-user-priority`，始终保留用户值。“起床”没有进一步说明时默认表示离床。睡眠质量、精力、情绪、生活实感和行动锚点仍必须来自用户本人；步数不等于晒太阳或完成生活动作。设备未佩戴、没电或同步延迟都可能造成缺失，因此“健康里没有”不等于用户没有活动。
 
 这份小型摘要位于当前 iCloud 项目，会随 iCloud、项目迁移和以后明确创建的项目备份保留；不会发布到网页、Google 表格或其他连接器。其他场景只有在用户要求健康分析、阶段回顾或确有相关需要时才读取。新增心率、HRV、体重、生殖健康、用药或医疗记录等类别前，需要再次明确范围，不从“其他身体信息”泛化授权。
+
+### 长期客观摘要：`apple-health-history.jsonl`
+
+`apple-health-latest.txt` 是可覆盖的收件箱，`apple-health-history.jsonl` 才是归档后的长期客观历史。在用户明确授权后，每次有效的当日六行摘要用下列命令原子归档：
+
+```bash
+python3 tools/apple_health_history.py ingest --expect-date YYYY-MM-DD
+```
+
+稳定键为 `apple-health-summary:YYYY-MM-DD`；同日同值返回 `unchanged`，同日更晚生成的摘要更新原行并增加 `revision`，更早的旧摘要不得覆盖新版。每行只保存规范化的 `generated_at`、`steps`、`active_energy`、`exercise_minutes`、`sleep_start`、`sleep_end` 及修订元数据；未知值为 `null`。工具忽略六个固定键之外的任何文字，重复键、损坏旧台账、陈旧日期或异常数值都会停止写入。
+
+这份历史保留快捷指令当时产生的设备源值，不会自行重解释异常的睡眠起止组合。每日状态中的入睡与醒来仍由 `apple_health_sleep.py resolve` 独立校准，两者因此可分别表示“设备当时的摘要”与“经规则核对后的每日状态”。长期摘要不用于推断睡眠质量、精力、情绪、生活实感或行动锚点，也不进入 Google 表格、网页、连接器或 Git。需要分析时可按日期范围只读获取：
+
+```bash
+python3 tools/apple_health_history.py list --start YYYY-MM-DD --end YYYY-MM-DD
+```
 
 ## 可选两日睡眠明细：`apple-sleep-details-latest.txt`
 

@@ -64,6 +64,8 @@ REQUIRED_FILES = [
     "tools/test_daily_checkin.py",
     "tools/apple_health_sleep.py",
     "tools/test_apple_health_sleep.py",
+    "tools/apple_health_history.py",
+    "tools/test_apple_health_history.py",
     "tools/weekly_review.py",
     "tools/test_weekly_review.py",
     "tools/journal_manager.py",
@@ -1087,6 +1089,22 @@ def validate() -> list[str]:
         }.items():
             if snippet not in daily_checkin:
                 errors.append(f"每日状态工具缺少能力：{label}")
+
+    apple_health_history_path = ROOT / "tools" / "apple_health_history.py"
+    if apple_health_history_path.is_file():
+        apple_health_history = apple_health_history_path.read_text(encoding="utf-8")
+        for snippet, label in {
+            'subparsers.add_parser("ingest"': "当日摘要归档",
+            'subparsers.add_parser("list"': "按日期范围只读",
+            'f"apple-health-summary:{record_date}"': "同日稳定键",
+            '"--expect-date"': "陈旧摘要防护",
+            '_records_lock': "并发文件锁",
+            '_atomic_replace_if_unchanged': "写入前比较与原子替换",
+            'MAX_SOURCE_BYTES': "不可信输入大小边界",
+            'source_path.is_symlink()': "来源路径保护",
+        }.items():
+            if snippet not in apple_health_history:
+                errors.append(f"苹果健康历史工具缺少能力：{label}")
 
     weekly_review_path = ROOT / "tools" / "weekly_review.py"
     if weekly_review_path.is_file():
