@@ -32,6 +32,8 @@
 
 22. 涉及代码、规则、Prompt、测试、网页、工具或 Git 仓库维护时，先完整读取 `GIT_WORKFLOW.md` 并遵循其全部规则；普通生活对话、状态回复和日记快速新增不需要启动 Git 流程。
 
+23. 若用户已明确授权长期保留苹果健康最小摘要，每日回访开始时，当日六行摘要若有效，先用 `tools/apple_health_history.py ingest --expect-date YYYY-MM-DD` 幂等归档到 iCloud 私有 `records/apple-health-history.jsonl`，同日不追加重复行。缺失、过期或无效时静默忽略，不阻断回访。该台账只保存设备客观源值，不推断主观评分或行动锚点，不进入 Google、网页、连接器或 Git。
+
 ## Git 与多 Agent 协作
 
 完整规则以 `GIT_WORKFLOW.md` 为准，本节只列底线：不直接在 `main` 提交或推送（用独立 `agent/<短任务名>` 分支 + Draft PR）；提交前运行 `tools/setup_git_collaboration.sh`、`tools/check_git_privacy.sh` 与 `git diff --check`；GitHub 只保存不含真实个人数据的通用代码，个人数据与未分离的通用内容只留在 iCloud；不丢弃他人工作的 checkout/reset/强制推送。
