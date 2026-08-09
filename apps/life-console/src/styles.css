@@ -161,6 +161,15 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .section-heading h2 { margin: 3px 0 0; font-size: 20px; letter-spacing: -0.025em; }
 .action-card { display: flex; min-height: 96px; align-items: center; justify-content: space-between; gap: 20px; padding: 22px 24px; }
 .action-card strong { font-size: 19px; letter-spacing: -0.02em; }
+.active-project-grid { display: grid; gap: 14px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.active-project-card { min-width: 0; padding: 24px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); box-shadow: var(--shadow-sm); }
+.active-project-card h3 { margin: 18px 0 0; font-size: 21px; letter-spacing: -0.025em; }
+.active-project-card p { margin: 9px 0 0; color: var(--muted-foreground); line-height: 1.58; }
+.active-project-meta, .active-project-footer { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.active-project-meta > span:last-child { color: var(--muted-foreground); font-size: 12px; }
+.active-project-footer { margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--border); }
+.active-project-footer strong { font-size: 13px; }
+.active-project-footer code { overflow: hidden; color: var(--muted-foreground); font-family: "JetBrains Mono", monospace; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 
 .neutral-badge, .count-badge { display: inline-flex; align-items: center; padding: 5px 10px; border-radius: 999px; color: var(--muted-foreground); background: var(--secondary); font-size: 12px; font-weight: 800; }
 .anchor-grid { display: grid; gap: 14px; grid-template-columns: repeat(4, minmax(0, 1fr)); }

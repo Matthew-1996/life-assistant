@@ -130,6 +130,20 @@ describe("Life Console synthetic UI", () => {
     expect(skipped.getAttribute("aria-pressed")).toBe("true");
   });
 
+  it("renders confirmed auxiliary goals as read-only active projects", () => {
+    render(<App />);
+
+    const projects = screen.getByRole("region", { name: "本周试行项目" });
+    expect(within(projects).getByText("合成室内训练")).toBeTruthy();
+    expect(within(projects).getByText("合成 Agent 实操")).toBeTruthy();
+    expect(
+      within(projects).getAllByText("2026-01-12 至 2026-01-18", {
+        selector: "span",
+      }),
+    ).toHaveLength(2);
+    expect(within(projects).getAllByText("只读项目")).toHaveLength(2);
+  });
+
   it("derives the current weekday from the dashboard date", async () => {
     const user = userEvent.setup();
     render(<App />);

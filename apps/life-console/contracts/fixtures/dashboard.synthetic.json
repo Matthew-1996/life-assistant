@@ -7,6 +7,22 @@
       "title": "保持稳定的日常节奏",
       "phase_label": "阶段 01 · 进行中"
     },
+    "active_projects": [
+      {
+        "title": "合成室内训练",
+        "status": "辅助目标；一周试行",
+        "period": "2026-01-12 至 2026-01-18",
+        "summary": "在不影响恢复的前提下尝试基础抗阻动作",
+        "plan_path": "plans/synthetic-training.md"
+      },
+      {
+        "title": "合成 Agent 实操",
+        "status": "辅助目标；一周试行",
+        "period": "2026-01-12 至 2026-01-18",
+        "summary": "使用合成数据完成一个最小工作流",
+        "plan_path": "plans/synthetic-agent.md"
+      }
+    ],
     "suggested_action": {
       "id": "synthetic-action-01",
       "label": "午后散步十分钟",

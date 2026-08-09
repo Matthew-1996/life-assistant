@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from datetime import date, datetime, timedelta, timezone
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 
@@ -56,13 +57,12 @@ def _json_lines(path: Path, allowed: set[str]) -> tuple[bytes, list[dict[str, An
     return raw, rows
 
 
-def _focus(root: Path) -> tuple[bytes, dict[str, str]]:
-    raw = _regular_bytes(root / "GOALS.md")
+def _focus(raw: bytes) -> dict[str, str]:
     text = raw.decode("utf-8", errors="strict")
     lines = [line.strip() for line in text.splitlines()]
     for index, line in enumerate(lines):
         if line.startswith("- 当前重点："):
-            return raw, {"title": line.split("：", 1)[1].strip(), "phase_label": "进行中"}
+            return {"title": line.split("：", 1)[1].strip(), "phase_label": "进行中"}
         if line in {"## 当前重点", "# 当前重点"}:
             section: list[str] = []
             for candidate in lines[index + 1 :]:
@@ -71,7 +71,7 @@ def _focus(root: Path) -> tuple[bytes, dict[str, str]]:
                 section.append(candidate)
             for candidate in section:
                 if candidate.startswith("### "):
-                    return raw, {
+                    return {
                         "title": candidate.removeprefix("### ").strip(),
                         "phase_label": "进行中",
                     }
@@ -79,11 +79,88 @@ def _focus(root: Path) -> tuple[bytes, dict[str, str]]:
                 if candidate.startswith("- ") and not candidate.startswith(
                     ("- 状态：", "- 阶段：", "- 日期：", "- 复盘：")
                 ):
-                    return raw, {
+                    return {
                         "title": candidate.removeprefix("- ").strip(),
                         "phase_label": "进行中",
                     }
-    return raw, {"title": "", "phase_label": "等待确认"}
+    return {"title": "", "phase_label": "等待确认"}
+
+
+def _active_projects(raw: bytes, current: date) -> list[dict[str, str]]:
+    text = raw.decode("utf-8", errors="strict")
+    match = re.search(
+        r"(?ms)^## 辅助目标\s*$\n(?P<section>.*?)(?=^## |\Z)",
+        text,
+    )
+    if not match:
+        return []
+
+    projects: list[dict[str, str]] = []
+    blocks = re.split(r"(?m)^### ", match.group("section"))
+    for block in blocks[1:]:
+        lines = [line.strip() for line in block.splitlines() if line.strip()]
+        if not lines:
+            continue
+        title = lines[0]
+        metadata: dict[str, str] = {}
+        for line in lines[1:]:
+            if not line.startswith("- ") or "：" not in line:
+                continue
+            key, value = line.removeprefix("- ").split("：", 1)
+            metadata[key.strip()] = value.strip()
+
+        status = metadata.get("状态", "")
+        if status.split("；", 1)[0] != "辅助目标":
+            continue
+        period = metadata.get("试行时间", "")
+        period_match = re.fullmatch(
+            r"(\d{4}-\d{2}-\d{2}) 至 (\d{4}-\d{2}-\d{2})",
+            period,
+        )
+        if not period_match:
+            continue
+        try:
+            start = date.fromisoformat(period_match.group(1))
+            end = date.fromisoformat(period_match.group(2))
+        except ValueError:
+            continue
+        if start > end or not start <= current <= end:
+            continue
+
+        plan_match = re.fullmatch(r"\[[^\]]+\]\(([^)]+)\)", metadata.get("当前实验", ""))
+        if not plan_match:
+            continue
+        raw_plan_path = plan_match.group(1)
+        plan_path = PurePosixPath(raw_plan_path)
+        if (
+            ".." in raw_plan_path
+            or plan_path.is_absolute()
+            or ".." in plan_path.parts
+            or not plan_path.parts
+            or plan_path.parts[0] != "plans"
+            or plan_path.suffix != ".md"
+        ):
+            continue
+
+        project = {
+            "title": title,
+            "status": status,
+            "period": period,
+            "summary": metadata.get("说明", ""),
+            "plan_path": plan_path.as_posix(),
+        }
+        limits = {
+            "title": 160,
+            "status": 80,
+            "period": 80,
+            "summary": 240,
+            "plan_path": 240,
+        }
+        if all(project[field] and len(project[field]) <= limit for field, limit in limits.items()):
+            projects.append(project)
+        if len(projects) == 2:
+            break
+    return projects
 
 
 def _etag(raw: bytes) -> str:
@@ -109,7 +186,9 @@ def build_dashboard(root: Path, *, today: date | None = None) -> dict[str, Any]:
     current = today or date.today()
     daily_raw, daily = _json_lines(root / "records/daily-checkins.jsonl", DAILY_FIELDS)
     journal_raw, journals = _json_lines(root / "journal/index.jsonl", JOURNAL_FIELDS)
-    goals_raw, focus = _focus(root)
+    goals_raw = _regular_bytes(root / "GOALS.md")
+    focus = _focus(goals_raw)
+    active_projects = _active_projects(goals_raw, current)
 
     seen: set[str] = set()
     for row in daily:
@@ -169,6 +248,7 @@ def build_dashboard(root: Path, *, today: date | None = None) -> dict[str, Any]:
         "date": current.isoformat(),
         "today": {
             "focus": focus,
+            "active_projects": active_projects,
             "suggested_action": None,
             "anchors": anchors,
             "daily_revision": latest["revision"] if latest else None,
