@@ -184,6 +184,40 @@ export function TodayPage({
         </article>
       </section>
 
+      {dashboard.today.active_projects.length > 0 && (
+        <section
+          aria-labelledby="active-projects-title"
+          className="section-block"
+        >
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">已确认辅助目标</p>
+              <h2 id="active-projects-title">本周试行项目</h2>
+            </div>
+            <span className="supporting-text">来自 iCloud 项目，不建立新的 Todo 真相源</span>
+          </div>
+          <div className="active-project-grid">
+            {dashboard.today.active_projects.map((project) => (
+              <article
+                className="active-project-card"
+                key={`${project.plan_path}:${project.title}`}
+              >
+                <div className="active-project-meta">
+                  <span className="neutral-badge">只读项目</span>
+                  <span>{project.period}</span>
+                </div>
+                <h3>{project.title}</h3>
+                <p>{project.summary}</p>
+                <div className="active-project-footer">
+                  <strong>{project.status}</strong>
+                  <code>{project.plan_path}</code>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+
       {dashboard.today.suggested_action && (
         <section className="section-block" aria-labelledby="action-title">
           <div className="section-heading">

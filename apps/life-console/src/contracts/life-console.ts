@@ -306,6 +306,13 @@ export interface components {
                     title: string;
                     phase_label: string;
                 };
+                active_projects: {
+                    title: string;
+                    status: string;
+                    period: string;
+                    summary: string;
+                    plan_path: string;
+                }[];
                 suggested_action: {
                     id: string;
                     label: string;

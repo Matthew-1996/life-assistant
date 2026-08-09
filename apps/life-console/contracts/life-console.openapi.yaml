@@ -450,7 +450,7 @@ components:
         today:
           type: object
           additionalProperties: false
-          required: [focus, suggested_action, anchors, daily_revision, confirmations]
+          required: [focus, active_projects, suggested_action, anchors, daily_revision, confirmations]
           properties:
             focus:
               type: object
@@ -459,6 +459,19 @@ components:
               properties:
                 title: {type: string, maxLength: 160}
                 phase_label: {type: string, maxLength: 80}
+            active_projects:
+              type: array
+              maxItems: 2
+              items:
+                type: object
+                additionalProperties: false
+                required: [title, status, period, summary, plan_path]
+                properties:
+                  title: {type: string, minLength: 1, maxLength: 160}
+                  status: {type: string, minLength: 1, maxLength: 80}
+                  period: {type: string, minLength: 1, maxLength: 80}
+                  summary: {type: string, minLength: 1, maxLength: 240}
+                  plan_path: {type: string, pattern: "^plans/(?!.*\\.\\.)[^/][^\\n]*\\.md$", maxLength: 240}
             suggested_action:
               type: [object, "null"]
               additionalProperties: false

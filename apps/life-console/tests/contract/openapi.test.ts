@@ -164,6 +164,20 @@ describe("Life Console OpenAPI contract", () => {
     ]);
   });
 
+  it("bounds the synthetic active-project projection", () => {
+    const dashboard =
+      readFixture<components["schemas"]["Dashboard"]>("dashboard.synthetic.json");
+
+    expect(dashboard.today.active_projects).toHaveLength(2);
+    expect(dashboard.today.active_projects[0]).toEqual({
+      title: "合成室内训练",
+      status: "辅助目标；一周试行",
+      period: "2026-01-12 至 2026-01-18",
+      summary: "在不影响恢复的前提下尝试基础抗阻动作",
+      plan_path: "plans/synthetic-training.md",
+    });
+  });
+
   it.each([
     ["/api/v1/health", "get", "health.synthetic.json"],
     ["/api/v1/session", "get", "session.synthetic.json"],

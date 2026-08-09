@@ -85,6 +85,65 @@ class HubReadTests(unittest.TestCase):
         result = build_dashboard(self.root, today=date(2026, 1, 12))
         self.assertEqual(result["today"]["focus"]["title"], "恢复可持续的生活节奏")
 
+    def test_dashboard_projects_only_confirmed_auxiliary_goals(self) -> None:
+        (self.root / "GOALS.md").write_text(
+            "## 当前重点\n"
+            "### 保持合成节奏\n\n"
+            "## 辅助目标\n"
+            "### 误放的候选方向\n"
+            "- 状态：候选\n"
+            "- 试行时间：2026-01-12 至 2026-01-18\n"
+            "- 说明：不应进入当前项目\n"
+            "- 当前实验：[候选计划](plans/synthetic-candidate.md)\n\n"
+            "### 已经过期的辅助目标\n"
+            "- 状态：辅助目标；一周试行\n"
+            "- 试行时间：2025-12-01 至 2025-12-07\n"
+            "- 说明：不应占用当前项目名额\n"
+            "- 当前实验：[过期计划](plans/synthetic-expired.md)\n\n"
+            "### 路径不符合契约的目标\n"
+            "- 状态：辅助目标；一周试行\n"
+            "- 试行时间：2026-01-12 至 2026-01-18\n"
+            "- 说明：连续双点路径必须拒绝\n"
+            "- 当前实验：[错误路径](plans/synthetic..unsafe.md)\n\n"
+            "### 合成室内训练\n"
+            "- 状态：辅助目标；一周试行\n"
+            "- 试行时间：2026-01-12 至 2026-01-18\n"
+            "- 说明：在不影响恢复的前提下尝试基础抗阻动作\n"
+            "- 当前实验：[合成训练计划](plans/synthetic-training.md)\n\n"
+            "### 合成 Agent 实操\n"
+            "- 状态：辅助目标；一周试行\n"
+            "- 试行时间：2026-01-12 至 2026-01-18\n"
+            "- 说明：使用合成数据完成一个最小工作流\n"
+            "- 当前实验：[合成实操计划](plans/synthetic-agent.md)\n\n"
+            "## 候选目标\n"
+            "### 不应展示的候选方向\n"
+            "- 状态：候选\n",
+            encoding="utf-8",
+        )
+
+        result = build_dashboard(self.root, today=date(2026, 1, 12))
+
+        self.assertEqual(
+            result["today"]["active_projects"],
+            [
+                {
+                    "title": "合成室内训练",
+                    "status": "辅助目标；一周试行",
+                    "period": "2026-01-12 至 2026-01-18",
+                    "summary": "在不影响恢复的前提下尝试基础抗阻动作",
+                    "plan_path": "plans/synthetic-training.md",
+                },
+                {
+                    "title": "合成 Agent 实操",
+                    "status": "辅助目标；一周试行",
+                    "period": "2026-01-12 至 2026-01-18",
+                    "summary": "使用合成数据完成一个最小工作流",
+                    "plan_path": "plans/synthetic-agent.md",
+                },
+            ],
+        )
+        self.assertNotIn("不应展示", json.dumps(result, ensure_ascii=False))
+
     def test_bad_and_duplicate_sources_fail_closed(self) -> None:
         path = self.root / "records/daily-checkins.jsonl"
         path.write_text("{bad json}\n", encoding="utf-8")
