@@ -55,6 +55,19 @@ try:
 except ModuleNotFoundError:  # Direct execution from tools/.
     from product_surfaces import SURFACES_PATH, ProductSurfaceError, load_product_surfaces
 
+try:
+    from tools.create_backup import (
+        LEGACY_GOVERNANCE_LINK,
+        LEGACY_GOVERNANCE_TARGET,
+        legacy_governance_link_is_valid,
+    )
+except ModuleNotFoundError:  # Direct execution from tools/.
+    from create_backup import (
+        LEGACY_GOVERNANCE_LINK,
+        LEGACY_GOVERNANCE_TARGET,
+        legacy_governance_link_is_valid,
+    )
+
 
 DEFAULT_ROOT = Path(__file__).resolve().parents[1]
 WORKBOOK = "outputs/019fb832-be4f-74f1-add5-58cb6fb6fc09/生活计划表.xlsx"
@@ -2082,6 +2095,10 @@ def _current_project_manifest(root: Path) -> dict[str, str] | None:
         for path in root.rglob("*"):
             relative = path.relative_to(root)
             if any(part in BACKUP_EXCLUDED_DIRS for part in relative.parts):
+                continue
+            if relative == LEGACY_GOVERNANCE_LINK:
+                if not legacy_governance_link_is_valid(root):
+                    return None
                 continue
             if not path.is_file() or path.name in BACKUP_EXCLUDED_FILES:
                 continue
