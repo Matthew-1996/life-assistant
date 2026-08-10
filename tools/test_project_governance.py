@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import hashlib
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 from tools import check_project_governance as governance
@@ -25,13 +27,19 @@ class ProjectGovernanceTests(unittest.TestCase):
             ".github/pull_request_template.md": (
                 "产品流程\n用户确认状态\n"
                 f"{governance.GOVERNANCE_PATH}\n"
+                "修改唯一规范正文\n"
+            ),
+            "docs/governance/README.md": (
+                "本地项目与 GitHub 仓库共同使用的唯一权威正文\n"
+                "不得由 Agent 改写\n"
+                "SHA-256\n"
             ),
             governance.GOVERNANCE_PATH: (
-                "项目开发最高优先级规范\n"
-                "文档缺失与用户确认门禁\n"
-                "核心开发流程与门禁\n"
-                "项目知识库\n"
-                "产品负责人已于 2026-08-10 明确确认\n"
+                "把这个规范作为项目开发上优先级最高的文档\n"
+                "涉及需要用户确认的部分，不可以自行跳过\n"
+                "# 核心流程\n"
+                "项目知识库：必须集成每一次项目\n"
+                "定期的技术方案review\n"
             ),
             f"{governance.KB_ROOT}/README.md": (
                 "生活助手-LifeConsole-1.0.0.md\n"
@@ -58,8 +66,17 @@ class ProjectGovernanceTests(unittest.TestCase):
             path = self.root / relative
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(text, encoding="utf-8")
+        self.sha_patch = mock.patch.object(
+            governance,
+            "GOVERNANCE_SHA256",
+            hashlib.sha256(
+                self.contents[governance.GOVERNANCE_PATH].encode("utf-8")
+            ).hexdigest(),
+        )
+        self.sha_patch.start()
 
     def tearDown(self) -> None:
+        self.sha_patch.stop()
         self.temp.cleanup()
 
     def test_valid_governance_tree_passes(self) -> None:
@@ -74,6 +91,15 @@ class ProjectGovernanceTests(unittest.TestCase):
         (self.root / "AGENTS.md").write_text("普通规则\n", encoding="utf-8")
         errors = governance.inspect_project_governance(self.root)
         self.assertTrue(any("AGENTS.md" in error for error in errors))
+
+    def test_governance_body_cannot_be_silently_rewritten(self) -> None:
+        path = self.root / governance.GOVERNANCE_PATH
+        path.write_text(
+            path.read_text(encoding="utf-8") + "Agent 补充\n",
+            encoding="utf-8",
+        )
+        errors = governance.inspect_project_governance(self.root)
+        self.assertTrue(any("不是 PO 确认版本" in error for error in errors))
 
     def test_confirmed_po_gate_cannot_be_silently_reverted(self) -> None:
         path = self.root / governance.VERSION_DIR / "生活助手-LifeConsole-1.0.0.md"

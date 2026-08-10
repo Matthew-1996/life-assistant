@@ -3,15 +3,20 @@
 
 from __future__ import annotations
 
+import hashlib
 import sys
 from pathlib import Path
 
 
 GOVERNANCE_PATH = "docs/governance/agent-user-project-development-standard.md"
+GOVERNANCE_SHA256 = (
+    "4cbf94c9f56188b0e7eae88a45ab740a4f857eefb3c03d35c68d4baacfe0c6a1"
+)
 KB_ROOT = "docs/knowledge-base"
 VERSION_DIR = f"{KB_ROOT}/生活助手-LifeConsole-1.0.0"
 REQUIRED_FILES = {
     GOVERNANCE_PATH,
+    "docs/governance/README.md",
     f"{KB_ROOT}/README.md",
     f"{VERSION_DIR}/生活助手-LifeConsole-1.0.0.md",
     f"{VERSION_DIR}/项目管理-生活助手-LifeConsole-1.0.0.md",
@@ -42,6 +47,12 @@ def inspect_project_governance(root: Path) -> list[str]:
     workflow = _read_text(root, "GIT_WORKFLOW.md", errors)
     template = _read_text(root, ".github/pull_request_template.md", errors)
     governance = _read_text(root, GOVERNANCE_PATH, errors)
+    if (
+        governance
+        and hashlib.sha256(governance.encode("utf-8")).hexdigest()
+        != GOVERNANCE_SHA256
+    ):
+        errors.append(f"唯一项目开发规范不是 PO 确认版本：{GOVERNANCE_PATH}")
     kb_index = _read_text(root, f"{KB_ROOT}/README.md", errors)
     prd = _read_text(root, f"{VERSION_DIR}/生活助手-LifeConsole-1.0.0.md", errors)
     pmo = _read_text(
@@ -70,13 +81,19 @@ def inspect_project_governance(root: Path) -> list[str]:
             "产品流程",
             "用户确认状态",
             GOVERNANCE_PATH,
+            "修改唯一规范正文",
+        ),
+        "docs/governance/README.md": (
+            "本地项目与 GitHub 仓库共同使用的唯一权威正文",
+            "不得由 Agent 改写",
+            "SHA-256",
         ),
         GOVERNANCE_PATH: (
-            "项目开发最高优先级规范",
-            "文档缺失与用户确认门禁",
-            "核心开发流程与门禁",
-            "项目知识库",
-            "产品负责人已于 2026-08-10 明确确认",
+            "项目开发上优先级最高的文档",
+            "涉及需要用户确认的部分，不可以自行跳过",
+            "# 核心流程",
+            "项目知识库：必须集成每一次项目",
+            "定期的技术方案review",
         ),
         f"{KB_ROOT}/README.md": (
             "生活助手-LifeConsole-1.0.0.md",
@@ -103,6 +120,9 @@ def inspect_project_governance(root: Path) -> list[str]:
         "AGENTS.md": agents,
         "GIT_WORKFLOW.md": workflow,
         ".github/pull_request_template.md": template,
+        "docs/governance/README.md": _read_text(
+            root, "docs/governance/README.md", errors
+        ),
         GOVERNANCE_PATH: governance,
         f"{KB_ROOT}/README.md": kb_index,
         f"{VERSION_DIR}/生活助手-LifeConsole-1.0.0.md": prd,
@@ -127,7 +147,7 @@ def main() -> int:
         for error in errors:
             print(f"- {error}", file=sys.stderr)
         return 1
-    print("PASS: 项目开发规范、知识库与用户确认门禁检查通过")
+    print("PASS: PO 规范原文完整，项目知识库与用户确认门禁检查通过")
     return 0
 
 

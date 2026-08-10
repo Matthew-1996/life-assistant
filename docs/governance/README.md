@@ -1,0 +1,19 @@
+# 项目治理文档
+
+本目录保存项目开发治理规则。
+
+## 权威正文
+
+[`agent-user-project-development-standard.md`](agent-user-project-development-standard.md) 是 iCloud 本地项目与 GitHub 仓库共同使用的唯一权威正文，也是项目开发文档中的最高优先级规范。
+
+- 正文不得由 Agent 改写、重排、润色、补充标题或追加元数据。
+- Agent 的执行细化只能写入 `AGENTS.md`、`GIT_WORKFLOW.md` 或知识库，且不得覆盖或改变规范原意。
+- 规范正文变更必须来自 PO 明确修改；修改后应更新完整性校验与变更记录。
+- 旧路径 `需求文档（个人维护）/agent项目开发规范.md` 不再保存第二份正文；本地兼容时只能作为指向本文件的相对符号链接或跳转说明，不能作为独立真相源。
+- 当前正文 SHA-256：`4cbf94c9f56188b0e7eae88a45ab740a4f857eefb3c03d35c68d4baacfe0c6a1`。
+
+校验命令：
+
+```bash
+python3 tools/check_project_governance.py
+```
