@@ -49,6 +49,13 @@ except ModuleNotFoundError:  # Direct execution from tools/.
 
 ROOT = Path(__file__).resolve().parents[1]
 ARCHIVE_ROOT = "codex-生活助手"
+LEGACY_GOVERNANCE_LINK = Path("需求文档（个人维护）/agent项目开发规范.md")
+LEGACY_GOVERNANCE_TARGET = Path(
+    "../docs/governance/agent-user-project-development-standard.md"
+)
+CANONICAL_GOVERNANCE = Path(
+    "docs/governance/agent-user-project-development-standard.md"
+)
 EXCLUDED_DIRS = {
     ".git",
     ".worktrees",
@@ -150,6 +157,22 @@ def project_files(root: Path = ROOT) -> list[Path]:
     for path in root.rglob("*"):
         relative = path.relative_to(root)
         if any(part in EXCLUDED_DIRS for part in relative.parts):
+            continue
+        if relative == LEGACY_GOVERNANCE_LINK:
+            canonical = root / CANONICAL_GOVERNANCE
+            try:
+                target = path.readlink()
+            except OSError as exc:
+                raise SourceDriftError from exc
+            if (
+                target != LEGACY_GOVERNANCE_TARGET
+                or canonical.is_symlink()
+                or not canonical.is_file()
+            ):
+                raise SourceDriftError
+            # ZIP recovery intentionally accepts regular files only. The canonical
+            # governance body is archived; this local compatibility link is
+            # validated here and recreated from PROJECT_CONTEXT.md when needed.
             continue
         if not path.is_file() or path.name in EXCLUDED_FILES:
             continue
