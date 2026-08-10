@@ -27,10 +27,10 @@ class ProjectGovernanceTests(unittest.TestCase):
             ".github/pull_request_template.md": (
                 "产品流程\n用户确认状态\n"
                 f"{governance.GOVERNANCE_PATH}\n"
-                "从 PO 原始文件逐字同步\n"
+                "修改唯一规范正文\n"
             ),
             "docs/governance/README.md": (
-                "PO 制定规范的逐字副本\n"
+                "本地项目与 GitHub 仓库共同使用的唯一权威正文\n"
                 "不得由 Agent 改写\n"
                 "SHA-256\n"
             ),
@@ -99,7 +99,7 @@ class ProjectGovernanceTests(unittest.TestCase):
             encoding="utf-8",
         )
         errors = governance.inspect_project_governance(self.root)
-        self.assertTrue(any("不是 PO 原文的逐字副本" in error for error in errors))
+        self.assertTrue(any("不是 PO 确认版本" in error for error in errors))
 
     def test_confirmed_po_gate_cannot_be_silently_reverted(self) -> None:
         path = self.root / governance.VERSION_DIR / "生活助手-LifeConsole-1.0.0.md"

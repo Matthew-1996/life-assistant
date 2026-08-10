@@ -10,7 +10,7 @@ from pathlib import Path
 
 GOVERNANCE_PATH = "docs/governance/agent-user-project-development-standard.md"
 GOVERNANCE_SHA256 = (
-    "6da8318c2ceaa99d43e5b9e103cd8ac643e9a5fa737c0e8c14c523166421386a"
+    "4cbf94c9f56188b0e7eae88a45ab740a4f857eefb3c03d35c68d4baacfe0c6a1"
 )
 KB_ROOT = "docs/knowledge-base"
 VERSION_DIR = f"{KB_ROOT}/生活助手-LifeConsole-1.0.0"
@@ -52,7 +52,7 @@ def inspect_project_governance(root: Path) -> list[str]:
         and hashlib.sha256(governance.encode("utf-8")).hexdigest()
         != GOVERNANCE_SHA256
     ):
-        errors.append(f"项目治理规范不是 PO 原文的逐字副本：{GOVERNANCE_PATH}")
+        errors.append(f"唯一项目开发规范不是 PO 确认版本：{GOVERNANCE_PATH}")
     kb_index = _read_text(root, f"{KB_ROOT}/README.md", errors)
     prd = _read_text(root, f"{VERSION_DIR}/生活助手-LifeConsole-1.0.0.md", errors)
     pmo = _read_text(
@@ -81,10 +81,10 @@ def inspect_project_governance(root: Path) -> list[str]:
             "产品流程",
             "用户确认状态",
             GOVERNANCE_PATH,
-            "从 PO 原始文件逐字同步",
+            "修改唯一规范正文",
         ),
         "docs/governance/README.md": (
-            "PO 制定规范的逐字副本",
+            "本地项目与 GitHub 仓库共同使用的唯一权威正文",
             "不得由 Agent 改写",
             "SHA-256",
         ),
