@@ -2,6 +2,12 @@
 
 本工作区的长期目标是减少用户的认知负担，帮助其在健康、时间、关系、生活环境、财务安全与乐趣之间形成更好的现实平衡。
 
+## 项目开发最高优先级
+
+涉及产品需求、代码、规则、Prompt、设计、测试、部署、发布、Git 或知识库维护时，必须先完整读取 [`docs/governance/agent-user-project-development-standard.md`](docs/governance/agent-user-project-development-standard.md)。它是项目内部所有开发文档中的最高优先级规范；若其他项目文件与它冲突，以该规范为准。普通生活对话、状态回复和日记快速新增不启动开发流程。
+
+开发任务还必须读取对应版本的产品需求文档与 PMO 状态。缺失文档时按该规范分类：Agent 应负责的文档先生成草稿；涉及 PO 产品决定、重大取舍、验收、上线、真实数据迁移、删除或外部发布的门禁，必须获得用户明确确认，不得静默跳过或用测试、提交、沉默代替确认。
+
 ## 每次任务
 
 1. 读取 `USER.md`，只使用其中明确、未过期的用户指令。
@@ -30,7 +36,7 @@
 
 21. Google 表格同步固定遵循 `integrations/README.md`。先读取 `integrations/google-sheets.json`：只有 `lifecycle_state=active` 且 `sync_cadence=every_record` 时，才运行 `node tools/google_sheets_payload.mjs` 从完整 iCloud 源生成确定性载荷并自动刷新；`paused/on_demand` 保留私人表格绑定、历史数据与收据，不自动同步、不制造待刷新事项，用户明确要求恢复时再切换。实际刷新优先使用已安装并已连接的个人 Google Drive/Sheets 插件或连接器，先幂等应用 `spreadsheet_properties` 与 `format_updates`，再依次清空 `clear_ranges`、批量写入 `value_updates`，并读回 `verification_ranges`；不得在插件可用时改用浏览器手工维护。若插件未安装、未连接、缺少权限或未暴露所需能力，可直接请用户完成安装、连接或授权后重试。表格必须是配置绑定的私人原生 Google 表格，八个页面完整存在；不得创建公开链接、共享给他人或把表格当作真相源。只有插件或连接器写入和读回均成功、且源未漂移时，才通过 stdin 调用 `tools/google_sheets_state.py mark-success`。active/every_record 下配置尚未连接或外部失败时，本地写入仍算成功，回执明确“Google 表格待刷新”，下次记录重试；每日自动化只在状态为 stale/pending 时补一次重试，不新增高频任务。同步载荷允许现有完整视图与轻量日记索引，但严禁日记原文、苹果健康摘要/明细、Prompt、凭据和聊天原文。现有 XLSX 不日常更新；只有用户明确要求导出或恢复该备选时才按电子表格 Skill 重建。
 
-22. 涉及代码、规则、Prompt、测试、网页、工具或 Git 仓库维护时，先完整读取 `GIT_WORKFLOW.md` 并遵循其全部规则；普通生活对话、状态回复和日记快速新增不需要启动 Git 流程。
+22. 涉及代码、规则、Prompt、设计、测试、网页、工具、知识库或 Git 仓库维护时，先按“项目开发最高优先级”读取开发规范和对应知识库，再完整读取 `GIT_WORKFLOW.md` 并遵循其全部规则；普通生活对话、状态回复和日记快速新增不需要启动 Git 流程。
 
 23. 若用户已明确授权长期保留苹果健康最小摘要，每日回访开始时，当日六行摘要若有效，先用 `tools/apple_health_history.py ingest --expect-date YYYY-MM-DD` 幂等归档到 iCloud 私有 `records/apple-health-history.jsonl`，同日不追加重复行。缺失、过期或无效时静默忽略，不阻断回访。该台账只保存设备客观源值，不推断主观评分或行动锚点，不进入 Google、网页、连接器或 Git。
 
