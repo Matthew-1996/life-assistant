@@ -40,77 +40,47 @@ describe("Life Console synthetic UI", () => {
     render(<App />);
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "今天，只看必要信息" }),
+      screen.getByRole("heading", { level: 1, name: "一周试行控制台。" }),
     ).toBeTruthy();
 
     const progress = navigationButton("进展");
     progress.focus();
     await user.keyboard("{Enter}");
     expect(
-      screen.getByRole("heading", { level: 1, name: "趋势，只是辅助判断" }),
+      screen.getByRole("heading", { level: 1, name: "自然周路径，不惩罚空白。" }),
     ).toBeTruthy();
 
     await user.click(navigationButton("记录"));
     expect(
-      screen.getByRole("heading", { level: 1, name: "记录，不打断生活" }),
+      screen.getByRole("heading", { level: 1, name: "先预览，再写入。" }),
     ).toBeTruthy();
 
     await user.click(navigationButton("系统"));
     expect(
-      screen.getByRole("heading", { level: 1, name: "正常时，系统保持安静" }),
+      screen.getByRole("heading", { level: 1, name: "本地工作站，不替代真相源。" }),
     ).toBeTruthy();
   });
 
-  it("renders the Apple-style global navigation shell", () => {
+  it("renders the accepted Apple-style trial week shell", () => {
     const { container } = render(<App />);
 
-    expect(container.querySelector(".global-nav")).toBeTruthy();
-    expect(container.querySelector(".brand-dot")).toBeTruthy();
+    expect(container.querySelector(".topbar")).toBeTruthy();
+    expect(container.querySelector(".topbar-inner")).toBeTruthy();
+    expect(container.querySelector(".brand-mark")).toBeTruthy();
     expect(screen.getByRole("navigation", { name: "全局导航" })).toBeTruthy();
-    const globalNav = container.querySelector(".global-nav");
-    expect(globalNav).toBeTruthy();
-    expect(
-      within(globalNav as HTMLElement).getByRole("button", {
-        name: "快速记录",
-      }),
-    ).toBeTruthy();
+    expect(screen.getByText("Life Console · Trial Week")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "跳到主要内容" })).toBeTruthy();
   });
 
-  it("keeps the redesigned workbench hero calls to action in React", async () => {
-    const user = userEvent.setup();
-    const { container } = render(<App />);
+  it("makes the trial week projects the workbench focus", () => {
+    render(<App />);
 
-    const main = within(screen.getByRole("main"));
-    expect(container.querySelector(".status-panel")).toBeTruthy();
-    expect(container.querySelector(".info-grid")).toBeTruthy();
-    expect(container.querySelector(".privacy-card")).toBeTruthy();
-    expect(screen.getByLabelText("今日状态摘要")).toBeTruthy();
-    expect(screen.getByText("隐私与保存链路")).toBeTruthy();
-    expect(main.getByRole("button", { name: "快速记录" })).toBeTruthy();
-    expect(main.getByRole("button", { name: "查看进展" })).toBeTruthy();
-
-    await user.click(main.getByRole("button", { name: "查看进展" }));
-    expect(
-      screen.getByRole("heading", { level: 1, name: "趋势，只是辅助判断" }),
-    ).toBeTruthy();
-  });
-
-  it("shows conversation capture and the compact form at the same time", async () => {
-    const user = userEvent.setup();
-    const { container } = render(<App />);
-
-    await user.click(navigationButton("记录"));
-
-    expect(container.querySelector(".capture-grid")).toBeTruthy();
-    expect(container.querySelector(".conversation-card")).toBeTruthy();
-    expect(container.querySelector(".form-card")).toBeTruthy();
-    expect(container.querySelector(".feedback-bar")).toBeTruthy();
-    expect(screen.getByLabelText("直接描述想记录的内容")).toBeTruthy();
-    expect(screen.getByRole("complementary", { name: "简洁表单" })).toBeTruthy();
-    expect(screen.getByText("写一句也可以")).toBeTruthy();
-    expect(screen.queryByText("先预览")).toBeNull();
-    expect(screen.getByRole("tab", { name: "日记" })).toBeTruthy();
-    expect(screen.getByRole("tab", { name: "每日状态" })).toBeTruthy();
+    const projects = screen.getByRole("region", { name: "本周双轨试行" });
+    expect(within(projects).getByText("合成室内训练")).toBeTruthy();
+    expect(within(projects).getByText("合成 Agent 实操")).toBeTruthy();
+    expect(screen.getByText("今日只做一个")).toBeTruthy();
+    expect(screen.getByText("本周路径，轻量可回退。")).toBeTruthy();
+    expect(screen.getByText("最低版不是失败")).toBeTruthy();
   });
 
   it("keeps unknown distinct from skipped in anchor controls", async () => {
@@ -133,7 +103,7 @@ describe("Life Console synthetic UI", () => {
   it("renders confirmed auxiliary goals as read-only active projects", () => {
     render(<App />);
 
-    const projects = screen.getByRole("region", { name: "本周试行项目" });
+    const projects = screen.getByRole("region", { name: "本周双轨试行" });
     expect(within(projects).getByText("合成室内训练")).toBeTruthy();
     expect(within(projects).getByText("合成 Agent 实操")).toBeTruthy();
     expect(
@@ -142,6 +112,72 @@ describe("Life Console synthetic UI", () => {
       }),
     ).toHaveLength(2);
     expect(within(projects).getAllByText("只读项目")).toHaveLength(2);
+  });
+
+  it("shows quick record cards for movement and daily anchors instead of Agent fields", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<App />);
+    await user.click(navigationButton("记录"));
+
+    expect(container.querySelector(".quick-record-grid")).toBeTruthy();
+    expect(screen.getByText("运动恢复快速记录")).toBeTruthy();
+    expect(screen.getByText("今日锚点快速记录")).toBeTruthy();
+    expect(screen.getByLabelText("今天做了什么")).toBeTruthy();
+    expect(screen.getByLabelText("身体反应")).toBeTruthy();
+    expect(screen.getByLabelText("快速记录起床状态")).toBeTruthy();
+    expect(screen.getByLabelText("快速记录身体 / 光照状态")).toBeTruthy();
+    expect(screen.queryByText("Agent 实操快速记录")).toBeNull();
+    expect(screen.getByRole("button", { name: "生成预览" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "保存到 iCloud" })).toBeTruthy();
+  });
+
+  it("previews a conversation draft without writing it", async () => {
+    const user = userEvent.setup();
+    const journal = vi.fn();
+    const preview = vi.fn().mockResolvedValue({
+      schema_version: 1,
+      state: "available",
+      message: "已生成结构化预览",
+      intent: "journal",
+      preview: {
+        event_date: syntheticDashboard.date,
+        summary: "今天完成了最低版",
+        completion: "minimum",
+      },
+    });
+    const client = {
+      dashboard: vi.fn().mockResolvedValue(syntheticDashboard),
+      journal,
+      checkin: vi.fn(),
+      preview,
+      ...enrichmentStubs(),
+    } satisfies LifeConsoleClient;
+    render(<App client={client} initialDashboard={syntheticDashboard} />);
+    await user.click(navigationButton("记录"));
+    await user.type(
+      screen.getByLabelText("直接描述想记录的内容"),
+      "今天完成了最低版。",
+    );
+    await user.click(screen.getByRole("button", { name: "生成预览" }));
+
+    await waitFor(() => expect(preview).toHaveBeenCalledTimes(1));
+    expect(journal).not.toHaveBeenCalled();
+    expect(screen.getByText("结构化预览")).toBeTruthy();
+    expect(screen.getByText("今天完成了最低版")).toBeTruthy();
+  });
+
+  it("keeps recorded journals and daily context visible on the record page", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(navigationButton("记录"));
+
+    const context = screen.getByRole("region", { name: "已录入与上下文" });
+    expect(within(context).getByText("周末散步")).toBeTruthy();
+    expect(within(context).getByText("今日锚点")).toBeTruthy();
+    expect(within(context).getByText("醒来")).toBeTruthy();
+    expect(within(context).getByText("完成")).toBeTruthy();
+    expect(within(context).getByText("Google")).toBeTruthy();
+    expect(within(context).getByText("暂停")).toBeTruthy();
   });
 
   it("derives the current weekday from the dashboard date", async () => {
@@ -153,6 +189,18 @@ describe("Life Console synthetic UI", () => {
     expect(current?.textContent).toContain("周一");
     expect(current?.textContent).toContain("今天");
     expect(current?.textContent).toContain("01-12");
+  });
+
+  it("presents low-pressure progress and weekend review guidance", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(navigationButton("进展"));
+
+    expect(screen.getByText("双轨进展")).toBeTruthy();
+    expect(screen.getByText("主观信号")).toBeTruthy();
+    expect(screen.getByText("缺失值不惩罚")).toBeTruthy();
+    expect(screen.getByText("周末只看四件事")).toBeTruthy();
+    expect(screen.getByText("下一周只保留、调整或停止哪一件事？")).toBeTruthy();
   });
 
   it("renders separate trend segments across missing values", async () => {
@@ -177,7 +225,7 @@ describe("Life Console synthetic UI", () => {
 
     const text = "这是一段只用于测试的合成记录。";
     await user.type(screen.getByLabelText("直接描述想记录的内容"), text);
-    await user.click(screen.getByRole("button", { name: "保存记录" }));
+    await user.click(screen.getByRole("button", { name: "保存到 iCloud" }));
 
     expect(screen.getByRole("status").textContent).toContain("合成演示");
     expect(localSet).not.toHaveBeenCalled();
@@ -208,7 +256,7 @@ describe("Life Console synthetic UI", () => {
       screen.getByLabelText("直接描述想记录的内容"),
       "今天去公园散步，很放松。",
     );
-    await user.click(screen.getByRole("button", { name: "保存记录" }));
+    await user.click(screen.getByRole("button", { name: "保存到 iCloud" }));
 
     await waitFor(() => expect(journal).toHaveBeenCalledTimes(1));
     const sent = journal.mock.calls[0][0];
@@ -240,6 +288,18 @@ describe("Life Console synthetic UI", () => {
     expect(screen.getByText("暂不维护")).toBeTruthy();
     expect(screen.getByText("方案待定")).toBeTruthy();
     expect(screen.getByText("已验证可读取")).toBeTruthy();
+  });
+
+  it("explains runtime flow and source-of-truth boundaries", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(navigationButton("系统"));
+
+    expect(screen.getByText("运行关系")).toBeTruthy();
+    expect(screen.getByText("保存确认")).toBeTruthy();
+    expect(screen.getByText("数据与展示边界")).toBeTruthy();
+    expect(screen.getByText("移动端与图表边界")).toBeTruthy();
+    expect(screen.getByText("设计治理资产关系")).toBeTruthy();
   });
 
   it("does not show an anchor as saved when the Hub write fails", async () => {
@@ -393,6 +453,43 @@ describe("Life Console synthetic UI", () => {
     expect(checkin.mock.calls[0][1].fields).toEqual({ energy: 4 });
   });
 
+  it("quick daily anchors save through checkin without switching form tabs", async () => {
+    const user = userEvent.setup();
+    const checkin = vi.fn().mockResolvedValue({
+      request_id: "req_quick_anchor",
+      command_id: "cmd_quick_anchor",
+      action: "updated",
+      source: { state: "saved", revision: 4 },
+      read_model: "current",
+      message: "已保存到 iCloud",
+    });
+    const client = {
+      dashboard: vi.fn().mockResolvedValue(syntheticDashboard),
+      journal: vi.fn(),
+      checkin,
+      preview: vi.fn(),
+      ...enrichmentStubs(),
+    } satisfies LifeConsoleClient;
+    render(<App client={client} initialDashboard={syntheticDashboard} />);
+    await user.click(navigationButton("记录"));
+    await user.selectOptions(screen.getByLabelText("快速记录生活动作状态"), "complete");
+    await user.selectOptions(screen.getByLabelText("快速记录晚间降速状态"), "skipped");
+    await user.click(screen.getByRole("button", { name: "保存今日锚点" }));
+
+    await waitFor(() => expect(checkin).toHaveBeenCalledTimes(1));
+    expect(checkin).toHaveBeenCalledWith(syntheticDashboard.date, {
+      schema_version: 1,
+      expect_revision: syntheticDashboard.today.daily_revision,
+      fields: {
+        wake: "complete",
+        body_light: "minimum",
+        life_action: "complete",
+        wind_down: "skipped",
+      },
+    });
+    expect(client.journal).not.toHaveBeenCalled();
+  });
+
   it("auto-enriches a conversation entry after saving it", async () => {
     const user = userEvent.setup();
     const saved = structuredClone(syntheticDashboard);
@@ -429,7 +526,7 @@ describe("Life Console synthetic UI", () => {
       screen.getByLabelText("直接描述想记录的内容"),
       "今天去公园散步，很放松。",
     );
-    await user.click(screen.getByRole("button", { name: "保存记录" }));
+    await user.click(screen.getByRole("button", { name: "保存到 iCloud" }));
 
     await waitFor(() => expect(journal).toHaveBeenCalledTimes(1));
     // 保存后自动触发一次整理，无需再手动点击。

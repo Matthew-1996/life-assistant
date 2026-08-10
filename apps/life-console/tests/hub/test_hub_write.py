@@ -149,6 +149,34 @@ class HubWriteTests(unittest.TestCase):
         items = json.loads(response.read())["items"]
         self.assertEqual(items[0]["type"], "revision_conflict")
 
+    def test_checkin_accepts_quick_anchor_fields(self) -> None:
+        body = {
+            "schema_version": 1,
+            "idempotency_key": "synthetic_quick_anchor_01",
+            "expect_revision": None,
+            "fields": {
+                "wake": "complete",
+                "body_light": "minimum",
+                "life_action": "complete",
+                "wind_down": "skipped",
+            },
+        }
+
+        status, result = self.post("/api/v1/checkins/2026-01-12", body)
+
+        self.assertEqual(status, 200)
+        self.assertEqual(result["source"]["revision"], 1)
+        record = json.loads((self.root / "records/daily-checkins.jsonl").read_text())
+        self.assertEqual(
+            record["anchors"],
+            {
+                "wake": "complete",
+                "body_light": "minimum",
+                "life_action": "complete",
+                "wind_down": "skipped",
+            },
+        )
+
     def test_write_requires_csrf(self) -> None:
         body = {
             "schema_version": 1,

@@ -1,6 +1,10 @@
 import { type SyntheticEvent, useState } from "react";
 
-import { ApiError, type LifeConsoleClient } from "../../api/client";
+import {
+  ApiError,
+  type CapturePreview,
+  type LifeConsoleClient,
+} from "../../api/client";
 import type { components } from "../../contracts/life-console";
 import type { Dashboard } from "../../data/dashboard";
 
@@ -30,6 +34,27 @@ const anchorFields = [
   ["life_action", "生活动作"],
   ["wind_down", "晚间降速"],
 ] as const;
+
+const anchorContextLabels = {
+  wake: "醒来",
+  body_light: "身体 / 光照",
+  life_action: "生活动作",
+  wind_down: "晚间降速",
+} as const;
+
+const anchorStateLabels = {
+  complete: "完成",
+  minimum: "最低版",
+  skipped: "跳过",
+} as const;
+
+const systemStateLabels: Record<string, string> = {
+  ready: "就绪",
+  readable: "可读取",
+  paused: "暂停",
+  pending: "待定",
+  unknown: "未知",
+};
 
 function compactLine(value: string, maximum: number): string {
   const normalized = value.replace(/\s+/g, " ").trim();
@@ -205,8 +230,42 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
   const [formMode, setFormMode] = useState<FormMode>("journal");
   const [captureText, setCaptureText] = useState("");
   const [captureSaving, setCaptureSaving] = useState(false);
+  const [capturePreviewing, setCapturePreviewing] = useState(false);
+  const [capturePreview, setCapturePreview] = useState<CapturePreview | null>(null);
   const [receipt, setReceipt] = useState<string | null>(null);
   const [conflict, setConflict] = useState<components["schemas"]["CheckinConflict"] | null>(null);
+
+  async function previewConversation() {
+    const eventText = captureText.trim();
+    if (!eventText) return;
+    setReceipt(null);
+    if (!client) {
+      setCapturePreview({
+        schema_version: 1,
+        state: "available",
+        message: "合成预览，不会写入真实 iCloud",
+        intent: "journal",
+        preview: {
+          date: dashboard.date,
+          source: "对话式记录",
+          summary: compactLine(eventText, 120),
+        },
+      });
+      return;
+    }
+    setCapturePreviewing(true);
+    try {
+      const result = await client.preview(
+        eventText,
+        dashboard.source_revisions.journal,
+      );
+      setCapturePreview(result);
+    } catch {
+      setReceipt("预览失败；草稿仍保留在当前页面。");
+    } finally {
+      setCapturePreviewing(false);
+    }
+  }
 
   async function saveConversation(event: SyntheticEvent<HTMLFormElement, SubmitEvent>) {
     event.preventDefault();
@@ -258,6 +317,7 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
           ? "已保存到 iCloud，正在用 DeepSeek 整理…"
           : "已保存到 iCloud（云端整理未启动，可在卡片上手动整理）",
       );
+        setCapturePreview(null);
       await onSaved?.();
     } catch {
       setReceipt("保存失败，请保留当前内容并重试");
@@ -356,18 +416,75 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
     }
   }
 
+  async function saveQuickAnchors(
+    event: SyntheticEvent<HTMLFormElement, SubmitEvent>,
+  ) {
+    event.preventDefault();
+    if (!client) {
+      setReceipt("合成演示已完成；未写入真实 iCloud");
+      event.currentTarget.reset();
+      return;
+    }
+    const form = event.currentTarget;
+    const values = new FormData(form);
+    const fields: Record<string, string> = {};
+    for (const [key] of anchorFields) {
+      const value = String(values.get(key) ?? "");
+      if (value) fields[key] = value;
+    }
+    if (!Object.keys(fields).length) {
+      setReceipt("请至少提供一个今日锚点");
+      return;
+    }
+    try {
+      const result = await client.checkin(String(values.get("date")), {
+        schema_version: 1,
+        expect_revision: dashboard.today.daily_revision,
+        fields,
+      });
+      setConflict(null);
+      setReceipt(result.message);
+      await onSaved?.();
+    } catch (error) {
+      if (error instanceof ApiError && error.response.conflict) {
+        setConflict(error.response.conflict);
+      } else {
+        setReceipt("保存失败，请保留当前内容并重试");
+      }
+    }
+  }
+
+  function previewMovement(
+    event: SyntheticEvent<HTMLFormElement, SubmitEvent>,
+  ) {
+    event.preventDefault();
+    setReceipt("已生成运动恢复草稿；尚未写入 iCloud。");
+  }
+
   return (
     <section aria-labelledby="records-title">
       <header className="hero capture-hero">
         <div>
-          <p className="eyebrow">记录输入</p>
-          <h1 id="records-title">记录，不打断生活</h1>
+          <p className="eyebrow">记录，不打断生活</p>
+          <h1 id="records-title">先预览，再写入。</h1>
+          <p className="lead">
+            记录页以大对话输入为主，同时提供运动恢复、今日锚点与简洁表单兜底。点击保存前，内容只停留在当前草稿与预览。
+          </p>
         </div>
-        <p>
-          {client
-            ? "通过本机 Life Hub 写入 iCloud 真相源；保存失败时保留当前输入。"
-            : "当前是合成演示；不会写入真实 iCloud。"}
-        </p>
+        <aside className="card hero-card">
+          <span className="status blue">写入语义</span>
+          <h2>草稿不会自动生效</h2>
+          <p className="quiet">
+            {client
+              ? "系统可以生成结构化预览；只有确认保存后，才调用本机白名单工具写入。"
+              : "当前是合成演示；预览与保存都不会改变真实 iCloud。"}
+          </p>
+          <div className="pill-row">
+            <span className="pill">预览</span>
+            <span className="pill">确认</span>
+            <span className="pill">本地保存</span>
+          </div>
+        </aside>
       </header>
 
       <section className="capture-grid" aria-label="记录输入">
@@ -376,45 +493,80 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
             <div className="card-header">
               <div>
                 <h2 className="card-title">对话式记录</h2>
-                <p className="card-desc">主入口是自然语言。系统先保存，再慢慢整理。</p>
+                  <p className="card-desc">一句话也可以。先看预览，再决定是否写入。</p>
               </div>
-              <span className="status-pill">Mac 本地</span>
+                <span className="status blue">主入口</span>
             </div>
-            <p className="input-prompt">写一句也可以</p>
             <label className="sr-only" htmlFor="capture-text">直接描述想记录的内容</label>
             <div className="input-wrap">
               <textarea
                 className="capture-textarea"
                 id="capture-text"
-                onChange={(event) => setCaptureText(event.target.value)}
-                placeholder="写一句也可以。例如：今天散步后感觉轻松一些……"
+                  onChange={(event) => {
+                    setCaptureText(event.target.value);
+                    setCapturePreview(null);
+                  }}
+                  placeholder="例如：今天只做了 5 分钟最低版，身体感觉稳定。"
                 value={captureText}
               />
               <div className="input-hint">
-                <span>先原样保存到 iCloud；外部展示待刷新不回滚本地成功。</span>
+                  <span>保存前不写入，不覆盖，不同步外部展示。</span>
                 <span className="mono">{captureText.trim().length} 字</span>
               </div>
             </div>
             <div className="actions">
               <div className="button-row">
                 <button
-                  className="primary-button btn btn-primary"
+                    className="button ghost"
+                    disabled={capturePreviewing || !captureText.trim()}
+                    onClick={() => void previewConversation()}
+                    type="button"
+                  >
+                    {capturePreviewing ? "预览中…" : "生成预览"}
+                  </button>
+                  <button
+                    className="button primary"
                   type="submit"
                   disabled={captureSaving || !captureText.trim()}
                 >
-                  {captureSaving ? "保存中…" : "保存记录"}
+                    {captureSaving ? "保存中…" : "保存到 iCloud"}
                 </button>
               </div>
-              <span className="status-pill">默认不发布原文</span>
+                <span className="caption">默认不发布原文</span>
             </div>
           </form>
         </section>
 
-        <aside className="card form-card" aria-label="简洁表单">
+          <aside className="card pad preview-panel" aria-live="polite">
+            <div className="section-head">
+              <div>
+                <h2>结构化预览</h2>
+                <p className="quiet">只展示会写入的字段与未知项。</p>
+              </div>
+              <span className={`status ${capturePreview ? "blue" : "gray"}`}>
+                {capturePreview ? "已生成" : "草稿"}
+              </span>
+            </div>
+            {capturePreview ? (
+              <>
+                <p className="quiet">{capturePreview.message}</p>
+                <dl className="preview-list">
+                  <div><dt>日期</dt><dd>{String(capturePreview.preview?.event_date ?? capturePreview.preview?.date ?? dashboard.date)}</dd></div>
+                  <div><dt>来源</dt><dd>对话式记录</dd></div>
+                  <div><dt>意图</dt><dd>{capturePreview.intent ?? "未知"}</dd></div>
+                  <div><dt>摘要</dt><dd>{String(capturePreview.preview?.summary ?? "等待对话继续确认")}</dd></div>
+                </dl>
+              </>
+            ) : (
+              <p className="empty-state">输入内容后生成预览；此步骤不会写入。</p>
+            )}
+          </aside>
+
+          <aside className="card form-card" aria-label="简洁表单">
           <div className="side-card-head">
             <div>
-              <span className="neutral-badge">简洁表单</span>
-          <h2 className="card-title">简洁表单</h2>
+                <span className="status gray">可选</span>
+                <h2 className="card-title">简洁表单兜底</h2>
             </div>
             <p className="card-desc">当需要补全状态时，用少量字段辅助回顾；表单只是兜底，不要求重复录入。</p>
           </div>
@@ -560,6 +712,79 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
         </aside>
       </section>
 
+        <section className="quick-record-grid section" aria-label="双轨快速记录">
+          <article className="card pad quick-record-card">
+            <div className="section-head">
+              <div>
+                <h2>运动恢复快速记录</h2>
+                <p className="quiet">只生成本页草稿，不建立新的运动台账。</p>
+              </div>
+              <span className="status green">恢复轨</span>
+            </div>
+            <form className="form-grid" onSubmit={previewMovement}>
+              <label className="field">
+                <span>今天做了什么</span>
+                <select aria-label="今天做了什么" defaultValue="minimum">
+                  <option value="minimum">5 分钟全身最低版</option>
+                  <option value="strength-a">室内力量 A</option>
+                  <option value="strength-b">室内力量 B</option>
+                  <option value="recovery">室内恢复力量</option>
+                  <option value="skipped">今天跳过</option>
+                </select>
+              </label>
+              <label className="field">
+                <span>身体反应</span>
+                <select aria-label="身体反应" defaultValue="unknown">
+                  <option value="stable">稳定，没有明显不适</option>
+                  <option value="tired">轻微疲劳，可观察</option>
+                  <option value="downgrade">不适，需要降级</option>
+                  <option value="unknown">未知，稍后再补</option>
+                </select>
+              </label>
+              <label className="field">
+                <span>主观用力</span>
+                <input aria-label="主观用力" placeholder="例如：5 / 10，仍有余力" />
+              </label>
+              <label className="field">
+                <span>下一次调整</span>
+                <input aria-label="下一次调整" placeholder="例如：保持最低版" />
+              </label>
+              <button className="button ghost" type="submit">生成运动草稿</button>
+            </form>
+          </article>
+
+          <article className="card pad quick-record-card">
+            <div className="section-head">
+              <div>
+                <h2>今日锚点快速记录</h2>
+                <p className="quiet">Agent 实操不做字段化反馈；这里补齐生活锚点。</p>
+              </div>
+              <span className="status blue">今日锚点</span>
+            </div>
+            <form className="anchor-quick-form" onSubmit={(event) => void saveQuickAnchors(event)}>
+              <input type="hidden" name="date" value={dashboard.date} />
+              <div className="anchor-quick-grid">
+                {anchorFields.map(([key, label]) => (
+                  <label className="field" key={key}>
+                    <span>{label}</span>
+                    <select
+                      aria-label={`快速记录${label}状态`}
+                      name={key}
+                      defaultValue={dashboard.today.anchors[key] ?? ""}
+                    >
+                      <option value="">未记录</option>
+                      <option value="complete">完成</option>
+                      <option value="minimum">最低版</option>
+                      <option value="skipped">跳过</option>
+                    </select>
+                  </label>
+                ))}
+              </div>
+              <button className="button primary" type="submit">保存今日锚点</button>
+            </form>
+          </article>
+        </section>
+
       <section className="feedback-bar" aria-label="保存反馈">
         <div>
           <strong>本地成功先算完成，外部展示待刷新不回滚</strong>
@@ -586,20 +811,57 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
         </section>
       )}
 
-      <section className="section-block" aria-labelledby="recent-title">
+      <section
+        aria-label="已录入与上下文"
+        className="section-block"
+      >
         <div className="section-heading">
-          <h2 id="recent-title">最近记录</h2>
+          <div>
+            <h2>已录入与上下文</h2>
+            <span className="supporting-text">放在当前页下方，避免新增 tab 打断记录流程</span>
+          </div>
           <span className="supporting-text">安全轻量投影</span>
         </div>
-        <div className="recent-list">
-          {dashboard.records.recent_journals.map((item) => (
-            <JournalCard
-              key={item.id}
-              journal={item}
-              client={client}
-              onChanged={onSaved}
-            />
-          ))}
+        <div className="record-context-grid">
+          <section className="record-context-card" aria-labelledby="recent-title">
+            <div className="context-card-head">
+              <h3 id="recent-title">最近日记</h3>
+              <span>已录入</span>
+            </div>
+            <div className="recent-list">
+              {dashboard.records.recent_journals.map((item) => (
+                <JournalCard
+                  key={item.id}
+                  journal={item}
+                  client={client}
+                  onChanged={onSaved}
+                />
+              ))}
+            </div>
+          </section>
+
+          <aside className="record-context-card" aria-label="今日锚点与派生状态">
+            <div className="context-card-head">
+              <h3>今日锚点</h3>
+              <span>其它信息</span>
+            </div>
+            <dl className="context-list">
+              {Object.entries(dashboard.today.anchors).map(([key, value]) => (
+                <div key={key}>
+                  <dt>{anchorContextLabels[key as keyof typeof anchorContextLabels]}</dt>
+                  <dd>{value ? anchorStateLabels[value] : "未记录"}</dd>
+                </div>
+              ))}
+              <div>
+                <dt>Google</dt>
+                <dd>{systemStateLabels[dashboard.system.google] ?? dashboard.system.google}</dd>
+              </div>
+              <div>
+                <dt>移动端</dt>
+                <dd>{systemStateLabels[dashboard.system.mobile] ?? dashboard.system.mobile}</dd>
+              </div>
+            </dl>
+          </aside>
         </div>
       </section>
     </section>

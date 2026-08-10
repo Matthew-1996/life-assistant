@@ -50,7 +50,7 @@
     "role": "top-level design system for Life Console UI work",
     "tokenCSS": "colors_and_type.css",
     "componentCSS": "components.css",
-    "prototypePackage": "../life-console-apple-redesign",
+    "prototypePackage": "../life-console-trial-week-redesign",
     "uiGuidelines": "../life-console-apple-ui-ue-guidelines.md"
   }
 }

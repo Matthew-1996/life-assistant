@@ -114,136 +114,120 @@ export function TodayPage({
 
   return (
     <section aria-labelledby="today-title">
-      <section className="hero-grid" aria-labelledby="today-title">
-        <div className="hero-panel focus-card">
-          <div>
-            <p className="eyebrow">MAC-ONLY LOCAL WORKSTATION</p>
-            <h1 id="today-title">今天，只看必要信息</h1>
-            <p className="hero-copy">
-              不追赶、不误报、不把趋势当结论。总览页只把今天真正需要处理的生活信号放在桌面上，其余内容留给记录与进展页慢慢整理。
-            </p>
-          </div>
-          <div className="hero-actions" aria-label="主要操作">
-            <button
-              className="primary-button"
-              onClick={() => onNavigate?.("records")}
-              type="button"
-            >
-              快速记录
+      <section className="hero" aria-labelledby="today-title">
+        <div>
+          <p className="eyebrow">{dashboard.date} · 本周试行</p>
+          <h1 id="today-title">一周试行控制台。</h1>
+          <p className="lead">
+            本周只验证两条轨道：运动恢复与 Agent 实操。今天不追求完整完成，只选择一个最低可执行版本，让生活系统继续保持轻。
+          </p>
+          <div className="pill-row hero-actions" aria-label="主要操作">
+            <button className="button primary" onClick={() => onNavigate?.("records")} type="button">
+              记录今天
             </button>
-            <button
-              className="secondary-button"
-              onClick={() => onNavigate?.("progress")}
-              type="button"
-            >
-              查看进展
+            <button className="button ghost" onClick={() => onNavigate?.("progress")} type="button">
+              查看自然周路径
             </button>
+            <span className="pill">不补作业</span>
+            <span className="pill">缺失值保持未知</span>
           </div>
         </div>
 
-        <aside className="status-panel card" aria-label="今日状态摘要">
-          <header>
-            <div>
-              <p className="kicker">今日桌面</p>
-              <h2>只保留可行动的提醒</h2>
-              <p className="quiet-note">这里不会把单日波动包装成结论，也不会自动替你决定写入真实记录。</p>
+        <aside className="card hero-card" aria-label="今日最低版建议">
+          <span className="status blue">今日只做一个</span>
+          <h2>{dashboard.today.suggested_action?.label ?? "先做一个最低版"}</h2>
+          <p className="quiet">
+            精力低时只保留一个可停止的小动作。最低版是有效观察，跳过也不需要追赶。
+          </p>
+          <div className="grid two metric-grid">
+            <div className="metric">
+              <strong>5</strong>
+              <span>分钟最低版</span>
             </div>
-          </header>
-          <div className="metric-stack" aria-label="保存与确认状态">
-            <div className="metric-row">
-              <span>真相源</span>
-              <strong>iCloud 项目</strong>
-            </div>
-            <div className="metric-row">
-              <span>默认动作</span>
-              <strong>只读整理</strong>
-            </div>
-            <div className="metric-row">
-              <span>真实写入</span>
-              <strong>确认后执行</strong>
+            <div className="metric">
+              <strong>1</strong>
+              <span>条明确下一步</span>
             </div>
           </div>
         </aside>
       </section>
 
-      <section className="info-grid" aria-label="必要信息区">
-        <article className="card quiet-card">
-          <span className="card-label">当前重点</span>
-          <h3>{dashboard.today.focus.title || "把今天压缩到一件主事"}</h3>
-          <p>先看工作台与最近记录，只选择一个最能降低摩擦的生活或工作动作，避免把清单扩成新的负担。</p>
-        </article>
-        <article className="card quiet-card">
-          <span className="card-label">一个建议行动</span>
-          <h3>{dashboard.today.suggested_action?.label ?? "先做 5 分钟小版本"}</h3>
-          <p>如果精力不足，优先完成一个可停止的小动作：整理桌面、出门见光、写下事实，任意一种都可以。</p>
-        </article>
-        <article className="card quiet-card">
-          <span className="card-label">待确认</span>
-          <h3>{dashboard.today.confirmations.length ? "写入前再问一次" : "现在没有必须确认的事"}</h3>
-          <p>日记、状态、阶段决定与对外同步都需要明确边界；未确认的内容只作为页面提示，不进入台账。</p>
-        </article>
-      </section>
-
       {dashboard.today.active_projects.length > 0 && (
         <section
           aria-labelledby="active-projects-title"
-          className="section-block"
+          aria-label="本周双轨试行"
+          className="section grid two"
         >
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">已确认辅助目标</p>
-              <h2 id="active-projects-title">本周试行项目</h2>
-            </div>
-            <span className="supporting-text">来自 iCloud 项目，不建立新的 Todo 真相源</span>
-          </div>
-          <div className="active-project-grid">
-            {dashboard.today.active_projects.map((project) => (
-              <article
-                className="active-project-card"
-                key={`${project.plan_path}:${project.title}`}
-              >
-                <div className="active-project-meta">
-                  <span className="neutral-badge">只读项目</span>
-                  <span>{project.period}</span>
+          <h2 className="sr-only" id="active-projects-title">本周双轨试行</h2>
+          {dashboard.today.active_projects.map((project, index) => (
+            <article className="card pad track-card" key={`${project.plan_path}:${project.title}`}>
+              <div className="track-dot">{index === 0 ? "身" : "A"}</div>
+              <div>
+                <div className="section-head compact-head">
+                  <h2>{project.title}</h2>
+                  <span className="status gray">只读项目</span>
                 </div>
-                <h3>{project.title}</h3>
-                <p>{project.summary}</p>
-                <div className="active-project-footer">
-                  <strong>{project.status}</strong>
-                  <code>{project.plan_path}</code>
+                <p className="quiet">{project.summary}</p>
+                <div className="pill-row">
+                  <span className="pill">{project.period}</span>
+                  <span className="pill">{project.status}</span>
                 </div>
-              </article>
-            ))}
-          </div>
+              </div>
+            </article>
+          ))}
         </section>
       )}
 
-      {dashboard.today.suggested_action && (
-        <section className="section-block" aria-labelledby="action-title">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">一个行动</p>
-              <h2 id="action-title">现在可以做什么</h2>
-            </div>
+      <section className="section" aria-labelledby="week-path-title">
+        <div className="section-head">
+          <div>
+            <h2 id="week-path-title">本周路径，轻量可回退。</h2>
+            <p className="quiet">按自然周观察，不把未知、最低版或跳过显示成失败。</p>
           </div>
-          <article className="action-card">
-            <div>
-              <strong>{dashboard.today.suggested_action.label}</strong>
-              <p>来自已确认计划；一期不建立新的 Todo 台账。</p>
+          <span className="status blue">自然周</span>
+        </div>
+        <div className="card pad timeline">
+          {["周一", "周二", "周三", "周四", "周五", "周末"].map((label, index) => (
+            <div className={`day-row ${index === 0 ? "today" : ""}`} key={label}>
+              <strong>{label}</strong>
+              <span>
+                {dashboard.today.active_projects[index % Math.max(dashboard.today.active_projects.length, 1)]?.title
+                  ?? dashboard.today.focus.title}
+              </span>
+              <span className={`status ${index === 0 ? "blue" : "gray"}`}>
+                {index === 0 ? "今日建议" : "可回退"}
+              </span>
             </div>
-            <span className="neutral-badge">仅建议</span>
-          </article>
-        </section>
-      )}
+          ))}
+        </div>
+      </section>
 
-      <section className="section-block" aria-labelledby="anchors-title">
-        <div className="section-heading section-title">
+      <section className="section grid three" aria-label="控制台原则">
+        <article className="card pad">
+          <span className="status blue">原则 01</span>
+          <h3>今日只突出一个主项</h3>
+          <p className="quiet">运动和 Agent 不要求同日都做，避免把恢复期变成双倍任务。</p>
+        </article>
+        <article className="card pad">
+          <span className="status blue">原则 02</span>
+          <h3>最低版不是失败</h3>
+          <p className="quiet">短时活动或一句下一步都算有效观察，不制造连续打卡压力。</p>
+        </article>
+        <article className="card pad">
+          <span className="status blue">原则 03</span>
+          <h3>保存前不改变真相源</h3>
+          <p className="quiet">界面先展示预览语义，真正写入必须经过明确保存动作。</p>
+        </article>
+      </section>
+
+      <section className="section" aria-labelledby="anchors-title">
+        <div className="section-head">
           <h2 id="anchors-title">今日锚点</h2>
-          <p>四个锚点只用于帮助回到现实节奏。状态采用分段胶囊展示，保留“未填写”作为正常选项。</p>
+          <p className="quiet">保留未记录、最低版与跳过的不同语义。</p>
         </div>
         <div className="anchor-grid">
           {anchorCopy.map((anchor) => (
-            <article className="card anchor-card" key={anchor.key}>
+            <article className="card pad anchor-card" key={anchor.key}>
               <div>
                 <p className="anchor-title">{anchor.title}</p>
                 <p className="anchor-help">{anchor.description}</p>
@@ -298,9 +282,9 @@ export function TodayPage({
         </section>
       )}
 
-      <div className="two-column">
-        <section className="section-block compact" aria-labelledby="confirm-title">
-          <div className="section-heading">
+      <div className="grid two section">
+        <section aria-labelledby="confirm-title">
+          <div className="section-head">
             <h2 id="confirm-title">待确认</h2>
             <span className="count-badge">
               {dashboard.today.confirmations.length}
@@ -325,8 +309,8 @@ export function TodayPage({
           )}
         </section>
 
-        <section className="section-block compact" aria-labelledby="skip-title">
-          <div className="section-heading">
+        <section aria-labelledby="skip-title">
+          <div className="section-head">
             <h2 id="skip-title">今天可以不做</h2>
           </div>
           <p className="permission-card">
@@ -335,7 +319,7 @@ export function TodayPage({
         </section>
       </div>
 
-      <section className="section-block card privacy-card" aria-labelledby="privacy-title">
+      <section className="section card pad privacy-card" aria-labelledby="privacy-title">
         <div>
           <p className="kicker">PRIVACY AND SAVE PATH</p>
           <h2 id="privacy-title">隐私与保存链路</h2>
@@ -367,6 +351,7 @@ export function TodayPage({
           </article>
         </div>
       </section>
+      <p className="footer-note">页面只呈现安全投影；真实记录与状态仍以 iCloud 项目为准。</p>
     </section>
   );
 }

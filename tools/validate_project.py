@@ -124,6 +124,12 @@ REQUIRED_FILES = [
     "docs/design/life-console-apple-redesign/pages/capture.html",
     "docs/design/life-console-apple-redesign/pages/insights.html",
     "docs/design/life-console-apple-redesign/pages/system.html",
+    "docs/design/life-console-trial-week-redesign/README.md",
+    "docs/design/life-console-trial-week-redesign/colors_and_type.css",
+    "docs/design/life-console-trial-week-redesign/pages/overview.html",
+    "docs/design/life-console-trial-week-redesign/pages/capture.html",
+    "docs/design/life-console-trial-week-redesign/pages/insights.html",
+    "docs/design/life-console-trial-week-redesign/pages/system.html",
     "docs/design/life-console-apple-ui-ue-guidelines.md",
     "skills/improve-daily-life/SKILL.md",
     "skills/improve-daily-life/agents/openai.yaml",
@@ -650,7 +656,7 @@ def validate_site_hosting_metadata(errors: list[str]) -> None:
 def validate_design_governance(errors: list[str]) -> None:
     design_root = ROOT / "docs" / "design"
     top_system = design_root / "apple-top-level-design-system"
-    prototype = design_root / "life-console-apple-redesign"
+    prototype = design_root / "life-console-trial-week-redesign"
     guideline = design_root / "life-console-apple-ui-ue-guidelines.md"
 
     consumption_path = top_system / "design-system-consumption.json"
@@ -671,7 +677,7 @@ def validate_design_governance(errors: list[str]) -> None:
         errors.append("UI 顶层设计系统缺少项目消费配置")
         return
     expected_links = {
-        "prototypePackage": "../life-console-apple-redesign",
+        "prototypePackage": "../life-console-trial-week-redesign",
         "uiGuidelines": "../life-console-apple-ui-ue-guidelines.md",
         "tokenCSS": "colors_and_type.css",
         "componentCSS": "components.css",
@@ -692,7 +698,7 @@ def validate_design_governance(errors: list[str]) -> None:
         if path.is_file() and not path.is_symlink()
     }
     if actual_pages != required_prototype_pages:
-        errors.append("Life Console 已验收原型页面集合无效")
+        errors.append("Life Console 当前设计原型页面集合无效")
 
     try:
         governance_text = (design_root / "README.md").read_text(encoding="utf-8")
@@ -702,6 +708,7 @@ def validate_design_governance(errors: list[str]) -> None:
         return
     for snippet, label in {
         "apple-top-level-design-system": "顶层设计系统入口",
+        "life-console-trial-week-redesign": "当前试行周原型入口",
         "life-console-apple-redesign": "已验收原型入口",
         "life-console-apple-ui-ue-guidelines.md": "长期 UI/UE 规范入口",
     }.items():

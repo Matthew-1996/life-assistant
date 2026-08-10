@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>一周试行控制台 · 系统</title>
+    <style id="theme-vars">
+/*
+ * Life Console Trial Week Apple Redesign
+ * Style: Apple-inspired restraint, light surfaces, blue emphasis.
+ * Boundary: synthetic examples only; no real journal, health, or account data.
+ */
+
+:root {
+  color-scheme: light;
+  --background: #f5f5f7;
+  --foreground: #1d1d1f;
+  --card: #ffffff;
+  --card-foreground: #1d1d1f;
+  --primary: #007aff;
+  --primary-foreground: #ffffff;
+  --muted: #f5f5f7;
+  --muted-foreground: #6e6e73;
+  --success: #34c759;
+  --warning: #ff9500;
+  --destructive: #ff3b30;
+  --border: #d1d1d6;
+  --input: #c7c7cc;
+  --ring: #007aff;
+  --blue-soft: #f3f8ff;
+  --gray-soft: #fafafa;
+  --line-soft: rgba(0, 0, 0, 0.08);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 8px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.05);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 16px;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+  --page-width: min(1180px, calc(100vw - 48px));
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 50% -10%, rgba(0, 122, 255, 0.10), transparent 34rem),
+    linear-gradient(180deg, #ffffff 0%, var(--background) 34rem);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  height: 44px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(250, 250, 250, 0.78);
+  backdrop-filter: saturate(180%) blur(18px);
+}
+
+.topbar-inner {
+  width: var(--page-width);
+  height: 44px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.brand-mark {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #1d1d1f 0%, #6e6e73 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  width: min(440px, 38vw);
+  height: 36px;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(242, 242, 247, 0.78);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.nav a {
+  flex: 1 1 0;
+  height: 30px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  font-weight: 580;
+  white-space: nowrap;
+}
+
+.nav a.active {
+  color: var(--primary);
+  background: var(--card);
+  box-shadow: var(--shadow-sm);
+}
+
+.page {
+  width: var(--page-width);
+  margin: 0 auto;
+  padding: 72px 0 96px;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr);
+  gap: 32px;
+  align-items: end;
+  margin-bottom: 32px;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 12px;
+  margin: 0 0 18px;
+  border-radius: 999px;
+  background: var(--blue-soft);
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.eyebrow::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 16px;
+  max-width: 900px;
+  font-size: clamp(42px, 5.2vw, 70px);
+  line-height: 0.98;
+  letter-spacing: -0.055em;
+  font-weight: 760;
+}
+
+h2 {
+  margin-bottom: 8px;
+  font-size: 24px;
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+}
+
+h3 {
+  margin-bottom: 8px;
+  font-size: 16px;
+  line-height: 1.2;
+  letter-spacing: -0.018em;
+}
+
+.lead {
+  max-width: 720px;
+  color: var(--muted-foreground);
+  font-size: 21px;
+  line-height: 1.42;
+  letter-spacing: -0.02em;
+}
+
+.quiet {
+  color: var(--muted-foreground);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.caption {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.45;
+  letter-spacing: 0.01em;
+}
+
+.grid {
+  display: grid;
+  gap: 16px;
+}
+
+.grid.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.grid.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: var(--shadow-sm);
+}
+
+.card.pad {
+  padding: 24px;
+}
+
+.card.hero-card {
+  padding: 28px;
+  border-radius: var(--radius-xl);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.section {
+  margin-top: 28px;
+}
+
+.section-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 14px;
+}
+
+.pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pill,
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--foreground);
+  font-size: 13px;
+  font-weight: 620;
+  white-space: nowrap;
+}
+
+.button.primary {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.button.ghost {
+  background: rgba(255, 255, 255, 0.68);
+  color: var(--muted-foreground);
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.status.blue {
+  background: var(--blue-soft);
+  color: var(--primary);
+}
+
+.status.green {
+  background: #edf8f0;
+  color: #198c38;
+}
+
+.status.gray {
+  background: #f5f5f7;
+  color: #6e6e73;
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.metric strong {
+  font-size: 34px;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.metric span {
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+
+.track-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.track-dot {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--blue-soft);
+  color: var(--primary);
+  display: grid;
+  place-items: center;
+  font-weight: 720;
+}
+
+.timeline {
+  display: grid;
+  gap: 10px;
+}
+
+.day-row {
+  display: grid;
+  grid-template-columns: 104px 1fr auto;
+  gap: 14px;
+  align-items: center;
+  padding: 13px 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.day-row > strong {
+  min-width: 104px;
+  white-space: nowrap;
+}
+
+.context-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
+}
+
+.journal-item {
+  display: grid;
+  gap: 8px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.journal-item:last-child {
+  border-bottom: 0;
+}
+
+.context-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.context-list div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.context-list div:last-child {
+  border-bottom: 0;
+}
+
+.context-list dt {
+  color: var(--muted-foreground);
+}
+
+.context-list dd {
+  margin: 0;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.day-row.today {
+  border-color: rgba(0, 122, 255, 0.32);
+  background: var(--blue-soft);
+}
+
+.bar {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--muted);
+}
+
+.bar > span {
+  display: block;
+  height: 100%;
+  width: var(--value, 50%);
+  border-radius: inherit;
+  background: var(--primary);
+}
+
+.signal-list {
+  display: grid;
+  gap: 10px;
+}
+
+.signal {
+  display: grid;
+  grid-template-columns: 112px 1fr auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.input-large,
+textarea,
+input,
+select {
+  width: 100%;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--foreground);
+  font: inherit;
+  outline: none;
+}
+
+textarea {
+  min-height: 210px;
+  padding: 20px;
+  resize: vertical;
+}
+
+input,
+select {
+  height: 44px;
+  padding: 0 14px;
+}
+
+textarea:focus,
+input:focus,
+select:focus {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.12);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.field label {
+  display: block;
+  margin: 0 0 7px 2px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-lg);
+}
+
+.table th,
+.table td {
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--line-soft);
+  text-align: left;
+  vertical-align: top;
+  font-size: 13px;
+}
+
+.table th {
+  background: var(--gray-soft);
+  color: var(--muted-foreground);
+  font-weight: 650;
+}
+
+.table tr:last-child td {
+  border-bottom: 0;
+}
+
+.flow {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.flow-step {
+  min-height: 136px;
+  padding: 18px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+}
+
+.flow-step small {
+  display: block;
+  margin-bottom: 12px;
+  color: var(--primary);
+  font-weight: 720;
+}
+
+.footer-note {
+  margin-top: 36px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line-soft);
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+
+@media (max-width: 860px) {
+  :root {
+    --page-width: min(100vw - 28px, 720px);
+  }
+
+  .topbar-inner {
+    gap: 10px;
+  }
+
+  .brand span {
+    display: none;
+  }
+
+  .nav a {
+    padding: 0 9px;
+  }
+
+  .page {
+    padding-top: 48px;
+  }
+
+  .hero,
+  .grid.two,
+  .grid.three,
+  .form-grid,
+  .flow {
+    grid-template-columns: 1fr;
+  }
+
+  h1 {
+    font-size: 38px;
+  }
+
+  .lead {
+    font-size: 17px;
+  }
+
+  .day-row,
+  .signal {
+    grid-template-columns: 1fr;
+  }
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-destructive: var(--destructive);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+    --radius-sm: var(--radius-sm);
+    --radius-md: var(--radius-md);
+    --radius-lg: var(--radius-lg);
+    --radius-xl: var(--radius-xl);
+  }
+  @layer base {
+    body { background: var(--background); color: var(--foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--background); }
+      .text-background { color: var(--background); }
+      .border-background { border-color: var(--background); }
+      .ring-background { --tw-ring-color: var(--background); }
+      .bg-foreground { background-color: var(--foreground); }
+      .text-foreground { color: var(--foreground); }
+      .border-foreground { border-color: var(--foreground); }
+      .ring-foreground { --tw-ring-color: var(--foreground); }
+      .bg-card { background-color: var(--card); }
+      .text-card { color: var(--card); }
+      .border-card { border-color: var(--card); }
+      .ring-card { --tw-ring-color: var(--card); }
+      .bg-card-foreground { background-color: var(--card-foreground); }
+      .text-card-foreground { color: var(--card-foreground); }
+      .border-card-foreground { border-color: var(--card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--card-foreground); }
+      .bg-primary { background-color: var(--primary); }
+      .text-primary { color: var(--primary); }
+      .border-primary { border-color: var(--primary); }
+      .ring-primary { --tw-ring-color: var(--primary); }
+      .bg-primary-foreground { background-color: var(--primary-foreground); }
+      .text-primary-foreground { color: var(--primary-foreground); }
+      .border-primary-foreground { border-color: var(--primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--primary-foreground); }
+      .bg-muted { background-color: var(--muted); }
+      .text-muted { color: var(--muted); }
+      .border-muted { border-color: var(--muted); }
+      .ring-muted { --tw-ring-color: var(--muted); }
+      .bg-muted-foreground { background-color: var(--muted-foreground); }
+      .text-muted-foreground { color: var(--muted-foreground); }
+      .border-muted-foreground { border-color: var(--muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--muted-foreground); }
+      .bg-destructive { background-color: var(--destructive); }
+      .text-destructive { color: var(--destructive); }
+      .border-destructive { border-color: var(--destructive); }
+      .ring-destructive { --tw-ring-color: var(--destructive); }
+      .bg-border { background-color: var(--border); }
+      .text-border { color: var(--border); }
+      .border-border { border-color: var(--border); }
+      .ring-border { --tw-ring-color: var(--border); }
+      .bg-input { background-color: var(--input); }
+      .text-input { color: var(--input); }
+      .border-input { border-color: var(--input); }
+      .ring-input { --tw-ring-color: var(--input); }
+      .bg-ring { background-color: var(--ring); }
+      .text-ring { color: var(--ring); }
+      .border-ring { border-color: var(--ring); }
+      .ring-ring { --tw-ring-color: var(--ring); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="overview.html" aria-label="Life Console Trial Week">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span>Life Console · Trial Week</span>
+      </a>
+      <nav class="nav" aria-label="主导航">
+        <a id="nav-overview" data-dom-id="nav-overview" href="overview.html">工作台</a>
+        <a id="nav-capture" data-dom-id="nav-capture" href="capture.html">记录</a>
+        <a id="nav-insights" data-dom-id="nav-insights" href="insights.html">进展</a>
+        <a id="nav-system" data-dom-id="nav-system" class="active" href="system.html">系统</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">边界清楚，系统才轻</p>
+        <h1>本地工作站，不替代真相源。</h1>
+        <p class="lead">系统页展示本地 Mac、iCloud 真相源、Google/网页派生、移动端与图表边界，以及设计治理资产之间的关系。</p>
+      </div>
+      <aside class="card hero-card">
+        <span class="status blue">核心边界</span>
+        <h2 style="margin-top: 18px;">iCloud 项目是唯一真相源</h2>
+        <p class="quiet">Life Console 只是本地界面与白名单写入入口；外部表格、网页和图表均为派生展示。</p>
+      </aside>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h2>运行关系</h2>
+          <p class="quiet">从本机界面到派生展示，保持单向、可解释、可回退。</p>
+        </div>
+        <span class="status gray">设计视图</span>
+      </div>
+      <div class="flow">
+        <article class="flow-step">
+          <small>01</small>
+          <h3>本地 Mac</h3>
+          <p class="quiet">用户打开 Life Console，读取本地白名单接口与合成预览。</p>
+        </article>
+        <article class="flow-step">
+          <small>02</small>
+          <h3>保存确认</h3>
+          <p class="quiet">点击保存后才调用原子工具；草稿不改变事实。</p>
+        </article>
+        <article class="flow-step">
+          <small>03</small>
+          <h3>iCloud 真相源</h3>
+          <p class="quiet">日记、状态、目标与规则仍由项目文件分层保存。</p>
+        </article>
+        <article class="flow-step">
+          <small>04</small>
+          <h3>派生展示</h3>
+          <p class="quiet">Google 表格与网页只展示确定性投影，不反向写回。</p>
+        </article>
+        <article class="flow-step">
+          <small>05</small>
+          <h3>设计治理</h3>
+          <p class="quiet">设计稿、规范、token 与验收说明约束后续实现。</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section grid two">
+      <article class="card pad">
+        <div class="section-head">
+          <div>
+            <h2>数据与展示边界</h2>
+            <p class="quiet">明确哪些系统可写，哪些只读，哪些暂缓。</p>
+          </div>
+          <span class="status blue">单向派生</span>
+        </div>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>对象</th>
+              <th>角色</th>
+              <th>边界</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>本地 Mac</td>
+              <td>首版工作站承载</td>
+              <td>只连接本机服务，不开放公网写入</td>
+            </tr>
+            <tr>
+              <td>iCloud 项目</td>
+              <td>真相源</td>
+              <td>原文与台账分层，写入需原子工具</td>
+            </tr>
+            <tr>
+              <td>Google 表格</td>
+              <td>私人派生展示</td>
+              <td>只读、单向，不接受反向录入</td>
+            </tr>
+            <tr>
+              <td>网页</td>
+              <td>移动端查看与只读投影</td>
+              <td>不发布敏感原文，不要求重复录入</td>
+            </tr>
+            <tr>
+              <td>图表</td>
+              <td>辅助判断</td>
+              <td>不替代主观确认，不生成惩罚性结论</td>
+            </tr>
+          </tbody>
+        </table>
+      </article>
+
+      <article class="card pad">
+        <div class="section-head">
+          <div>
+            <h2>移动端与图表边界</h2>
+            <p class="quiet">移动端不是桌面缩小版；图表只降低认知负担。</p>
+          </div>
+          <span class="status gray">暂不扩张</span>
+        </div>
+        <div class="signal-list">
+          <div class="day-row">
+            <strong>移动端</strong>
+            <span>先做只读查看与轻量提醒，后续按真实场景决定形态</span>
+            <span class="status gray">待定</span>
+          </div>
+          <div class="day-row">
+            <strong>图表</strong>
+            <span>展示趋势与缺失，不用连续打卡、红色惩罚或完成率压力</span>
+            <span class="status blue">克制</span>
+          </div>
+          <div class="day-row">
+            <strong>外部同步</strong>
+            <span>本地成功不依赖 Google/网页刷新，外部失败不回滚</span>
+            <span class="status green">安全</span>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="section card pad">
+      <div class="section-head">
+        <div>
+          <h2>设计治理资产关系</h2>
+          <p class="quiet">交互稿围绕苹果式克制风格，约束后续设计和实现同步。</p>
+        </div>
+        <span class="status blue">资产图谱</span>
+      </div>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>资产</th>
+            <th>作用</th>
+            <th>本次处理</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Apple 顶层设计系统</td>
+            <td>颜色、字体、圆角、卡片、导航、按钮原则</td>
+            <td>作为风格约束消费</td>
+          </tr>
+          <tr>
+            <td>Life Console UI/UE 规范</td>
+            <td>四页信息架构与写入边界</td>
+            <td>延续并聚焦试行周</td>
+          </tr>
+          <tr>
+            <td>本设计项目</td>
+            <td>4 页可预览设计稿与设计注册文件</td>
+            <td>新增独立资产</td>
+          </tr>
+          <tr>
+            <td>应用代码</td>
+            <td>后续实现参考</td>
+            <td>按验收后的交互与视觉基准同步实现</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section grid three">
+      <article class="card pad">
+        <span class="status blue">写入</span>
+        <h3 style="margin-top: 14px;">不写入前不改变真相源</h3>
+        <p class="quiet">保存按钮之前，所有输入都是预览状态，不触发同步或覆盖。</p>
+      </article>
+      <article class="card pad">
+        <span class="status gray">隐私</span>
+        <h3 style="margin-top: 14px;">示例只用合成数据</h3>
+        <p class="quiet">设计稿不包含真实日记、健康明细、账号标识或本地绝对路径。</p>
+      </article>
+      <article class="card pad">
+        <span class="status green">治理</span>
+        <h3 style="margin-top: 14px;">设计先行，代码后续</h3>
+        <p class="quiet">本次只生成设计资产，便于后续评审和实现拆解。</p>
+      </article>
+    </section>
+
+    <p class="footer-note">本页为系统关系设计说明，不执行发布、同步、删除或外部服务操作。</p>
+  </main>
+</body>
+</html>
