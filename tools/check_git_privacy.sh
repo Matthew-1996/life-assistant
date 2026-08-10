@@ -35,6 +35,9 @@ machine_path_pattern='/'"Users/"'[A-Za-z0-9._-]+/'
 # 判断单个路径是否属于禁止进入 Git 的 iCloud 私有文件或凭据路径。
 is_private_path() {
   local path="$1"
+  if [[ "$path" == "plans/睡眠与状态记录模板.md" ]]; then
+    return 1
+  fi
   case "$path" in
     USER.md|MEMORY.md|GOALS.md|PROJECT_CONTEXT.md|PORTABILITY.md|STATUS.md|\
     automations/*|backups/*|outputs/*|\
@@ -46,10 +49,7 @@ is_private_path() {
     integrations/journal-enrichment.json|\
     life-plan-schedule.json|tools/render_life_plan.mjs|\
     tools/test_journal_workbook_e2e.mjs|tools/update_life_plan_growth.mjs|\
-    tools/update_life_plan_journal.mjs|\
-    plans/2026-07-31-两周睡眠与生活恢复计划.md|\
-    plans/2026-08-01-生活扩展路线图.md|\
-    plans/2026-08-14-待决策清单.md)
+    tools/update_life_plan_journal.mjs|plans/*.md|需求文档（个人维护）/*)
       return 0
       ;;
   esac
