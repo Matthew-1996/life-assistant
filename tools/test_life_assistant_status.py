@@ -369,6 +369,7 @@ class LifeAssistantStatusTest(unittest.TestCase):
             if path.is_file()
             and "backups" not in path.relative_to(self.root).parts
             and path.name != "STATUS.md"
+            and path.relative_to(self.root) != STATUS_MODULE.LEGACY_GOVERNANCE_LINK
         )
         manifest_path.write_text(
             "".join(
@@ -1643,6 +1644,18 @@ class LifeAssistantStatusTest(unittest.TestCase):
         lock.chmod(0o600)
         result = self._run("--json")
         backup = json.loads(result.stdout)["sections"]["backup"]
+        self.assertTrue(backup["metrics"]["current_project_matches"])
+
+    def test_valid_legacy_governance_link_does_not_make_backup_look_stale(self) -> None:
+        legacy = self.root / STATUS_MODULE.LEGACY_GOVERNANCE_LINK
+        legacy.parent.mkdir(parents=True, exist_ok=True)
+        legacy.symlink_to(STATUS_MODULE.LEGACY_GOVERNANCE_TARGET)
+        self._create_backup(revision="legacy-link")
+
+        result = self._run("--json")
+
+        backup = json.loads(result.stdout)["sections"]["backup"]
+        self.assertTrue(backup["metrics"]["verified"])
         self.assertTrue(backup["metrics"]["current_project_matches"])
 
     def test_bad_backup_checksum_is_fail(self) -> None:

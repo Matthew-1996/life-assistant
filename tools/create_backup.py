@@ -144,6 +144,20 @@ class SnapshotFile(NamedTuple):
     contains_secret: bool
 
 
+def legacy_governance_link_is_valid(root: Path) -> bool:
+    link = root / LEGACY_GOVERNANCE_LINK
+    canonical = root / CANONICAL_GOVERNANCE
+    try:
+        target = link.readlink()
+    except OSError:
+        return False
+    return (
+        target == LEGACY_GOVERNANCE_TARGET
+        and not canonical.is_symlink()
+        and canonical.is_file()
+    )
+
+
 def sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -159,16 +173,7 @@ def project_files(root: Path = ROOT) -> list[Path]:
         if any(part in EXCLUDED_DIRS for part in relative.parts):
             continue
         if relative == LEGACY_GOVERNANCE_LINK:
-            canonical = root / CANONICAL_GOVERNANCE
-            try:
-                target = path.readlink()
-            except OSError as exc:
-                raise SourceDriftError from exc
-            if (
-                target != LEGACY_GOVERNANCE_TARGET
-                or canonical.is_symlink()
-                or not canonical.is_file()
-            ):
+            if not legacy_governance_link_is_valid(root):
                 raise SourceDriftError
             # ZIP recovery intentionally accepts regular files only. The canonical
             # governance body is archived; this local compatibility link is
