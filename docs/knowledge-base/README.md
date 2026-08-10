@@ -6,7 +6,7 @@
 
 | 产品 / 项目 / 版本 | 产品需求文档 | PMO 状态 | 当前阶段 | 子状态 | 用户确认 |
 |---|---|---|---|---|---|
-| 生活助手 / Life Console / 1.0.0 | [生活助手-LifeConsole-1.0.0.md](生活助手-LifeConsole-1.0.0/生活助手-LifeConsole-1.0.0.md) | [项目管理](生活助手-LifeConsole-1.0.0/项目管理-生活助手-LifeConsole-1.0.0.md) | 待需求评审 | 进行中 | 待 PO 确认历史基线与未来执行口径 |
+| 生活助手 / Life Console / 1.0.0 | [生活助手-LifeConsole-1.0.0.md](生活助手-LifeConsole-1.0.0/生活助手-LifeConsole-1.0.0.md) | [项目管理](生活助手-LifeConsole-1.0.0/项目管理-生活助手-LifeConsole-1.0.0.md) | 已上线 | 已完成 | PO 已于 2026-08-10 确认历史基线与未来执行口径 |
 
 ## 读取顺序
 

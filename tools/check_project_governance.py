@@ -76,26 +76,27 @@ def inspect_project_governance(root: Path) -> list[str]:
             "文档缺失与用户确认门禁",
             "核心开发流程与门禁",
             "项目知识库",
+            "产品负责人已于 2026-08-10 明确确认",
         ),
         f"{KB_ROOT}/README.md": (
             "生活助手-LifeConsole-1.0.0.md",
             "项目管理-生活助手-LifeConsole-1.0.0.md",
-            "待 PO 确认",
+            "PO 已于 2026-08-10 确认",
         ),
         f"{VERSION_DIR}/生活助手-LifeConsole-1.0.0.md": (
-            "状态：待需求评审",
-            "本次需要 PO 确认",
+            "状态：已确认 / 历史基线",
+            "PO 确认结果",
             "事实基线：`origin/main@",
         ),
         f"{VERSION_DIR}/项目管理-生活助手-LifeConsole-1.0.0.md": (
-            "当前阶段：待需求评审",
+            "当前阶段：已上线",
             "当前卡点与风险",
-            "PO 确认入口",
+            "PO 确认记录",
         ),
         f"{VERSION_DIR}/需求评审报告-生活助手-LifeConsole-1.0.0.md": (
-            "状态：待需求评审 / 进行中",
+            "状态：需求评审已完成",
             "PO 确认记录",
-            "结论：待确认",
+            "结论：通过",
         ),
     }
     contents = {

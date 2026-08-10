@@ -31,26 +31,27 @@ class ProjectGovernanceTests(unittest.TestCase):
                 "文档缺失与用户确认门禁\n"
                 "核心开发流程与门禁\n"
                 "项目知识库\n"
+                "产品负责人已于 2026-08-10 明确确认\n"
             ),
             f"{governance.KB_ROOT}/README.md": (
                 "生活助手-LifeConsole-1.0.0.md\n"
                 "项目管理-生活助手-LifeConsole-1.0.0.md\n"
-                "待 PO 确认\n"
+                "PO 已于 2026-08-10 确认\n"
             ),
             f"{governance.VERSION_DIR}/生活助手-LifeConsole-1.0.0.md": (
-                "状态：待需求评审\n"
-                "本次需要 PO 确认\n"
+                "状态：已确认 / 历史基线\n"
+                "PO 确认结果\n"
                 "事实基线：`origin/main@abcdef0`\n"
             ),
             f"{governance.VERSION_DIR}/项目管理-生活助手-LifeConsole-1.0.0.md": (
-                "当前阶段：待需求评审\n"
+                "当前阶段：已上线\n"
                 "当前卡点与风险\n"
-                "PO 确认入口\n"
+                "PO 确认记录\n"
             ),
             f"{governance.VERSION_DIR}/需求评审报告-生活助手-LifeConsole-1.0.0.md": (
-                "状态：待需求评审 / 进行中\n"
+                "状态：需求评审已完成\n"
                 "PO 确认记录\n"
-                "结论：待确认\n"
+                "结论：通过\n"
             ),
         }
         for relative, text in self.contents.items():
@@ -74,11 +75,11 @@ class ProjectGovernanceTests(unittest.TestCase):
         errors = governance.inspect_project_governance(self.root)
         self.assertTrue(any("AGENTS.md" in error for error in errors))
 
-    def test_pending_po_gate_cannot_be_silently_closed(self) -> None:
+    def test_confirmed_po_gate_cannot_be_silently_reverted(self) -> None:
         path = self.root / governance.VERSION_DIR / "生活助手-LifeConsole-1.0.0.md"
         path.write_text(
             self.contents[path.relative_to(self.root).as_posix()].replace(
-                "状态：待需求评审", "状态：已上线"
+                "状态：已确认 / 历史基线", "状态：待需求评审"
             ),
             encoding="utf-8",
         )
