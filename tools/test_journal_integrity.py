@@ -129,6 +129,33 @@ class JournalIntegrityTests(unittest.TestCase):
         with self.assertRaises(integrity.JournalIntegrityError):
             integrity.inspect_journal_graph(self.root)
 
+    def test_live_scan_ignores_regular_ds_store_metadata(self) -> None:
+        self._write_source()
+        self._write_index()
+        (self.root / "entries/.DS_Store").write_bytes(b"finder metadata")
+        (self.root / "entries/2026/.DS_Store").write_bytes(b"finder metadata")
+
+        report = integrity.inspect_journal_graph(self.root)
+
+        self.assertTrue(report["valid"])
+        self.assertEqual(report["source_files"], 1)
+
+    def test_live_scan_rejects_ds_store_symlink(self) -> None:
+        self._write_source()
+        self._write_index()
+        target = self.root / "finder-metadata"
+        target.write_bytes(b"finder metadata")
+        (self.root / "entries/.DS_Store").symlink_to(target)
+
+        with self.assertRaises(integrity.JournalIntegrityError):
+            integrity.inspect_journal_graph(self.root)
+
+    def test_backup_snapshot_rejects_ds_store_metadata(self) -> None:
+        members = {"journal/entries/.DS_Store": b"finder metadata"}
+
+        with self.assertRaises(integrity.JournalIntegrityError):
+            integrity.inspect_journal_snapshot(members)
+
     def test_malformed_marker_line_fails_but_blockquoted_text_is_not_a_marker(self) -> None:
         path = self._write_source()
         path.write_text(
