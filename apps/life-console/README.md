@@ -14,7 +14,9 @@ Implemented in phase one:
 - synthetic dashboard, receipt, and error fixtures;
 - contract tests for schema validity and localhost-only configuration;
 - Mac desktop pages for Today, Progress, Records, and System;
+- the trial-week interaction baseline from `docs/design/life-console-trial-week-redesign/`;
 - source-backed anchor, trend, handoff, and fallback form interactions;
+- quick daily-anchor writes for wake, body/light, life action, and wind-down;
 - a Python standard-library Life Hub with authenticated localhost reads;
 - whitelisted journal and daily-checkin writes through existing atomic tools;
 - revision-conflict, idempotency, purge-plan, and partial-refresh handling;

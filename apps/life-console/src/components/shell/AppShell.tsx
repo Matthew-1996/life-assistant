@@ -5,12 +5,11 @@ export type PageId = "today" | "progress" | "records" | "system";
 const navigation: Array<{
   id: PageId;
   label: string;
-  hint: string;
 }> = [
-  { id: "today", label: "工作台", hint: "今天" },
-  { id: "records", label: "记录", hint: "写入" },
-  { id: "progress", label: "进展", hint: "趋势" },
-  { id: "system", label: "系统", hint: "边界" },
+  { id: "today", label: "工作台" },
+  { id: "records", label: "记录" },
+  { id: "progress", label: "进展" },
+  { id: "system", label: "系统" },
 ];
 
 interface AppShellProps {
@@ -28,39 +27,34 @@ export function AppShell({
 }: AppShellProps) {
   return (
     <div className="app-shell">
-      <header className="global-nav">
-        <div className="brand">
-          <span className="brand-dot" aria-hidden="true" />
-          <div>
-            <strong>Life Console</strong>
-            <span>{date}</span>
-          </div>
+      <a className="skip-link" href="#main-content">跳到主要内容</a>
+      <header className="global-nav topbar">
+        <div className="topbar-inner">
+          <button
+            aria-label={`Life Console Trial Week，${date}`}
+            className="brand"
+            onClick={() => onNavigate("today")}
+            type="button"
+          >
+            <span className="brand-mark" aria-hidden="true" />
+            <span>Life Console · Trial Week</span>
+          </button>
+
+          <nav aria-label="全局导航">
+            {navigation.map((item) => (
+              <button
+                aria-current={activePage === item.id ? "page" : undefined}
+                className="nav-item"
+                data-active={activePage === item.id}
+                key={item.id}
+                onClick={() => onNavigate(item.id)}
+                type="button"
+              >
+                {item.label}
+              </button>
+            ))}
+          </nav>
         </div>
-
-        <nav aria-label="全局导航">
-          {navigation.map((item) => (
-            <button
-              className="nav-item"
-              data-active={activePage === item.id}
-              key={item.id}
-              onClick={() => onNavigate(item.id)}
-              type="button"
-            >
-              <span className="nav-copy">
-                <span>{item.label}</span>
-                <small>{item.hint}</small>
-              </span>
-            </button>
-          ))}
-        </nav>
-
-        <button
-          className="primary-button nav-cta"
-          onClick={() => onNavigate("records")}
-          type="button"
-        >
-          快速记录
-        </button>
       </header>
 
       <div className="workspace">
