@@ -114,6 +114,35 @@ class GitPrivacyTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn(private_path, result.stderr)
 
+    def test_arbitrary_personal_plan_is_rejected(self) -> None:
+        private_path = "plans/2026-08-10-personal-plan.md"
+        self._write(private_path, "private plan\n")
+        self._add(private_path)
+
+        result = self._check()
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(private_path, result.stderr)
+
+    def test_personal_maintenance_path_is_rejected(self) -> None:
+        private_path = "需求文档（个人维护）/note.md"
+        self._write(private_path, "local compatibility content\n")
+        self._add(private_path)
+
+        result = self._check()
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(private_path, result.stderr)
+
+    def test_generic_plan_template_is_allowed(self) -> None:
+        public_path = "plans/睡眠与状态记录模板.md"
+        self._write(public_path, "generic template\n")
+        self._add(public_path)
+
+        result = self._check()
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_secret_content_is_rejected_without_echo(self) -> None:
         secret = "ghp_" + ("a" * 24)
         self._write("tools/example.txt", secret)
