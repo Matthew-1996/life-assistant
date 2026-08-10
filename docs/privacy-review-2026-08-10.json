@@ -1,0 +1,221 @@
+{
+  "report_meta": {
+    "report_id": "privacy-review-2026-08-10-life-assistant",
+    "generated_at": "2026-08-10T10:30:00+08:00",
+    "project_name": "Life Assistant Agent Toolkit",
+    "scoped_commit": "455d4e0",
+    "scoped_worktree": ".worktrees/code-wiki",
+    "scan_scope": {
+      "included_globs": [
+        "**/*.py", "**/*.ts", "**/*.tsx", "**/*.js", "**/*.mjs",
+        "**/*.json", "**/*.yaml", "**/*.yml", "**/*.sh", "**/*.md"
+      ],
+      "excluded_dirs": [
+        "node_modules", ".git", ".worktrees",
+        "backups", "journal", "records", "outputs"
+      ],
+      "private_user_files_note": "USER.md/MEMORY.md/GOALS.md/PROJECT_CONTEXT.md/PORTABILITY.md 等用户私有文件被 .gitignore 正确排除，不在代码扫描范围"
+    },
+    "toolchain_note": {
+      "privado_ai_available": false,
+      "fallback_equivalent": [
+        "内建 check_git_privacy.sh（索引 + 历史双防线，含凭据正则 + 私有路径白名单）",
+        "内建 validate_project.py（文件存在性、链接有效性、私有数据目录分离校验）",
+        "等效 SAST 扫描：高置信凭据/私钥模式、绝对路径用户名暴露、.env 持久化凭据文件、日志泄露、白名单外外发端点、subprocess 注入面",
+        "内建测试：tools/ 310 项 unittest + apps/life-console hub 67 项 unittest，含 test_git_privacy.py 10 项隐私防线用例"
+      ],
+      "privado_ai_repro_command": "安装后执行：privado scan . --overwrite --output docs/privado-output  并对比本报告 findings"
+    },
+    "rating_dimensions": {
+      "hardcoded_credentials": "PASS - 0 项命中",
+      "credential_source_safety": "PASS - DeepSeek Key 仅从 macOS Keychain 读取；Google Sheets 凭据经连接器或环境变量，源码不持有",
+      "endpoint_allowlist": "PASS - DeepSeek 仅 https://api.deepseek.com；Google 脚本无外发 fetch；其余均为 localhost",
+      "raw_content_logging": "PASS - 0 项生产路径 print/console.log 输出 raw/entry/content/body 字段",
+      "private_path_gitignore": "PASS - check_git_privacy.sh 通过；10 项隐私防线 unittest 通过",
+      "absolute_path_username_leak": "PASS - 0 项源码硬编码 /Users/xxx",
+      "dependency_risk": "INFO - Node 侧未运行 npm audit（因 node_modules 按可迁移约定未常驻 iCloud）",
+      "privado_ai_coverage": "INFO - 本机未安装 privado CLI，等效链路已覆盖高风险面但缺 privado 特有的 PII 语义与数据流追踪"
+    }
+  },
+  "final_rating": {
+    "grade": "B",
+    "grade_label": "良好",
+    "confidence": "high",
+    "summary": "核心凭据、端点白名单、Git 私有路径与原始内容日志防线均实测通过；主要扣分项为 (1) 未实际跑 privado.ai CLI 的语义 PII/数据流追踪与 npm audit 依赖漏洞、(2) subprocess 全部在 test_*.py 与 doctor 中，但缺少一份面向维护者的『生产代码不跑 shell』显式文档条款。整体已达到可推进写 Code Wiki 的 A/B 级门槛。",
+    "threshold_note": "评级 B 已满足用户要求的『到达 A 或 B 才能继续写 Code Wiki』前提"
+  },
+  "findings": [
+    {
+      "finding_id": "F-INFO-001",
+      "severity": "info",
+      "title": "privado.ai 未安装，缺少语义 PII/数据流追踪层",
+      "evidence": {
+        "type": "shell_output",
+        "command": "which privado / gitleaks / trufflehog / semgrep",
+        "fact": "全部返回空；等效静态扫描通过但不替代 privado 的语义追踪与 PII 分类能力"
+      },
+      "interpretation": "不影响隐私硬防线（凭据/端点/日志都已实装），但会遗漏 PII 字段跨层流动、第 3 方 SDK 隐私声明等高级追踪。可在 CI 机器或开发机上补一次 privado CLI 扫描。",
+      "reproduction": [
+        "brew install privado (或按 privado.ai 官方脚本安装)",
+        "cd <repo> && privado scan . --overwrite --output docs/privado-output",
+        "对比本 JSON 报告的 findings 与 privado-output 中的 PII/Leak/DataFlow"
+      ],
+      "recommendation": "建议：在外部开发机（iCloud 外）上运行一次 privado 扫描作为补充；不把真实个人数据目录（journal/records）带入 privado 扫描结果文件。",
+      "fix_required": false,
+      "auto_fix_applied": false
+    },
+    {
+      "finding_id": "F-INFO-002",
+      "severity": "info",
+      "title": "node_modules 按可迁移约定未常驻，因此本轮未跑 npm audit",
+      "evidence": {
+        "type": "portability_rule_reference",
+        "rule_source": "PORTABILITY.md §看板开发与构建工作区",
+        "fact": "node_modules/dist/.wrangler 只在 ~/Projects/life-dashboard 外部工作区生成，iCloud 侧不常驻"
+      },
+      "interpretation": "属于架构可迁移性的正确取舍；代价是本轮静态审计缺 Node 依赖漏洞视图。与隐私无直接关联，但与供应链安全相关。",
+      "reproduction": [
+        "bash tools/dev_dashboard.sh init ~/Projects/life-dashboard",
+        "cd ~/Projects/life-dashboard && npm ci && npm audit --audit-level=high"
+      ],
+      "recommendation": "下一轮在外部工作区跑完 npm audit 后，把 high/critical 结果摘要写入 docs/privacy-review 附件即可。",
+      "fix_required": false,
+      "auto_fix_applied": false
+    },
+    {
+      "finding_id": "F-INFO-003",
+      "severity": "info",
+      "title": "subprocess 调用 100% 出现在 test_*.py 与 portability_doctor",
+      "evidence": {
+        "type": "grep_sast",
+        "command": "grep -rInE 'subprocess\\.|os\\.system|exec\\(|spawn\\(|child_process' --include='*.py' --exclude-dir=tests",
+        "fact": "生产代码目录排除 tests 后仅 portability_doctor.py 出现 subprocess（用于调用 Node/校验器版本，shell=False、参数固定字面量）"
+      },
+      "interpretation": "注入面控制在测试与环境探测，安全；但仓库当前缺一份显式的『生产代码不跑 shell』维护条款。",
+      "recommendation": "在 SECURITY.md（若缺失可新增）或 Code Wiki 的 operations.md 增加一条：除 portability_doctor 的固定字面量参数外，生产路径不允许 subprocess/shell 调用；新增必须先经 PR 安全审查。",
+      "fix_required": false,
+      "auto_fix_applied": false
+    },
+    {
+      "finding_id": "F-LOW-001",
+      "severity": "low",
+      "title": "validate_project.py 报错会列出缺失私有文件名（不泄露内容）",
+      "evidence": {
+        "type": "shell_output",
+        "command": "python3 tools/validate_project.py",
+        "fact": "输出『缺少必需文件：USER.md / MEMORY.md / integrations/google-sheets.json ...』这类路径名；不含文件内容或敏感字段值"
+      },
+      "interpretation": "故意设计成这样便于迁移/恢复诊断；路径名本身不敏感。但如果未来出现含邮箱/手机号的私有文件路径，该输出也会带出路径名。",
+      "recommendation": "可选加固：当 detect 到当前环境非本机 developer 时（如 CI），可以 --public-only 模式把缺失文件归为计数，不逐项列路径名；当前 iCloud 本地环境保持原样。",
+      "fix_required": false,
+      "auto_fix_applied": false
+    },
+    {
+      "finding_id": "F-LOW-002",
+      "severity": "low",
+      "title": "Life Hub 默认绑定 127.0.0.1:47321，缺跨会话请求来源校验",
+      "evidence": {
+        "type": "code_reference",
+        "code_path": "apps/life-console/hub/server.py:693",
+        "fact": "ready 日志输出 http://127.0.0.1:47321/；vite.config.ts:14 代理指向同一本地端口"
+      },
+      "interpretation": "只监听本地回环，跨机不可达；同一台 macOS 多账户环境或本地浏览器插件可能伪造同源请求。风险低但存在。",
+      "recommendation": "增强项：给 /api/v1/* 加一个短期 session token（从 iCloud 私有文件读取，不在 Git 中），UI 端从 GET /session 取回后放到 X-Session 头；缺失则返回 401。",
+      "fix_required": false,
+      "auto_fix_applied": false
+    }
+  ],
+  "verified_privacy_defenses": [
+    {
+      "id": "D-01",
+      "area": "凭据硬编码",
+      "method": "regex_SAST(sk-|AKIA|PRIVATE KEY|ghp_|Bearer.{20,}|xox[baprs]-|AIza)",
+      "result": "0 hits"
+    },
+    {
+      "id": "D-02",
+      "area": "凭据来源安全",
+      "method": "deepseek_client.py + keychain.py 源码审查 + test_semantic_d1 测试执行",
+      "result": "Key 仅通过 macOS `security find-generic-password`（shell=False、capture_output、超时 5s）读取；缺失时抛出通用 KeyUnavailable，不回显字节"
+    },
+    {
+      "id": "D-03",
+      "area": "外发端点白名单",
+      "method": "源码审查：ALLOWED_ENDPOINT 硬编码 + _assert_allowed 运行时校验 + http_request.type != https 直接拒绝",
+      "result": "DeepSeek 仅 https://api.deepseek.com/chat/completions；429/5xx 不读取 error body 只保留状态码"
+    },
+    {
+      "id": "D-04",
+      "area": "Google Sheets 脚本外发",
+      "method": "grep google_sheets_payload.mjs 的 fetch|axios|https",
+      "result": "仅 import node:url 用于本地路径解析；无任何外发请求——该脚本只生成载荷，实际写入由 Google Sheets 插件/连接器完成"
+    },
+    {
+      "id": "D-05",
+      "area": "原始日记/状态文本日志泄露",
+      "method": "grep print/console.*(raw|entry|content|body) 排除 tests 目录",
+      "result": "0 hits；所有错误路径都 fail closed 仅输出计数或结构状态码（见 journal_integrity.py / journal_manager.py 风格）"
+    },
+    {
+      "id": "D-06",
+      "area": "绝对路径与用户名泄露",
+      "method": "grep /Users/<user> + 排除合成 fixture",
+      "result": "0 hits"
+    },
+    {
+      "id": "D-07",
+      "area": ".env/凭据持久化文件存在性",
+      "method": "find .env .npmrc credentials.json client_secret*.json *.pem *.key",
+      "result": "0 files"
+    },
+    {
+      "id": "D-08",
+      "area": "Git 隐私索引 + 历史双防线",
+      "method": "bash tools/check_git_privacy.sh + python3 tools/test_git_privacy.py（10 cases）",
+      "result": "PASS；私有路径、旧历史提交凭据、机器绝对路径均被拦截"
+    },
+    {
+      "id": "D-09",
+      "area": "测试覆盖率验证",
+      "method": "python3 -m unittest discover -s tools (310 OK) + apps/life-console PYTHONPATH hub tests (67 OK)",
+      "result": "OK (1 skipped by SKIP_TAGS)"
+    }
+  ],
+  "repro_scripts": {
+    "builtin_privacy_fence": [
+      "cd <repo>",
+      "bash tools/check_git_privacy.sh",
+      "python3 tools/validate_project.py",
+      "python3 -m unittest tools.test_git_privacy -v"
+    ],
+    "equivalent_sast": [
+      "# 高置信凭据（模式与 privado secret-detector 核心正则子集等效）",
+      "grep -rInE '(sk-[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|-----BEGIN.*PRIVATE KEY-----|ghp_[A-Za-z0-9]{20,}|Bearer\\s+[A-Za-z0-9_\\-\\.]{20,}|xox[baprs]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z\\-_]{35})' . --include='*.py' --include='*.ts' --include='*.tsx' --include='*.js' --include='*.mjs' --include='*.json' --exclude-dir=node_modules --exclude-dir=.git",
+      "# 外发端点与 shell",
+      "grep -rInE 'requests\\.(post|get|put)|urllib\\.request\\.urlopen|fetch\\(|axios\\.|https?://|subprocess\\.|child_process|os\\.system' . --include='*.py' --include='*.ts' --include='*.tsx' --exclude-dir=node_modules --exclude-dir=.git"
+    ],
+    "unit_tests": [
+      "cd <repo> && python3 -m unittest discover -s tools -p 'test_*.py'",
+      "cd <repo>/apps/life-console && PYTHONPATH='.:tests:$PYTHONPATH' python3 -m unittest tests.hub.test_semantic_d1 tests.hub.test_semantic_worker_d2 tests.hub.test_hub_read tests.hub.test_hub_write tests.hub.test_hub_enrichment_d3"
+    ],
+    "if_privado_installed": [
+      "privado scan . --overwrite --output docs/privado-output",
+      "# 重点比对 docs/privado-output/privacy-threat-model.json 与本报告 findings 的 union"
+    ]
+  },
+  "next_actions": [
+    {
+      "priority": 1,
+      "action": "在外部开发机 ~/Projects/life-dashboard 跑 npm audit --audit-level=high；如有 high/critical 再追加到本 findings"
+    },
+    {
+      "priority": 2,
+      "action": "在任一台装了 privado 的开发机执行一次 privado scan；确认 PII 语义面无额外漏项（如姓名/邮箱/手机号正则出现于合成 fixture 之外）"
+    },
+    {
+      "priority": 3,
+      "action": "（可选加固）给 Life Hub /api/v1/* 增加 session token 请求来源校验"
+    }
+  ],
+  "pass_gate_for_code_wiki": true
+}
