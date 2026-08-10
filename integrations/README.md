@@ -9,11 +9,13 @@
 
 `google-sheets.json` 只保存可迁移策略、表格 ID 和链接，不保存 OAuth 凭据、令牌或用户日记原文。首次导入成功前保持 `pending_connection`；只有原生 Google 表格已创建、八个页面存在且关键范围读回验证成功后，才能通过 `tools/google_sheets_state.py activate` 写入表格标识并切换为 `active`。
 
-只有配置同时为 `lifecycle_state=active` 与 `sync_cadence=every_record` 时，每次记录才在 iCloud 本地写入后运行 `node tools/google_sheets_payload.mjs` 并刷新展示。工作站验收后可切换为 `paused/on_demand`：保留私人表格绑定、历史数据和同步收据，不自动生成待刷新事项，也不在记录后发起外部写入；用户明确要求恢复时再切换。实际刷新载荷声明 `Asia/Shanghai` 时区与日期/时间列格式；连接器先应用 `spreadsheet_properties` 和 `format_updates`，再处理 `clear_ranges`、`value_updates` 并读回 `verification_ranges`。日期继续保存为可排序日期值并显示为 `yyyy-mm-dd`，时间继续保存为可排序时间值并显示为 `hh:mm`，不得把 `46236` 或小数序列直接展示给用户。载荷只包含现有生活计划视图允许展示的内容：目标与路线展示、每日结构化状态、用户明确周复盘以及轻量日记索引；不包含日记原文、苹果健康摘要/明细、Prompt、凭据或聊天原文。
+当前生命周期固定为 `paused/on_demand`，并与 `docs/operations/product-surfaces.json` 一致：普通日记、状态和复盘只写 iCloud，不自动运行 Google 同步，也不制造“待刷新”任务。只有用户明确要求查看或刷新 Google 表格时，才运行 `node tools/google_sheets_payload.mjs` 并按 SOP 应用载荷。工具仍保留 `active/every_record` 兼容能力，但恢复自动模式属于未来生命周期变更，必须先取得用户明确确认并同步更新生命周期契约，不能由 Agent 自行切换。
 
-Google 处于 active/every_record 时，同步失败不回滚本地写入；没有成功收据、或当前三类源哈希与最近成功收据不一致时，状态为待刷新并在下次记录重试。paused/on_demand 时源变化不算同步欠账。现有 `生活计划表.xlsx` 保留为迁移前快照与手工 Numbers 备选，不再作为日常同步真相。
+实际刷新载荷声明 `Asia/Shanghai` 时区与日期/时间列格式；连接器先应用 `spreadsheet_properties` 和 `format_updates`，再处理 `clear_ranges`、`value_updates` 并读回 `verification_ranges`。日期继续保存为可排序日期值并显示为 `yyyy-mm-dd`，时间继续保存为可排序时间值并显示为 `hh:mm`，不得把序列号直接展示给用户。载荷只包含现有生活计划视图允许展示的内容：目标与路线展示、每日结构化状态、用户明确周复盘以及轻量日记索引；不包含日记原文、苹果健康摘要/明细、Prompt、凭据或聊天原文。
 
-实际需要刷新时，外部读写优先走已安装并已连接的 Google Drive/Sheets 插件或连接器，不把浏览器手工编辑当作正常同步方式。active/every_record 下插件未安装、未连接、缺少权限或没有暴露所需读写能力时，先请用户完成相应安装、连接或授权；本地 iCloud 写入仍照常完成，Google 展示层保持待刷新。paused/on_demand 不触发这些连接要求。
+按需同步失败不回滚本地写入，也不自动安排下次重试；只说明本次展示刷新未完成，等待用户下次明确要求。`paused/on_demand` 下源变化不算同步欠账。现有 `生活计划表.xlsx` 是唯一长期本地可视化工作簿，只在用户明确要求更新、导出或恢复时按需重建，不是日常同步真相。
+
+实际需要刷新时，外部读写优先走已安装并已连接的 Google Drive/Sheets 插件或连接器，不把浏览器手工编辑当作正常同步方式。只有当前按需请求发生时，插件未安装、未连接、缺少权限或没有暴露所需读写能力才请用户完成相应安装、连接或授权；普通记录不触发这些连接要求。
 
 ## 按篇 DeepSeek 语义整理（启动授权）
 

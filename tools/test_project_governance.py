@@ -44,15 +44,16 @@ class ProjectGovernanceTests(unittest.TestCase):
             f"{governance.KB_ROOT}/README.md": (
                 "生活助手-LifeConsole-1.0.0.md\n"
                 "项目管理-生活助手-LifeConsole-1.0.0.md\n"
-                "PO 已于 2026-08-10 确认\n"
+                "PO 已确认\n"
             ),
+            f"{governance.VERSION_DIR}/README.md": "版本知识库\n",
             f"{governance.VERSION_DIR}/生活助手-LifeConsole-1.0.0.md": (
                 "状态：已确认 / 历史基线\n"
                 "PO 确认结果\n"
-                "事实基线：`origin/main@abcdef0`\n"
+                "事实来源：当前 `main`\n"
             ),
             f"{governance.VERSION_DIR}/项目管理-生活助手-LifeConsole-1.0.0.md": (
-                "当前阶段：已上线\n"
+                "产品阶段：已上线\n"
                 "当前卡点与风险\n"
                 "PO 确认记录\n"
             ),
@@ -61,6 +62,9 @@ class ProjectGovernanceTests(unittest.TestCase):
                 "PO 确认记录\n"
                 "结论：通过\n"
             ),
+            f"{governance.VERSION_DIR}/设计方案-生活助手-LifeConsole-1.0.0.md": "设计方案\n",
+            f"{governance.VERSION_DIR}/技术方案-生活助手-LifeConsole-1.0.0.md": "技术方案\n",
+            f"{governance.VERSION_DIR}/工程评审与验收-生活助手-LifeConsole-1.0.0.md": "工程评审与验收\n",
         }
         for relative, text in self.contents.items():
             path = self.root / relative

@@ -48,14 +48,6 @@ const anchorStateLabels = {
   skipped: "跳过",
 } as const;
 
-const systemStateLabels: Record<string, string> = {
-  ready: "就绪",
-  readable: "可读取",
-  paused: "暂停",
-  pending: "待定",
-  unknown: "未知",
-};
-
 function compactLine(value: string, maximum: number): string {
   const normalized = value.replace(/\s+/g, " ").trim();
   return normalized.length > maximum
@@ -787,8 +779,8 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
 
       <section className="feedback-bar" aria-label="保存反馈">
         <div>
-          <strong>本地成功先算完成，外部展示待刷新不回滚</strong>
-          <span>记录先落在 Mac 本地真相源；表格或网页只是派生视图，失败时保留待刷新状态。</span>
+          <strong>本地成功先算完成，派生展示只在需要时更新</strong>
+          <span>记录先落在 iCloud 私人真相源；Google 与 XLSX 只按需派生，失败不回滚本地结果。</span>
         </div>
         <span className="feedback-state">local saved</span>
       </section>
@@ -853,12 +845,12 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
                 </div>
               ))}
               <div>
-                <dt>Google</dt>
-                <dd>{systemStateLabels[dashboard.system.google] ?? dashboard.system.google}</dd>
+                <dt>Google / XLSX</dt>
+                <dd>按需</dd>
               </div>
               <div>
-                <dt>移动端</dt>
-                <dd>{systemStateLabels[dashboard.system.mobile] ?? dashboard.system.mobile}</dd>
+                <dt>移动网页</dt>
+                <dd>已归档</dd>
               </div>
             </dl>
           </aside>

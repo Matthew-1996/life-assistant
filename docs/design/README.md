@@ -2,7 +2,7 @@
 
 本目录是 Life Console 前端 UI 的设计管理入口。后续网页、原型、组件和视觉风格变更都应从这里读取约束，再进入 React 实现。
 
-## 三层资产
+## 唯一当前资产
 
 1. `apple-top-level-design-system/`
 
@@ -12,11 +12,7 @@
 
    当前最新的 Life Console 试行周控制台交互稿与实现基准。它包含四个静态原型页面：工作台、记录、进展、系统。线上 React、OpenAPI 契约、Life Hub 读写路径和测试应优先对齐这里的页面结构、信息层级、交互语义和视觉比例。
 
-3. `life-console-apple-redesign/`
-
-   上一版已验收的苹果式前端重构方案，作为阶段性归档和风格参考保留。若它与 `life-console-trial-week-redesign/` 冲突，以试行周控制台方案为准。
-
-4. `life-console-apple-ui-ue-guidelines.md`
+3. `life-console-apple-ui-ue-guidelines.md`
 
    长期 UI/UE 维护规范。它把 Life Console 的产品原则固化为可执行规则：低认知负担、写入需确认、iCloud 作为真相源、趋势不替代判断、不制造压力型反馈。
 
@@ -34,7 +30,8 @@
 - 若要改产品行为、文案语气、隐私边界或验收标准，同步更新 `life-console-apple-ui-ue-guidelines.md`。
 - 若线上实现与交互稿不同，PR 必须说明差异原因；如果差异不是核心功能约束导致，应优先修正实现或更新交互稿。
 - 所有设计资产只能包含通用规则和合成示例，不得包含真实日记、健康明细、外部账号标识、凭据或机器本地状态。
+- 上一版原型与根目录原始导出不留在活动树；需要审计时从 Git 历史读取，不得恢复成第二个“当前版本”。
 
 ## 当前验收状态
 
-当前线上 React 与 Life Hub 契约已按 `life-console-trial-week-redesign/` 作为当前实现基准推进。后续维护应把本目录视为 UI/UE 管理基建，而不是一次性设计交付物。
+当前 React 与 Life Hub 契约按 `life-console-trial-week-redesign/` 作为唯一当前实现基准推进。后续维护应把本目录视为 UI/UE 管理基建，而不是一次性设计交付物。
