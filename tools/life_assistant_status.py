@@ -241,6 +241,13 @@ CORE_FILES = (
     "docs/knowledge-base/生活助手-LifeConsole-1.0.0/设计方案-生活助手-LifeConsole-1.0.0.md",
     "docs/knowledge-base/生活助手-LifeConsole-1.0.0/技术方案-生活助手-LifeConsole-1.0.0.md",
     "docs/knowledge-base/生活助手-LifeConsole-1.0.0/工程评审与验收-生活助手-LifeConsole-1.0.0.md",
+    "docs/knowledge-base/生活助手-LifeConsole-1.1.0/README.md",
+    "docs/knowledge-base/生活助手-LifeConsole-1.1.0/生活助手-LifeConsole-1.1.0.md",
+    "docs/knowledge-base/生活助手-LifeConsole-1.1.0/需求评审报告-生活助手-LifeConsole-1.1.0.md",
+    "docs/knowledge-base/生活助手-LifeConsole-1.1.0/设计方案-生活助手-LifeConsole-1.1.0.md",
+    "docs/knowledge-base/生活助手-LifeConsole-1.1.0/技术方案-生活助手-LifeConsole-1.1.0.md",
+    "docs/knowledge-base/生活助手-LifeConsole-1.1.0/工程评审与验收-生活助手-LifeConsole-1.1.0.md",
+    "docs/knowledge-base/生活助手-LifeConsole-1.1.0/项目管理-生活助手-LifeConsole-1.1.0.md",
     "docs/operations/README.md",
     "docs/operations/product-surfaces.json",
     "skills/improve-daily-life/SKILL.md",
@@ -2000,7 +2007,7 @@ def _check_automation(
 
 
 def _check_site(root: Path) -> Section:
-    """Validate archived dashboard state without reading hosting metadata."""
+    """Validate the Life Console delivery contract without reading hosting metadata."""
 
     section = Section()
     try:
@@ -2022,13 +2029,14 @@ def _check_site(root: Path) -> Section:
         "primary_surface": "life-console",
         "google_sync_cadence": surfaces["google-sheets"]["sync_cadence"],
         "xlsx_sync_cadence": surfaces["xlsx"]["sync_cadence"],
+        "life_console_delivery": surfaces["life-console"]["delivery"],
+        "private_sites_deployment_policy": surfaces["life-console"]["deployment_policy"],
         "life_dashboard_state": surfaces["life-dashboard"]["lifecycle_state"],
-        "new_deployments_allowed": False,
         "online_verified": False,
     }
     section.add(
         "PASS",
-        "展示层生命周期已收口：Life Console 为主要入口，Google 与 XLSX 按需派生，移动网页已归档且禁止新部署。",
+        "展示层生命周期已收口：Life Console 是唯一前端产品，本机可写、私人 Sites 只读；旧 Life Dashboard 已归档并被替换。",
     )
     return section
 

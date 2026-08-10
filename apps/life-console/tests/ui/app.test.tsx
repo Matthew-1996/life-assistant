@@ -282,15 +282,38 @@ describe("Life Console synthetic UI", () => {
     expect(screen.getByRole("button", { name: "保存日记" })).toBeTruthy();
   });
 
-  it("shows on-demand derived views and the archived mobile site", async () => {
+  it("shows on-demand derived views and the private online surface", async () => {
     const user = userEvent.setup();
     render(<App />);
     await user.click(navigationButton("系统"));
 
     expect(screen.getByText("按需使用")).toBeTruthy();
     expect(screen.getByText("按需重建")).toBeTruthy();
-    expect(screen.getAllByText("已归档").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("按需发布").length).toBeGreaterThan(0);
     expect(screen.getByText("已验证可读取")).toBeTruthy();
+  });
+
+  it("keeps the private Sites mode read-only and hides diary content", async () => {
+    const user = userEvent.setup();
+    const privateSnapshot = {
+      ...syntheticDashboard,
+      records: { recent_journals: [] },
+    };
+    render(
+      <App initialDashboard={privateSnapshot} mode="sites-readonly" />,
+    );
+
+    expect(screen.getByText(/私人线上只读版/)).toBeTruthy();
+    expect(screen.queryByRole("group", { name: "生活动作状态" })).toBeNull();
+
+    await user.click(navigationButton("记录"));
+    expect(screen.getByRole("heading", { level: 1, name: "记录内容只留在本机。" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "保存到 iCloud" })).toBeNull();
+    expect(screen.queryByText("合成日记标题")).toBeNull();
+
+    await user.click(navigationButton("系统"));
+    expect(screen.getByText("线上不连接")).toBeTruthy();
+    expect(screen.getByText("当前入口")).toBeTruthy();
   });
 
   it("explains runtime flow and source-of-truth boundaries", async () => {
@@ -301,7 +324,7 @@ describe("Life Console synthetic UI", () => {
     expect(screen.getByText("运行关系")).toBeTruthy();
     expect(screen.getByText("保存确认")).toBeTruthy();
     expect(screen.getByText("数据与展示边界")).toBeTruthy();
-    expect(screen.getByText("派生展示与归档边界")).toBeTruthy();
+    expect(screen.getByText("派生展示与线上边界")).toBeTruthy();
     expect(screen.getByText("设计治理资产关系")).toBeTruthy();
   });
 

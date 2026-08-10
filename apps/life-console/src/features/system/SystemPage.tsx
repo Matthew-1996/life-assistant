@@ -2,27 +2,29 @@ import type { Dashboard } from "../../data/dashboard";
 
 interface SystemPageProps {
   dashboard: Dashboard;
+  onlineReadOnly?: boolean;
 }
 
-export function SystemPage({ dashboard }: SystemPageProps) {
+export function SystemPage({ dashboard, onlineReadOnly = false }: SystemPageProps) {
   const statuses = [
     {
       title: "Life Hub",
-      value: dashboard.system.hub === "ready" ? "本机可用" : "不可用",
-      tone: dashboard.system.hub === "ready" ? "ready" : "attention",
-      description: "仅允许本机 localhost 访问。",
+      value: onlineReadOnly ? "线上不连接" : (dashboard.system.hub === "ready" ? "本机可用" : "不可用"),
+      tone: onlineReadOnly ? "neutral" : (dashboard.system.hub === "ready" ? "ready" : "attention"),
+      description: onlineReadOnly ? "线上页面只读取部署时生成的白名单快照。" : "仅允许本机 localhost 访问。",
     },
     {
       title: "iCloud 项目",
-      value: {
+      value: onlineReadOnly ? "快照来源" : ({
         readable: "已验证可读取",
         writable: "已验证可读写",
         partial: "部分可用",
         unavailable: "不可用",
-      }[dashboard.system.icloud],
+      }[dashboard.system.icloud]),
       tone: dashboard.system.icloud === "writable" ? "ready" : "neutral",
-      description:
-        dashboard.system.icloud === "readable"
+      description: onlineReadOnly
+        ? "网页不直连 iCloud，也不接受反向写回。"
+        : dashboard.system.icloud === "readable"
           ? "当前只证明白名单快照可读；用户尚未批准真实写入验收。"
           : "个人记录和状态的唯一真相源。",
     },
@@ -51,10 +53,10 @@ export function SystemPage({ dashboard }: SystemPageProps) {
       description: "本地可视化备选，不接受反向写回。",
     },
     {
-      title: "移动网页",
-      value: "已归档",
-      tone: "neutral",
-      description: "既有私密实例保留，不再维护或部署。",
+      title: "私人线上版",
+      value: onlineReadOnly ? "当前入口" : "按需发布",
+      tone: onlineReadOnly ? "ready" : "neutral",
+      description: "复用同一套 Life Console 界面，只发布去敏只读快照。",
     },
   ];
 
@@ -63,16 +65,18 @@ export function SystemPage({ dashboard }: SystemPageProps) {
       <section className="hero">
         <div>
           <p className="eyebrow">边界清楚，系统才轻</p>
-          <h1 id="system-title">本地工作站，不替代真相源。</h1>
+          <h1 id="system-title">{onlineReadOnly ? "私人线上视图，不替代真相源。" : "本地工作站，不替代真相源。"}</h1>
           <p className="lead">
-            系统页展示本地 Mac、iCloud 真相源、按需派生、已归档移动网页与设计治理资产之间的关系。
+            {onlineReadOnly
+              ? "系统页展示私人只读快照、iCloud 真相源与本机写入能力之间的边界。"
+              : "系统页展示本地 Mac、iCloud 真相源、按需派生与设计治理资产之间的关系。"}
           </p>
         </div>
         <aside className="card hero-card">
           <span className="status blue">核心边界</span>
           <h2>iCloud 项目是唯一真相源</h2>
           <p className="quiet">
-            Life Console 是主要入口；Google 表格和 XLSX 只按需派生，归档网页不再维护或部署。
+            Life Console 是唯一前端产品；本机版负责安全写入，私人线上版只读查看。
           </p>
         </aside>
       </section>
@@ -87,8 +91,8 @@ export function SystemPage({ dashboard }: SystemPageProps) {
         </div>
         <div className="flow">
           {[
-            ["01", "本地 Mac", "读取本地白名单接口与安全投影。"],
-            ["02", "保存确认", "点击保存后才调用原子工具；草稿不改变事实。"],
+            ["01", onlineReadOnly ? "私人线上版" : "本地 Mac", onlineReadOnly ? "读取部署时生成的去敏白名单快照。" : "读取本地白名单接口与安全投影。"],
+            ["02", onlineReadOnly ? "只读边界" : "保存确认", onlineReadOnly ? "网页不提供保存、删除或外部同步入口。" : "点击保存后才调用原子工具；草稿不改变事实。"],
             ["03", "iCloud 真相源", "日记、状态、目标与规则继续分层保存。"],
             ["04", "派生展示", "Google 表格与 XLSX 按需展示确定性投影。"],
             ["05", "设计治理", "设计稿、规范与验收说明约束实现。"],
@@ -130,16 +134,16 @@ export function SystemPage({ dashboard }: SystemPageProps) {
         <article className="card pad">
           <div className="section-head">
             <div>
-              <h2>派生展示与归档边界</h2>
-              <p className="quiet">按需展示只降低认知负担；归档网页不再扩张。</p>
+              <h2>派生展示与线上边界</h2>
+              <p className="quiet">按需展示只降低认知负担，不建立第二套真相源。</p>
             </div>
             <span className="status gray">暂不扩张</span>
           </div>
           <div className="signal-list">
             <div className="day-row">
-              <strong>移动网页</strong>
-              <span>既有私密实例保留，不再维护源码或产生新部署。</span>
-              <span className="status gray">已归档</span>
+              <strong>私人线上版</strong>
+              <span>与 Life Console 共用界面代码，日记与 Apple 健康数据不进入快照。</span>
+              <span className="status green">只读</span>
             </div>
             <div className="day-row">
               <strong>图表</strong>

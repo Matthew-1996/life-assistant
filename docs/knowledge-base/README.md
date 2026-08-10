@@ -6,6 +6,7 @@
 
 | 产品 / 项目 / 版本 | 版本入口 | 产品需求 | 设计 / 技术 / 验收 | PMO 状态 | 当前阶段 | 用户确认 |
 |---|---|---|---|---|---|---|
+| 生活助手 / Life Console / 1.1.0 | [版本知识库](生活助手-LifeConsole-1.1.0/README.md) | [PRD](生活助手-LifeConsole-1.1.0/生活助手-LifeConsole-1.1.0.md) | [设计](生活助手-LifeConsole-1.1.0/设计方案-生活助手-LifeConsole-1.1.0.md) / [技术](生活助手-LifeConsole-1.1.0/技术方案-生活助手-LifeConsole-1.1.0.md) / [工程验收](生活助手-LifeConsole-1.1.0/工程评审与验收-生活助手-LifeConsole-1.1.0.md) | [项目管理](生活助手-LifeConsole-1.1.0/项目管理-生活助手-LifeConsole-1.1.0.md) | 待上线 | PO 已明确要求用 Life Console 原位替换既有私人 Sites 页面 |
 | 生活助手 / Life Console / 1.0.0 | [版本知识库](生活助手-LifeConsole-1.0.0/README.md) | [PRD](生活助手-LifeConsole-1.0.0/生活助手-LifeConsole-1.0.0.md) | [设计](生活助手-LifeConsole-1.0.0/设计方案-生活助手-LifeConsole-1.0.0.md) / [技术](生活助手-LifeConsole-1.0.0/技术方案-生活助手-LifeConsole-1.0.0.md) / [工程验收](生活助手-LifeConsole-1.0.0/工程评审与验收-生活助手-LifeConsole-1.0.0.md) | [项目管理](生活助手-LifeConsole-1.0.0/项目管理-生活助手-LifeConsole-1.0.0.md) | 已上线 | PO 已确认 1.0.0 基线与本次项目收口计划 |
 
 ## 读取顺序

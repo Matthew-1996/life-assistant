@@ -114,6 +114,26 @@ class GitPrivacyTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn(private_path, result.stderr)
 
+    def test_generated_sites_snapshot_is_rejected(self) -> None:
+        private_path = "apps/life-console/public/life-console-snapshot.json"
+        self._write(private_path, '{"private": true}\n')
+        self._add(private_path)
+
+        result = self._check()
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(private_path, result.stderr)
+
+    def test_sites_hosting_binding_is_rejected(self) -> None:
+        private_path = "apps/life-console/.openai/hosting.json"
+        self._write(private_path, '{"project_id": "private"}\n')
+        self._add(private_path)
+
+        result = self._check()
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(private_path, result.stderr)
+
     def test_arbitrary_personal_plan_is_rejected(self) -> None:
         private_path = "plans/2026-08-10-personal-plan.md"
         self._write(private_path, "private plan\n")

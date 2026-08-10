@@ -14,6 +14,7 @@ type RecentJournal = Dashboard["records"]["recent_journals"][number];
 interface RecordsPageProps {
   dashboard: Dashboard;
   client?: LifeConsoleClient;
+  readOnly?: boolean;
   onSaved?: () => boolean | Promise<boolean>;
 }
 
@@ -218,7 +219,7 @@ function JournalCard({
   );
 }
 
-export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
+export function RecordsPage({ dashboard, client, readOnly = false, onSaved }: RecordsPageProps) {
   const [formMode, setFormMode] = useState<FormMode>("journal");
   const [captureText, setCaptureText] = useState("");
   const [captureSaving, setCaptureSaving] = useState(false);
@@ -451,6 +452,39 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
   ) {
     event.preventDefault();
     setReceipt("已生成运动恢复草稿；尚未写入 iCloud。");
+  }
+
+  if (readOnly) {
+    return (
+      <section aria-labelledby="records-title">
+        <header className="hero capture-hero">
+          <div>
+            <p className="eyebrow">线上只读，隐私优先</p>
+            <h1 id="records-title">记录内容只留在本机。</h1>
+            <p className="lead">
+              这个页面不发布日记标题、摘要或原文，也不提供会造成误解的在线保存入口。需要记录或修改时，直接在对话里告诉生活助手，或使用本机 Life Console。
+            </p>
+          </div>
+          <aside className="card hero-card">
+            <span className="status green">已保护</span>
+            <h2>日记未进入网页快照</h2>
+            <p className="quiet">Apple 健康摘要、Prompt、凭据和聊天原文同样不会发布。</p>
+          </aside>
+        </header>
+        <section className="section grid two" aria-label="线上记录边界">
+          <article className="card pad">
+            <span className="status blue">记录入口</span>
+            <h2>继续用对话</h2>
+            <p className="quiet">发送“日记”“生活记录”或直接描述近况，助手会先保存到 iCloud。</p>
+          </article>
+          <article className="card pad">
+            <span className="status gray">刷新方式</span>
+            <h2>按需重新发布</h2>
+            <p className="quiet">线上内容是一次只读快照，不会反向写回，也不会自动暴露新记录。</p>
+          </article>
+        </section>
+      </section>
+    );
   }
 
   return (

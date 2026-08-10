@@ -11,9 +11,10 @@ import { TodayPage } from "./features/today/TodayPage";
 interface AppProps {
   client?: LifeConsoleClient;
   initialDashboard?: Dashboard;
+  mode?: "local" | "sites-readonly" | "demo";
 }
 
-export function App({ client, initialDashboard }: AppProps) {
+export function App({ client, initialDashboard, mode = client ? "local" : "demo" }: AppProps) {
   const [activePage, setActivePage] = useState<PageId>("today");
   const [dashboard, setDashboard] = useState<Dashboard | null>(
     initialDashboard ?? (client ? null : syntheticDashboard),
@@ -50,13 +51,21 @@ export function App({ client, initialDashboard }: AppProps) {
       <TodayPage
         dashboard={dashboard}
         client={client}
+        readOnly={mode === "sites-readonly"}
         onNavigate={setActivePage}
         onSaved={refresh}
       />
     ),
     progress: <ProgressPage dashboard={dashboard} />,
-    records: <RecordsPage dashboard={dashboard} client={client} onSaved={refresh} />,
-    system: <SystemPage dashboard={dashboard} />,
+    records: (
+      <RecordsPage
+        dashboard={dashboard}
+        client={client}
+        readOnly={mode === "sites-readonly"}
+        onSaved={refresh}
+      />
+    ),
+    system: <SystemPage dashboard={dashboard} onlineReadOnly={mode === "sites-readonly"} />,
   };
 
   return (
@@ -65,6 +74,11 @@ export function App({ client, initialDashboard }: AppProps) {
       date={dashboard.date}
       onNavigate={setActivePage}
     >
+      {mode === "sites-readonly" && (
+        <div className="service-banner service-banner--readonly" role="status">
+          私人线上只读版 · 数据更新于 {new Date(dashboard.generated_at).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" })}。记录和修改继续通过对话或本机版完成。
+        </div>
+      )}
       {error && (
         <div className="service-banner" role="alert">
           本地服务暂不可用；页面保留上次已读取的状态，不会把新操作误报为已保存。

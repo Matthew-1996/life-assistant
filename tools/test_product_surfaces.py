@@ -40,7 +40,7 @@ class ProductSurfaceTests(unittest.TestCase):
     def test_canonical_contract_passes(self) -> None:
         self.assertEqual(load_product_surfaces(self.root), EXPECTED_SURFACES)
 
-    def test_archived_dashboard_cannot_be_reactivated_silently(self) -> None:
+    def test_replaced_dashboard_cannot_be_reactivated_silently(self) -> None:
         path = self.root / SURFACES_PATH
         payload = json.loads(path.read_text(encoding="utf-8"))
         payload["surfaces"][-1]["lifecycle_state"] = "active"

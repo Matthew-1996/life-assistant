@@ -52,6 +52,9 @@ class PortabilityDoctorTests(unittest.TestCase):
                             "role": "primary",
                             "sync_cadence": "on_demand",
                             "writeback": "local-tools-only",
+                            "delivery": "local-write-and-private-sites-readonly",
+                            "deployment_policy": "explicit-user-approval",
+                            "live_instance_policy": "owner-only",
                         },
                         {
                             "id": "google-sheets",
@@ -73,8 +76,8 @@ class PortabilityDoctorTests(unittest.TestCase):
                             "role": "retired",
                             "sync_cadence": "none",
                             "writeback": "none",
-                            "deployment_policy": "no_new_deployments",
-                            "live_instance_policy": "preserve_owner_only",
+                            "deployment_policy": "source-retired",
+                            "live_instance_policy": "replaced-by-life-console",
                         },
                     ],
                 }

@@ -46,6 +46,7 @@ const states: Array<{ value: AnchorState; label: string }> = [
 interface TodayPageProps {
   dashboard: Dashboard;
   client?: LifeConsoleClient;
+  readOnly?: boolean;
   onNavigate?: (page: PageId) => void;
   onSaved?: () => boolean | Promise<boolean>;
 }
@@ -53,6 +54,7 @@ interface TodayPageProps {
 export function TodayPage({
   dashboard,
   client,
+  readOnly = false,
   onNavigate,
   onSaved,
 }: TodayPageProps) {
@@ -67,6 +69,10 @@ export function TodayPage({
 
   async function updateAnchor(key: AnchorKey, value: AnchorState) {
     setStatus(null);
+    if (readOnly) {
+      setStatus("线上版只读；请通过对话或本机版记录。");
+      return;
+    }
     if (value === null) {
       setStatus("“未记录”只表示没有数据，不会作为普通更新提交。");
       return;
@@ -123,7 +129,7 @@ export function TodayPage({
           </p>
           <div className="pill-row hero-actions" aria-label="主要操作">
             <button className="button primary" onClick={() => onNavigate?.("records")} type="button">
-              记录今天
+              {readOnly ? "查看记录边界" : "记录今天"}
             </button>
             <button className="button ghost" onClick={() => onNavigate?.("progress")} type="button">
               查看自然周路径
@@ -235,22 +241,28 @@ export function TodayPage({
               <div
                 aria-label={`${anchor.title}状态`}
                 className="segmented-control segmented"
-                role="group"
+                role={readOnly ? undefined : "group"}
               >
-                {states.map((state) => (
-                  <button
-                    aria-label={state.label}
-                    aria-pressed={anchors[anchor.key] === state.value}
-                    className="segment"
-                    data-state={state.value ?? "unknown"}
-                    disabled={pending !== null || state.value === null}
-                    key={state.label}
-                    onClick={() => void updateAnchor(anchor.key, state.value)}
-                    type="button"
-                  >
-                    {state.label === "未记录" ? "未填写" : state.label}
-                  </button>
-                ))}
+                {readOnly ? (
+                  <span className="status gray">
+                    {states.find((state) => state.value === anchors[anchor.key])?.label ?? "未记录"}
+                  </span>
+                ) : (
+                  states.map((state) => (
+                    <button
+                      aria-label={state.label}
+                      aria-pressed={anchors[anchor.key] === state.value}
+                      className="segment"
+                      data-state={state.value ?? "unknown"}
+                      disabled={pending !== null || state.value === null}
+                      key={state.label}
+                      onClick={() => void updateAnchor(anchor.key, state.value)}
+                      type="button"
+                    >
+                      {state.label === "未记录" ? "未填写" : state.label}
+                    </button>
+                  ))
+                )}
               </div>
             </article>
           ))}

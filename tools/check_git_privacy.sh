@@ -49,7 +49,8 @@ is_private_path() {
     integrations/journal-enrichment.json|\
     life-plan-schedule.json|tools/render_life_plan.mjs|\
     tools/test_journal_workbook_e2e.mjs|tools/update_life_plan_growth.mjs|\
-    tools/update_life_plan_journal.mjs|plans/*.md|需求文档（个人维护）/*)
+    tools/update_life_plan_journal.mjs|plans/*.md|需求文档（个人维护）/*|\
+    apps/life-console/.openai/*|apps/life-console/public/life-console-snapshot.json)
       return 0
       ;;
   esac

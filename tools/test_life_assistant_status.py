@@ -316,6 +316,9 @@ class LifeAssistantStatusTest(unittest.TestCase):
                     "role": "primary",
                     "sync_cadence": "on_demand",
                     "writeback": "local-tools-only",
+                    "delivery": "local-write-and-private-sites-readonly",
+                    "deployment_policy": "explicit-user-approval",
+                    "live_instance_policy": "owner-only",
                 },
                 {
                     "id": "google-sheets",
@@ -337,8 +340,8 @@ class LifeAssistantStatusTest(unittest.TestCase):
                     "role": "retired",
                     "sync_cadence": "none",
                     "writeback": "none",
-                    "deployment_policy": "no_new_deployments",
-                    "live_instance_policy": "preserve_owner_only",
+                    "deployment_policy": "source-retired",
+                    "live_instance_policy": "replaced-by-life-console",
                 },
             ],
         }
@@ -557,7 +560,10 @@ class LifeAssistantStatusTest(unittest.TestCase):
         self.assertEqual(report["sections"]["site"]["metrics"]["life_dashboard_state"], "archived")
         self.assertEqual(report["sections"]["site"]["metrics"]["google_sync_cadence"], "on_demand")
         self.assertEqual(report["sections"]["site"]["metrics"]["xlsx_sync_cadence"], "on_demand")
-        self.assertFalse(report["sections"]["site"]["metrics"]["new_deployments_allowed"])
+        self.assertEqual(
+            report["sections"]["site"]["metrics"]["private_sites_deployment_policy"],
+            "explicit-user-approval",
+        )
         self.assertFalse(report["sections"]["site"]["metrics"]["online_verified"])
         self.assertNotIn(AUTOMATION_PROMPT_SENTINEL, result.stdout + status_text)
         self.assertNotIn("automation-2", result.stdout + status_text)

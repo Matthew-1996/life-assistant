@@ -31,7 +31,8 @@
 
 - `USER.md`、`MEMORY.md`、`GOALS.md`、`journal/`、`records/` 和个人计划是 iCloud 私人真相源，各自职责不合并。
 - `STATUS.md` 是可重建状态快照，不是目标、记忆或日记真相源。
-- 展示层生命周期以 [`docs/operations/product-surfaces.json`](docs/operations/product-surfaces.json) 为准：Life Console 是主要入口；Google 表格和唯一长期 XLSX 都只按需单向派生；Life Dashboard 已归档，不再维护或部署。
+- 展示层生命周期以 [`docs/operations/product-surfaces.json`](docs/operations/product-surfaces.json) 为准：Life Console 是唯一活动前端产品，本机版负责受控写入，私人 Sites 版只在用户当次明确授权后发布去敏只读快照；Google 表格和唯一长期 XLSX 都只按需单向派生；旧 Life Dashboard 源码已归档，不再部署。
+- Sites 快照与 `.openai/hosting.json` 是私有部署材料，不进入 GitHub。快照不得包含日记标题/摘要/原文、Apple 健康摘要/明细、Prompt、凭据、聊天原文、机器路径或源文件指纹；部署前后必须验证站点仍为仅所有者访问。
 - 派生展示失败不得回滚本地写入，也不得从 Google、XLSX、浏览器缓存或归档网页反向补写 iCloud。
 - 未经针对具体范围的当次明确同意，不把日记原文、健康数据或敏感摘要发布到外部服务。
 

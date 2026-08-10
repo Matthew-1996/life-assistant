@@ -9,6 +9,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:sites": "tsc -b && vite build --mode sites --outDir dist/client && node scripts/prepare-sites-build.mjs",
+    "export:sites-snapshot": "python3 scripts/export_sites_snapshot.py",
     "generate:contracts": "openapi-typescript contracts/life-console.openapi.yaml -o src/contracts/life-console.ts",
     "check:contracts": "npm run generate:contracts && git diff --exit-code -- src/contracts/life-console.ts",
     "test": "npm run check:contracts && vitest run && npm run test:python",
