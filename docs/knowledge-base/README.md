@@ -6,7 +6,9 @@
 
 | 产品 / 项目 / 版本 | 版本入口 | 产品需求 | 设计 / 技术 / 验收 | PMO 状态 | 当前阶段 | 用户确认 |
 |---|---|---|---|---|---|---|
-| 生活助手 / Life Console / 1.0.0 | [版本知识库](生活助手-LifeConsole-1.0.0/README.md) | [PRD](生活助手-LifeConsole-1.0.0/生活助手-LifeConsole-1.0.0.md) | [设计](生活助手-LifeConsole-1.0.0/设计方案-生活助手-LifeConsole-1.0.0.md) / [技术](生活助手-LifeConsole-1.0.0/技术方案-生活助手-LifeConsole-1.0.0.md) / [工程验收](生活助手-LifeConsole-1.0.0/工程评审与验收-生活助手-LifeConsole-1.0.0.md) | [项目管理](生活助手-LifeConsole-1.0.0/项目管理-生活助手-LifeConsole-1.0.0.md) | 已上线 | PO 已确认 1.0.0 基线与本次项目收口计划 |
+| 生活助手 / Life Console / 1.0.0 | [版本知识库](生活助手-LifeConsole-1.0.0/README.md) | [PRD](生活助手-LifeConsole-1.0.0/生活助手-LifeConsole-1.0.0.md) | [设计](生活助手-LifeConsole-1.0.0/设计方案-生活助手-LifeConsole-1.0.0.md) / [技术](生活助手-LifeConsole-1.0.0/技术方案-生活助手-LifeConsole-1.0.0.md) / [工程验收](生活助手-LifeConsole-1.0.0/工程评审与验收-生活助手-LifeConsole-1.0.0.md) | [项目管理](生活助手-LifeConsole-1.0.0/项目管理-生活助手-LifeConsole-1.0.0.md) | 已上线 | PO 已确认 1.0.0 基线与项目收口计划 |
+| 生活助手 / Life Console / 1.1.0 (Draft 底稿) | 存在于 `.worktrees/life-console-sites/` 独立 worktree 与 Draft PR #35，不进入通用知识库目录（引用而非本目录副本） | PRD 草稿、只读快照技术草稿 | 见 2.0.0 PMO §8 决策日志 | 已废弃为 2.0.0 前端视觉底稿，不独立发布 | PO 已拒绝只读定位；sites 构建模式与 Worker 骨架提炼进 2.0.0 IMPL-A1 |
+| 生活助手 / Life Console / 2.0.0（云端真相源）| [版本知识库](生活助手-LifeConsole-2.0.0/README.md) | [PRD 草稿](生活助手-LifeConsole-2.0.0/生活助手-LifeConsole-2.0.0.md) | [设计草稿](生活助手-LifeConsole-2.0.0/设计方案-生活助手-LifeConsole-2.0.0.md) / [技术草稿](生活助手-LifeConsole-2.0.0/技术方案-生活助手-LifeConsole-2.0.0.md) / [工程验收草稿](生活助手-LifeConsole-2.0.0/工程评审与验收-生活助手-LifeConsole-2.0.0.md) | [项目管理草稿](生活助手-LifeConsole-2.0.0/项目管理-生活助手-LifeConsole-2.0.0.md) | 待需求评审 | PO 会话已口头确认架构与边界；待书面签字需求评审报告 §7 后进入设计/技术方案评审 |
 
 ## 读取顺序
 
