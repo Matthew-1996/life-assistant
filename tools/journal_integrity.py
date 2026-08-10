@@ -139,6 +139,8 @@ def _scan_sources(journal_root: Path) -> tuple[dict[str, str], int]:
             path = current_path / file_name
             if path.is_symlink() or not path.is_file():
                 raise JournalIntegrityError("日记原文目录中存在非普通文件。")
+            if file_name == ".DS_Store":
+                continue
             relative = path.relative_to(journal_root).as_posix()
             if _safe_entry_path(relative) is None:
                 raise JournalIntegrityError("日记原文目录中存在不符合约定的文件路径。")
