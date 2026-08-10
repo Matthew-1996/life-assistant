@@ -1280,7 +1280,7 @@ def validate() -> list[str]:
             'prompt_sha256': "规范提示词完整性校验",
             '_normalize_prompt(config["prompt"])': "运行时提示词精确比对",
             'load_product_surfaces': "展示层生命周期严格校验",
-            '"archived"': "移动网页归档状态",
+            'surfaces["life-dashboard"]["lifecycle_state"]': "移动网页归档状态",
             'archive.testzip()': "ZIP 完整性",
             '_verify_backup_manifest': "备份文件清单",
             '_current_project_manifest': "备份与当前项目一致性",
