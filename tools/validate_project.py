@@ -31,6 +31,11 @@ try:
 except ModuleNotFoundError:  # Direct execution from tools/.
     from phase_actions import PhaseActionError, inspect_phase_actions
 
+try:
+    from tools.check_project_governance import inspect_project_governance
+except ModuleNotFoundError:  # Direct execution from tools/.
+    from check_project_governance import inspect_project_governance
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SKILL_DIR = ROOT / "skills" / "improve-daily-life"
@@ -43,6 +48,14 @@ REQUIRED_FILES = [
     "PROJECT_CONTEXT.md",
     "PORTABILITY.md",
     "README.md",
+    "GIT_WORKFLOW.md",
+    "docs/governance/agent-user-project-development-standard.md",
+    "docs/knowledge-base/README.md",
+    "docs/knowledge-base/生活助手-LifeConsole-1.0.0/生活助手-LifeConsole-1.0.0.md",
+    "docs/knowledge-base/生活助手-LifeConsole-1.0.0/项目管理-生活助手-LifeConsole-1.0.0.md",
+    "docs/knowledge-base/生活助手-LifeConsole-1.0.0/需求评审报告-生活助手-LifeConsole-1.0.0.md",
+    "tools/check_project_governance.py",
+    "tools/test_project_governance.py",
     "research/2026-08-01-对话式日记完成审计.md",
     "automations/生活状态回访.md",
     "automations/registry.json",
@@ -949,6 +962,8 @@ def validate() -> list[str]:
     for relative in REQUIRED_FILES:
         if not (ROOT / relative).is_file():
             errors.append(f"缺少必需文件：{relative}")
+
+    errors.extend(inspect_project_governance(ROOT))
 
     # 周复盘台账是首次有效周回答后才创建的可选真相来源。缺失等于空台账，
     # 但一旦存在就必须是当前项目内可安全读取的普通 JSONL 文件。

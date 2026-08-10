@@ -51,6 +51,7 @@ jobs:
           tools.test_phase_actions
           tools.test_phase_review
           tools.test_portability_doctor
+          tools.test_project_governance
           tools.test_verify_backup
           tools.test_weekly_review
 
