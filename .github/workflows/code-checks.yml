@@ -51,6 +51,7 @@ jobs:
           tools.test_phase_actions
           tools.test_phase_review
           tools.test_portability_doctor
+          tools.test_product_surfaces
           tools.test_project_governance
           tools.test_verify_backup
           tools.test_weekly_review
@@ -67,10 +68,9 @@ jobs:
           node-version: "22"
           cache: npm
           cache-dependency-path: apps/life-console/package-lock.json
-      - name: Run reusable Node tests (dashboard date/state logic + Google Sheets payload tooling)
+      - name: Run reusable Node tests (plan projection + Google Sheets payload tooling)
         run: >-
           node --test
-          web/life-dashboard/tests/life-date.test.mjs
           tools/test_life_plan_records.mjs
           tools/test_google_sheets_payload.mjs
       - name: Install Life Console dependencies

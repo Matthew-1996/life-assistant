@@ -89,9 +89,9 @@ python3 tools/daily_checkin.py purge \
   --acknowledge-historical-copies
 ```
 
-工具在同一文件锁内重新校验完整台账、revision 和内容哈希，再通过原子替换只移除目标日期；其他日期不变。目标在预览后变化、台账损坏或确认不匹配时停止删除。删除最后一条时保留零字节数据文件，便于状态检查发现 Google 展示层待同步。安全重试已完成的相同删除会返回 `already_absent`，但仍要刷新已连接的展示层。
+工具在同一文件锁内重新校验完整台账、revision 和内容哈希，再通过原子替换只移除目标日期；其他日期不变。目标在预览后变化、台账损坏或确认不匹配时停止删除。删除最后一条时保留零字节数据文件。安全重试已完成的相同删除会返回 `already_absent`；按需展示只在用户明确要求时刷新。
 
-`purge` 成功只证明当前 `records/daily-checkins.jsonl` 中的源记录已移除。若 Google 展示层已连接，随后生成载荷、刷新并确认对应 D:P 已清空；刷新失败时明确“iCloud 源记录已删除，Google 展示层待同步”，不得恢复源记录。旧 ZIP、聊天记录和 iCloud/设备历史不会自动删除；若用户要求处理这些副本，需要逐项识别并再次审批。
+`purge` 成功只证明当前 `records/daily-checkins.jsonl` 中的源记录已移除。Google/XLSX 处于 on-demand 时保持原历史快照；只有用户明确要求更新展示时才生成载荷、刷新并确认对应 D:P 已清空。刷新失败不得恢复源记录。旧 ZIP、聊天记录和 iCloud/设备历史不会自动删除；若用户要求处理这些副本，需要逐项识别并再次审批。
 
 ### 隐私边界
 
@@ -108,7 +108,7 @@ python3 tools/daily_checkin.py upsert \
   --note-summary "散步后稍舒服"
 ```
 
-成功后运行 `node tools/google_sheets_payload.mjs` 生成不含原始日记和苹果健康明细的确定性载荷；配置为 `active` 时通过 Google Drive/Sheets 连接器按载荷刷新并读回校验，再用 `tools/google_sheets_state.py mark-success` 写入源快照收据。连接未完成或刷新失败时，本地写入仍成功，并在下一次记录时重试。
+本地成功后不自动生成 Google 载荷。只有用户明确要求刷新按需展示时，才运行 `node tools/google_sheets_payload.mjs`，通过 Google Drive/Sheets 连接器按载荷刷新并读回校验，再用 `tools/google_sheets_state.py mark-success` 写入源快照收据。连接未完成或刷新失败不影响本地写入，也不自动安排下一次重试。
 
 ## 周复盘：`weekly-reviews.jsonl`
 
@@ -145,7 +145,7 @@ stdin 示例结构：
 }
 ```
 
-成功 action 为 `created`、`updated` 或 `unchanged`。任一种成功结果后都生成 Google 载荷：生活计划表“每周复盘”I:N 是 `weekly-reviews.jsonl` 的只读派生视图，按完整源台账重建；无源记录时 I:N 全空，部分回答只显示已提供字段并标为“部分复盘”，不从旧单元格、日记或每日均值补齐。配置为 `active` 时刷新并读回校验；失败不回滚本地台账。用户只需在对话中回复，不直接填写 I:N。
+成功 action 为 `created`、`updated` 或 `unchanged`。生活计划表“每周复盘”I:N 是 `weekly-reviews.jsonl` 的只读派生视图，只有用户明确要求更新展示时才按完整源台账重建；无源记录时 I:N 全空，部分回答只显示已提供字段并标为“部分复盘”，不从旧单元格、日记或每日均值补齐。刷新失败不回滚本地台账。用户只需在对话中回复，不直接填写 I:N。
 
 用户明确要求移除单个周回答时，可以在同一 `upsert` 中使用精确的 `--clear-field` 和当前 `--expect-revision`；不能把一条记录清成全空，整周删除应使用下面的两阶段流程。字段清除后同样要刷新已连接的 Google 展示层，且历史副本不会随之清理。
 
@@ -168,7 +168,7 @@ python3 tools/weekly_review.py purge \
   --acknowledge-historical-copies
 ```
 
-工具会在独立文件锁内重新校验完整台账、revision 和内容哈希，只移除目标周；其他自然周不变。删除最后一条时保留零字节数据文件，安全重试返回 `already_absent`。随后刷新已连接的 Google 展示层并确认该周 I:N 已清空；刷新失败时明确区分已删除的 iCloud 源记录和待同步的派生视图。
+工具会在独立文件锁内重新校验完整台账、revision 和内容哈希，只移除目标周；其他自然周不变。删除最后一条时保留零字节数据文件，安全重试返回 `already_absent`。Google/XLSX 保持按需历史快照；只有用户明确要求更新展示时才刷新并确认该周 I:N 已清空。
 
 该 `purge` 不删除原始聊天、`journal/` 日记或日记回顾、每日状态、已另行写入 `GOALS.md`/`MEMORY.md` 的确认信息、网页、旧 ZIP 或 iCloud/设备历史。如果用户要求处理这些副本，需要逐项识别并再次审批；不能把当前项目删除说成全平台删除。
 

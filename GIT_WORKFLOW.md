@@ -56,27 +56,18 @@ python3 tools/validate_project.py
 python3 -m unittest discover -s tools -p 'test_*.py'
 ```
 
-网页变更还需在具备 Node.js `>=22.13.0` 的环境运行；`node_modules` 不在 iCloud 内，先在外部工作区同步源码再装依赖：
-
-```bash
-tools/dev_dashboard.sh init ~/Projects/life-dashboard   # 首次或换机后
-cd ~/Projects/life-dashboard
-npm ci
-npm test
-```
-
-日常在外部工作区编辑后用 `tools/dev_dashboard.sh push` 回写 iCloud 真相源，脚手架变更再按本文件流程经 PR 提交。
+涉及 Life Console 时还需在 `apps/life-console/` 使用锁定依赖运行 `npm test` 与 `npm run build`。归档 Life Dashboard 不再参与开发、测试或部署；恢复其历史源码不等于获得重新上线授权。
 
 ## 多 Agent 工作流
 
-1. 先完成“产品开发门禁”的文档与阶段判断，再创建分支。
-2. `main` 只通过 Pull Request 更新；每个 Agent 使用独立的 `agent/<短任务名>` 分支。
-3. 并行任务使用独立 `git worktree`；一个 Agent 对应一个分支和一个工作目录。
-4. 开始前同步 `origin/main`，提交前再次变基到最新 `origin/main`。
-5. 一个提交只处理一个可审阅目标，不混入无关格式化、生成文件或个人数据。
-6. 默认先开 Draft Pull Request；PR 必须写明关联产品版本或快速维护理由、当前阶段、用户确认状态与知识库更新。
-7. 未通过对应用户门禁的 PR 保持 Draft，不得因 CI 绿灯自动合并；禁止强制推送共享分支和删除他人分支。
-8. 冲突必须基于当前 iCloud 真相源人工判断，不得用 checkout/reset 丢弃其他 Agent 的修改。
+1. 先检查 GitHub 的开放 PR、远端 `agent/*` 分支与本地 worktree，确认没有同范围任务；每个活动分支必须对应一个明确负责人和活动 Draft PR。
+2. 完成“产品开发门禁”的文档与阶段判断，再从最新 `origin/main` 创建分支。
+3. `main` 只通过 Pull Request 更新；每个 Agent 使用独立的 `agent/<短任务名>` 分支和独立 `git worktree`。
+4. 一个提交只处理一个可审阅目标，不混入无关格式化、生成文件或个人数据；提交前同步最新 `origin/main` 并处理冲突。
+5. 默认先开 Draft Pull Request；PR 必须写明关联产品版本或快速维护理由、当前阶段、用户确认状态与知识库更新。
+6. 未通过对应用户门禁的 PR 保持 Draft，不得因 CI 绿灯自动合并；禁止强制推送共享分支和删除他人进行中的分支。
+7. 冲突必须基于当前 iCloud 真相源人工判断，不得用 checkout/reset 丢弃其他 Agent 的修改。
+8. PR 合并或关闭后立即删除对应远端分支、本地分支与 worktree；空闲稳态的开放 PR 数为零，远端和本地活动分支只保留 `main`。
 
 示例：
 
@@ -88,7 +79,7 @@ git push -u origin agent/task-name
 gh pr create --draft --base main --head agent/task-name
 ```
 
-任务合并后，由确认没有未提交修改的人移除对应 worktree 和分支。
+任务合并或关闭后，由确认没有未提交修改的人移除对应 worktree 和分支，并再次核对开放 PR、远端 heads 与 `git worktree list`。GitHub 的关闭 PR 记录和内部 `refs/pull/*` 是历史审计，不算活动分支。
 
 ## 冲突高风险区
 

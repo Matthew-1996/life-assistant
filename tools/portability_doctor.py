@@ -3,7 +3,7 @@
 
 The project context is portable, but not every optional editing/build capability is
 dependency-free. This doctor separates required local Python capabilities from
-optional validators, spreadsheet tooling and the mobile-site build toolchain.
+optional validators, spreadsheet tooling and the Life Console build toolchain.
 """
 
 from __future__ import annotations
@@ -18,10 +18,15 @@ import sys
 from pathlib import Path
 from typing import Any, Sequence
 
+try:
+    from tools.product_surfaces import ProductSurfaceError, load_product_surfaces
+except ModuleNotFoundError:  # Direct execution from tools/.
+    from product_surfaces import ProductSurfaceError, load_product_surfaces
+
 
 ROOT = Path(__file__).resolve().parents[1]
 MINIMUM_PYTHON = (3, 9)
-DEFAULT_SITE_NODE_MINIMUM = (22, 13, 0)
+DEFAULT_NODE_MINIMUM = (22, 13, 0)
 REQUIRED_PROJECT_FILES = (
     "AGENTS.md",
     "USER.md",
@@ -35,6 +40,15 @@ REQUIRED_PROJECT_FILES = (
     "docs/knowledge-base/生活助手-LifeConsole-1.0.0/生活助手-LifeConsole-1.0.0.md",
     "docs/knowledge-base/生活助手-LifeConsole-1.0.0/项目管理-生活助手-LifeConsole-1.0.0.md",
     "docs/knowledge-base/生活助手-LifeConsole-1.0.0/需求评审报告-生活助手-LifeConsole-1.0.0.md",
+    "docs/knowledge-base/生活助手-LifeConsole-1.0.0/README.md",
+    "docs/knowledge-base/生活助手-LifeConsole-1.0.0/设计方案-生活助手-LifeConsole-1.0.0.md",
+    "docs/knowledge-base/生活助手-LifeConsole-1.0.0/技术方案-生活助手-LifeConsole-1.0.0.md",
+    "docs/knowledge-base/生活助手-LifeConsole-1.0.0/工程评审与验收-生活助手-LifeConsole-1.0.0.md",
+    "docs/operations/README.md",
+    "docs/operations/product-surfaces.json",
+    "apps/life-console/package.json",
+    "apps/life-console/package-lock.json",
+    "apps/life-console/contracts/life-console.openapi.yaml",
     "automations/registry.json",
     "automations/生活状态回访.prompt.txt",
     "integrations/README.md",
@@ -70,8 +84,7 @@ REQUIRED_PROJECT_FILES = (
     "tools/google_sheets_payload.mjs",
     "tools/google_sheets_state.py",
     "tools/life_assistant_status.py",
-    "web/life-dashboard/.openai/hosting.json",
-    "web/life-dashboard/PUBLICATION_STATE.json",
+    "tools/product_surfaces.py",
 )
 SEVERITY = {"PASS": 0, "INFO": 0, "ATTENTION": 1, "FAIL": 2}
 
@@ -83,16 +96,16 @@ def _version_tuple(value: str) -> tuple[int, int, int] | None:
     return tuple(int(part) for part in match.groups())  # type: ignore[return-value]
 
 
-def _site_node_minimum(root: Path) -> tuple[int, int, int]:
-    package_path = root / "web" / "life-dashboard" / "package.json"
+def _life_console_node_minimum(root: Path) -> tuple[int, int, int]:
+    package_path = root / "apps" / "life-console" / "package.json"
     try:
         package = json.loads(package_path.read_text(encoding="utf-8"))
         requirement = package["engines"]["node"]
     except (OSError, UnicodeError, json.JSONDecodeError, KeyError, TypeError):
-        return DEFAULT_SITE_NODE_MINIMUM
+        return DEFAULT_NODE_MINIMUM
     if not isinstance(requirement, str):
-        return DEFAULT_SITE_NODE_MINIMUM
-    return _version_tuple(requirement) or DEFAULT_SITE_NODE_MINIMUM
+        return DEFAULT_NODE_MINIMUM
+    return _version_tuple(requirement) or DEFAULT_NODE_MINIMUM
 
 
 def _run_version(executable: str) -> tuple[int, int, int] | None:
@@ -148,6 +161,24 @@ def build_report(root: Path = ROOT) -> dict[str, Any]:
         )
     else:
         add("project_files", "PASS", "required", "核心项目文件齐全。")
+
+    try:
+        load_product_surfaces(root)
+    except (ProductSurfaceError, OSError, ValueError):
+        add(
+            "product_surfaces",
+            "FAIL",
+            "required",
+            "展示层生命周期清单缺失、损坏或不是规范归档状态。",
+            "恢复统一生命周期清单；不要用历史移动网页源码替代该契约。",
+        )
+    else:
+        add(
+            "product_surfaces",
+            "PASS",
+            "required",
+            "Life Console 主入口、Google/XLSX 按需派生和移动网页归档状态有效。",
+        )
 
     weekly_review_data = root / "records" / "weekly-reviews.jsonl"
     if weekly_review_data.is_symlink() or (
@@ -294,47 +325,39 @@ def build_report(root: Path = ROOT) -> dict[str, Any]:
 
     node = shutil.which("node")
     node_version = _run_version(node) if node else None
-    site_minimum = _site_node_minimum(root)
-    minimum_label = ".".join(str(part) for part in site_minimum)
+    node_minimum = _life_console_node_minimum(root)
+    minimum_label = ".".join(str(part) for part in node_minimum)
     if node_version is None:
         add(
             "node",
             "ATTENTION",
             "optional",
-            "Node.js 不可用；核心 Python 工具仍可用，但不能生成 Google 表格载荷、导出归档 XLSX 或构建移动端网页。",
-            f"需要这两项能力时安装 Node.js >= {minimum_label}。",
+            "Node.js 不可用；核心 Python 工具仍可用，但不能测试/构建 Life Console、生成 Google 表格载荷或按需重建 XLSX。",
+            f"需要这些能力时安装 Node.js >= {minimum_label}。",
         )
-    elif node_version < site_minimum:
+    elif node_version < node_minimum:
         installed = ".".join(str(part) for part in node_version)
         add(
             "node",
             "ATTENTION",
             "optional",
-            f"Node.js {installed} 可用，但低于移动端项目声明的 {minimum_label}。",
-            f"构建网页前升级到 Node.js >= {minimum_label}。",
+            f"Node.js {installed} 可用，但低于 Life Console 声明的 {minimum_label}。",
+            f"测试或构建 Life Console 前升级到 Node.js >= {minimum_label}。",
         )
     else:
         installed = ".".join(str(part) for part in node_version)
-        add("node", "PASS", "optional", f"Node.js {installed} 满足移动端构建声明。")
+        add("node", "PASS", "optional", f"Node.js {installed} 满足 Life Console 构建声明。")
 
-    package_lock = root / "web" / "life-dashboard" / "package-lock.json"
-    site_modules = root / "web" / "life-dashboard" / "node_modules"
-    if not package_lock.is_file():
-        add(
-            "site_dependencies",
-            "FAIL",
-            "required_source",
-            "移动端 package-lock.json 缺失，无法按锁定版本重建依赖。",
-        )
-    elif site_modules.is_dir():
-        add("site_dependencies", "PASS", "optional", "当前设备已有移动端 node_modules（备份不会携带它）。")
+    life_console_modules = root / "apps" / "life-console" / "node_modules"
+    if life_console_modules.is_dir():
+        add("life_console_dependencies", "PASS", "optional", "当前设备已有 Life Console node_modules（备份不会携带它）。")
     else:
         add(
-            "site_dependencies",
+            "life_console_dependencies",
             "INFO",
             "optional",
-            "移动端 node_modules 不在 iCloud（按设计），这是预期状态。",
-            "需要构建网页时，在 iCloud 外工作区运行：tools/dev_dashboard.sh init ~/Projects/life-dashboard，再 cd 进去 npm ci。",
+            "Life Console node_modules 未保留，这是可重建依赖的预期状态。",
+            "需要测试或构建时，在 apps/life-console 运行 npm ci。",
         )
 
     if _artifact_tool_resolves(node, root):

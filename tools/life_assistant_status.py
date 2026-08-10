@@ -50,6 +50,11 @@ try:
 except ModuleNotFoundError:  # Direct execution from tools/.
     from google_sheets_state import GoogleSheetsStateError, inspect_state as inspect_google_sheets_state
 
+try:
+    from tools.product_surfaces import SURFACES_PATH, ProductSurfaceError, load_product_surfaces
+except ModuleNotFoundError:  # Direct execution from tools/.
+    from product_surfaces import SURFACES_PATH, ProductSurfaceError, load_product_surfaces
+
 
 DEFAULT_ROOT = Path(__file__).resolve().parents[1]
 WORKBOOK = "outputs/019fb832-be4f-74f1-add5-58cb6fb6fc09/生活计划表.xlsx"
@@ -97,34 +102,6 @@ JOURNAL_REVIEW_CADENCES = {
 JOURNAL_REVIEW_TIMEZONE = "Asia/Shanghai"
 JOURNAL_TRIAL_WEEKLY_START = "2026-08-02"
 JOURNAL_TRIAL_WEEKLY_END = "2026-08-14"
-SITE_ROOT = "web/life-dashboard"
-HOSTING_METADATA = f"{SITE_ROOT}/.openai/hosting.json"
-SITE_PUBLICATION_STATE = f"{SITE_ROOT}/PUBLICATION_STATE.json"
-SITE_DEPLOYMENT_FILES = (
-    "package.json",
-    "package-lock.json",
-    "next.config.ts",
-    "postcss.config.mjs",
-    "vite.config.ts",
-    "tsconfig.json",
-    "drizzle.config.ts",
-)
-SITE_SOURCE_DIRS = ("app", "public")
-SITE_PUBLICATION_FIELDS = {
-    "schema_version",
-    "publication_state",
-    "visibility",
-    "local_source_sha256",
-    "local_source_file_count",
-    "published_source_sha256",
-    "recorded_on",
-}
-SITE_PUBLICATION_STATES = {
-    "published_current",
-    "local_changes_unpublished",
-    "unknown",
-}
-SITE_VISIBILITIES = {"private", "shared", "public", "unknown"}
 STALE_REVIEW_MARKERS = (
     "来源日记已撤回，本回顾需刷新",
     "来源日记已更正，本回顾需刷新",
@@ -247,6 +224,12 @@ CORE_FILES = (
     "docs/knowledge-base/生活助手-LifeConsole-1.0.0/生活助手-LifeConsole-1.0.0.md",
     "docs/knowledge-base/生活助手-LifeConsole-1.0.0/项目管理-生活助手-LifeConsole-1.0.0.md",
     "docs/knowledge-base/生活助手-LifeConsole-1.0.0/需求评审报告-生活助手-LifeConsole-1.0.0.md",
+    "docs/knowledge-base/生活助手-LifeConsole-1.0.0/README.md",
+    "docs/knowledge-base/生活助手-LifeConsole-1.0.0/设计方案-生活助手-LifeConsole-1.0.0.md",
+    "docs/knowledge-base/生活助手-LifeConsole-1.0.0/技术方案-生活助手-LifeConsole-1.0.0.md",
+    "docs/knowledge-base/生活助手-LifeConsole-1.0.0/工程评审与验收-生活助手-LifeConsole-1.0.0.md",
+    "docs/operations/README.md",
+    "docs/operations/product-surfaces.json",
     "skills/improve-daily-life/SKILL.md",
     AUTOMATION_SPEC,
     AUTOMATION_REGISTRY,
@@ -281,20 +264,8 @@ CORE_FILES = (
     "tools/life_plan_records.mjs",
     "tools/update_life_plan_journal.mjs",
     "tools/life_assistant_status.py",
-    HOSTING_METADATA,
-    SITE_PUBLICATION_STATE,
-    "web/life-dashboard/package.json",
-    "web/life-dashboard/package-lock.json",
-    "web/life-dashboard/next.config.ts",
-    "web/life-dashboard/postcss.config.mjs",
-    "web/life-dashboard/vite.config.ts",
-    "web/life-dashboard/tsconfig.json",
-    "web/life-dashboard/drizzle.config.ts",
-    "web/life-dashboard/app/globals.css",
-    "web/life-dashboard/app/layout.tsx",
-    "web/life-dashboard/app/life-date.js",
-    "web/life-dashboard/app/life-plan.js",
-    "web/life-dashboard/app/page.tsx",
+    "tools/product_surfaces.py",
+    "tools/test_product_surfaces.py",
 )
 
 SEVERITY = {"PASS": 0, "ATTENTION": 1, "FAIL": 2}
@@ -303,7 +274,7 @@ SECTION_TITLES = {
     "goals": "目标节点",
     "journal": "生活记录与回顾",
     "automation": "自动化",
-    "site": "移动端",
+    "site": "展示层",
     "backup": "迁移与备份",
 }
 
@@ -2015,213 +1986,37 @@ def _check_automation(
     return section
 
 
-def _site_source_fingerprint(root: Path) -> tuple[str, int]:
-    """为可发布的移动端源码生成确定性指纹。
-
-    算法是可迁移契约：相对 ``web/life-dashboard`` 的 POSIX 路径排序后，
-    依次写入 ``path + NUL + raw bytes + NUL``。只收集部署顶层白名单以及
-    ``app/**``、``public/**`` 中的普通非符号链接文件。
-    """
-
-    site_root = root / SITE_ROOT
-    if site_root.is_symlink() or not site_root.is_dir():
-        raise OSError("移动端源码目录缺失或不安全。")
-
-    candidates: dict[str, Path] = {}
-
-    def add_candidate(path: Path) -> None:
-        if path.is_symlink() or not path.is_file():
-            return
-        relative = path.relative_to(site_root).as_posix()
-        candidates[relative] = path
-
-    for relative in SITE_DEPLOYMENT_FILES:
-        add_candidate(site_root / relative)
-
-    for directory_name in SITE_SOURCE_DIRS:
-        source_dir = site_root / directory_name
-        if source_dir.is_symlink() or not source_dir.is_dir():
-            continue
-        for current, directory_names, file_names in os.walk(
-            source_dir,
-            topdown=True,
-            followlinks=False,
-        ):
-            current_path = Path(current)
-            directory_names[:] = sorted(
-                name
-                for name in directory_names
-                if not (current_path / name).is_symlink()
-            )
-            for name in sorted(file_names):
-                add_candidate(current_path / name)
-
-    digest = hashlib.sha256()
-    for relative in sorted(candidates):
-        digest.update(relative.encode("utf-8"))
-        digest.update(b"\0")
-        digest.update(candidates[relative].read_bytes())
-        digest.update(b"\0")
-    return digest.hexdigest(), len(candidates)
-
-
-def _valid_hosting_metadata(root: Path) -> bool:
-    """严格验证托管元数据，不向调用方返回站点标识。"""
-
-    path = root / HOSTING_METADATA
-    if path.is_symlink() or not path.is_file():
-        return False
-    try:
-        payload = json.loads(_read_text(path))
-    except (OSError, UnicodeError, json.JSONDecodeError):
-        return False
-    if not isinstance(payload, dict) or set(payload) != {"project_id", "d1", "r2"}:
-        return False
-    project_id = payload.get("project_id")
-    return (
-        isinstance(project_id, str)
-        and bool(project_id)
-        and project_id == project_id.strip()
-        and project_id.splitlines() == [project_id]
-        and (payload.get("d1") is None or isinstance(payload.get("d1"), dict))
-        and (payload.get("r2") is None or isinstance(payload.get("r2"), dict))
-    )
-
-
-def _load_site_publication_state(
-    root: Path,
-) -> tuple[dict[str, Any] | None, str | None]:
-    """读取严格发布状态；错误不包含文件内容或指纹。"""
-
-    path = root / SITE_PUBLICATION_STATE
-    if path.is_symlink() or not path.is_file():
-        return None, "移动端可迁移发布状态缺失或不是普通项目文件。"
-    try:
-        payload = json.loads(_read_text(path))
-    except (OSError, UnicodeError, json.JSONDecodeError):
-        return None, "移动端可迁移发布状态无法安全读取。"
-    if not isinstance(payload, dict) or set(payload) != SITE_PUBLICATION_FIELDS:
-        return None, "移动端可迁移发布状态结构无效。"
-
-    schema_version = payload.get("schema_version")
-    publication_state = payload.get("publication_state")
-    visibility = payload.get("visibility")
-    local_hash = payload.get("local_source_sha256")
-    local_count = payload.get("local_source_file_count")
-    published_hash = payload.get("published_source_sha256")
-    recorded_on = payload.get("recorded_on")
-    if (
-        isinstance(schema_version, bool)
-        or schema_version != 1
-        or not isinstance(publication_state, str)
-        or publication_state not in SITE_PUBLICATION_STATES
-        or not isinstance(visibility, str)
-        or visibility not in SITE_VISIBILITIES
-        or not isinstance(local_hash, str)
-        or re.fullmatch(r"[0-9a-f]{64}", local_hash) is None
-        or isinstance(local_count, bool)
-        or not isinstance(local_count, int)
-        or local_count < 1
-        or (
-            published_hash is not None
-            and (
-                not isinstance(published_hash, str)
-                or re.fullmatch(r"[0-9a-f]{64}", published_hash) is None
-            )
-        )
-        or _valid_date(recorded_on) is None
-        or (
-            publication_state == "published_current"
-            and published_hash != local_hash
-        )
-    ):
-        return None, "移动端可迁移发布状态字段值无效。"
-    return payload, None
-
-
 def _check_site(root: Path) -> Section:
+    """Validate archived dashboard state without reading hosting metadata."""
+
     section = Section()
-    if not _valid_hosting_metadata(root):
-        section.metrics = {
-            "configured": False,
-            "online_verified": False,
-            "publication_record_valid": False,
-        }
-        section.add(
-            "FAIL",
-            "移动端托管元数据缺失或结构无效。",
-            "在托管工具中恢复或重新绑定移动端项目。",
-        )
-        return section
-
-    state, state_error = _load_site_publication_state(root)
-    if state_error or state is None:
-        section.metrics = {
-            "configured": True,
-            "online_verified": False,
-            "publication_record_valid": False,
-        }
-        section.add(
-            "FAIL",
-            state_error or "移动端可迁移发布状态无效。",
-            "按当前源码重建严格发布状态记录后重新检查。",
-        )
-        return section
-
     try:
-        actual_hash, actual_count = _site_source_fingerprint(root)
-    except (OSError, UnicodeError, ValueError):
+        surfaces = load_product_surfaces(root)
+    except (ProductSurfaceError, OSError, ValueError):
         section.metrics = {
-            "configured": True,
-            "online_verified": False,
-            "publication_record_valid": True,
-            "local_source_matches": False,
+            "contract_verified": False,
+            "life_dashboard_state": "unknown",
         }
         section.add(
             "FAIL",
-            "移动端本地源码无法安全读取或生成指纹。",
-            "恢复移动端源码文件后重新检查。",
+            "展示层生命周期清单缺失、损坏或不是规范状态。",
+            "恢复 docs/operations/product-surfaces.json 并重新运行项目校验。",
         )
         return section
-
-    source_matches = (
-        state["local_source_sha256"] == actual_hash
-        and state["local_source_file_count"] == actual_count
-    )
-    publication_state = state["publication_state"]
     section.metrics = {
-        "configured": True,
+        "contract_verified": True,
+        "truth_source": "icloud-private-workspace",
+        "primary_surface": "life-console",
+        "google_sync_cadence": surfaces["google-sheets"]["sync_cadence"],
+        "xlsx_sync_cadence": surfaces["xlsx"]["sync_cadence"],
+        "life_dashboard_state": surfaces["life-dashboard"]["lifecycle_state"],
+        "new_deployments_allowed": False,
         "online_verified": False,
-        "publication_record_valid": True,
-        "publication_state": publication_state,
-        "visibility": state["visibility"],
-        "recorded_on": state["recorded_on"],
-        "local_source_matches": source_matches,
-        "local_source_file_count": actual_count,
     }
-    if not source_matches:
-        section.add(
-            "ATTENTION",
-            "移动端本地源码与可迁移发布状态记录不一致；不能确认线上版本包含当前本地变更。",
-            "核对本地变更；如需发布，先取得用户当次明确同意，再更新发布状态记录。",
-        )
-    elif publication_state == "published_current":
-        section.add(
-            "PASS",
-            "移动端发布记录与当前本地源码指纹一致；本工具不输出站点标识，也不进行联网可用性或访问权限检查。",
-        )
-    elif publication_state == "local_changes_unpublished":
-        section.add(
-            "ATTENTION",
-            "移动端发布记录确认本地新版尚未发布；只有取得用户当次明确同意才能发布。",
-            "等待用户当次明确同意；未同意时保持本地状态。",
-        )
-    else:
-        section.add(
-            "ATTENTION",
-            "可迁移记录无法确认当前移动端源码是否已发布。",
-            "核对最近一次发布；如需重新发布，先取得用户当次明确同意。",
-        )
+    section.add(
+        "PASS",
+        "展示层生命周期已收口：Life Console 为主要入口，Google 与 XLSX 按需派生，移动网页已归档且禁止新部署。",
+    )
     return section
 
 
@@ -2489,7 +2284,7 @@ def render_markdown(report: dict[str, Any]) -> str:
             "## 隐私说明",
             "",
             "本报告只包含结构状态和计数；不包含日记原文、日记标题/摘要、"
-            "候选认识内容、阶段动作值或站点标识。",
+            "候选认识内容、阶段动作值或外部服务标识。",
             "",
         ]
     )

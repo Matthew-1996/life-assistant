@@ -176,8 +176,10 @@ describe("Life Console synthetic UI", () => {
     expect(within(context).getByText("今日锚点")).toBeTruthy();
     expect(within(context).getByText("醒来")).toBeTruthy();
     expect(within(context).getByText("完成")).toBeTruthy();
-    expect(within(context).getByText("Google")).toBeTruthy();
-    expect(within(context).getByText("暂停")).toBeTruthy();
+    expect(within(context).getByText("Google / XLSX")).toBeTruthy();
+    expect(within(context).getByText("按需")).toBeTruthy();
+    expect(within(context).getByText("移动网页")).toBeTruthy();
+    expect(within(context).getByText("已归档")).toBeTruthy();
   });
 
   it("derives the current weekday from the dashboard date", async () => {
@@ -280,13 +282,14 @@ describe("Life Console synthetic UI", () => {
     expect(screen.getByRole("button", { name: "保存日记" })).toBeTruthy();
   });
 
-  it("shows paused Google and pending mobile states as neutral copy", async () => {
+  it("shows on-demand derived views and the archived mobile site", async () => {
     const user = userEvent.setup();
     render(<App />);
     await user.click(navigationButton("系统"));
 
-    expect(screen.getByText("暂不维护")).toBeTruthy();
-    expect(screen.getByText("方案待定")).toBeTruthy();
+    expect(screen.getByText("按需使用")).toBeTruthy();
+    expect(screen.getByText("按需重建")).toBeTruthy();
+    expect(screen.getAllByText("已归档").length).toBeGreaterThan(0);
     expect(screen.getByText("已验证可读取")).toBeTruthy();
   });
 
@@ -298,7 +301,7 @@ describe("Life Console synthetic UI", () => {
     expect(screen.getByText("运行关系")).toBeTruthy();
     expect(screen.getByText("保存确认")).toBeTruthy();
     expect(screen.getByText("数据与展示边界")).toBeTruthy();
-    expect(screen.getByText("移动端与图表边界")).toBeTruthy();
+    expect(screen.getByText("派生展示与归档边界")).toBeTruthy();
     expect(screen.getByText("设计治理资产关系")).toBeTruthy();
   });
 

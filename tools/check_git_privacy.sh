@@ -44,10 +44,6 @@ is_private_path() {
     records/*.jsonl|records/apple-health-latest.txt|records/apple-sleep-details-latest.txt|\
     integrations/google-sheets.json|integrations/google-sheets.sync-state.json|\
     integrations/journal-enrichment.json|\
-    web/life-dashboard/.openai/*|web/life-dashboard/PUBLICATION_STATE.json|\
-    web/life-dashboard/README.md|web/life-dashboard/personal.config.js|\
-    web/life-dashboard/app/life-plan.js|web/life-dashboard/app/page.tsx|\
-    web/life-dashboard/tests/life-plan.test.mjs|web/life-dashboard/tests/rendered-html.test.mjs|\
     life-plan-schedule.json|tools/render_life_plan.mjs|\
     tools/test_journal_workbook_e2e.mjs|tools/update_life_plan_growth.mjs|\
     tools/update_life_plan_journal.mjs|\

@@ -8,7 +8,7 @@
 2. 再读取 `colors_and_type.css` 与 `css.json`，确认可复用 token。
 3. 根据需求读取 `components/index.json` 和对应 `components/{slug}.json`。
 4. 用 `preview/component-*.html` 和 `ui_kits/website/index.html` 校准视觉比例与组件状态。
-5. 具体到 Life Console 线上前端时，以 `../life-console-apple-redesign/` 的已验收原型为页面结构基准，以 `../life-console-apple-ui-ue-guidelines.md` 作为长期 UI/UE 规范。
+5. 具体到 Life Console 前端时，以 `../life-console-trial-week-redesign/` 的当前原型为页面结构基准，以 `../life-console-apple-ui-ue-guidelines.md` 作为长期 UI/UE 规范。
 
 ## 维护边界
 

@@ -40,15 +40,21 @@ export function SystemPage({ dashboard }: SystemPageProps) {
     },
     {
       title: "Google 表格",
-      value: dashboard.system.google === "paused" ? "暂不维护" : "按需使用",
+      value: "按需使用",
       tone: "neutral",
-      description: "保留恢复能力，不属于一期保存链路。",
+      description: "只读单向派生，不属于日常保存链路。",
     },
     {
-      title: "移动端",
-      value: "方案待定",
+      title: "XLSX",
+      value: "按需重建",
       tone: "neutral",
-      description: "不会用桌面缩放版代替真实移动方案。",
+      description: "本地可视化备选，不接受反向写回。",
+    },
+    {
+      title: "移动网页",
+      value: "已归档",
+      tone: "neutral",
+      description: "既有私密实例保留，不再维护或部署。",
     },
   ];
 
@@ -59,14 +65,14 @@ export function SystemPage({ dashboard }: SystemPageProps) {
           <p className="eyebrow">边界清楚，系统才轻</p>
           <h1 id="system-title">本地工作站，不替代真相源。</h1>
           <p className="lead">
-            系统页展示本地 Mac、iCloud 真相源、外部派生、移动端与图表边界，以及设计治理资产之间的关系。
+            系统页展示本地 Mac、iCloud 真相源、按需派生、已归档移动网页与设计治理资产之间的关系。
           </p>
         </div>
         <aside className="card hero-card">
           <span className="status blue">核心边界</span>
           <h2>iCloud 项目是唯一真相源</h2>
           <p className="quiet">
-            Life Console 只是本地界面与白名单写入入口；外部表格、网页和图表均为派生展示。
+            Life Console 是主要入口；Google 表格和 XLSX 只按需派生，归档网页不再维护或部署。
           </p>
         </aside>
       </section>
@@ -84,7 +90,7 @@ export function SystemPage({ dashboard }: SystemPageProps) {
             ["01", "本地 Mac", "读取本地白名单接口与安全投影。"],
             ["02", "保存确认", "点击保存后才调用原子工具；草稿不改变事实。"],
             ["03", "iCloud 真相源", "日记、状态、目标与规则继续分层保存。"],
-            ["04", "派生展示", "外部表格与网页只展示确定性投影。"],
+            ["04", "派生展示", "Google 表格与 XLSX 按需展示确定性投影。"],
             ["05", "设计治理", "设计稿、规范与验收说明约束实现。"],
           ].map(([index, title, description]) => (
             <article className="flow-step" key={index}>
@@ -124,16 +130,16 @@ export function SystemPage({ dashboard }: SystemPageProps) {
         <article className="card pad">
           <div className="section-head">
             <div>
-              <h2>移动端与图表边界</h2>
-              <p className="quiet">移动端不是桌面缩小版；图表只降低认知负担。</p>
+              <h2>派生展示与归档边界</h2>
+              <p className="quiet">按需展示只降低认知负担；归档网页不再扩张。</p>
             </div>
             <span className="status gray">暂不扩张</span>
           </div>
           <div className="signal-list">
             <div className="day-row">
-              <strong>移动端</strong>
-              <span>后续按真实场景决定形态，本轮专注 PC。</span>
-              <span className="status gray">待定</span>
+              <strong>移动网页</strong>
+              <span>既有私密实例保留，不再维护源码或产生新部署。</span>
+              <span className="status gray">已归档</span>
             </div>
             <div className="day-row">
               <strong>图表</strong>

@@ -18,9 +18,13 @@ REQUIRED_FILES = {
     GOVERNANCE_PATH,
     "docs/governance/README.md",
     f"{KB_ROOT}/README.md",
+    f"{VERSION_DIR}/README.md",
     f"{VERSION_DIR}/生活助手-LifeConsole-1.0.0.md",
     f"{VERSION_DIR}/项目管理-生活助手-LifeConsole-1.0.0.md",
     f"{VERSION_DIR}/需求评审报告-生活助手-LifeConsole-1.0.0.md",
+    f"{VERSION_DIR}/设计方案-生活助手-LifeConsole-1.0.0.md",
+    f"{VERSION_DIR}/技术方案-生活助手-LifeConsole-1.0.0.md",
+    f"{VERSION_DIR}/工程评审与验收-生活助手-LifeConsole-1.0.0.md",
 }
 
 
@@ -98,15 +102,15 @@ def inspect_project_governance(root: Path) -> list[str]:
         f"{KB_ROOT}/README.md": (
             "生活助手-LifeConsole-1.0.0.md",
             "项目管理-生活助手-LifeConsole-1.0.0.md",
-            "PO 已于 2026-08-10 确认",
+            "PO 已确认",
         ),
         f"{VERSION_DIR}/生活助手-LifeConsole-1.0.0.md": (
             "状态：已确认 / 历史基线",
             "PO 确认结果",
-            "事实基线：`origin/main@",
+            "事实来源：当前 `main`",
         ),
         f"{VERSION_DIR}/项目管理-生活助手-LifeConsole-1.0.0.md": (
-            "当前阶段：已上线",
+            "产品阶段：已上线",
             "当前卡点与风险",
             "PO 确认记录",
         ),

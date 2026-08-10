@@ -36,9 +36,16 @@ try:
 except ModuleNotFoundError:  # Direct execution from tools/.
     from check_project_governance import inspect_project_governance
 
+try:
+    from tools.product_surfaces import ProductSurfaceError, load_product_surfaces
+except ModuleNotFoundError:  # Direct execution from tools/.
+    from product_surfaces import ProductSurfaceError, load_product_surfaces
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SKILL_DIR = ROOT / "skills" / "improve-daily-life"
+LEGACY_GOVERNANCE_LINK = Path("需求文档（个人维护）/agent项目开发规范.md")
+LEGACY_GOVERNANCE_TARGET = Path("../docs/governance/agent-user-project-development-standard.md")
 
 REQUIRED_FILES = [
     "AGENTS.md",
@@ -54,6 +61,12 @@ REQUIRED_FILES = [
     "docs/knowledge-base/生活助手-LifeConsole-1.0.0/生活助手-LifeConsole-1.0.0.md",
     "docs/knowledge-base/生活助手-LifeConsole-1.0.0/项目管理-生活助手-LifeConsole-1.0.0.md",
     "docs/knowledge-base/生活助手-LifeConsole-1.0.0/需求评审报告-生活助手-LifeConsole-1.0.0.md",
+    "docs/knowledge-base/生活助手-LifeConsole-1.0.0/README.md",
+    "docs/knowledge-base/生活助手-LifeConsole-1.0.0/设计方案-生活助手-LifeConsole-1.0.0.md",
+    "docs/knowledge-base/生活助手-LifeConsole-1.0.0/技术方案-生活助手-LifeConsole-1.0.0.md",
+    "docs/knowledge-base/生活助手-LifeConsole-1.0.0/工程评审与验收-生活助手-LifeConsole-1.0.0.md",
+    "docs/operations/README.md",
+    "docs/operations/product-surfaces.json",
     "tools/check_project_governance.py",
     "tools/test_project_governance.py",
     "research/2026-08-01-对话式日记完成审计.md",
@@ -101,25 +114,13 @@ REQUIRED_FILES = [
     "tools/test_google_sheets_payload.mjs",
     "tools/google_sheets_state.py",
     "tools/test_google_sheets_state.py",
+    "tools/product_surfaces.py",
+    "tools/test_product_surfaces.py",
     "journal/README.md",
     "journal/PRIVACY.md",
     "journal/INDEX.md",
     "records/README.md",
     "records/apple-health-latest.example.txt",
-    "web/life-dashboard/.openai/hosting.json",
-    "web/life-dashboard/PUBLICATION_STATE.json",
-    "web/life-dashboard/app/globals.css",
-    "web/life-dashboard/app/layout.tsx",
-    "web/life-dashboard/app/life-date.js",
-    "web/life-dashboard/app/life-plan.js",
-    "web/life-dashboard/app/page.tsx",
-    "web/life-dashboard/package.json",
-    "web/life-dashboard/package-lock.json",
-    "web/life-dashboard/drizzle.config.ts",
-    "web/life-dashboard/next.config.ts",
-    "web/life-dashboard/postcss.config.mjs",
-    "web/life-dashboard/tsconfig.json",
-    "web/life-dashboard/vite.config.ts",
     "docs/design/README.md",
     "docs/design/apple-top-level-design-system/README.md",
     "docs/design/apple-top-level-design-system/usage-guide.md",
@@ -131,12 +132,6 @@ REQUIRED_FILES = [
     "docs/design/apple-top-level-design-system/components/index.json",
     "docs/design/apple-top-level-design-system/preview/component-button.html",
     "docs/design/apple-top-level-design-system/ui_kits/website/index.html",
-    "docs/design/life-console-apple-redesign/README.md",
-    "docs/design/life-console-apple-redesign/colors_and_type.css",
-    "docs/design/life-console-apple-redesign/pages/overview.html",
-    "docs/design/life-console-apple-redesign/pages/capture.html",
-    "docs/design/life-console-apple-redesign/pages/insights.html",
-    "docs/design/life-console-apple-redesign/pages/system.html",
     "docs/design/life-console-trial-week-redesign/README.md",
     "docs/design/life-console-trial-week-redesign/colors_and_type.css",
     "docs/design/life-console-trial-week-redesign/pages/overview.html",
@@ -259,33 +254,6 @@ WEEKLY_GOAL_INTENTS = {
     "unsure",
 }
 WEEKLY_TIMESTAMP_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
-SITE_ROOT = ROOT / "web" / "life-dashboard"
-SITE_PUBLICATION_STATE = SITE_ROOT / "PUBLICATION_STATE.json"
-SITE_HOSTING_METADATA = SITE_ROOT / ".openai" / "hosting.json"
-SITE_FINGERPRINT_TOP_LEVEL = (
-    "package.json",
-    "package-lock.json",
-    "drizzle.config.ts",
-    "next.config.ts",
-    "postcss.config.mjs",
-    "tsconfig.json",
-    "vite.config.ts",
-)
-SITE_PUBLICATION_FIELDS = {
-    "schema_version",
-    "publication_state",
-    "visibility",
-    "local_source_sha256",
-    "local_source_file_count",
-    "published_source_sha256",
-    "recorded_on",
-}
-SITE_PUBLICATION_STATES = {
-    "published_current",
-    "local_changes_unpublished",
-    "unknown",
-}
-SITE_VISIBILITIES = {"private", "shared", "public", "unknown"}
 
 
 def _reject_json_constant(_: str) -> None:
@@ -557,113 +525,11 @@ def validate_optional_weekly_records(path: Path, errors: list[str]) -> None:
         seen_starts.add(start.isoformat())
 
 
-def site_source_fingerprint(site_root: Path) -> tuple[str, int]:
-    """Hash deploy-relevant source without including hosting IDs or build output."""
-
-    candidates: set[Path] = set()
-    for relative in SITE_FINGERPRINT_TOP_LEVEL:
-        candidate = site_root / relative
-        if candidate.is_file():
-            candidates.add(candidate)
-    for directory_name in ("app", "public"):
-        directory = site_root / directory_name
-        if not directory.is_dir():
-            continue
-        for candidate in directory.rglob("*"):
-            if candidate.is_file() and candidate.name != ".DS_Store":
-                candidates.add(candidate)
-
-    digest = hashlib.sha256()
-    ordered = sorted(
-        candidates,
-        key=lambda path: path.relative_to(site_root).as_posix(),
-    )
-    for path in ordered:
-        if path.is_symlink():
-            raise ValueError("移动端部署源码不得使用符号链接")
-        relative = path.relative_to(site_root).as_posix()
-        digest.update(relative.encode("utf-8"))
-        digest.update(b"\0")
-        digest.update(path.read_bytes())
-        digest.update(b"\0")
-    return digest.hexdigest(), len(ordered)
-
-
-def validate_site_publication_state(errors: list[str]) -> None:
-    if not SITE_PUBLICATION_STATE.is_file() or SITE_PUBLICATION_STATE.is_symlink():
-        return
+def validate_product_surface_lifecycle(errors: list[str]) -> None:
     try:
-        payload = json.loads(SITE_PUBLICATION_STATE.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError):
-        errors.append("移动端发布状态无法安全读取")
-        return
-    if not isinstance(payload, dict) or set(payload) != SITE_PUBLICATION_FIELDS:
-        errors.append("移动端发布状态字段集无效")
-        return
-    if type(payload.get("schema_version")) is not int or payload["schema_version"] != 1:
-        errors.append("移动端发布状态版本无效")
-    publication_state = payload.get("publication_state")
-    visibility = payload.get("visibility")
-    local_digest = payload.get("local_source_sha256")
-    local_count = payload.get("local_source_file_count")
-    published_digest = payload.get("published_source_sha256")
-    recorded_on = payload.get("recorded_on")
-    if publication_state not in SITE_PUBLICATION_STATES:
-        errors.append("移动端发布状态值无效")
-    if visibility not in SITE_VISIBILITIES:
-        errors.append("移动端发布可见范围无效")
-    if not isinstance(local_digest, str) or not re.fullmatch(r"[0-9a-f]{64}", local_digest):
-        errors.append("移动端本地源码指纹无效")
-    if type(local_count) is not int or local_count < 1:
-        errors.append("移动端本地源码文件计数无效")
-    if published_digest is not None and (
-        not isinstance(published_digest, str)
-        or not re.fullmatch(r"[0-9a-f]{64}", published_digest)
-    ):
-        errors.append("移动端已发布源码指纹无效")
-    if not isinstance(recorded_on, str):
-        errors.append("移动端发布状态记录日期无效")
-    else:
-        try:
-            normalized_date = date.fromisoformat(recorded_on)
-        except ValueError:
-            errors.append("移动端发布状态记录日期无效")
-        else:
-            if normalized_date.isoformat() != recorded_on:
-                errors.append("移动端发布状态记录日期无效")
-    if publication_state == "published_current" and published_digest != local_digest:
-        errors.append("移动端标记为已发布当前版本时，源码指纹必须一致")
-    try:
-        actual_digest, actual_count = site_source_fingerprint(SITE_ROOT)
-    except (OSError, ValueError):
-        errors.append("移动端部署源码无法安全计算指纹")
-        return
-    if local_digest != actual_digest or local_count != actual_count:
-        errors.append("移动端发布状态未覆盖当前本地源码")
-
-
-def validate_site_hosting_metadata(errors: list[str]) -> None:
-    if not SITE_HOSTING_METADATA.is_file() or SITE_HOSTING_METADATA.is_symlink():
-        return
-    try:
-        payload = json.loads(SITE_HOSTING_METADATA.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError):
-        errors.append("移动端托管元数据无法安全读取")
-        return
-    if not isinstance(payload, dict) or set(payload) != {"project_id", "d1", "r2"}:
-        errors.append("移动端托管元数据字段集无效")
-        return
-    project_id = payload.get("project_id")
-    if (
-        not isinstance(project_id, str)
-        or not project_id
-        or project_id.strip() != project_id
-        or any(character in project_id for character in "\r\n")
-    ):
-        errors.append("移动端托管绑定无效")
-    for field in ("d1", "r2"):
-        if payload.get(field) is not None and not isinstance(payload.get(field), dict):
-            errors.append(f"移动端托管元数据 {field} 绑定无效")
+        load_product_surfaces(ROOT)
+    except (ProductSurfaceError, OSError, ValueError):
+        errors.append("展示层生命周期清单缺失、无效或不是规范状态")
 
 
 def validate_design_governance(errors: list[str]) -> None:
@@ -722,7 +588,6 @@ def validate_design_governance(errors: list[str]) -> None:
     for snippet, label in {
         "apple-top-level-design-system": "顶层设计系统入口",
         "life-console-trial-week-redesign": "当前试行周原型入口",
-        "life-console-apple-redesign": "已验收原型入口",
         "life-console-apple-ui-ue-guidelines.md": "长期 UI/UE 规范入口",
     }.items():
         if snippet not in governance_text:
@@ -963,6 +828,22 @@ def validate() -> list[str]:
         if not (ROOT / relative).is_file():
             errors.append(f"缺少必需文件：{relative}")
 
+    for relative, label in {
+        "docs/code-wiki": "第二套 Code Wiki",
+        "docs/design/life-console-apple-redesign": "上一版 Life Console 设计",
+        "web/life-dashboard": "已归档移动网页源码",
+    }.items():
+        if (ROOT / relative).exists():
+            errors.append(f"活动树仍包含应移除的重复内容：{label}")
+    apps_root = ROOT / "apps"
+    active_apps = sorted(
+        path.name
+        for path in apps_root.iterdir()
+        if path.is_dir() and not path.is_symlink()
+    ) if apps_root.is_dir() else []
+    if active_apps != ["life-console"]:
+        errors.append("活动应用目录必须且只能包含 apps/life-console")
+
     errors.extend(inspect_project_governance(ROOT))
 
     # 周复盘台账是首次有效周回答后才创建的可选真相来源。缺失等于空台账，
@@ -976,10 +857,31 @@ def validate() -> list[str]:
         path.relative_to(ROOT)
         for path in ROOT.rglob("*")
         if path.is_symlink()
+        and path.relative_to(ROOT) != LEGACY_GOVERNANCE_LINK
         and not any(part in EXCLUDED_DIRS for part in path.relative_to(ROOT).parts)
     ]
     if symlinks:
         errors.append("存在不可移植的符号链接：" + ", ".join(map(str, symlinks)))
+    legacy_link = ROOT / LEGACY_GOVERNANCE_LINK
+    if legacy_link.is_symlink():
+        try:
+            link_target = Path(legacy_link.readlink())
+        except OSError:
+            errors.append("旧规范兼容链接无法安全读取")
+        else:
+            if link_target != LEGACY_GOVERNANCE_TARGET:
+                errors.append("旧规范兼容链接没有指向唯一规范正文")
+            else:
+                try:
+                    same_body = legacy_link.read_bytes() == (
+                        ROOT / "docs/governance/agent-user-project-development-standard.md"
+                    ).read_bytes()
+                except OSError:
+                    same_body = False
+                if not same_body:
+                    errors.append("旧规范兼容链接与唯一规范正文不一致")
+    elif legacy_link.exists():
+        errors.append("旧规范兼容路径必须是指向唯一正文的相对软链接")
 
     validate_automation_registry(errors)
     validate_journal_review_policy(errors)
@@ -988,8 +890,7 @@ def validate() -> list[str]:
     validate_optional_insight_ledger(errors)
     validate_optional_phase_actions(errors)
     validate_design_governance(errors)
-    validate_site_hosting_metadata(errors)
-    validate_site_publication_state(errors)
+    validate_product_surface_lifecycle(errors)
 
     skill_path = SKILL_DIR / "SKILL.md"
     if skill_path.is_file():
@@ -1378,11 +1279,8 @@ def validate() -> list[str]:
             '_load_automation_contract': "自动化契约结构与路径校验",
             'prompt_sha256': "规范提示词完整性校验",
             '_normalize_prompt(config["prompt"])': "运行时提示词精确比对",
-            'HOSTING_METADATA': "站点托管配置",
-            'SITE_PUBLICATION_STATE': "可迁移站点发布状态",
-            '_site_source_fingerprint': "部署源码确定性指纹",
-            '_valid_hosting_metadata': "托管元数据严格校验",
-            '_load_site_publication_state': "发布状态严格校验",
+            'load_product_surfaces': "展示层生命周期严格校验",
+            '"archived"': "移动网页归档状态",
             'archive.testzip()': "ZIP 完整性",
             '_verify_backup_manifest': "备份文件清单",
             '_current_project_manifest': "备份与当前项目一致性",

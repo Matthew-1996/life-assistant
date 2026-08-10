@@ -86,15 +86,8 @@ class LifeAssistantStatusTest(unittest.TestCase):
             CANONICAL_PROMPT,
         )
         self._write_registry(prompt_sha256=self._digest(prompt_path.read_bytes()))
-        self._write(
-            "web/life-dashboard/.openai/hosting.json",
-            json.dumps(
-                {"project_id": PROJECT_ID_SENTINEL, "d1": None, "r2": None}
-            ),
-        )
-        self._write("web/life-dashboard/public/test-asset.txt", "portable asset\n")
         self._write(WORKBOOK, b"test workbook")
-        self._write_publication_state()
+        self._write_product_surfaces()
 
     def _write_review_policy(self, **changes: object) -> Path:
         policy: dict[str, object] = {
@@ -312,37 +305,47 @@ class LifeAssistantStatusTest(unittest.TestCase):
         record["etag"] = self._digest(self._canonical_json_bytes(record))
         return record
 
-    def _write_publication_state(
-        self,
-        *,
-        publication_state: str = "published_current",
-        visibility: str = "private",
-        published_source_sha256: str | None | object = ...,
-    ) -> Path:
-        local_hash, local_count = STATUS_MODULE._site_source_fingerprint(self.root)
-        if published_source_sha256 is ...:
-            if publication_state == "published_current":
-                published_source_sha256 = local_hash
-            elif publication_state == "local_changes_unpublished":
-                published_source_sha256 = "0" * 64
-            else:
-                published_source_sha256 = None
-        return self._write(
-            STATUS_MODULE.SITE_PUBLICATION_STATE,
-            json.dumps(
+    def _write_product_surfaces(self, **changes: object) -> Path:
+        payload: dict[str, object] = {
+            "schema_version": 1,
+            "truth_source": "icloud-private-workspace",
+            "surfaces": [
                 {
-                    "schema_version": 1,
-                    "publication_state": publication_state,
-                    "visibility": visibility,
-                    "local_source_sha256": local_hash,
-                    "local_source_file_count": local_count,
-                    "published_source_sha256": published_source_sha256,
-                    "recorded_on": TODAY,
+                    "id": "life-console",
+                    "lifecycle_state": "active",
+                    "role": "primary",
+                    "sync_cadence": "on_demand",
+                    "writeback": "local-tools-only",
                 },
-                ensure_ascii=False,
-                indent=2,
-            )
-            + "\n",
+                {
+                    "id": "google-sheets",
+                    "lifecycle_state": "derived",
+                    "role": "secondary",
+                    "sync_cadence": "on_demand",
+                    "writeback": "none",
+                },
+                {
+                    "id": "xlsx",
+                    "lifecycle_state": "derived",
+                    "role": "secondary",
+                    "sync_cadence": "on_demand",
+                    "writeback": "none",
+                },
+                {
+                    "id": "life-dashboard",
+                    "lifecycle_state": "archived",
+                    "role": "retired",
+                    "sync_cadence": "none",
+                    "writeback": "none",
+                    "deployment_policy": "no_new_deployments",
+                    "live_instance_policy": "preserve_owner_only",
+                },
+            ],
+        }
+        payload.update(changes)
+        return self._write(
+            STATUS_MODULE.SURFACES_PATH,
+            json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
         )
 
     def _create_backup(
@@ -548,133 +551,57 @@ class LifeAssistantStatusTest(unittest.TestCase):
         self.assertTrue(report["sections"]["automation"]["metrics"]["contract_verified"])
         self.assertTrue(report["sections"]["automation"]["metrics"]["prompt_sha256_verified"])
         self.assertEqual(report["sections"]["site"]["status"], "PASS")
-        self.assertTrue(report["sections"]["site"]["metrics"]["local_source_matches"])
+        self.assertTrue(report["sections"]["site"]["metrics"]["contract_verified"])
+        self.assertEqual(report["sections"]["site"]["metrics"]["primary_surface"], "life-console")
+        self.assertEqual(report["sections"]["site"]["metrics"]["life_dashboard_state"], "archived")
+        self.assertEqual(report["sections"]["site"]["metrics"]["google_sync_cadence"], "on_demand")
+        self.assertEqual(report["sections"]["site"]["metrics"]["xlsx_sync_cadence"], "on_demand")
+        self.assertFalse(report["sections"]["site"]["metrics"]["new_deployments_allowed"])
         self.assertFalse(report["sections"]["site"]["metrics"]["online_verified"])
         self.assertNotIn(AUTOMATION_PROMPT_SENTINEL, result.stdout + status_text)
         self.assertNotIn("automation-2", result.stdout + status_text)
         self.assertNotIn("test-thread", result.stdout + status_text)
 
-    def test_site_source_fingerprint_uses_fixed_path_and_byte_framing(self) -> None:
-        expected_relatives = sorted(
-            [
-                *STATUS_MODULE.SITE_DEPLOYMENT_FILES,
-                "app/globals.css",
-                "app/layout.tsx",
-                "app/life-date.js",
-                "app/life-plan.js",
-                "app/page.tsx",
-                "public/test-asset.txt",
-            ]
-        )
-        expected = hashlib.sha256()
-        site_root = self.root / STATUS_MODULE.SITE_ROOT
-        for relative in expected_relatives:
-            expected.update(relative.encode("utf-8"))
-            expected.update(b"\0")
-            expected.update((site_root / relative).read_bytes())
-            expected.update(b"\0")
-
-        actual_hash, actual_count = STATUS_MODULE._site_source_fingerprint(self.root)
-        self.assertEqual(actual_hash, expected.hexdigest())
-        self.assertEqual(actual_count, len(expected_relatives))
-
-    def test_matching_local_changes_unpublished_needs_explicit_consent(self) -> None:
-        self._write_publication_state(publication_state="local_changes_unpublished")
-        self._create_backup()
-
-        result = self._run("--json")
-        report = json.loads(result.stdout)
-        site = report["sections"]["site"]
-        self.assertEqual(site["status"], "ATTENTION")
-        self.assertEqual(site["metrics"]["publication_state"], "local_changes_unpublished")
-        self.assertTrue(site["metrics"]["local_source_matches"])
-        self.assertFalse(site["metrics"]["online_verified"])
-        self.assertIn("当次明确同意", "".join(site["messages"] + report["actions"]))
-        self.assertNotIn(PROJECT_ID_SENTINEL, result.stdout)
-
-    def test_unknown_publication_state_needs_attention(self) -> None:
-        self._write_publication_state(publication_state="unknown")
-        self._create_backup()
-
-        result = self._run("--json")
-        site = json.loads(result.stdout)["sections"]["site"]
-        self.assertEqual(site["status"], "ATTENTION")
-        self.assertEqual(site["metrics"]["publication_state"], "unknown")
-        self.assertTrue(site["metrics"]["local_source_matches"])
-
-    def test_site_source_drift_needs_attention_without_leaking_source(self) -> None:
-        self._write(
-            "web/life-dashboard/app/nested/future-feature.ts",
-            SITE_SOURCE_SENTINEL,
-        )
-
-        result = self._run("--json")
-        site = json.loads(result.stdout)["sections"]["site"]
-        self.assertEqual(site["status"], "ATTENTION")
-        self.assertFalse(site["metrics"]["local_source_matches"])
-        self.assertFalse(site["metrics"]["online_verified"])
-        self.assertIn("不能确认线上版本", "".join(site["messages"]))
-        self.assertNotIn(SITE_SOURCE_SENTINEL, result.stdout + result.stderr)
-        self.assertNotIn(PROJECT_ID_SENTINEL, result.stdout + result.stderr)
-
-    def test_missing_publication_state_fails(self) -> None:
-        (self.root / STATUS_MODULE.SITE_PUBLICATION_STATE).unlink()
+    def test_missing_product_surface_contract_fails(self) -> None:
+        (self.root / STATUS_MODULE.SURFACES_PATH).unlink()
 
         result = self._run("--json", expected_code=2)
         site = json.loads(result.stdout)["sections"]["site"]
         self.assertEqual(site["status"], "FAIL")
-        self.assertFalse(site["metrics"]["publication_record_valid"])
+        self.assertFalse(site["metrics"]["contract_verified"])
         self.assertNotIn(PROJECT_ID_SENTINEL, result.stdout + result.stderr)
 
-    def test_publication_state_rejects_invalid_schema_and_extra_field(self) -> None:
-        valid_path = self._write_publication_state()
+    def test_product_surface_contract_rejects_reactivation_and_extra_fields(self) -> None:
+        valid_path = self._write_product_surfaces()
         valid = json.loads(valid_path.read_text(encoding="utf-8"))
+        reactivated = json.loads(json.dumps(valid))
+        reactivated["surfaces"][-1]["lifecycle_state"] = "active"
         invalid_payloads = [
             {**valid, "schema_version": 2},
             {**valid, "unexpected": SITE_SOURCE_SENTINEL},
-            {**valid, "publication_state": []},
-            {**valid, "local_source_file_count": True},
-            {**valid, "local_source_file_count": 0},
-            {**valid, "published_source_sha256": "f" * 64},
+            {**valid, "truth_source": "browser"},
+            reactivated,
         ]
         for position, payload in enumerate(invalid_payloads):
             with self.subTest(position=position):
                 self._write(
-                    STATUS_MODULE.SITE_PUBLICATION_STATE,
+                    STATUS_MODULE.SURFACES_PATH,
                     json.dumps(payload, ensure_ascii=False),
                 )
                 result = self._run("--json", expected_code=2)
                 site = json.loads(result.stdout)["sections"]["site"]
                 self.assertEqual(site["status"], "FAIL")
-                self.assertFalse(site["metrics"]["publication_record_valid"])
+                self.assertFalse(site["metrics"]["contract_verified"])
                 self.assertNotIn(SITE_SOURCE_SENTINEL, result.stdout + result.stderr)
                 self.assertNotIn(PROJECT_ID_SENTINEL, result.stdout + result.stderr)
 
-    def test_hosting_metadata_schema_is_strict_without_identifier_leak(self) -> None:
-        invalid_payloads = [
-            {"project_id": PROJECT_ID_SENTINEL, "d1": None},
-            {
-                "project_id": PROJECT_ID_SENTINEL,
-                "d1": None,
-                "r2": None,
-                "unexpected": SITE_SOURCE_SENTINEL,
-            },
-            {"project_id": f" {PROJECT_ID_SENTINEL}", "d1": None, "r2": None},
-            {"project_id": f"{PROJECT_ID_SENTINEL}\ninside", "d1": None, "r2": None},
-            {"project_id": PROJECT_ID_SENTINEL, "d1": "invalid", "r2": None},
-        ]
-        for position, payload in enumerate(invalid_payloads):
-            with self.subTest(position=position):
-                self._write(
-                    STATUS_MODULE.HOSTING_METADATA,
-                    json.dumps(payload, ensure_ascii=False),
-                )
-                result = self._run("--json", expected_code=2)
-                site = json.loads(result.stdout)["sections"]["site"]
-                self.assertEqual(site["status"], "FAIL")
-                self.assertFalse(site["metrics"]["configured"])
-                self.assertNotIn(SITE_SOURCE_SENTINEL, result.stdout + result.stderr)
-                self.assertNotIn(PROJECT_ID_SENTINEL, result.stdout + result.stderr)
+    def test_archived_surface_check_does_not_read_legacy_hosting_metadata(self) -> None:
+        self._write("web/life-dashboard/.openai/hosting.json", PROJECT_ID_SENTINEL)
+        result = self._run("--json")
+        site = json.loads(result.stdout)["sections"]["site"]
+        self.assertEqual(site["status"], "PASS")
+        self.assertEqual(site["metrics"]["life_dashboard_state"], "archived")
+        self.assertNotIn(PROJECT_ID_SENTINEL, result.stdout + result.stderr)
 
     def test_portable_contract_covers_daily_upsert_and_natural_week(self) -> None:
         project_root = SCRIPT.parent.parent

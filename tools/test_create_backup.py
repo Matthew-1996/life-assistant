@@ -27,7 +27,7 @@ class CreateBackupTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
         self._write("AGENTS.md", "portable\n")
-        self._write("web/life-dashboard/.openai/hosting.json", '{"project_id":"not-a-secret"}\n')
+        self._write("docs/operations/product-surfaces.json", '{"schema_version":1}\n')
         self._write(".env.example", "EXAMPLE_VALUE=replace-me\n")
 
     def tearDown(self) -> None:
@@ -125,7 +125,7 @@ class CreateBackupTests(unittest.TestCase):
         self.assertTrue(archive.is_file())
         with zipfile.ZipFile(archive) as handle:
             names = set(handle.namelist())
-        self.assertIn("codex-生活助手/web/life-dashboard/.openai/hosting.json", names)
+        self.assertIn("codex-生活助手/docs/operations/product-surfaces.json", names)
         self.assertIn("codex-生活助手/.env.example", names)
 
     def test_git_worktrees_are_excluded_from_project_snapshot(self) -> None:

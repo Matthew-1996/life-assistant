@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "truth_source": "icloud-private-workspace",
+  "surfaces": [
+    {
+      "id": "life-console",
+      "lifecycle_state": "active",
+      "role": "primary",
+      "sync_cadence": "on_demand",
+      "writeback": "local-tools-only"
+    },
+    {
+      "id": "google-sheets",
+      "lifecycle_state": "derived",
+      "role": "secondary",
+      "sync_cadence": "on_demand",
+      "writeback": "none"
+    },
+    {
+      "id": "xlsx",
+      "lifecycle_state": "derived",
+      "role": "secondary",
+      "sync_cadence": "on_demand",
+      "writeback": "none"
+    },
+    {
+      "id": "life-dashboard",
+      "lifecycle_state": "archived",
+      "role": "retired",
+      "sync_cadence": "none",
+      "writeback": "none",
+      "deployment_policy": "no_new_deployments",
+      "live_instance_policy": "preserve_owner_only"
+    }
+  ]
+}
