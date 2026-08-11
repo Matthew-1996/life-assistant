@@ -92,6 +92,23 @@ describe("Life Console 2.0.0 synthetic Sites API", () => {
     }));
   });
 
+  it("accepts the authenticated owner header supplied by Sites", async () => {
+    const platformEnv = {
+      ...env,
+      ALLOW_SYNTHETIC_AUTH: "false",
+      SYNTHETIC_OWNER_ID: undefined,
+    };
+    const response = await worker.fetch(
+      new Request(`${origin}/api/v1/auth/me`, {
+        headers: { "oai-authenticated-user-id": owner },
+      }),
+      platformEnv,
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(expect.objectContaining({ role: "owner" }));
+  });
+
   it("creates a goal once for a repeated idempotency key", async () => {
     const csrf = await csrfToken();
     const requestInit = {
