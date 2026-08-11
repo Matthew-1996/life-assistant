@@ -9,10 +9,13 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:sites-200": "tsc -b && vite build --mode sites-200 --outDir dist/client && node scripts/prepare-sites-200-build.mjs",
     "generate:contracts": "openapi-typescript contracts/life-console.openapi.yaml -o src/contracts/life-console.ts",
-    "check:contracts": "npm run generate:contracts && git diff --exit-code -- src/contracts/life-console.ts",
+    "generate:sites-contracts": "openapi-typescript contracts/life-console-sites.openapi.yaml -o src/contracts/life-console-sites.ts",
+    "check:contracts": "npm run generate:contracts && npm run generate:sites-contracts && git diff --exit-code -- src/contracts/life-console.ts src/contracts/life-console-sites.ts",
     "test": "npm run check:contracts && vitest run && npm run test:python",
     "test:contracts": "npm run check:contracts && vitest run tests/contract",
+    "test:worker": "vitest run tests/worker",
     "test:python": "python3 -m unittest discover -v -s tests/hub -p 'test_*.py' && python3 -m unittest discover -v -s tests/packaging -p 'test_*.py' && python3 -m unittest discover -v -s tests/e2e -p 'test_*.py'"
   },
   "dependencies": {

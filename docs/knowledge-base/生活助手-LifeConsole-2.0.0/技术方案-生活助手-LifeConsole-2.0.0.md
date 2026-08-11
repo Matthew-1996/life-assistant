@@ -1,6 +1,6 @@
 # 技术方案 - 生活助手 - Life Console - 2.0.0
 
-> 状态：草稿 / 待技术方案评审
+> 状态：已评审通过 / Gate 2 已确认
 >
 > 前置参考：
 > - 1.0.0 技术方案（iCloud 真相源 + 本机 Life Hub 架构）
@@ -77,7 +77,7 @@ flowchart TB
 | 对象存储 | Cloudflare R2 | 零出口费；与 Worker 签名 URL 配合好 | S3 兼容 |
 | 加密算法 | AES-256-GCM (Web Crypto) | Worker 端原生；带认证；DEK/KEK 分层 | ChaCha20-Poly1305 |
 | 前端构建 | Vite (继承 1.1.0 `sites` 模式) | 已验收；Worker 入口 + SPA 静态资源 | Next.js (Sites 不原生支持) |
-| 同步代理 | Python 脚本 (复用 1.0.0 原子工具) | 已测试、无需重写 iCloud 写入逻辑 | Worker 定时触发器 |
+| 同步代理 | Python 版本化冷备代理 | D1 owner-only payload 单向写入 iCloud 冷备树；每个 revision 独立、原子落盘、权限 0600，不改写 1.0.0 活动台账 | Worker 定时触发器 |
 | 密钥管理主存 | Sites Secret + 离线恢复包 | 运行时从 Secret 读；恢复包作为极端备份 | 外部 KMS（成本+复杂度高，单用户无必要）|
 
 ## 3. D1 数据模型（12 张表）
@@ -237,7 +237,7 @@ flowchart TB
 | plan_json TEXT | | 迁移计划 JSON（数量估算）|
 | validation_report_json TEXT | | VALIDATING 结果报告 |
 | switched_at / rolled_back_at TEXT | | — |
-| **开放问题 Q2** | | 回滚窗口内新写入：写入一张 `rolled_back_pending.json` R2 对象 |
+| 回滚增量导出 | | 回滚窗口内新写入导出为 R2 加密增量包 `rolled-back-pending/batch-<id>.json.enc`，附 manifest、revision、幂等键与内容哈希 |
 
 ## 4. 字段级加密方案（AES-256-GCM + DEK/KEK）
 
@@ -291,8 +291,8 @@ stateDiagram-v2
 
 ### 4.4 恢复包格式
 
-- ZIP 文件名：`life-console-2.0.0-recovery-pack-<YYYYMMDD>.zip`
-- ZIP 本身使用 AES-256 加密（用户口令 + PBKDF2 1,000,000 迭代）
+- R2 对象名：`recovery-packs/recovery_<uuid>.zip.enc`
+- 先生成无压缩 ZIP，再使用 AES-256-GCM 外层加密（用户口令 + PBKDF2-SHA256 1,000,000 迭代）
 - ZIP 内：
   - `manifest.json`：版本、创建日期、KEK 数量、SHA-256
   - `kek-journal-v1.key`：明文 KEK（ZIP 已加密）
@@ -355,7 +355,9 @@ stateDiagram-v2
 | 方法 | 路径 | 说明 |
 |---|---|---|
 | GET | `/api/v1/backup/queue` | 查看 backup_exports 最近 50 条（系统页分区 3）|
-| POST | `/api/v1/backup/trigger` | 手动触发一次同步（非阻塞，返回 job ID）|
+| POST | `/api/v1/backup/trigger` | 手动生成 D1 完整加密备份并写入 R2，返回对象键与 SHA-256 |
+| GET | `/api/v1/backup/queue/:id/payload` | 同步代理读取 owner-only 解密载荷；仅用于 D1 → iCloud 冷备 |
+| POST | `/api/v1/backup/queue/:id/report` | 同步代理回报 SUCCESS / RETRYING / FAILED / SKIPPED |
 | GET | `/api/v1/backup/exports/:batch_id` | 从 R2 下载完整加密备份 ZIP（签名 URL，5min）|
 
 ### 5.7 迁移
@@ -372,9 +374,9 @@ stateDiagram-v2
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| POST | `/api/v1/crypto/rotate-keks` | 生成 v2 KEK 并写入 Sites Secret；启动渐进重加密 |
-| POST | `/api/v1/crypto/recovery-pack` | 生成恢复包加密 ZIP，返回 R2 签名 URL（5min 下载）|
-| POST | `/api/v1/crypto/verify-recovery-pack` | 上传恢复包 ZIP + 口令，返回示例数据验证结果 |
+| POST | `/api/v1/crypto/rotate-keks` | 要求 v2 KEK 已由阶段 C 运维流程写入 Sites Secret；Worker 只执行渐进重加密，不持有 Secret 管理权限 |
+| POST | `/api/v1/crypto/recovery-pack` | 生成 ZIP 后使用口令加密并写入 R2，返回对象键与 SHA-256；阶段 C 再接 5 分钟签名下载 |
+| POST | `/api/v1/crypto/verify-recovery-pack` | 通过 R2 对象键或上传密文 + 口令解密验证样本 |
 
 ### 5.9 审计
 
@@ -402,8 +404,8 @@ if (mode === 'sites-api') {
 }
 ```
 
-**写交互四态**：每个表单统一使用 `useWritableForm()` Hook，内置：
-- localStorage 草稿自动保存
+**写交互四态**：Sites 新增表单统一使用 `useWritableForm()` Hook，内置：
+- localStorage 草稿自动保存；内容使用会话级 AES-GCM 密钥加密，密钥只存在 sessionStorage
 - 生成 revision / 幂等 Key
 - loading / success / conflict(409) / failed 状态渲染
 - 冲突差异卡片展示
@@ -436,14 +438,15 @@ stateDiagram-v2
 ## 8. 同步代理（D1 → iCloud 单向冷备）
 
 ```python
-# tools/sites_backup_sync_agent.py  （实现时命名）
+# tools/sites_backup_sync_agent.py
 """
 从 Sites GET /api/v1/backup/queue?status=PENDING 拉取队列
 对每条：
-  1. GET /api/v1/<resource_type>/<resource_id> 获取完整解密 JSON
-  2. 调用 1.0.0 对应原子工具：
-     - journal_manager.py add/update/delete
-     - daily_checkin.py 等
+  1. GET /api/v1/backup/queue/<id>/payload 获取完整解密 JSON
+  2. 原子写入 <cold-backup>/<resource_type>/<resource_id>/revision-XXXXXXXX.json
+     - 目录权限 0700，文件权限 0600
+     - 同 revision 已存在但内容不同时失败关闭
+     - 不修改 1.0.0 活动台账，不产生 iCloud → D1 反向同步
   3. POST /api/v1/backup/queue/<id>/report {status, error}
 重试退避：10s / 30s / 2min / 10min / 1h / 6h / 24h
 24h 仍失败标记为 FAILED_PERMANENT，系统页红色告警
@@ -484,13 +487,29 @@ stateDiagram-v2
 | KEK 丢失但恢复包存在 | 不自动 | 离线用恢复包解密 → 生成新 KEK → 渐进重加密 |
 | KEK + 恢复包全部丢失 | 数据不可恢复（只能从 iCloud 冷备重建明文）| 进入灾难恢复模式，按灾难手册 |
 | 迁移后 7 天内回滚 | 需 PO 手动点击 | `/migration/rollback` → 真相源切回 ICLOUD_PRIMARY；D1 新写入导出 JSON |
-| Cloudflare 区域故障 | 不自动 | 使用同步代理 + 1.0.0 原子工具直接写 iCloud 冷备；故障恢复后回灌 D1 |
+| Cloudflare 区域故障 | 不自动 | 启用 iCloud 应急追加队列：仅追加带幂等键和 `base_revision` 的离线事件，不覆盖既有记录；恢复后冻结相关资源，受控导入 D1，冲突人工处理 |
 
-## 12. 开放问题（来自需求评审 Q1-Q4）
+## 12. 技术评审决策（Q1-Q4）
 
-| 编号 | 结论（草稿） | 需评审确认 |
+PO 于 2026-08-11 完成以下技术开放项决策，并明确要求“完成评审，开始代码实现”。技术方案 Gate 2 已通过。
+
+| 编号 | PO 决策 | 实现约束 |
 |---|---|---|
-| Q1：恢复包口令是否允许自动填充？ | **禁止**；使用 `<input autocomplete="new-password" type="password" />` + 手动输入两次 | 待确认 |
-| Q2：回滚窗口内 D1 新写入如何导出？ | R2 `rolled-back-pending/batch-<id>.json` 压缩包；仅包含 SWITCHED 后的增量 | 待确认 |
-| Q3：D1 冷启动对首屏 2s 影响？ | Worker 中启用 D1 「Local Cache」参数；首页并行 5 API；预计 P95 首屏 ≤1.8s（合成数据基准） | 待测试验证 |
-| Q4：Cloudflare 区域故障降级？ | 提供同步代理直写 iCloud 临时脚本；故障解除后按 revision 比对回灌 | 待确认 |
+| Q1 | **允许受信任密码管理器生成和自动填充恢复包口令** | 口令至少 16 位；允许长密码短语，不强制字符组合；输入框使用标准密码字段并允许密码管理器识别；仍需二次确认与弱口令拦截。 |
+| Q2 | **回滚增量保存为 R2 加密增量包** | 路径采用 `rolled-back-pending/batch-<id>.json.enc` 或等价加密对象；只包含 `SWITCHED` 后的增量，并附 manifest、资源 ID、revision、幂等键和内容哈希；回滚后只供人工审阅与受控合并。 |
+| Q3 | **使用聚合启动接口控制首屏性能** | 新增 `/api/v1/bootstrap`，仅返回首屏必要最小数据；其余分区懒加载。以合成数据压测验证 P95 首屏 ≤ 2 秒，不依赖未经验证的 D1 缓存参数。 |
+| Q4 | **Cloudflare 故障期间启用 iCloud 应急追加队列** | iCloud 不成为临时真相源；仅追加离线事件，禁止更新、删除或覆盖既有记录。每条事件携带幂等键、`base_revision`、时间戳和资源类型。云端恢复后先冻结相关资源，再受控导入 D1；revision 冲突必须人工处理，导入成功后 iCloud 恢复为单向冷备。 |
+
+### 12.1 Q4 单一真相源不变量
+
+- D1 始终是唯一权威真相源；应急队列只是待处理事件载体。
+- 应急事件不得被普通 iCloud 同步流程解释为已生效业务记录。
+- D1 恢复后不得自动静默合并；先校验幂等键与 `base_revision`，冲突进入人工确认。
+- 应急队列实现进入阶段 A 通用代码范围；真实启用仍需部署与数据门禁。
+
+### 12.2 Gate 2 确认记录
+
+- 结论：通过。
+- 确认日期：2026-08-11。
+- 修改意见：无；按 Q1-Q4 决策实施。
+- 授权边界：允许开始通用代码、D1 Schema、Worker API 与合成测试；真实密钥、正式部署、真实数据迁移和切源仍按阶段 C-E 单独确认。

@@ -46,6 +46,7 @@ const states: Array<{ value: AnchorState; label: string }> = [
 interface TodayPageProps {
   dashboard: Dashboard;
   client?: LifeConsoleClient;
+  mode?: "local" | "sites";
   onNavigate?: (page: PageId) => void;
   onSaved?: () => boolean | Promise<boolean>;
 }
@@ -53,9 +54,11 @@ interface TodayPageProps {
 export function TodayPage({
   dashboard,
   client,
+  mode = "local",
   onNavigate,
   onSaved,
 }: TodayPageProps) {
+  const saveTarget = mode === "sites" ? "云端真相源" : "iCloud";
   const [anchors, setAnchors] = useState<Anchors>(dashboard.today.anchors);
   const [conflict, setConflict] = useState<components["schemas"]["CheckinConflict"] | null>(null);
   const [pending, setPending] = useState<AnchorKey | null>(null);
@@ -86,7 +89,7 @@ export function TodayPage({
       const refreshed = await onSaved?.();
       setStatus(
         refreshed === false
-          ? "已保存到 iCloud，但页面暂时无法刷新。"
+          ? `已保存到${saveTarget}，但页面暂时无法刷新。`
           : result.message,
       );
       if (refreshed !== false) setConflict(null);
@@ -324,34 +327,40 @@ export function TodayPage({
           <p className="kicker">PRIVACY AND SAVE PATH</p>
           <h2 id="privacy-title">隐私与保存链路</h2>
           <p className="quiet-note">
-            Life Console 是本地工作站界面。它帮助你读懂 iCloud 项目中的事实，但不会把敏感内容默认发布到网页、表格或任何外部服务。
+            {mode === "sites"
+              ? "Life Console 通过 Owner-only Sites API 读取和写入 D1；日记原文与健康明细使用字段级加密，iCloud 只接收单向冷备。"
+              : "Life Console 是本地工作站界面。它帮助你读懂 iCloud 项目中的事实，但不会把敏感内容默认发布到网页、表格或任何外部服务。"}
           </p>
         </div>
         <div className="chain" aria-label="保存链路">
           <article className="chain-step">
             <span className="step-index">01</span>
             <div>
-              <h3>本机读取</h3>
-              <p>页面优先展示本机可见的项目状态，减少跨工具来回确认。</p>
+              <h3>{mode === "sites" ? "Owner-only 读取" : "本机读取"}</h3>
+              <p>{mode === "sites" ? "页面通过受控 Sites 会话读取最小必要投影。" : "页面优先展示本机可见的项目状态，减少跨工具来回确认。"}</p>
             </div>
           </article>
           <article className="chain-step">
             <span className="step-index">02</span>
             <div>
-              <h3>iCloud 真相源</h3>
-              <p>日记、目标、台账与阶段决定以 iCloud 项目文件为准。</p>
+              <h3>{mode === "sites" ? "D1 唯一真相源" : "iCloud 真相源"}</h3>
+              <p>{mode === "sites" ? "所有写入使用 revision、幂等、审计与字段级加密。" : "日记、目标、台账与阶段决定以 iCloud 项目文件为准。"}</p>
             </div>
           </article>
           <article className="chain-step">
             <span className="step-index">03</span>
             <div>
               <h3>真实写入需确认</h3>
-              <p>任何会改变记录、同步状态或长期记忆的动作，都需要当次明确确认。</p>
+              <p>{mode === "sites" ? "写入成功后进入 iCloud 单向冷备队列；冲突不会静默覆盖。" : "任何会改变记录、同步状态或长期记忆的动作，都需要当次明确确认。"}</p>
             </div>
           </article>
         </div>
       </section>
-      <p className="footer-note">页面只呈现安全投影；真实记录与状态仍以 iCloud 项目为准。</p>
+      <p className="footer-note">
+        {mode === "sites"
+          ? "页面只呈现安全投影；D1 是唯一真相源，iCloud 是单向冷备。"
+          : "页面只呈现安全投影；真实记录与状态仍以 iCloud 项目为准。"}
+      </p>
     </section>
   );
 }

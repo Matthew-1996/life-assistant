@@ -1,6 +1,6 @@
 # 工程评审与验收 - 生活助手 - Life Console - 2.0.0
 
-> 状态：草稿 / 待评审
+> 状态：技术方案评审已通过 / 阶段 A 通用开发完成，待候选环境联调
 >
 > 适用范围：通用仓库代码、合成数据测试、治理与隐私检查；真实数据迁移与验收仅在 iCloud 私有环境 + Sites owner-only 会话执行，证据不复制到 Git。
 
@@ -8,7 +8,7 @@
 
 | 评审项 | 当前结论（草稿） | 持续门禁 |
 |---|---|---|
-| 架构 | Sites Worker + D1/R2 单真相源架构符合 2.0.0 目标；同步代理写 iCloud 冷备避免双真相源 | 不允许 iCloud 反向写入 D1；任何双向同步补丁必须重新走需求评审 |
+| 架构 | Sites Worker + D1/R2 单真相源架构符合 2.0.0 目标；iCloud 日常为单向冷备，区域故障时只承载应急追加事件 | 不允许 iCloud 成为临时真相源；应急事件恢复后必须受控导入 D1，冲突人工处理 |
 | 数据模型 | 12 张表覆盖 goals/journals(+revisions)/daily/weekly/phase/health(days+segments)/idempotency/audit/backup/migration；统一 UUID+revision+soft-delete；命名、类型、索引设计完整 | 新增字段必须走 D1 迁移脚本版本化；禁止手工 ALTER |
 | 加密 | AES-256-GCM + DEK/KEK 分层；恢复包 PBKDF2 1M 迭代；Worker 端不落地明文；符合最小明文索引原则 | 密钥轮换后必须验证旧 kid 数据全部重加密；审计 log 不含正文字段 |
 | 身份与会话 | Owner-only ChatGPT Sites session + Worker CSRF + Origin 校验 + 限流/防重放；会话 15 分钟无操作自动登出 | 所有写 API 必须校验会话；OPTIONS 预检响应不过早放行 |
@@ -77,7 +77,7 @@ npm run test:e2e:synthetic # Playwright 合成端口
 #   1. 四页导航与快照：视觉与 1.0.0 差异阈值 ≤ 0.5%（核心区域）
 #   2. 写交互四态：草稿预览 → 保存中 → 成功 / 409 差异卡片 / 失败重试
 #   3. 系统页六分区渲染：真相源、加密、冷备、迁移向导、审计摘要、系统信息
-#   4. 恢复包流程 UI：输入口令 → 生成 → 下载 → 验证；禁止自动填充输入框验证
+#   4. 恢复包流程 UI：至少16位口令 → 允许受信任密码管理器填充 → 生成 → 下载 → 验证
 #   5. 系统页 footer 显示 revision + 同步状态
 ```
 
@@ -90,9 +90,40 @@ npm run build:sites-200
 #   1. dist/client/assets/index-*.js 存在
 #   2. 不存在 life-console-snapshot.json（2.0.0 不再用只读快照）
 #   3. worker/sites-200.js 入口引用正确
-#   4. 合成数据预览：python3 -m http.server 47325 --directory dist/client
-#      → 访问 → 跳转 /api/v1/auth/me 返回合成 fixture
+#   4. dist/server 包含 Worker 入口、lib 与 routes；2.0.0 不携带只读 snapshot
 ```
+
+### 2.6 阶段 A 首个实现工作块证据（2026-08-11）
+
+| 验证项 | 结果 |
+|---|---|
+| Sites Worker 安全壳测试 | 3/3 通过；SPA fallback、安全响应头、API 默认 `503 implementation_pending`、静态写方法拒绝 |
+| D1 初始迁移结构测试 | 6/6 通过；12 张表、敏感密文字段、审计最小字段、初始真相源、外键和备份去重约束 |
+| Vitest 全量 | 62/62 通过 |
+| Python Hub | 75/75 通过 |
+| macOS 打包测试 | 7/7 通过 |
+| 合成 E2E | 1/1 通过 |
+| 默认构建 | 通过 |
+| Sites 2.0.0 构建 | 通过；生成 `dist/client` 与 `dist/server/index.js`，且不生成 1.1.0 `life-console-snapshot.json` |
+| 治理 / 隐私 / diff | 全部通过 |
+
+边界：本证据仅覆盖 IMPL-A1/A2，不代表 Worker API、加密、真实身份、D1 运行实例、R2、部署或迁移已经完成。
+
+### 2.7 阶段 A 通用开发收口证据（2026-08-11）
+
+| 验证项 | 结果 |
+|---|---|
+| Vitest 全量 | 85/85 通过；含 OpenAPI、隐私 fixture、Worker 安全壳、AES/恢复包、Sites API 与 React UI |
+| Worker 合成链路 | 19 项通过；覆盖 Owner-only 失败关闭、CSRF/同源、幂等、revision 409、CRUD、Health segments、审计筛选、迁移/回滚、R2 完整备份、加密 ZIP 恢复包与预配置 v2 KEK 轮换 |
+| D1 Schema / Hub Python | 75/75 通过；其中 D1 结构 6/6 |
+| macOS 打包 / 既有合成 E2E | 7/7、1/1 通过 |
+| Sites 本地工具 | 5/5 通过；应急 CREATE_ONLY 队列 3 项、版本化 iCloud 冷备代理 2 项 |
+| 默认构建 | 通过 |
+| Sites 2.0.0 构建 | 通过；生成 `dist/client` 与模块化 `dist/server`，不生成 `life-console-snapshot.json` |
+
+已实现边界：通用 Worker/D1/R2 接口、合成密钥加密、前端双模式、加密草稿、系统管理 UI 和单向冷备代理。未执行边界：正式 Owner 会话、真实 D1/R2、真实 KEK、Sites 部署、真实 iCloud 读取/迁移、切源与删除真实数据。
+
+测试策略差异：当前 Worker 集成测试使用 Node `node:sqlite` D1 适配器与 R2 mock，不伪造正式 Cloudflare 绑定；Miniflare、签名下载 URL 与浏览器级 Sites E2E 留到阶段 B/C 候选环境验证。因此阶段 A 通用开发完成，但阶段 A 最终验收清单仍不宣称全部完成。
 
 ## 3. 六阶段交付验收方法
 
@@ -170,7 +201,7 @@ npm run build:sites-200
 - [ ] 二次确认对话框：「我理解回滚后将失去 D1 中 X 条新写入（已导出到 R2）」
 - [ ] 回滚完成后系统页显示 `真相源 = ICLOUD_PRIMARY (ROLLED_BACK)`
 - [ ] D1 写入接口返回 405 Method Not Allowed（只读模式）
-- [ ] R2 导出 `rolled-back-pending/batch-*.json` 下载成功，可人工阅读 JSON
+- [ ] R2 导出 `rolled-back-pending/batch-*.json.enc` 下载成功，解密后可人工审阅 manifest 与增量记录
 
 ## 5. 隐私扫描与合规（必须在 PR 合入前通过）
 
@@ -190,3 +221,16 @@ npm run build:sites-200
 - 未覆盖边界（明确列出）
 
 CI 只证明通用检查通过；阶段 C/D/E/F 的真实部署与迁移证据保存在私有 iCloud research/ 目录，不进 Git。
+
+## 7. PO 阶段 A 确认记录
+
+- 确认结论：通过阶段 A 通用开发结果确认。
+- 确认日期：2026-08-11。
+- PO 原话：`好的，我确认签字，把 PR 转为 Ready`。
+- 授权范围：
+  - 将本文件 §2.7 所列通用代码、合成测试与知识库变更提交并推送到 PR #36。
+  - PR #36 保持 Ready for review，进入代码评审与 CI 验证。
+- 不包含：
+  - 不授权正式 Sites 部署、Owner 会话绑定、真实 D1/R2 绑定或真实 KEK 生成。
+  - 不授权读取或迁移真实 iCloud 数据、切换真相源、永久删除真实数据或合并 PR。
+  - 阶段 B/C/D/E/F 继续遵循各自的 PO 当次确认门禁。

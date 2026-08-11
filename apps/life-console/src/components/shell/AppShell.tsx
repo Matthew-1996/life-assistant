@@ -15,6 +15,7 @@ const navigation: Array<{
 interface AppShellProps {
   activePage: PageId;
   date: string;
+  mode?: "local" | "sites";
   children: ReactNode;
   onNavigate: (page: PageId) => void;
 }
@@ -22,6 +23,7 @@ interface AppShellProps {
 export function AppShell({
   activePage,
   date,
+  mode = "local",
   children,
   onNavigate,
 }: AppShellProps) {
@@ -37,23 +39,26 @@ export function AppShell({
             type="button"
           >
             <span className="brand-mark" aria-hidden="true" />
-            <span>Life Console · Trial Week</span>
+            <span>Life Console · {mode === "sites" ? "Cloud" : "Trial Week"}</span>
           </button>
 
-          <nav aria-label="全局导航">
-            {navigation.map((item) => (
-              <button
-                aria-current={activePage === item.id ? "page" : undefined}
-                className="nav-item"
-                data-active={activePage === item.id}
-                key={item.id}
-                onClick={() => onNavigate(item.id)}
-                type="button"
-              >
-                {item.label}
-              </button>
-            ))}
-          </nav>
+          <div className="topbar-actions">
+            {mode === "sites" && <span className="source-badge">Sites API</span>}
+            <nav aria-label="全局导航">
+              {navigation.map((item) => (
+                <button
+                  aria-current={activePage === item.id ? "page" : undefined}
+                  className="nav-item"
+                  data-active={activePage === item.id}
+                  key={item.id}
+                  onClick={() => onNavigate(item.id)}
+                  type="button"
+                >
+                  {item.label}
+                </button>
+              ))}
+            </nav>
+          </div>
         </div>
       </header>
 

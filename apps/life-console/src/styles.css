@@ -153,6 +153,43 @@ a:focus-visible {
   background: rgb(242 242 247 / 78%);
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.source-badge {
+  display: inline-flex;
+  height: 24px;
+  align-items: center;
+  padding: 0 9px;
+  border: 1px solid rgb(0 122 255 / 16%);
+  border-radius: 999px;
+  color: var(--primary);
+  background: var(--blue-soft);
+  font-size: 11px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.migration-hero {
+  margin-top: 28px;
+}
+
+.migration-steps {
+  display: grid;
+  gap: 12px;
+  margin: 18px 0 24px;
+  padding-left: 24px;
+  color: var(--muted-foreground);
+  line-height: 1.55;
+}
+
+.system-status-grid .card h2 {
+  margin: 14px 0 8px;
+}
+
 .nav-item {
   display: inline-flex;
   height: 30px;
