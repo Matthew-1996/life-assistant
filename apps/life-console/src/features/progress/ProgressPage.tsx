@@ -56,7 +56,7 @@ function lineSegments(
 interface ProgressPageProps {
   client?: SitesLifeConsoleClient;
   dashboard: Dashboard;
-  mode?: "local" | "sites";
+  mode?: "local" | "sites" | "candidate-preview";
 }
 
 function WriteState({

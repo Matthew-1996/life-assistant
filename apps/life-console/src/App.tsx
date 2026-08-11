@@ -1,4 +1,9 @@
-import { useEffect, useState } from "react";
+import {
+  type FormEvent,
+  type MouseEvent,
+  useEffect,
+  useState,
+} from "react";
 
 import type { LifeConsoleClient } from "./api/client";
 import type {
@@ -15,7 +20,7 @@ import { TodayPage } from "./features/today/TodayPage";
 interface AppProps {
   client?: LifeConsoleClient;
   initialDashboard?: Dashboard;
-  mode?: "local" | "sites";
+  mode?: "local" | "sites" | "candidate-preview";
 }
 
 export function App({ client, initialDashboard, mode = "local" }: AppProps) {
@@ -25,6 +30,7 @@ export function App({ client, initialDashboard, mode = "local" }: AppProps) {
   );
   const [sitesStatus, setSitesStatus] = useState<SitesSystemStatus | null>(null);
   const [error, setError] = useState(false);
+  const [candidateNotice, setCandidateNotice] = useState(false);
 
   async function refresh(): Promise<boolean> {
     if (!client) return true;
@@ -48,6 +54,20 @@ export function App({ client, initialDashboard, mode = "local" }: AppProps) {
     void refresh();
   }, [client]);
 
+  function blockCandidateWrite(
+    event: MouseEvent<HTMLDivElement> | FormEvent<HTMLDivElement>,
+  ) {
+    if (mode !== "candidate-preview") return;
+    const target = event.target as HTMLElement;
+    const writeControl = target.closest(
+      "form button[type='submit'], button.danger, [data-write-control]",
+    );
+    if (!writeControl) return;
+    event.preventDefault();
+    event.stopPropagation();
+    setCandidateNotice(true);
+  }
+
   if (!dashboard) {
     return (
       <main className="startup-state">
@@ -65,7 +85,7 @@ export function App({ client, initialDashboard, mode = "local" }: AppProps) {
     today: (
       <TodayPage
         dashboard={dashboard}
-        client={client}
+        client={mode === "candidate-preview" ? undefined : client}
         mode={mode}
         onNavigate={setActivePage}
         onSaved={refresh}
@@ -81,7 +101,7 @@ export function App({ client, initialDashboard, mode = "local" }: AppProps) {
     records: (
       <RecordsPage
         dashboard={dashboard}
-        client={client}
+        client={mode === "candidate-preview" ? undefined : client}
         mode={mode}
         onSaved={refresh}
       />
@@ -109,7 +129,27 @@ export function App({ client, initialDashboard, mode = "local" }: AppProps) {
           <button onClick={() => void refresh()} type="button">重试</button>
         </div>
       )}
-      {pages[activePage]}
+      {mode === "candidate-preview" && (
+        <div className="service-banner service-banner--candidate" role="status">
+          只读预览模式：候选不可写
+        </div>
+      )}
+      <div
+        className={mode === "candidate-preview" ? "candidate-preview" : undefined}
+        onClickCapture={blockCandidateWrite}
+        onSubmitCapture={blockCandidateWrite}
+      >
+        {pages[activePage]}
+      </div>
+      {candidateNotice && (
+        <div
+          aria-label="候选预览提示"
+          className="candidate-toast"
+          role="status"
+        >
+          只读预览模式：候选不可写
+        </div>
+      )}
     </AppShell>
   );
 }

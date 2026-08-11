@@ -46,7 +46,7 @@ const states: Array<{ value: AnchorState; label: string }> = [
 interface TodayPageProps {
   dashboard: Dashboard;
   client?: LifeConsoleClient;
-  mode?: "local" | "sites";
+  mode?: "local" | "sites" | "candidate-preview";
   onNavigate?: (page: PageId) => void;
   onSaved?: () => boolean | Promise<boolean>;
 }
@@ -58,7 +58,9 @@ export function TodayPage({
   onNavigate,
   onSaved,
 }: TodayPageProps) {
-  const saveTarget = mode === "sites" ? "云端真相源" : "iCloud";
+  const saveTarget = mode === "candidate-preview"
+    ? "候选预览"
+    : mode === "sites" ? "云端真相源" : "iCloud";
   const [anchors, setAnchors] = useState<Anchors>(dashboard.today.anchors);
   const [conflict, setConflict] = useState<components["schemas"]["CheckinConflict"] | null>(null);
   const [pending, setPending] = useState<AnchorKey | null>(null);
@@ -245,6 +247,7 @@ export function TodayPage({
                     aria-label={state.label}
                     aria-pressed={anchors[anchor.key] === state.value}
                     className="segment"
+                    data-write-control
                     data-state={state.value ?? "unknown"}
                     disabled={pending !== null || state.value === null}
                     key={state.label}
@@ -327,7 +330,9 @@ export function TodayPage({
           <p className="kicker">PRIVACY AND SAVE PATH</p>
           <h2 id="privacy-title">隐私与保存链路</h2>
           <p className="quiet-note">
-            {mode === "sites"
+            {mode === "candidate-preview"
+              ? "当前仅展示内置合成数据；页面没有 API client，不读取或写入 D1、R2、KEK 与 iCloud。"
+              : mode === "sites"
               ? "Life Console 通过 Owner-only Sites API 读取和写入 D1；日记原文与健康明细使用字段级加密，iCloud 只接收单向冷备。"
               : "Life Console 是本地工作站界面。它帮助你读懂 iCloud 项目中的事实，但不会把敏感内容默认发布到网页、表格或任何外部服务。"}
           </p>
@@ -336,28 +341,30 @@ export function TodayPage({
           <article className="chain-step">
             <span className="step-index">01</span>
             <div>
-              <h3>{mode === "sites" ? "Owner-only 读取" : "本机读取"}</h3>
-              <p>{mode === "sites" ? "页面通过受控 Sites 会话读取最小必要投影。" : "页面优先展示本机可见的项目状态，减少跨工具来回确认。"}</p>
+              <h3>{mode === "candidate-preview" ? "合成投影" : mode === "sites" ? "Owner-only 读取" : "本机读取"}</h3>
+              <p>{mode === "candidate-preview" ? "页面只加载随构建发布的非个人合成数据。" : mode === "sites" ? "页面通过受控 Sites 会话读取最小必要投影。" : "页面优先展示本机可见的项目状态，减少跨工具来回确认。"}</p>
             </div>
           </article>
           <article className="chain-step">
             <span className="step-index">02</span>
             <div>
-              <h3>{mode === "sites" ? "D1 唯一真相源" : "iCloud 真相源"}</h3>
-              <p>{mode === "sites" ? "所有写入使用 revision、幂等、审计与字段级加密。" : "日记、目标、台账与阶段决定以 iCloud 项目文件为准。"}</p>
+              <h3>{mode === "candidate-preview" ? "不绑定真相源" : mode === "sites" ? "D1 唯一真相源" : "iCloud 真相源"}</h3>
+              <p>{mode === "candidate-preview" ? "候选环境不连接 D1、R2 或 iCloud。" : mode === "sites" ? "所有写入使用 revision、幂等、审计与字段级加密。" : "日记、目标、台账与阶段决定以 iCloud 项目文件为准。"}</p>
             </div>
           </article>
           <article className="chain-step">
             <span className="step-index">03</span>
             <div>
-              <h3>真实写入需确认</h3>
-              <p>{mode === "sites" ? "写入成功后进入 iCloud 单向冷备队列；冲突不会静默覆盖。" : "任何会改变记录、同步状态或长期记忆的动作，都需要当次明确确认。"}</p>
+              <h3>{mode === "candidate-preview" ? "候选不可写" : "真实写入需确认"}</h3>
+              <p>{mode === "candidate-preview" ? "所有写控件仅展示禁用态，触发时只显示只读提示。" : mode === "sites" ? "写入成功后进入 iCloud 单向冷备队列；冲突不会静默覆盖。" : "任何会改变记录、同步状态或长期记忆的动作，都需要当次明确确认。"}</p>
             </div>
           </article>
         </div>
       </section>
       <p className="footer-note">
-        {mode === "sites"
+        {mode === "candidate-preview"
+          ? "mode=CANDIDATE_PREVIEW · 合成数据 · 无真相源绑定。"
+          : mode === "sites"
           ? "页面只呈现安全投影；D1 是唯一真相源，iCloud 是单向冷备。"
           : "页面只呈现安全投影；真实记录与状态仍以 iCloud 项目为准。"}
       </p>

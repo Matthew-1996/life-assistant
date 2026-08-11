@@ -9,20 +9,25 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:candidate-preview": "tsc -b && vite build --mode candidate-preview --outDir dist/client && node scripts/prepare-candidate-preview-build.mjs",
     "build:sites-200": "tsc -b && vite build --mode sites-200 --outDir dist/client && node scripts/prepare-sites-200-build.mjs",
     "generate:contracts": "openapi-typescript contracts/life-console.openapi.yaml -o src/contracts/life-console.ts",
     "generate:sites-contracts": "openapi-typescript contracts/life-console-sites.openapi.yaml -o src/contracts/life-console-sites.ts",
     "check:contracts": "npm run generate:contracts && npm run generate:sites-contracts && git diff --exit-code -- src/contracts/life-console.ts src/contracts/life-console-sites.ts",
     "test": "npm run check:contracts && vitest run && npm run test:python",
     "test:contracts": "npm run check:contracts && vitest run tests/contract",
+    "test:e2e:synthetic": "playwright test",
+    "test:integration:miniflare": "vitest run tests/integration",
     "test:worker": "vitest run tests/worker",
-    "test:python": "python3 -m unittest discover -v -s tests/hub -p 'test_*.py' && python3 -m unittest discover -v -s tests/packaging -p 'test_*.py' && python3 -m unittest discover -v -s tests/e2e -p 'test_*.py'"
+    "test:python": "python3 -m unittest discover -v -s tests/hub -p 'test_*.py' && python3 -m unittest discover -v -s tests/packaging -p 'test_*.py' && python3 -m unittest discover -v -s tests/e2e -p 'test_*.py'",
+    "start:e2e:synthetic": "npm run build:sites-200 && node scripts/start-synthetic-sites-server.mjs"
   },
   "dependencies": {
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@testing-library/react": "16.3.0",
     "@testing-library/user-event": "14.6.1",
     "@types/node": "^24.3.0",
@@ -32,6 +37,7 @@
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "jsdom": "26.1.0",
+    "miniflare": "^3.20250718.3",
     "openapi-typescript": "7.13.0",
     "typescript": "^5.9.2",
     "vite": "^7.1.3",

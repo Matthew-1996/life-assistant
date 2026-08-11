@@ -9,6 +9,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    exclude: ["tests/playwright/**", "node_modules/**", "dist/**"],
     environmentOptions: {
       jsdom: {
         url: "http://127.0.0.1:47321/",

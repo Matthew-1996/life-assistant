@@ -148,6 +148,9 @@ describe("Life Console Sites mode", () => {
       screen.getByRole("heading", { name: "云端真相源，边界保持可见。" }),
     ).toBeTruthy();
     expect(screen.getByText("字段级加密")).toBeTruthy();
+    expect(
+      screen.getByText("我理解恢复包需要由本人安全保管").closest("label")?.classList,
+    ).toContain("checkbox-row");
     await waitFor(() => expect(screen.getByText("2 条待处理")).toBeTruthy());
     await user.click(screen.getByRole("button", { name: "打开迁移向导" }));
     expect(
@@ -158,6 +161,9 @@ describe("Life Console Sites mode", () => {
         name: "等待阶段 D 迁移授权",
       }) as HTMLButtonElement).disabled,
     ).toBe(true);
+    expect(
+      screen.getByText("Owner-only 会话").closest(".day-row")?.classList,
+    ).toContain("migration-check-row");
   });
 
   it("generates and verifies a recovery pack without exposing its passphrase", async () => {

@@ -14,7 +14,7 @@ type RecentJournal = Dashboard["records"]["recent_journals"][number];
 interface RecordsPageProps {
   dashboard: Dashboard;
   client?: LifeConsoleClient;
-  mode?: "local" | "sites";
+  mode?: "local" | "sites" | "candidate-preview";
   onSaved?: () => boolean | Promise<boolean>;
 }
 
@@ -86,7 +86,7 @@ function JournalCard({
 }: {
   journal: RecentJournal;
   client?: LifeConsoleClient;
-  mode: "local" | "sites";
+  mode: "local" | "sites" | "candidate-preview";
   onChanged?: () => boolean | Promise<boolean>;
 }) {
   // 本地覆盖状态：卡片内触发整理/删除后立即反映，不必等下一次看板刷新。
@@ -238,7 +238,9 @@ export function RecordsPage({
   mode = "local",
   onSaved,
 }: RecordsPageProps) {
-  const saveTarget = mode === "sites" ? "云端真相源" : "iCloud";
+  const saveTarget = mode === "candidate-preview"
+    ? "候选预览"
+    : mode === "sites" ? "云端真相源" : "iCloud";
   const [formMode, setFormMode] = useState<FormMode>("journal");
   const [captureText, setCaptureText] = useState("");
   const [captureSaving, setCaptureSaving] = useState(false);
@@ -488,7 +490,9 @@ export function RecordsPage({
           <span className="status blue">写入语义</span>
           <h2>草稿不会自动生效</h2>
           <p className="quiet">
-            {client
+            {mode === "candidate-preview"
+              ? "当前只展示合成数据；所有写动作都会被候选只读边界拦截。"
+              : client
               ? "系统可以生成结构化预览；只有确认保存后，才调用本机白名单工具写入。"
               : `当前是合成演示；预览与保存都不会改变真实${saveTarget}。`}
           </p>
@@ -539,6 +543,7 @@ export function RecordsPage({
                   </button>
                   <button
                     className="button primary"
+                    data-readonly={mode === "candidate-preview"}
                   type="submit"
                   disabled={captureSaving || !captureText.trim()}
                 >
@@ -608,7 +613,7 @@ export function RecordsPage({
               <textarea
                 id="journal-event"
                 name="event"
-                placeholder="例如：和双双去看了展，回来路上聊得很开心。"
+                placeholder="例如：和朋友去看了展，回来路上聊得很开心。"
                 required
               />
               <label htmlFor="journal-feeling">当时的感受（可选）</label>
@@ -802,7 +807,9 @@ export function RecordsPage({
         <div>
           <strong>本地成功先算完成，派生展示只在需要时更新</strong>
           <span>
-            {mode === "sites"
+            {mode === "candidate-preview"
+              ? "候选环境只展示合成投影，不连接或写入任何真相源。"
+              : mode === "sites"
               ? "记录先写入 D1 唯一真相源；成功后进入 iCloud 单向冷备队列。"
               : "记录先落在 iCloud 私人真相源；Google 与 XLSX 只按需派生，失败不回滚本地结果。"}
           </span>

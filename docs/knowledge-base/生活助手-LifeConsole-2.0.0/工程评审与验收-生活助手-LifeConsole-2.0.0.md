@@ -1,6 +1,6 @@
 # 工程评审与验收 - 生活助手 - Life Console - 2.0.0
 
-> 状态：技术方案评审已通过 / 阶段 A 通用开发完成，待候选环境联调
+> 状态：技术方案评审已通过 / 阶段 A 通用开发、Miniflare 与 Playwright 合成验证完成 / 阶段 B 本地候选已验收，待私有 Sites 候选部署
 >
 > 适用范围：通用仓库代码、合成数据测试、治理与隐私检查；真实数据迁移与验收仅在 iCloud 私有环境 + Sites owner-only 会话执行，证据不复制到 Git。
 
@@ -125,6 +125,31 @@ npm run build:sites-200
 
 测试策略差异：当前 Worker 集成测试使用 Node `node:sqlite` D1 适配器与 R2 mock，不伪造正式 Cloudflare 绑定；Miniflare、签名下载 URL 与浏览器级 Sites E2E 留到阶段 B/C 候选环境验证。因此阶段 A 通用开发完成，但阶段 A 最终验收清单仍不宣称全部完成。
 
+### 2.8 阶段 B 本地候选预览证据（2026-08-11）
+
+| 验证项 | 结果 |
+|---|---|
+| 候选模式 | 新增 `candidate-preview` 构建；仅加载仓库内合成投影，不构造 Local/Sites API client |
+| 强制只读 | App 捕获写表单与写按钮，写控件显示只读样式，触发时只显示「只读预览模式：候选不可写」 |
+| 静态 Worker | `/api/*` 恒定 403，非 GET/HEAD 静态请求恒定 405；CSP 为 `connect-src 'none'` |
+| Vitest | 92/92 通过；新增候选 UI 2 项、候选 Worker 3 项、系统布局 2 项 |
+| Python / 打包 / 合成 E2E | 75/75、7/7、1/1 通过 |
+| 构建 | 默认构建、Sites 2.0.0 构建和候选构建全部通过 |
+| 浏览器检查 | 四页导航通过；系统页显示 `mode=CANDIDATE_PREVIEW · 合成数据`；写动作仅显示只读提示；恢复包确认项为紧凑单行；迁移前置检查采用“标题+状态首行、说明独立次行”，5 项边界测量均无重叠；网络请求中没有 `/api/` |
+| 治理 / 隐私 / diff | 全部通过 |
+
+未完成边界：当前 Agent 运行时未暴露 Sites hosting connector，无法调用 `create_site`、私有部署与权限读回。因此本节不勾选阶段 B 的临时 Sites 部署、Owner 登录和非 owner 403；不得把本地 URL 或 Worker 单测冒充线上权限验收。
+
+### 2.9 Miniflare 与 Playwright 合成验证证据（2026-08-11）
+
+| 验证项 | 结果 |
+|---|---|
+| Miniflare | 26/26 通过；真实 workerd + D1 + R2 绑定，覆盖 Owner/CSRF/Origin、CRUD、密文落库、revision 409、幂等、审计、备份队列、完整备份、恢复包、KEK 轮换、迁移回滚与删除计划/purge |
+| Playwright | 2/2 通过；真实 Chrome 加载 Sites 构建并通过 Miniflare Worker 写入 D1；覆盖目标保存后刷新读取，以及 journal 新建→编辑→409→删除计划→取消→再计划→提前 purge 409→计划到期→purge 成功 |
+| Trace | `trace: on`；每次合成 E2E 生成本地 trace，`test-results/` 已忽略，不进入 Git |
+| 浏览器兼容 | 优先读取 `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`；macOS 可复用本机 Chrome，其他环境回退到 Playwright Chromium |
+| 网络与数据边界 | 合成服务器仅监听 `127.0.0.1:47821`；使用临时 D1/R2、合成 KEK 与合成 Owner；未访问真实 Sites、Cloudflare、iCloud 或私人数据 |
+
 ## 3. 六阶段交付验收方法
 
 ### 阶段 A：合成数据联调
@@ -133,9 +158,9 @@ npm run build:sites-200
 证据：本地 Terminal 输出 + 合成 E2E 视频（不包含真实数据）
 清单：
 - [ ] Worker 单元测试（§2.2）全部通过（≥30 case，覆盖率 ≥ 85%）
-- [ ] Miniflare 集成测试（§2.3）全部通过（≥25 case，加密链路无失败）
+- [x] Miniflare 集成测试（§2.3）全部通过（26 case，加密链路无失败）
 - [ ] 前端合成测试（§2.4）全部通过（≥40 case，409 差异卡片有截图）
-- [ ] 合成 E2E 链路：新建→编辑→冲突→删除计划→取消→再删→purge 有 Playwright trace
+- [x] 合成 E2E 链路：新建→编辑→冲突→删除计划→取消→再删→purge 有 Playwright trace
 - [ ] 隐私检查：合成 D1 导出 JSON 中 `content_encrypted` 无法肉眼阅读
 - [ ] 治理检查：§2.1 全部通过
 
@@ -234,3 +259,18 @@ CI 只证明通用检查通过；阶段 C/D/E/F 的真实部署与迁移证据�
   - 不授权正式 Sites 部署、Owner 会话绑定、真实 D1/R2 绑定或真实 KEK 生成。
   - 不授权读取或迁移真实 iCloud 数据、切换真相源、永久删除真实数据或合并 PR。
   - 阶段 B/C/D/E/F 继续遵循各自的 PO 当次确认门禁。
+
+## 8. PO 阶段 B 本地候选验收记录
+
+- 验收结论：阶段 B 本地候选预览通过验收。
+- 验收日期：2026-08-11。
+- PO 原话：`已完成验收`。
+- 已验收范围：
+  - 四页候选工作台、合成数据标识与候选不可写提示。
+  - 所有写动作被只读边界拦截，不调用 `/api/`。
+  - 系统页恢复包确认项为紧凑单行布局。
+  - 独立迁移向导前置检查采用“标题+状态首行、说明独立次行”，无文字重叠。
+- 未包含：
+  - 未验收独立私有 Sites URL、Owner 登录或非 Owner 403。
+  - 未授权阶段 C 的正式 Owner-only、D1/R2、真实 KEK、恢复包或备份校验。
+  - 未授权真实 iCloud 读取/迁移、真相源切换、正式 URL 覆盖、永久删除、合并或发布。

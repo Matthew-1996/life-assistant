@@ -9,7 +9,7 @@ import type { Dashboard } from "../../data/dashboard";
 interface SystemPageProps {
   client?: SitesLifeConsoleClient;
   dashboard: Dashboard;
-  mode?: "local" | "sites";
+  mode?: "local" | "sites" | "candidate-preview";
   sitesStatus?: SitesSystemStatus | null;
 }
 
@@ -53,7 +53,7 @@ function SitesMigrationPage({
         </div>
         <div className="signal-list">
           {checks.map(([title, description], index) => (
-            <div className="day-row" key={title}>
+            <div className="day-row migration-check-row" key={title}>
               <strong>{title}</strong>
               <span>{description}</span>
               <span className={`status ${index < 3 ? "green" : "gray"}`}>
@@ -80,9 +80,11 @@ function SitesMigrationPage({
 }
 
 function SitesSystemPage({
+  candidatePreview,
   client,
   status,
 }: {
+  candidatePreview?: boolean;
   client?: SitesLifeConsoleClient;
   status: SitesSystemStatus | null;
 }) {
@@ -174,14 +176,24 @@ function SitesSystemPage({
       />
     );
   }
-  const sourceTruth = status?.source_truth ?? "ICLOUD_PRIMARY";
+  const sourceTruth = candidatePreview
+    ? "SYNTHETIC_ONLY"
+    : status?.source_truth ?? "ICLOUD_PRIMARY";
   const sourceReady = sourceTruth === "SITES_D1_PRIMARY";
   return (
     <section aria-labelledby="system-title">
       <section className="hero">
         <div>
-          <p className="eyebrow">Owner-only · Sites API</p>
-          <h1 id="system-title">云端真相源，边界保持可见。</h1>
+          <p className="eyebrow">
+            {candidatePreview
+              ? "mode=CANDIDATE_PREVIEW · 合成数据"
+              : "Owner-only · Sites API"}
+          </p>
+          <h1 id="system-title">
+            {candidatePreview
+              ? "候选环境只展示，不写入。"
+              : "云端真相源，边界保持可见。"}
+          </h1>
           <p className="lead">
             系统页集中展示真相源、加密、iCloud 冷备、迁移门禁和审计边界。
           </p>
@@ -200,8 +212,12 @@ function SitesSystemPage({
       <section className="section grid two system-status-grid">
         <article className="card pad">
           <span className="status blue">运行模式</span>
-          <h2>Sites API / Owner-only</h2>
-          <p className="quiet">所有敏感读取与写入都必须经过 Owner 会话、同源和 CSRF 校验。</p>
+          <h2>{candidatePreview ? "Static preview / Owner-only" : "Sites API / Owner-only"}</h2>
+          <p className="quiet">
+            {candidatePreview
+              ? "仅加载内置合成投影；不绑定 D1、R2、KEK 或 iCloud。"
+              : "所有敏感读取与写入都必须经过 Owner 会话、同源和 CSRF 校验。"}
+          </p>
         </article>
         <article className="card pad">
           <span className="status green">字段级加密</span>
@@ -239,7 +255,9 @@ function SitesSystemPage({
           </div>
           <button
             className="button primary"
-            disabled={!client || backupState === "saving"}
+            data-readonly={candidatePreview}
+            data-write-control
+            disabled={!candidatePreview && (!client || backupState === "saving")}
             onClick={() => void triggerBackup()}
             type="button"
           >
@@ -299,7 +317,9 @@ function SitesSystemPage({
             <div className="button-row">
               <button
                 className="button primary"
-                disabled={!client || recoveryState === "saving"}
+                data-readonly={candidatePreview}
+                data-write-control
+                disabled={!candidatePreview && (!client || recoveryState === "saving")}
                 type="submit"
               >
                 生成恢复包
@@ -377,8 +397,14 @@ export function SystemPage({
   mode = "local",
   sitesStatus = null,
 }: SystemPageProps) {
-  if (mode === "sites") {
-    return <SitesSystemPage client={client} status={sitesStatus} />;
+  if (mode === "sites" || mode === "candidate-preview") {
+    return (
+      <SitesSystemPage
+        candidatePreview={mode === "candidate-preview"}
+        client={client}
+        status={sitesStatus}
+      />
+    );
   }
   const statuses = [
     {
