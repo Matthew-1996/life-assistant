@@ -103,6 +103,10 @@ function SitesSystemPage({
   >("idle");
   const [recoveryObject, setRecoveryObject] = useState<string | null>(null);
   const [recoveryDigest, setRecoveryDigest] = useState<string | null>(null);
+  const [recoveryDownloadUrl, setRecoveryDownloadUrl] = useState<string | null>(null);
+  const [recoveryDownloadState, setRecoveryDownloadState] = useState<
+    "idle" | "checking" | "available" | "expired" | "failed"
+  >("idle");
   const [backupState, setBackupState] = useState<
     "idle" | "saving" | "saved" | "failed"
   >("idle");
@@ -116,27 +120,50 @@ function SitesSystemPage({
 
   async function generateRecoveryPack(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const submitted = new FormData(event.currentTarget);
+    const submittedPassphrase = submitted.get("passphrase");
+    const submittedConfirmation = submitted.get("confirmation");
+    const submittedAcknowledged = submitted.get("acknowledged") === "on";
     if (
       !client
-      || passphrase.length < 16
-      || passphrase !== confirmation
-      || !acknowledged
+      || typeof submittedPassphrase !== "string"
+      || typeof submittedConfirmation !== "string"
+      || submittedPassphrase.length < 16
+      || submittedPassphrase !== submittedConfirmation
+      || !submittedAcknowledged
     ) {
       setRecoveryState("failed");
       return;
     }
+    setPassphrase(submittedPassphrase);
+    setConfirmation(submittedConfirmation);
+    setAcknowledged(submittedAcknowledged);
     setRecoveryState("saving");
     try {
       const result = await client.createRecoveryPack({
-        passphrase,
-        confirmation,
-        acknowledged,
+        passphrase: submittedPassphrase,
+        confirmation: submittedConfirmation,
+        acknowledged: submittedAcknowledged,
       });
       setRecoveryObject(result.object_key);
       setRecoveryDigest(result.sha256);
+      setRecoveryDownloadUrl(result.download_url);
+      setRecoveryDownloadState("idle");
       setRecoveryState("ready");
     } catch {
       setRecoveryState("failed");
+    }
+  }
+
+  async function checkRecoveryDownload() {
+    if (!client || !recoveryDownloadUrl) return;
+    setRecoveryDownloadState("checking");
+    try {
+      setRecoveryDownloadState(
+        await client.checkRecoveryDownload(recoveryDownloadUrl),
+      );
+    } catch {
+      setRecoveryDownloadState("failed");
     }
   }
 
@@ -291,6 +318,7 @@ function SitesSystemPage({
               <input
                 autoComplete="new-password"
                 minLength={16}
+                name="passphrase"
                 onChange={(event) => setPassphrase(event.target.value)}
                 type="password"
                 value={passphrase}
@@ -301,6 +329,7 @@ function SitesSystemPage({
               <input
                 autoComplete="new-password"
                 minLength={16}
+                name="confirmation"
                 onChange={(event) => setConfirmation(event.target.value)}
                 type="password"
                 value={confirmation}
@@ -309,6 +338,7 @@ function SitesSystemPage({
             <label className="checkbox-row">
               <input
                 checked={acknowledged}
+                name="acknowledged"
                 onChange={(event) => setAcknowledged(event.target.checked)}
                 type="checkbox"
               />
@@ -333,6 +363,16 @@ function SitesSystemPage({
                   立即验证
                 </button>
               )}
+              {recoveryDownloadUrl && (
+                <button
+                  className="secondary-button"
+                  disabled={recoveryDownloadState === "checking"}
+                  onClick={() => void checkRecoveryDownload()}
+                  type="button"
+                >
+                  验证限时下载
+                </button>
+              )}
             </div>
           </form>
           {recoveryState === "ready" && (
@@ -345,6 +385,15 @@ function SitesSystemPage({
           )}
           {recoveryState === "failed" && (
             <p className="error-message">恢复包操作失败；请检查口令、确认项与服务状态。</p>
+          )}
+          {recoveryDownloadState === "available" && (
+            <p className="success-message">签名下载当前有效</p>
+          )}
+          {recoveryDownloadState === "expired" && (
+            <p className="success-message">签名下载已按期失效</p>
+          )}
+          {recoveryDownloadState === "failed" && (
+            <p className="error-message">签名下载验证失败；未展示或记录完整链接。</p>
           )}
         </article>
       </section>

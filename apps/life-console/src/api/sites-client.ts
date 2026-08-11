@@ -97,7 +97,9 @@ export interface SitesLifeConsoleClient extends LifeConsoleClient {
     object_key: string;
     sha256: string;
     key_ids: string[];
+    download_url: string;
   }>;
+  checkRecoveryDownload(downloadUrl: string): Promise<"available" | "expired">;
   verifyRecoveryPack(input: {
     object_key: string;
     passphrase: string;
@@ -173,6 +175,23 @@ export function createSitesApiClient(): SitesLifeConsoleClient {
       method: "POST",
       body: value,
     }),
+    checkRecoveryDownload: async (downloadUrl) => {
+      const url = new URL(downloadUrl, window.location.origin);
+      if (
+        url.origin !== window.location.origin
+        || url.pathname !== "/api/v1/crypto/recovery-pack/download"
+      ) {
+        throw new Error("Invalid recovery download URL.");
+      }
+      const response = await fetch(url, {
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+      await response.arrayBuffer();
+      if (response.ok) return "available";
+      if (response.status === 410) return "expired";
+      throw new Error("Recovery download verification failed.");
+    },
     verifyRecoveryPack: (value) =>
       request("/api/v1/crypto/verify-recovery-pack", {
         method: "POST",

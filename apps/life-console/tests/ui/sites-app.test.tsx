@@ -85,7 +85,9 @@ function client(): SitesLifeConsoleClient {
       object_key: "recovery-packs/recovery_synthetic.zip.enc",
       sha256: "b".repeat(64),
       key_ids: ["journal-v1", "health-v1", "backup-v1"],
+      download_url: "https://example.test/api/v1/crypto/recovery-pack/download?redacted",
     }),
+    checkRecoveryDownload: vi.fn().mockResolvedValue("available"),
     verifyRecoveryPack: vi.fn().mockResolvedValue({
       verified: true,
       pack_id: "recovery_synthetic",
@@ -197,11 +199,53 @@ describe("Life Console Sites mode", () => {
       confirmation: "synthetic-passphrase-2026",
       acknowledged: true,
     });
+    await user.click(screen.getByRole("button", { name: "验证限时下载" }));
+    await waitFor(() => {
+      expect(screen.getByText("签名下载当前有效")).toBeTruthy();
+    });
+    (sitesClient.checkRecoveryDownload as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce("expired");
+    await user.click(screen.getByRole("button", { name: "验证限时下载" }));
+    await waitFor(() => {
+      expect(screen.getByText("签名下载已按期失效")).toBeTruthy();
+    });
     await user.click(screen.getByRole("button", { name: "立即验证" }));
     await waitFor(() => {
       expect(screen.getByText("恢复包验证通过")).toBeTruthy();
     });
     expect(screen.getByText("journal / CREATE / SUCCESS")).toBeTruthy();
+  });
+
+  it("submits password-manager values even without React input events", async () => {
+    const user = userEvent.setup();
+    const sitesClient = client();
+    render(
+      <App
+        client={sitesClient}
+        initialDashboard={syntheticDashboard}
+        mode="sites"
+      />,
+    );
+
+    await user.click(navigationButton("系统"));
+    const valueSetter = Object.getOwnPropertyDescriptor(
+      HTMLInputElement.prototype,
+      "value",
+    )?.set;
+    const passphrase = screen.getByLabelText("恢复包保护口令") as HTMLInputElement;
+    const confirmation = screen.getByLabelText("再次输入保护口令") as HTMLInputElement;
+    await user.click(screen.getByLabelText("我理解恢复包需要由本人安全保管"));
+    valueSetter?.call(passphrase, "password-manager-passphrase-2026");
+    valueSetter?.call(confirmation, "password-manager-passphrase-2026");
+    await user.click(screen.getByRole("button", { name: "生成恢复包" }));
+
+    await waitFor(() => {
+      expect(sitesClient.createRecoveryPack).toHaveBeenCalledWith({
+        passphrase: "password-manager-passphrase-2026",
+        confirmation: "password-manager-passphrase-2026",
+        acknowledged: true,
+      });
+    });
   });
 
   it("creates a cloud goal from a locally persisted draft", async () => {
