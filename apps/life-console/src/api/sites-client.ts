@@ -75,37 +75,6 @@ function unsupported(): never {
 
 export interface SitesLifeConsoleClient extends LifeConsoleClient {
   systemStatus(): Promise<SitesSystemStatus>;
-  auditEvents(): Promise<{ items: Array<{
-    id: string;
-    created_at: string;
-    resource_type: string;
-    resource_id: string | null;
-    action: string;
-    result: string;
-  }> }>;
-  triggerBackup(): Promise<{
-    batch_id: string;
-    object_key: string;
-    sha256: string;
-  }>;
-  createRecoveryPack(input: {
-    passphrase: string;
-    confirmation: string;
-    acknowledged: boolean;
-  }): Promise<{
-    pack_id: string;
-    object_key: string;
-    sha256: string;
-    key_ids: string[];
-  }>;
-  verifyRecoveryPack(input: {
-    object_key: string;
-    passphrase: string;
-  }): Promise<{
-    verified: boolean;
-    pack_id: string | null;
-    key_ids: string[];
-  }>;
   rotateKeks(input: { domain: "journal" | "health" }): Promise<CloudMutation>;
   createGoal(input: object): Promise<CloudMutation>;
   createWeeklyReview(input: object): Promise<CloudMutation>;
@@ -164,20 +133,6 @@ export function createSitesApiClient(): SitesLifeConsoleClient {
   return {
     dashboard: () => request<Dashboard>("/api/v1/dashboard"),
     systemStatus: () => request<SitesSystemStatus>("/api/v1/system/status"),
-    auditEvents: () => request("/api/v1/audit/events?size=20"),
-    triggerBackup: () => request("/api/v1/backup/trigger", {
-      method: "POST",
-      body: { reason: "manual-ui" },
-    }),
-    createRecoveryPack: (value) => request("/api/v1/crypto/recovery-pack", {
-      method: "POST",
-      body: value,
-    }),
-    verifyRecoveryPack: (value) =>
-      request("/api/v1/crypto/verify-recovery-pack", {
-        method: "POST",
-        body: value,
-      }),
     rotateKeks: (value) => request("/api/v1/crypto/rotate-keks", {
       method: "POST",
       body: value,

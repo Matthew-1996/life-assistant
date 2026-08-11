@@ -1,6 +1,6 @@
 # 技术方案 - 生活助手 - Life Console - 2.1.0
 
-> 状态：Gate 2 已确认 / 等待阶段 A POC 验证
+> 状态：Gate 2A 首轮实现完成 / Worker 与 HTTPS 平台验证仍阻塞
 >
 > 基线：复用 2.0.0 Owner-only Sites Worker、D1、字段级 AES/KEK、CRUD、revision、幂等、删除计划和最小审计
 >

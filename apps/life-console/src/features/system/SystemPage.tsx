@@ -1,10 +1,11 @@
-import { type FormEvent, useEffect, useState } from "react";
+import { useState } from "react";
 
 import type {
   SitesLifeConsoleClient,
   SitesSystemStatus,
 } from "../../api/sites-client";
 import type { Dashboard } from "../../data/dashboard";
+import { ICloudBackupCard } from "./ICloudBackupCard";
 
 interface SystemPageProps {
   client?: SitesLifeConsoleClient;
@@ -21,10 +22,10 @@ function SitesMigrationPage({
   onBack: () => void;
 }) {
   const checks = [
-    ["Owner-only 会话", "代码已实现；待正式 Sites 绑定验证"],
-    ["D1 Schema", "12 张表与迁移状态机测试通过"],
-    ["字段级加密", "合成 KEK round-trip 测试通过"],
-    ["R2 备份", "代码已实现；待正式 Bucket 绑定验证"],
+    ["Owner-only 会话", "访问边界已建立；真实迁移仍需单独门禁"],
+    ["云端数据结构", "版本化结构与迁移状态机继续保留"],
+    ["数据保护", "敏感字段继续加密保存"],
+    ["iCloud 最新备份", "本机原子覆盖核心已进入合成验证"],
     ["真实 iCloud 来源", "尚未授权读取或迁移"],
   ];
   return (
@@ -69,7 +70,7 @@ function SitesMigrationPage({
           <li>生成仅包含数量和影响范围的迁移计划。</li>
           <li>上传后校验数量、ID、revision、摘要哈希与加密 round-trip。</li>
           <li>PO 输入精确确认文字后切换到 D1。</li>
-          <li>7 天回滚窗口内保留 R2 加密增量包。</li>
+          <li>在已确认的回滚窗口内保留可逆路径。</li>
         </ol>
         <button className="button primary" disabled type="button">
           等待阶段 D 迁移授权
@@ -81,93 +82,13 @@ function SitesMigrationPage({
 
 function SitesSystemPage({
   candidatePreview,
-  client,
   status,
 }: {
   candidatePreview?: boolean;
-  client?: SitesLifeConsoleClient;
   status: SitesSystemStatus | null;
 }) {
   const [showMigration, setShowMigration] = useState(false);
-  const [audit, setAudit] = useState<Array<{
-    id: string;
-    resource_type: string;
-    action: string;
-    result: string;
-  }>>([]);
-  const [passphrase, setPassphrase] = useState("");
-  const [confirmation, setConfirmation] = useState("");
-  const [acknowledged, setAcknowledged] = useState(false);
-  const [recoveryState, setRecoveryState] = useState<
-    "idle" | "saving" | "ready" | "verified" | "failed"
-  >("idle");
-  const [recoveryObject, setRecoveryObject] = useState<string | null>(null);
-  const [recoveryDigest, setRecoveryDigest] = useState<string | null>(null);
-  const [backupState, setBackupState] = useState<
-    "idle" | "saving" | "saved" | "failed"
-  >("idle");
-
-  useEffect(() => {
-    if (!client) return;
-    void client.auditEvents()
-      .then((value) => setAudit(value.items))
-      .catch(() => setAudit([]));
-  }, [client]);
-
-  async function generateRecoveryPack(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (
-      !client
-      || passphrase.length < 16
-      || passphrase !== confirmation
-      || !acknowledged
-    ) {
-      setRecoveryState("failed");
-      return;
-    }
-    setRecoveryState("saving");
-    try {
-      const result = await client.createRecoveryPack({
-        passphrase,
-        confirmation,
-        acknowledged,
-      });
-      setRecoveryObject(result.object_key);
-      setRecoveryDigest(result.sha256);
-      setRecoveryState("ready");
-    } catch {
-      setRecoveryState("failed");
-    }
-  }
-
-  async function verifyRecovery() {
-    if (!client || !recoveryObject) return;
-    setRecoveryState("saving");
-    try {
-      const result = await client.verifyRecoveryPack({
-        object_key: recoveryObject,
-        passphrase,
-      });
-      setRecoveryState(result.verified ? "verified" : "failed");
-      if (result.verified) {
-        setPassphrase("");
-        setConfirmation("");
-      }
-    } catch {
-      setRecoveryState("failed");
-    }
-  }
-
-  async function triggerBackup() {
-    if (!client) return;
-    setBackupState("saving");
-    try {
-      await client.triggerBackup();
-      setBackupState("saved");
-    } catch {
-      setBackupState("failed");
-    }
-  }
+  const [showConnectionHelp, setShowConnectionHelp] = useState(false);
   if (showMigration) {
     return (
       <SitesMigrationPage
@@ -191,18 +112,18 @@ function SitesSystemPage({
           </p>
           <h1 id="system-title">
             {candidatePreview
-              ? "候选环境只展示，不写入。"
-              : "云端真相源，边界保持可见。"}
+              ? "合成候选只展示备份状态。"
+              : "云端可用，备份路径保持清晰。"}
           </h1>
           <p className="lead">
-            系统页集中展示真相源、加密、iCloud 冷备、迁移门禁和审计边界。
+            系统页只保留运行状态、数据保护、iCloud 最新备份、迁移边界和必要系统信息。
           </p>
         </div>
         <aside className="card hero-card">
           <span className={`status ${sourceReady ? "green" : "blue"}`}>
             {sourceTruth}
           </span>
-          <h2>Life Console {status?.version ?? "2.0.0"}</h2>
+          <h2>Life Console {status?.version ?? "2.1.0"}</h2>
           <p className="quiet">
             当前迁移阶段：{status?.migration.phase ?? "NOT_STARTED"}
           </p>
@@ -215,163 +136,36 @@ function SitesSystemPage({
           <h2>{candidatePreview ? "Static preview / Owner-only" : "Sites API / Owner-only"}</h2>
           <p className="quiet">
             {candidatePreview
-              ? "仅加载内置合成投影；不绑定 D1、R2、KEK 或 iCloud。"
+              ? "仅加载内置合成投影；不连接任何真实数据或存储。"
               : "所有敏感读取与写入都必须经过 Owner 会话、同源和 CSRF 校验。"}
           </p>
         </article>
         <article className="card pad">
-          <span className="status green">字段级加密</span>
-          <h2>{status?.encryption.journal_kid ?? "journal-v1"} · {status?.encryption.health_kid ?? "health-v1"}</h2>
-          <p className="quiet">日记原文和健康明细以 AES-256-GCM DEK/KEK 信封保存。</p>
+          <span className="status green">数据保护</span>
+          <h2>云端数据已加密保存</h2>
+          <p className="quiet">系统继续保护敏感字段；普通使用不需要理解或操作密钥。</p>
         </article>
-        <article className="card pad">
-          <span className={status?.backup.failed ? "status red" : "status blue"}>iCloud 单向冷备</span>
-          <h2>{status?.backup.pending ?? 0} 条待处理</h2>
-          <p className="quiet">
-            失败 {status?.backup.failed ?? 0} 条 · 最近成功 {status?.backup.last_success_at ?? "尚无"}
+      </section>
+
+      <section className="section">
+        <ICloudBackupCard
+          lastSuccessAt={status?.backup.last_success_at}
+          onPrimaryAction={candidatePreview ? undefined : () => setShowConnectionHelp(true)}
+          readOnly={candidatePreview}
+          state={candidatePreview ? "READY" : "AGENT_UNAVAILABLE"}
+        />
+        {showConnectionHelp && (
+          <p className="service-banner" role="status">
+            本机助手的安装与连接流程将在浏览器回环验证通过后开放；当前不会创建云端导出。
           </p>
-        </article>
-        <article className="card pad">
-          <span className="status gray">审计</span>
-          <h2>追加式事件</h2>
-          <p className="quiet">只记录操作者哈希、资源、动作和结果，不记录正文或密文片段。</p>
-        </article>
-      </section>
-
-      <section className="section grid two">
-        <article className="card pad">
-          <div className="section-head">
-            <div>
-              <h2>完整加密备份</h2>
-              <p className="quiet">生成 D1 全量密文快照并以 backup-v1 再加密写入 R2。</p>
-            </div>
-            <span className={`status ${backupState === "failed" ? "red" : "blue"}`}>
-              {backupState === "saving"
-                ? "生成中"
-                : backupState === "saved"
-                  ? "已生成"
-                  : backupState === "failed" ? "失败" : "待触发"}
-            </span>
-          </div>
-          <button
-            className="button primary"
-            data-readonly={candidatePreview}
-            data-write-control
-            disabled={!candidatePreview && (!client || backupState === "saving")}
-            onClick={() => void triggerBackup()}
-            type="button"
-          >
-            手动生成完整备份
-          </button>
-        </article>
-
-        <article className="card pad">
-          <div className="section-head">
-            <div>
-              <h2>恢复包</h2>
-              <p className="quiet">口令至少 16 位，可由受信任密码管理器生成和填充。</p>
-            </div>
-            <span className={`status ${
-              recoveryState === "verified"
-                ? "green"
-                : recoveryState === "failed" ? "red" : "blue"
-            }`}>
-              {recoveryState === "saving"
-                ? "处理中"
-                : recoveryState === "ready"
-                  ? "待验证"
-                  : recoveryState === "verified"
-                    ? "已验证"
-                    : recoveryState === "failed" ? "需检查" : "未创建"}
-            </span>
-          </div>
-          <form className="form-grid" onSubmit={(event) => void generateRecoveryPack(event)}>
-            <label>
-              恢复包保护口令
-              <input
-                autoComplete="new-password"
-                minLength={16}
-                onChange={(event) => setPassphrase(event.target.value)}
-                type="password"
-                value={passphrase}
-              />
-            </label>
-            <label>
-              再次输入保护口令
-              <input
-                autoComplete="new-password"
-                minLength={16}
-                onChange={(event) => setConfirmation(event.target.value)}
-                type="password"
-                value={confirmation}
-              />
-            </label>
-            <label className="checkbox-row">
-              <input
-                checked={acknowledged}
-                onChange={(event) => setAcknowledged(event.target.checked)}
-                type="checkbox"
-              />
-              我理解恢复包需要由本人安全保管
-            </label>
-            <div className="button-row">
-              <button
-                className="button primary"
-                data-readonly={candidatePreview}
-                data-write-control
-                disabled={!candidatePreview && (!client || recoveryState === "saving")}
-                type="submit"
-              >
-                生成恢复包
-              </button>
-              {recoveryState === "ready" && (
-                <button
-                  className="secondary-button"
-                  onClick={() => void verifyRecovery()}
-                  type="button"
-                >
-                  立即验证
-                </button>
-              )}
-            </div>
-          </form>
-          {recoveryState === "ready" && (
-            <p className="success-message">
-              恢复包已生成 · SHA-256 {recoveryDigest?.slice(0, 12)}…
-            </p>
-          )}
-          {recoveryState === "verified" && (
-            <p className="success-message">恢复包验证通过</p>
-          )}
-          {recoveryState === "failed" && (
-            <p className="error-message">恢复包操作失败；请检查口令、确认项与服务状态。</p>
-          )}
-        </article>
+        )}
       </section>
 
       <section className="section card pad">
         <div className="section-head">
           <div>
-            <h2>审计事件摘要</h2>
-            <p className="quiet">仅展示资源、动作与结果；不含正文、请求体或密文片段。</p>
-          </div>
-          <span className="status gray">最近 {audit.length} 条</span>
-        </div>
-        <div className="signal-list">
-          {audit.length === 0 && <p className="quiet">暂无可显示的审计事件。</p>}
-          {audit.map((event) => (
-            <div className="day-row" key={event.id}>
-              <strong>{event.resource_type} / {event.action} / {event.result}</strong>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="section card pad">
-        <div className="section-head">
-          <div>
-            <h2>迁移与回滚</h2>
-            <p className="quiet">完整向导拆为独立子页，系统页只保留状态和入口。</p>
+            <h2>迁移与恢复边界</h2>
+            <p className="quiet">迁移和恢复继续使用独立受控流程；当前系统页不直接执行。</p>
           </div>
           <span className="status gray">{status?.migration.phase ?? "NOT_STARTED"}</span>
         </div>
@@ -384,15 +178,38 @@ function SitesSystemPage({
         </button>
       </section>
 
+      <section className="section card pad">
+        <div className="section-head">
+          <div>
+            <h2>系统信息</h2>
+            <p className="quiet">保留必要边界，不展示底层资源、密钥版本或运维事件。</p>
+          </div>
+          <span className="status gray">Life Console 2.1.0</span>
+        </div>
+        <div className="signal-list">
+          <div className="day-row">
+            <strong>访问范围</strong>
+            <span>Owner-only</span>
+          </div>
+          <div className="day-row">
+            <strong>当前真相源</strong>
+            <span>{sourceTruth}</span>
+          </div>
+          <div className="day-row">
+            <strong>备份边界</strong>
+            <span>只有本机代理校验通过后才替换 iCloud 最新备份</span>
+          </div>
+        </div>
+      </section>
+
       <p className="footer-note">
-        本页不生成真实密钥、不执行正式部署、不迁移数据，也不切换真相源。
+        当前只实现合成界面状态；不调用 Worker 导出、不执行部署、不读取真实数据，也不切换真相源。
       </p>
     </section>
   );
 }
 
 export function SystemPage({
-  client,
   dashboard,
   mode = "local",
   sitesStatus = null,
@@ -401,7 +218,6 @@ export function SystemPage({
     return (
       <SitesSystemPage
         candidatePreview={mode === "candidate-preview"}
-        client={client}
         status={sitesStatus}
       />
     );

@@ -65,32 +65,6 @@ function client(): SitesLifeConsoleClient {
         last_success_at: null,
       },
     }),
-    auditEvents: vi.fn().mockResolvedValue({
-      items: [{
-        id: "audit_synthetic",
-        created_at: "2026-01-12T00:00:00Z",
-        resource_type: "journal",
-        resource_id: "journal_synthetic",
-        action: "CREATE",
-        result: "SUCCESS",
-      }],
-    }),
-    triggerBackup: vi.fn().mockResolvedValue({
-      batch_id: "backup_synthetic",
-      object_key: "full-backups/backup_synthetic.json.enc",
-      sha256: "a".repeat(64),
-    }),
-    createRecoveryPack: vi.fn().mockResolvedValue({
-      pack_id: "recovery_synthetic",
-      object_key: "recovery-packs/recovery_synthetic.zip.enc",
-      sha256: "b".repeat(64),
-      key_ids: ["journal-v1", "health-v1", "backup-v1"],
-    }),
-    verifyRecoveryPack: vi.fn().mockResolvedValue({
-      verified: true,
-      pack_id: "recovery_synthetic",
-      key_ids: ["journal-v1", "health-v1", "backup-v1"],
-    }),
     rotateKeks: vi.fn(),
     createGoal: vi.fn(),
     createWeeklyReview: vi.fn(),
@@ -133,7 +107,7 @@ describe("Life Console Sites mode", () => {
     expect(screen.getByRole("button", { name: "保存到 云端真相源" })).toBeTruthy();
   });
 
-  it("renders the six-boundary system summary and independent migration page", async () => {
+  it("renders the five-section 2.1 system summary and independent migration page", async () => {
     const user = userEvent.setup();
     render(
       <App
@@ -145,13 +119,14 @@ describe("Life Console Sites mode", () => {
 
     await user.click(navigationButton("系统"));
     expect(
-      screen.getByRole("heading", { name: "云端真相源，边界保持可见。" }),
+      screen.getByRole("heading", { name: "云端可用，备份路径保持清晰。" }),
     ).toBeTruthy();
-    expect(screen.getByText("字段级加密")).toBeTruthy();
-    expect(
-      screen.getByText("我理解恢复包需要由本人安全保管").closest("label")?.classList,
-    ).toContain("checkbox-row");
-    await waitFor(() => expect(screen.getByText("2 条待处理")).toBeTruthy());
+    expect(screen.getByText("云端数据已加密保存")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "iCloud 最新备份" })).toBeTruthy();
+    expect(screen.getByText("本机备份助手未连接")).toBeTruthy();
+    expect(screen.queryByText("恢复包")).toBeNull();
+    expect(screen.queryByText("审计事件摘要")).toBeNull();
+    expect(screen.queryByText("完整加密备份")).toBeNull();
     await user.click(screen.getByRole("button", { name: "打开迁移向导" }));
     expect(
       screen.getByRole("heading", { name: "迁移只在全量校验通过后切源。" }),
@@ -166,42 +141,20 @@ describe("Life Console Sites mode", () => {
     ).toContain("migration-check-row");
   });
 
-  it("generates and verifies a recovery pack without exposing its passphrase", async () => {
+  it("keeps backup UI synthetic while the loopback bridge is blocked", async () => {
     const user = userEvent.setup();
-    const sitesClient = client();
     render(
       <App
-        client={sitesClient}
+        client={client()}
         initialDashboard={syntheticDashboard}
         mode="sites"
       />,
     );
 
     await user.click(navigationButton("系统"));
-    await user.type(
-      screen.getByLabelText("恢复包保护口令"),
-      "synthetic-passphrase-2026",
-    );
-    await user.type(
-      screen.getByLabelText("再次输入保护口令"),
-      "synthetic-passphrase-2026",
-    );
-    await user.click(screen.getByLabelText("我理解恢复包需要由本人安全保管"));
-    await user.click(screen.getByRole("button", { name: "生成恢复包" }));
-
-    await waitFor(() => {
-      expect(screen.getByText(/恢复包已生成/)).toBeTruthy();
-    });
-    expect(sitesClient.createRecoveryPack).toHaveBeenCalledWith({
-      passphrase: "synthetic-passphrase-2026",
-      confirmation: "synthetic-passphrase-2026",
-      acknowledged: true,
-    });
-    await user.click(screen.getByRole("button", { name: "立即验证" }));
-    await waitFor(() => {
-      expect(screen.getByText("恢复包验证通过")).toBeTruthy();
-    });
-    expect(screen.getByText("journal / CREATE / SUCCESS")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "查看连接方法" }));
+    expect(screen.getByText(/浏览器回环验证通过后开放/)).toBeTruthy();
+    expect(screen.getByText(/当前只实现合成界面状态/)).toBeTruthy();
   });
 
   it("creates a cloud goal from a locally persisted draft", async () => {
