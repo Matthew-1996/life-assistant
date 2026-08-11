@@ -89,6 +89,7 @@ export function App({ client, initialDashboard, mode = "local" }: AppProps) {
         mode={mode}
         onNavigate={setActivePage}
         onSaved={refresh}
+        sourceTruth={sitesStatus?.source_truth}
       />
     ),
     progress: (
