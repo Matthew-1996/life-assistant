@@ -1,4 +1,8 @@
+import type { FormEvent } from "react";
+
+import type { SitesLifeConsoleClient } from "../../api/sites-client";
 import type { Dashboard } from "../../data/dashboard";
+import { useWritableForm } from "../../hooks/useWritableForm";
 
 type RatingKey = "sleep_quality" | "energy" | "mood" | "life_feeling";
 
@@ -50,10 +54,223 @@ function lineSegments(
 }
 
 interface ProgressPageProps {
+  client?: SitesLifeConsoleClient;
   dashboard: Dashboard;
+  mode?: "local" | "sites";
 }
 
-export function ProgressPage({ dashboard }: ProgressPageProps) {
+function WriteState({
+  state,
+  revision,
+}: {
+  state: "draft" | "saving" | "success" | "conflict" | "failed";
+  revision: number | null;
+}) {
+  if (state === "saving") return <p className="quiet">正在保存到云端…</p>;
+  if (state === "success") {
+    return <p className="success-message">已保存到云端 · revision #{revision ?? "?"}</p>;
+  }
+  if (state === "conflict") {
+    return <p className="error-message">数据冲突；草稿仍保留，请刷新后比较服务器版本。</p>;
+  }
+  if (state === "failed") {
+    return <p className="error-message">保存失败；加密草稿仍保留，可稍后重试。</p>;
+  }
+  return <p className="quiet">草稿已在本浏览器加密保存，尚未上传。</p>;
+}
+
+function SitesWritePanel({
+  client,
+  date,
+}: {
+  client: SitesLifeConsoleClient;
+  date: string;
+}) {
+  const weekStart = naturalWeek(date)[0].date;
+  const goal = useWritableForm("life-console:sites:goal-draft", {
+    title: "",
+    status: "focus",
+    priority_order: 1,
+  });
+  const weekly = useWritableForm("life-console:sites:weekly-draft", {
+    week_start: weekStart,
+    summary: "",
+    goals_hit_rate: {},
+    action_items: [] as string[],
+  });
+  const phase = useWritableForm("life-console:sites:phase-draft", {
+    phase_name: "",
+    started_at: date,
+    ended_at: date,
+    body: "",
+    goals_before: [] as string[],
+    goals_after: [] as string[],
+    actions: [] as string[],
+  });
+  const health = useWritableForm("life-console:sites:health-draft", {
+    date,
+    steps: "",
+    sleep_duration_min: "",
+  });
+
+  function submit(
+    event: FormEvent<HTMLFormElement>,
+    operation: () => Promise<boolean>,
+  ) {
+    event.preventDefault();
+    void operation();
+  }
+
+  return (
+    <section className="section" aria-labelledby="cloud-write-title">
+      <div className="section-head">
+        <div>
+          <h2 id="cloud-write-title">云端写入工具</h2>
+          <p className="quiet">目标、复盘与健康摘要直接写入 D1；输入先保存在本机加密草稿。</p>
+        </div>
+        <span className="status blue">Owner-only</span>
+      </div>
+      <div className="grid two">
+        <form
+          className="card pad form-grid"
+          onSubmit={(event) => submit(event, () => goal.submit(client.createGoal))}
+        >
+          <h3>新建目标</h3>
+          <label>
+            目标名称
+            <input
+              onChange={(event) => goal.update({ title: event.target.value })}
+              required
+              value={goal.draft.title}
+            />
+          </label>
+          <label>
+            优先级
+            <select
+              onChange={(event) => goal.update({ status: event.target.value })}
+              value={goal.draft.status}
+            >
+              <option value="focus">当前重点</option>
+              <option value="secondary">次要目标</option>
+              <option value="candidate">候选</option>
+            </select>
+          </label>
+          <button className="button primary" disabled={goal.state === "saving"} type="submit">
+            保存目标
+          </button>
+          <WriteState revision={goal.revision} state={goal.state} />
+        </form>
+
+        <form
+          className="card pad form-grid"
+          onSubmit={(event) => submit(event, () => weekly.submit(client.createWeeklyReview))}
+        >
+          <h3>本周复盘</h3>
+          <label>
+            周开始日期
+            <input readOnly type="date" value={weekly.draft.week_start} />
+          </label>
+          <label>
+            复盘正文
+            <textarea
+              onChange={(event) => weekly.update({ summary: event.target.value })}
+              required
+              value={weekly.draft.summary}
+            />
+          </label>
+          <button className="button primary" disabled={weekly.state === "saving"} type="submit">
+            保存周复盘
+          </button>
+          <WriteState revision={weekly.revision} state={weekly.state} />
+        </form>
+
+        <form
+          className="card pad form-grid"
+          onSubmit={(event) => submit(event, () => phase.submit(client.createPhaseReview))}
+        >
+          <h3>阶段复盘</h3>
+          <label>
+            阶段名称
+            <input
+              onChange={(event) => phase.update({ phase_name: event.target.value })}
+              required
+              value={phase.draft.phase_name}
+            />
+          </label>
+          <label>
+            复盘正文
+            <textarea
+              onChange={(event) => phase.update({ body: event.target.value })}
+              required
+              value={phase.draft.body}
+            />
+          </label>
+          <button className="button primary" disabled={phase.state === "saving"} type="submit">
+            保存阶段复盘
+          </button>
+          <WriteState revision={phase.revision} state={phase.state} />
+        </form>
+
+        <form
+          className="card pad form-grid"
+          onSubmit={(event) => submit(event, () => health.submit((value) =>
+            client.importHealthDay({
+              date: value.date,
+              steps: value.steps ? Number(value.steps) : null,
+              sleep_duration_min: value.sleep_duration_min
+                ? Number(value.sleep_duration_min)
+                : null,
+              raw_payload: {
+                source: "manual-sites-ui",
+                captured_at: new Date().toISOString(),
+              },
+            })))}
+        >
+          <h3>健康摘要导入</h3>
+          <label>
+            日期
+            <input
+              onChange={(event) => health.update({ date: event.target.value })}
+              required
+              type="date"
+              value={health.draft.date}
+            />
+          </label>
+          <label>
+            步数
+            <input
+              min="0"
+              onChange={(event) => health.update({ steps: event.target.value })}
+              type="number"
+              value={health.draft.steps}
+            />
+          </label>
+          <label>
+            睡眠分钟
+            <input
+              min="0"
+              onChange={(event) => health.update({
+                sleep_duration_min: event.target.value,
+              })}
+              type="number"
+              value={health.draft.sleep_duration_min}
+            />
+          </label>
+          <button className="button primary" disabled={health.state === "saving"} type="submit">
+            导入健康摘要
+          </button>
+          <WriteState revision={health.revision} state={health.state} />
+        </form>
+      </div>
+    </section>
+  );
+}
+
+export function ProgressPage({
+  client,
+  dashboard,
+  mode = "local",
+}: ProgressPageProps) {
   const dates = dashboard.progress.ratings.map((sample) => sample.date);
   const week = naturalWeek(dashboard.date);
 
@@ -250,6 +467,10 @@ export function ProgressPage({ dashboard }: ProgressPageProps) {
           ))}
         </div>
       </section>
+
+      {mode === "sites" && client && (
+        <SitesWritePanel client={client} date={dashboard.date} />
+      )}
 
       <p className="footer-note">趋势不构成医学、人格或长期能力结论。</p>
     </section>

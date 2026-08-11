@@ -1,10 +1,385 @@
+import { type FormEvent, useEffect, useState } from "react";
+
+import type {
+  SitesLifeConsoleClient,
+  SitesSystemStatus,
+} from "../../api/sites-client";
 import type { Dashboard } from "../../data/dashboard";
 
 interface SystemPageProps {
+  client?: SitesLifeConsoleClient;
   dashboard: Dashboard;
+  mode?: "local" | "sites";
+  sitesStatus?: SitesSystemStatus | null;
 }
 
-export function SystemPage({ dashboard }: SystemPageProps) {
+function SitesMigrationPage({
+  status,
+  onBack,
+}: {
+  status: SitesSystemStatus | null;
+  onBack: () => void;
+}) {
+  const checks = [
+    ["Owner-only 会话", "代码已实现；待正式 Sites 绑定验证"],
+    ["D1 Schema", "12 张表与迁移状态机测试通过"],
+    ["字段级加密", "合成 KEK round-trip 测试通过"],
+    ["R2 备份", "代码已实现；待正式 Bucket 绑定验证"],
+    ["真实 iCloud 来源", "尚未授权读取或迁移"],
+  ];
+  return (
+    <section aria-labelledby="migration-title">
+      <button className="secondary-button" onClick={onBack} type="button">
+        返回系统页
+      </button>
+      <section className="hero migration-hero">
+        <div>
+          <p className="eyebrow">独立迁移向导 · 阶段 D/E 门禁</p>
+          <h1 id="migration-title">迁移只在全量校验通过后切源。</h1>
+          <p className="lead">
+            当前页面只展示通用能力与前置检查，不读取真实 iCloud 数据，也不允许切换真相源。
+          </p>
+        </div>
+        <aside className="card hero-card">
+          <span className="status blue">{status?.migration.phase ?? "NOT_STARTED"}</span>
+          <h2>{status?.source_truth ?? "ICLOUD_PRIMARY"}</h2>
+          <p className="quiet">真实迁移计划、上传校验和切源都需要后续当次确认。</p>
+        </aside>
+      </section>
+      <section className="section card pad">
+        <div className="section-head">
+          <h2>前置检查</h2>
+          <span className="status gray">候选环境</span>
+        </div>
+        <div className="signal-list">
+          {checks.map(([title, description], index) => (
+            <div className="day-row" key={title}>
+              <strong>{title}</strong>
+              <span>{description}</span>
+              <span className={`status ${index < 3 ? "green" : "gray"}`}>
+                {index < 3 ? "已验证" : "待门禁"}
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+      <section className="section card pad">
+        <h2>后续受控步骤</h2>
+        <ol className="migration-steps">
+          <li>生成仅包含数量和影响范围的迁移计划。</li>
+          <li>上传后校验数量、ID、revision、摘要哈希与加密 round-trip。</li>
+          <li>PO 输入精确确认文字后切换到 D1。</li>
+          <li>7 天回滚窗口内保留 R2 加密增量包。</li>
+        </ol>
+        <button className="button primary" disabled type="button">
+          等待阶段 D 迁移授权
+        </button>
+      </section>
+    </section>
+  );
+}
+
+function SitesSystemPage({
+  client,
+  status,
+}: {
+  client?: SitesLifeConsoleClient;
+  status: SitesSystemStatus | null;
+}) {
+  const [showMigration, setShowMigration] = useState(false);
+  const [audit, setAudit] = useState<Array<{
+    id: string;
+    resource_type: string;
+    action: string;
+    result: string;
+  }>>([]);
+  const [passphrase, setPassphrase] = useState("");
+  const [confirmation, setConfirmation] = useState("");
+  const [acknowledged, setAcknowledged] = useState(false);
+  const [recoveryState, setRecoveryState] = useState<
+    "idle" | "saving" | "ready" | "verified" | "failed"
+  >("idle");
+  const [recoveryObject, setRecoveryObject] = useState<string | null>(null);
+  const [recoveryDigest, setRecoveryDigest] = useState<string | null>(null);
+  const [backupState, setBackupState] = useState<
+    "idle" | "saving" | "saved" | "failed"
+  >("idle");
+
+  useEffect(() => {
+    if (!client) return;
+    void client.auditEvents()
+      .then((value) => setAudit(value.items))
+      .catch(() => setAudit([]));
+  }, [client]);
+
+  async function generateRecoveryPack(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (
+      !client
+      || passphrase.length < 16
+      || passphrase !== confirmation
+      || !acknowledged
+    ) {
+      setRecoveryState("failed");
+      return;
+    }
+    setRecoveryState("saving");
+    try {
+      const result = await client.createRecoveryPack({
+        passphrase,
+        confirmation,
+        acknowledged,
+      });
+      setRecoveryObject(result.object_key);
+      setRecoveryDigest(result.sha256);
+      setRecoveryState("ready");
+    } catch {
+      setRecoveryState("failed");
+    }
+  }
+
+  async function verifyRecovery() {
+    if (!client || !recoveryObject) return;
+    setRecoveryState("saving");
+    try {
+      const result = await client.verifyRecoveryPack({
+        object_key: recoveryObject,
+        passphrase,
+      });
+      setRecoveryState(result.verified ? "verified" : "failed");
+      if (result.verified) {
+        setPassphrase("");
+        setConfirmation("");
+      }
+    } catch {
+      setRecoveryState("failed");
+    }
+  }
+
+  async function triggerBackup() {
+    if (!client) return;
+    setBackupState("saving");
+    try {
+      await client.triggerBackup();
+      setBackupState("saved");
+    } catch {
+      setBackupState("failed");
+    }
+  }
+  if (showMigration) {
+    return (
+      <SitesMigrationPage
+        status={status}
+        onBack={() => setShowMigration(false)}
+      />
+    );
+  }
+  const sourceTruth = status?.source_truth ?? "ICLOUD_PRIMARY";
+  const sourceReady = sourceTruth === "SITES_D1_PRIMARY";
+  return (
+    <section aria-labelledby="system-title">
+      <section className="hero">
+        <div>
+          <p className="eyebrow">Owner-only · Sites API</p>
+          <h1 id="system-title">云端真相源，边界保持可见。</h1>
+          <p className="lead">
+            系统页集中展示真相源、加密、iCloud 冷备、迁移门禁和审计边界。
+          </p>
+        </div>
+        <aside className="card hero-card">
+          <span className={`status ${sourceReady ? "green" : "blue"}`}>
+            {sourceTruth}
+          </span>
+          <h2>Life Console {status?.version ?? "2.0.0"}</h2>
+          <p className="quiet">
+            当前迁移阶段：{status?.migration.phase ?? "NOT_STARTED"}
+          </p>
+        </aside>
+      </section>
+
+      <section className="section grid two system-status-grid">
+        <article className="card pad">
+          <span className="status blue">运行模式</span>
+          <h2>Sites API / Owner-only</h2>
+          <p className="quiet">所有敏感读取与写入都必须经过 Owner 会话、同源和 CSRF 校验。</p>
+        </article>
+        <article className="card pad">
+          <span className="status green">字段级加密</span>
+          <h2>{status?.encryption.journal_kid ?? "journal-v1"} · {status?.encryption.health_kid ?? "health-v1"}</h2>
+          <p className="quiet">日记原文和健康明细以 AES-256-GCM DEK/KEK 信封保存。</p>
+        </article>
+        <article className="card pad">
+          <span className={status?.backup.failed ? "status red" : "status blue"}>iCloud 单向冷备</span>
+          <h2>{status?.backup.pending ?? 0} 条待处理</h2>
+          <p className="quiet">
+            失败 {status?.backup.failed ?? 0} 条 · 最近成功 {status?.backup.last_success_at ?? "尚无"}
+          </p>
+        </article>
+        <article className="card pad">
+          <span className="status gray">审计</span>
+          <h2>追加式事件</h2>
+          <p className="quiet">只记录操作者哈希、资源、动作和结果，不记录正文或密文片段。</p>
+        </article>
+      </section>
+
+      <section className="section grid two">
+        <article className="card pad">
+          <div className="section-head">
+            <div>
+              <h2>完整加密备份</h2>
+              <p className="quiet">生成 D1 全量密文快照并以 backup-v1 再加密写入 R2。</p>
+            </div>
+            <span className={`status ${backupState === "failed" ? "red" : "blue"}`}>
+              {backupState === "saving"
+                ? "生成中"
+                : backupState === "saved"
+                  ? "已生成"
+                  : backupState === "failed" ? "失败" : "待触发"}
+            </span>
+          </div>
+          <button
+            className="button primary"
+            disabled={!client || backupState === "saving"}
+            onClick={() => void triggerBackup()}
+            type="button"
+          >
+            手动生成完整备份
+          </button>
+        </article>
+
+        <article className="card pad">
+          <div className="section-head">
+            <div>
+              <h2>恢复包</h2>
+              <p className="quiet">口令至少 16 位，可由受信任密码管理器生成和填充。</p>
+            </div>
+            <span className={`status ${
+              recoveryState === "verified"
+                ? "green"
+                : recoveryState === "failed" ? "red" : "blue"
+            }`}>
+              {recoveryState === "saving"
+                ? "处理中"
+                : recoveryState === "ready"
+                  ? "待验证"
+                  : recoveryState === "verified"
+                    ? "已验证"
+                    : recoveryState === "failed" ? "需检查" : "未创建"}
+            </span>
+          </div>
+          <form className="form-grid" onSubmit={(event) => void generateRecoveryPack(event)}>
+            <label>
+              恢复包保护口令
+              <input
+                autoComplete="new-password"
+                minLength={16}
+                onChange={(event) => setPassphrase(event.target.value)}
+                type="password"
+                value={passphrase}
+              />
+            </label>
+            <label>
+              再次输入保护口令
+              <input
+                autoComplete="new-password"
+                minLength={16}
+                onChange={(event) => setConfirmation(event.target.value)}
+                type="password"
+                value={confirmation}
+              />
+            </label>
+            <label className="checkbox-row">
+              <input
+                checked={acknowledged}
+                onChange={(event) => setAcknowledged(event.target.checked)}
+                type="checkbox"
+              />
+              我理解恢复包需要由本人安全保管
+            </label>
+            <div className="button-row">
+              <button
+                className="button primary"
+                disabled={!client || recoveryState === "saving"}
+                type="submit"
+              >
+                生成恢复包
+              </button>
+              {recoveryState === "ready" && (
+                <button
+                  className="secondary-button"
+                  onClick={() => void verifyRecovery()}
+                  type="button"
+                >
+                  立即验证
+                </button>
+              )}
+            </div>
+          </form>
+          {recoveryState === "ready" && (
+            <p className="success-message">
+              恢复包已生成 · SHA-256 {recoveryDigest?.slice(0, 12)}…
+            </p>
+          )}
+          {recoveryState === "verified" && (
+            <p className="success-message">恢复包验证通过</p>
+          )}
+          {recoveryState === "failed" && (
+            <p className="error-message">恢复包操作失败；请检查口令、确认项与服务状态。</p>
+          )}
+        </article>
+      </section>
+
+      <section className="section card pad">
+        <div className="section-head">
+          <div>
+            <h2>审计事件摘要</h2>
+            <p className="quiet">仅展示资源、动作与结果；不含正文、请求体或密文片段。</p>
+          </div>
+          <span className="status gray">最近 {audit.length} 条</span>
+        </div>
+        <div className="signal-list">
+          {audit.length === 0 && <p className="quiet">暂无可显示的审计事件。</p>}
+          {audit.map((event) => (
+            <div className="day-row" key={event.id}>
+              <strong>{event.resource_type} / {event.action} / {event.result}</strong>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="section card pad">
+        <div className="section-head">
+          <div>
+            <h2>迁移与回滚</h2>
+            <p className="quiet">完整向导拆为独立子页，系统页只保留状态和入口。</p>
+          </div>
+          <span className="status gray">{status?.migration.phase ?? "NOT_STARTED"}</span>
+        </div>
+        <button
+          className="button primary"
+          onClick={() => setShowMigration(true)}
+          type="button"
+        >
+          打开迁移向导
+        </button>
+      </section>
+
+      <p className="footer-note">
+        本页不生成真实密钥、不执行正式部署、不迁移数据，也不切换真相源。
+      </p>
+    </section>
+  );
+}
+
+export function SystemPage({
+  client,
+  dashboard,
+  mode = "local",
+  sitesStatus = null,
+}: SystemPageProps) {
+  if (mode === "sites") {
+    return <SitesSystemPage client={client} status={sitesStatus} />;
+  }
   const statuses = [
     {
       title: "Life Hub",

@@ -1,0 +1,389 @@
+openapi: 3.1.0
+info:
+  title: Life Console Sites API
+  version: 2.0.0
+  description: Owner-only cloud API. Examples and tests use synthetic data only.
+servers:
+  - url: /
+security:
+  - SitesOwnerSession: []
+paths:
+  /api/v1/auth/me:
+    get:
+      operationId: getSitesOwner
+      responses:
+        "200": {description: Owner identity hash, content: {application/json: {schema: {$ref: "#/components/schemas/Owner"}}}}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+  /api/v1/auth/csrf:
+    post:
+      operationId: createSitesCsrf
+      responses:
+        "200": {description: Short-lived CSRF token, content: {application/json: {schema: {$ref: "#/components/schemas/Csrf"}}}}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+  /api/v1/dashboard:
+    get:
+      operationId: getSitesDashboard
+      responses:
+        "200": {description: Whitelisted D1 dashboard projection, content: {application/json: {schema: {type: object}}}}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+  /api/v1/bootstrap:
+    get:
+      operationId: getSitesBootstrap
+      responses:
+        "200": {description: Minimum first-screen projection, content: {application/json: {schema: {$ref: "#/components/schemas/Bootstrap"}}}}
+  /api/v1/system/status:
+    get:
+      operationId: getSitesSystemStatus
+      responses:
+        "200": {description: Truth source, migration, encryption and backup status, content: {application/json: {schema: {$ref: "#/components/schemas/SystemStatus"}}}}
+  /api/v1/goals:
+    get:
+      operationId: listSitesGoals
+      responses:
+        "200": {description: Goal list, content: {application/json: {schema: {$ref: "#/components/schemas/ListResponse"}}}}
+    post:
+      operationId: createSitesGoal
+      parameters: [{$ref: "#/components/parameters/CsrfHeader"}, {$ref: "#/components/parameters/IdempotencyHeader"}]
+      requestBody: {$ref: "#/components/requestBodies/JsonObject"}
+      responses:
+        "200": {$ref: "#/components/responses/Mutation"}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /api/v1/goals/{id}:
+    parameters: [{$ref: "#/components/parameters/ResourceId"}]
+    patch:
+      operationId: updateSitesGoal
+      parameters: [{$ref: "#/components/parameters/CsrfHeader"}, {$ref: "#/components/parameters/RevisionHeader"}]
+      requestBody: {$ref: "#/components/requestBodies/JsonObject"}
+      responses:
+        "200": {$ref: "#/components/responses/Mutation"}
+        "409": {$ref: "#/components/responses/Conflict"}
+    delete:
+      operationId: deleteSitesGoal
+      parameters: [{$ref: "#/components/parameters/CsrfHeader"}, {$ref: "#/components/parameters/RevisionHeader"}]
+      responses:
+        "200": {$ref: "#/components/responses/Mutation"}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /api/v1/journals:
+    get:
+      operationId: listSitesJournals
+      parameters:
+        - {name: date_from, in: query, schema: {type: string, format: date}}
+        - {name: date_to, in: query, schema: {type: string, format: date}}
+        - {name: mood, in: query, schema: {type: string, maxLength: 80}}
+        - {name: q, in: query, schema: {type: string, maxLength: 16}}
+      responses:
+        "200": {description: Metadata-only journal list, content: {application/json: {schema: {$ref: "#/components/schemas/ListResponse"}}}}
+    post:
+      operationId: createSitesJournal
+      parameters: [{$ref: "#/components/parameters/CsrfHeader"}, {$ref: "#/components/parameters/IdempotencyHeader"}]
+      requestBody: {$ref: "#/components/requestBodies/JsonObject"}
+      responses:
+        "200": {$ref: "#/components/responses/Mutation"}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /api/v1/journals/{id}:
+    parameters: [{$ref: "#/components/parameters/ResourceId"}]
+    get:
+      operationId: getSitesJournal
+      responses:
+        "200": {description: Decrypted owner-only journal, content: {application/json: {schema: {type: object}}}}
+        "404": {$ref: "#/components/responses/NotFound"}
+    patch:
+      operationId: updateSitesJournal
+      parameters: [{$ref: "#/components/parameters/CsrfHeader"}, {$ref: "#/components/parameters/RevisionHeader"}]
+      requestBody: {$ref: "#/components/requestBodies/JsonObject"}
+      responses:
+        "200": {$ref: "#/components/responses/Mutation"}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /api/v1/journals/{id}/delete-plan:
+    parameters: [{$ref: "#/components/parameters/ResourceId"}, {$ref: "#/components/parameters/CsrfHeader"}, {$ref: "#/components/parameters/RevisionHeader"}]
+    post:
+      operationId: planSitesJournalDeletion
+      requestBody: {$ref: "#/components/requestBodies/JsonObject"}
+      responses:
+        "200": {$ref: "#/components/responses/Mutation"}
+  /api/v1/journals/{id}/delete-plan/cancel:
+    parameters: [{$ref: "#/components/parameters/ResourceId"}, {$ref: "#/components/parameters/CsrfHeader"}, {$ref: "#/components/parameters/RevisionHeader"}]
+    post:
+      operationId: cancelSitesJournalDeletion
+      requestBody: {$ref: "#/components/requestBodies/JsonObject"}
+      responses:
+        "200": {$ref: "#/components/responses/Mutation"}
+  /api/v1/journals/{id}/purge:
+    parameters: [{$ref: "#/components/parameters/ResourceId"}, {$ref: "#/components/parameters/CsrfHeader"}, {$ref: "#/components/parameters/RevisionHeader"}]
+    delete:
+      operationId: purgeSitesJournal
+      responses:
+        "200": {$ref: "#/components/responses/Mutation"}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /api/v1/daily-checkins:
+    get:
+      operationId: listSitesDailyCheckins
+      responses: {"200": {description: Daily list, content: {application/json: {schema: {$ref: "#/components/schemas/ListResponse"}}}}}
+    post:
+      operationId: createSitesDailyCheckin
+      parameters: [{$ref: "#/components/parameters/CsrfHeader"}, {$ref: "#/components/parameters/IdempotencyHeader"}]
+      requestBody: {$ref: "#/components/requestBodies/JsonObject"}
+      responses: {"200": {$ref: "#/components/responses/Mutation"}}
+  /api/v1/daily-checkins/by-date/{date}:
+    parameters:
+      - {name: date, in: path, required: true, schema: {type: string, format: date}}
+    patch:
+      operationId: updateSitesDailyCheckinByDate
+      parameters: [{$ref: "#/components/parameters/CsrfHeader"}, {$ref: "#/components/parameters/RevisionHeader"}]
+      requestBody: {$ref: "#/components/requestBodies/JsonObject"}
+      responses:
+        "200": {$ref: "#/components/responses/Mutation"}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /api/v1/weekly-reviews:
+    get:
+      operationId: listSitesWeeklyReviews
+      responses: {"200": {description: Weekly list, content: {application/json: {schema: {$ref: "#/components/schemas/ListResponse"}}}}}
+    post:
+      operationId: createSitesWeeklyReview
+      parameters: [{$ref: "#/components/parameters/CsrfHeader"}, {$ref: "#/components/parameters/IdempotencyHeader"}]
+      requestBody: {$ref: "#/components/requestBodies/JsonObject"}
+      responses: {"200": {$ref: "#/components/responses/Mutation"}}
+  /api/v1/phase-reviews:
+    get:
+      operationId: listSitesPhaseReviews
+      responses: {"200": {description: Phase list, content: {application/json: {schema: {$ref: "#/components/schemas/ListResponse"}}}}}
+    post:
+      operationId: createSitesPhaseReview
+      parameters: [{$ref: "#/components/parameters/CsrfHeader"}, {$ref: "#/components/parameters/IdempotencyHeader"}]
+      requestBody: {$ref: "#/components/requestBodies/JsonObject"}
+      responses: {"200": {$ref: "#/components/responses/Mutation"}}
+  /api/v1/health/days:
+    get:
+      operationId: listSitesHealthDays
+      responses: {"200": {description: Minimum plaintext health trend, content: {application/json: {schema: {$ref: "#/components/schemas/ListResponse"}}}}}
+  /api/v1/health/days/{id}:
+    parameters: [{$ref: "#/components/parameters/ResourceId"}]
+    get:
+      operationId: getSitesHealthDay
+      responses:
+        "200": {description: Decrypted owner-only health detail, content: {application/json: {schema: {type: object}}}}
+        "404": {$ref: "#/components/responses/NotFound"}
+    patch:
+      operationId: updateSitesHealthDay
+      parameters: [{$ref: "#/components/parameters/CsrfHeader"}, {$ref: "#/components/parameters/RevisionHeader"}]
+      requestBody: {$ref: "#/components/requestBodies/JsonObject"}
+      responses:
+        "200": {$ref: "#/components/responses/Mutation"}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /api/v1/health/days/{id}/segments:
+    parameters: [{$ref: "#/components/parameters/ResourceId"}]
+    get:
+      operationId: listSitesHealthSegments
+      responses:
+        "200": {description: Decrypted owner-only segment list, content: {application/json: {schema: {$ref: "#/components/schemas/ListResponse"}}}}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /api/v1/health/import:
+    post:
+      operationId: importSitesHealthDay
+      parameters: [{$ref: "#/components/parameters/CsrfHeader"}, {$ref: "#/components/parameters/IdempotencyHeader"}]
+      requestBody: {$ref: "#/components/requestBodies/JsonObject"}
+      responses: {"200": {$ref: "#/components/responses/Mutation"}}
+  /api/v1/audit/events:
+    get:
+      operationId: listSitesAuditEvents
+      parameters:
+        - {name: size, in: query, schema: {type: integer, minimum: 1, maximum: 100}}
+        - {name: resource_type, in: query, schema: {type: string, maxLength: 80}}
+        - {name: action, in: query, schema: {type: string, maxLength: 80}}
+      responses: {"200": {description: Raw-free audit list, content: {application/json: {schema: {$ref: "#/components/schemas/ListResponse"}}}}}
+  /api/v1/backup/queue:
+    get:
+      operationId: listSitesBackupQueue
+      parameters:
+        - {name: size, in: query, schema: {type: integer, minimum: 1, maximum: 100}}
+        - {name: status, in: query, schema: {type: string, enum: [PENDING, SUCCESS, FAILED, RETRYING, SKIPPED]}}
+      responses: {"200": {description: Backup queue metadata, content: {application/json: {schema: {$ref: "#/components/schemas/ListResponse"}}}}}
+  /api/v1/backup/trigger:
+    post:
+      operationId: triggerSitesFullBackup
+      parameters: [{$ref: "#/components/parameters/CsrfHeader"}]
+      requestBody: {$ref: "#/components/requestBodies/JsonObject"}
+      responses:
+        "200": {description: Encrypted R2 backup receipt, content: {application/json: {schema: {type: object}}}}
+  /api/v1/backup/queue/{id}/payload:
+    parameters: [{$ref: "#/components/parameters/ResourceId"}]
+    get:
+      operationId: getSitesBackupPayload
+      responses:
+        "200": {description: Owner-only decrypted cold-backup payload, content: {application/json: {schema: {type: object}}}}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /api/v1/backup/queue/{id}/report:
+    parameters: [{$ref: "#/components/parameters/ResourceId"}]
+    post:
+      operationId: reportSitesBackupOutcome
+      parameters: [{$ref: "#/components/parameters/CsrfHeader"}]
+      requestBody: {$ref: "#/components/requestBodies/JsonObject"}
+      responses:
+        "200": {$ref: "#/components/responses/Mutation"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /api/v1/crypto/recovery-pack:
+    post:
+      operationId: createSitesRecoveryPack
+      parameters: [{$ref: "#/components/parameters/CsrfHeader"}]
+      requestBody: {$ref: "#/components/requestBodies/JsonObject"}
+      responses:
+        "200": {description: Encrypted recovery pack receipt, content: {application/json: {schema: {type: object}}}}
+  /api/v1/crypto/verify-recovery-pack:
+    post:
+      operationId: verifySitesRecoveryPack
+      parameters: [{$ref: "#/components/parameters/CsrfHeader"}]
+      requestBody: {$ref: "#/components/requestBodies/JsonObject"}
+      responses:
+        "200": {description: Recovery sample verification result, content: {application/json: {schema: {type: object}}}}
+  /api/v1/crypto/rotate-keks:
+    post:
+      operationId: rotateSitesKeks
+      parameters: [{$ref: "#/components/parameters/CsrfHeader"}]
+      requestBody: {$ref: "#/components/requestBodies/JsonObject"}
+      responses:
+        "200": {description: Re-encryption result, content: {application/json: {schema: {type: object}}}}
+        "503": {description: Target KEK must be preconfigured, content: {application/json: {schema: {$ref: "#/components/schemas/Error"}}}}
+  /api/v1/migration/status:
+    get:
+      operationId: getSitesMigrationStatus
+      responses: {"200": {description: Migration state, content: {application/json: {schema: {type: object}}}}}
+  /api/v1/migration/plan:
+    post:
+      operationId: planSitesMigration
+      parameters: [{$ref: "#/components/parameters/CsrfHeader"}]
+      requestBody: {$ref: "#/components/requestBodies/JsonObject"}
+      responses: {"200": {$ref: "#/components/responses/Mutation"}}
+  /api/v1/migration/validate:
+    post:
+      operationId: validateSitesMigration
+      parameters: [{$ref: "#/components/parameters/CsrfHeader"}]
+      requestBody: {$ref: "#/components/requestBodies/JsonObject"}
+      responses: {"200": {$ref: "#/components/responses/Mutation"}}
+  /api/v1/migration/switch:
+    post:
+      operationId: switchSitesTruthSource
+      parameters: [{$ref: "#/components/parameters/CsrfHeader"}]
+      requestBody: {$ref: "#/components/requestBodies/JsonObject"}
+      responses:
+        "200": {$ref: "#/components/responses/Mutation"}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /api/v1/migration/rollback:
+    post:
+      operationId: rollbackSitesTruthSource
+      parameters: [{$ref: "#/components/parameters/CsrfHeader"}]
+      requestBody: {$ref: "#/components/requestBodies/JsonObject"}
+      responses:
+        "200": {$ref: "#/components/responses/Mutation"}
+        "409": {$ref: "#/components/responses/Conflict"}
+components:
+  securitySchemes:
+    SitesOwnerSession:
+      type: apiKey
+      in: cookie
+      name: __Host-sites-owner
+  parameters:
+    ResourceId:
+      name: id
+      in: path
+      required: true
+      schema: {type: string, minLength: 1, maxLength: 200}
+    CsrfHeader:
+      name: X-Life-CSRF
+      in: header
+      required: true
+      schema: {type: string, minLength: 32, maxLength: 500}
+    IdempotencyHeader:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: {type: string, minLength: 16, maxLength: 200}
+    RevisionHeader:
+      name: If-Match
+      in: header
+      required: true
+      schema: {type: integer, minimum: 1}
+  requestBodies:
+    JsonObject:
+      required: true
+      content:
+        application/json:
+          schema: {type: object, additionalProperties: true}
+  responses:
+    Mutation:
+      description: Mutation receipt with revision where applicable.
+      content: {application/json: {schema: {$ref: "#/components/schemas/Mutation"}}}
+    Unauthorized:
+      description: Owner session required.
+      content: {application/json: {schema: {$ref: "#/components/schemas/Error"}}}
+    NotFound:
+      description: Resource not found.
+      content: {application/json: {schema: {$ref: "#/components/schemas/Error"}}}
+    Conflict:
+      description: Revision or state conflict.
+      content: {application/json: {schema: {$ref: "#/components/schemas/Error"}}}
+  schemas:
+    Owner:
+      type: object
+      additionalProperties: false
+      required: [owner_hash, role, version]
+      properties:
+        owner_hash: {type: string, pattern: "^[a-f0-9]{64}$"}
+        role: {type: string, const: owner}
+        version: {type: string, const: 2.0.0}
+    Csrf:
+      type: object
+      additionalProperties: false
+      required: [owner_hash, token, expires_at]
+      properties:
+        owner_hash: {type: string}
+        token: {type: string}
+        expires_at: {type: string, format: date-time}
+    Mutation:
+      type: object
+      additionalProperties: true
+      required: [id]
+      properties:
+        id: {type: string}
+        revision: {type: integer, minimum: 1}
+        updated_at: {type: string, format: date-time}
+    ListResponse:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items: {type: array, items: {type: object}}
+    Bootstrap:
+      type: object
+      additionalProperties: false
+      required: [dashboard, system, goals, journals, health]
+      properties:
+        dashboard: {type: object}
+        system: {$ref: "#/components/schemas/SystemStatus"}
+        goals: {type: array, items: {type: object}}
+        journals: {type: array, items: {type: object}}
+        health: {type: array, items: {type: object}}
+    SystemStatus:
+      type: object
+      additionalProperties: true
+      required: [version, mode, source_truth, migration, encryption, backup]
+      properties:
+        version: {type: string, const: 2.0.0}
+        mode: {type: string, const: sites-api}
+        source_truth: {type: string, enum: [ICLOUD_PRIMARY, SITES_D1_PRIMARY]}
+        migration: {type: object}
+        encryption: {type: object}
+        backup: {type: object}
+    Error:
+      type: object
+      additionalProperties: false
+      required: [request_id, error]
+      properties:
+        request_id: {type: string}
+        error:
+          type: object
+          additionalProperties: true
+          required: [code, message, retryable]
+          properties:
+            code: {type: string}
+            message: {type: string}
+            retryable: {type: boolean}

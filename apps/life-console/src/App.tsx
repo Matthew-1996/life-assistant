@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 
 import type { LifeConsoleClient } from "./api/client";
+import type {
+  SitesLifeConsoleClient,
+  SitesSystemStatus,
+} from "./api/sites-client";
 import { AppShell, type PageId } from "./components/shell/AppShell";
 import { syntheticDashboard, type Dashboard } from "./data/dashboard";
 import { ProgressPage } from "./features/progress/ProgressPage";
@@ -11,19 +15,27 @@ import { TodayPage } from "./features/today/TodayPage";
 interface AppProps {
   client?: LifeConsoleClient;
   initialDashboard?: Dashboard;
+  mode?: "local" | "sites";
 }
 
-export function App({ client, initialDashboard }: AppProps) {
+export function App({ client, initialDashboard, mode = "local" }: AppProps) {
   const [activePage, setActivePage] = useState<PageId>("today");
   const [dashboard, setDashboard] = useState<Dashboard | null>(
     initialDashboard ?? (client ? null : syntheticDashboard),
   );
+  const [sitesStatus, setSitesStatus] = useState<SitesSystemStatus | null>(null);
   const [error, setError] = useState(false);
 
   async function refresh(): Promise<boolean> {
     if (!client) return true;
     try {
-      setDashboard(await client.dashboard());
+      const nextDashboard = await client.dashboard();
+      setDashboard(nextDashboard);
+      if (mode === "sites" && "systemStatus" in client) {
+        setSitesStatus(
+          await (client as SitesLifeConsoleClient).systemStatus(),
+        );
+      }
       setError(false);
       return true;
     } catch {
@@ -39,7 +51,11 @@ export function App({ client, initialDashboard }: AppProps) {
   if (!dashboard) {
     return (
       <main className="startup-state">
-        <h1>{error ? "本地服务暂不可用" : "正在读取本机工作台"}</h1>
+        <h1>
+          {error
+            ? mode === "sites" ? "云端服务暂不可用" : "本地服务暂不可用"
+            : mode === "sites" ? "正在读取云端工作台" : "正在读取本机工作台"}
+        </h1>
         {error && <button onClick={() => void refresh()}>重试</button>}
       </main>
     );
@@ -50,24 +66,46 @@ export function App({ client, initialDashboard }: AppProps) {
       <TodayPage
         dashboard={dashboard}
         client={client}
+        mode={mode}
         onNavigate={setActivePage}
         onSaved={refresh}
       />
     ),
-    progress: <ProgressPage dashboard={dashboard} />,
-    records: <RecordsPage dashboard={dashboard} client={client} onSaved={refresh} />,
-    system: <SystemPage dashboard={dashboard} />,
+    progress: (
+      <ProgressPage
+        client={mode === "sites" ? client as SitesLifeConsoleClient : undefined}
+        dashboard={dashboard}
+        mode={mode}
+      />
+    ),
+    records: (
+      <RecordsPage
+        dashboard={dashboard}
+        client={client}
+        mode={mode}
+        onSaved={refresh}
+      />
+    ),
+    system: (
+      <SystemPage
+        client={mode === "sites" ? client as SitesLifeConsoleClient : undefined}
+        dashboard={dashboard}
+        mode={mode}
+        sitesStatus={sitesStatus}
+      />
+    ),
   };
 
   return (
     <AppShell
       activePage={activePage}
       date={dashboard.date}
+      mode={mode}
       onNavigate={setActivePage}
     >
       {error && (
         <div className="service-banner" role="alert">
-          本地服务暂不可用；页面保留上次已读取的状态，不会把新操作误报为已保存。
+          {mode === "sites" ? "云端服务" : "本地服务"}暂不可用；页面保留上次已读取的状态，不会把新操作误报为已保存。
           <button onClick={() => void refresh()} type="button">重试</button>
         </div>
       )}

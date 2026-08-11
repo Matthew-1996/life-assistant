@@ -14,6 +14,7 @@ type RecentJournal = Dashboard["records"]["recent_journals"][number];
 interface RecordsPageProps {
   dashboard: Dashboard;
   client?: LifeConsoleClient;
+  mode?: "local" | "sites";
   onSaved?: () => boolean | Promise<boolean>;
 }
 
@@ -80,10 +81,12 @@ const STATE_LABELS: Record<EnrichmentState, string> = {
 function JournalCard({
   journal,
   client,
+  mode,
   onChanged,
 }: {
   journal: RecentJournal;
   client?: LifeConsoleClient;
+  mode: "local" | "sites";
   onChanged?: () => boolean | Promise<boolean>;
 }) {
   // 本地覆盖状态：卡片内触发整理/删除后立即反映，不必等下一次看板刷新。
@@ -143,8 +146,13 @@ function JournalCard({
     }
     setBusy(true);
     try {
-      await client.deleteJournal(journal.id);
-      setRemoved(true);
+      const result = await client.deleteJournal(journal.id);
+      if (mode === "sites") {
+        setNote(result.message);
+        setConfirming(false);
+      } else {
+        setRemoved(true);
+      }
       await onChanged?.();
     } catch {
       setNote("删除失败，请稍后重试。");
@@ -173,14 +181,16 @@ function JournalCard({
       <strong>{journal.title}</strong>
       <p>{journal.summary}</p>
       <div className="journal-card-actions">
-        <button
-          className="secondary-button"
-          type="button"
-          disabled={busy || state === "working"}
-          onClick={() => void enrichNow()}
-        >
-          {state === "failed" ? "重新整理" : "整理"}
-        </button>
+        {mode === "local" && (
+          <button
+            className="secondary-button"
+            type="button"
+            disabled={busy || state === "working"}
+            onClick={() => void enrichNow()}
+          >
+            {state === "failed" ? "重新整理" : "整理"}
+          </button>
+        )}
         <button
           className="secondary-button danger"
           type="button"
@@ -193,7 +203,11 @@ function JournalCard({
       {note && <p className="save-receipt" role="status">{note}</p>}
       {confirming && (
         <div className="confirm-dialog" role="alertdialog" aria-label="确认删除这条记录">
-          <p>删除后这条日记将从当前项目移除（不影响聊天、旧备份与设备历史）。确认删除？</p>
+          <p>
+            {mode === "sites"
+              ? "将创建 7 天删除计划；计划期内可取消，不会立即永久删除。确认继续？"
+              : "删除后这条日记将从当前项目移除（不影响聊天、旧备份与设备历史）。确认删除？"}
+          </p>
           <div className="form-actions">
             <button
               className="secondary-button"
@@ -209,7 +223,7 @@ function JournalCard({
               disabled={busy}
               onClick={() => void confirmDelete()}
             >
-              确认删除
+              {mode === "sites" ? "创建删除计划" : "确认删除"}
             </button>
           </div>
         </div>
@@ -218,7 +232,13 @@ function JournalCard({
   );
 }
 
-export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
+export function RecordsPage({
+  dashboard,
+  client,
+  mode = "local",
+  onSaved,
+}: RecordsPageProps) {
+  const saveTarget = mode === "sites" ? "云端真相源" : "iCloud";
   const [formMode, setFormMode] = useState<FormMode>("journal");
   const [captureText, setCaptureText] = useState("");
   const [captureSaving, setCaptureSaving] = useState(false);
@@ -235,7 +255,7 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
       setCapturePreview({
         schema_version: 1,
         state: "available",
-        message: "合成预览，不会写入真实 iCloud",
+        message: `合成预览，不会写入真实${saveTarget}`,
         intent: "journal",
         preview: {
           date: dashboard.date,
@@ -265,7 +285,7 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
     if (!eventText) return;
     setReceipt(null);
     if (!client) {
-      setReceipt("合成演示已完成；未写入真实 iCloud");
+      setReceipt(`合成演示已完成；未写入真实${saveTarget}`);
       setCaptureText("");
       return;
     }
@@ -289,10 +309,9 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
         tags: [],
       });
       setCaptureText("");
-      // 保存成功后自动触发一次 DeepSeek 语义整理：读回最新看板定位这条，
-      // 再一步 enrich；效果等同于直接把记录交给助手自动整理。
       let autoEnriched = false;
       try {
+        if (mode === "sites") throw new Error("Sites mode keeps enrichment optional");
         const latest = await client.dashboard();
         const newest = latest.records.recent_journals.find(
           (item) => item.date === dashboard.date && item.title === title,
@@ -305,9 +324,11 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
         // 云端整理失败不影响已保存的本地记录；卡片会显示"整理失败"并可手动重试。
       }
       setReceipt(
-        autoEnriched
-          ? "已保存到 iCloud，正在用 DeepSeek 整理…"
-          : "已保存到 iCloud（云端整理未启动，可在卡片上手动整理）",
+        mode === "sites"
+          ? "已保存到云端真相源；iCloud 冷备已进入队列"
+          : autoEnriched
+            ? "已保存到 iCloud，正在用 DeepSeek 整理…"
+            : "已保存到 iCloud（云端整理未启动，可在卡片上手动整理）",
       );
         setCapturePreview(null);
       await onSaved?.();
@@ -333,7 +354,7 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
   ) {
     event.preventDefault();
     if (!client) {
-      setReceipt("合成演示已完成；未写入真实 iCloud");
+      setReceipt(`合成演示已完成；未写入真实${saveTarget}`);
       event.currentTarget.reset();
       return;
     }
@@ -413,7 +434,7 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
   ) {
     event.preventDefault();
     if (!client) {
-      setReceipt("合成演示已完成；未写入真实 iCloud");
+      setReceipt(`合成演示已完成；未写入真实${saveTarget}`);
       event.currentTarget.reset();
       return;
     }
@@ -450,7 +471,7 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
     event: SyntheticEvent<HTMLFormElement, SubmitEvent>,
   ) {
     event.preventDefault();
-    setReceipt("已生成运动恢复草稿；尚未写入 iCloud。");
+    setReceipt(`已生成运动恢复草稿；尚未写入${saveTarget}。`);
   }
 
   return (
@@ -469,7 +490,7 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
           <p className="quiet">
             {client
               ? "系统可以生成结构化预览；只有确认保存后，才调用本机白名单工具写入。"
-              : "当前是合成演示；预览与保存都不会改变真实 iCloud。"}
+              : `当前是合成演示；预览与保存都不会改变真实${saveTarget}。`}
           </p>
           <div className="pill-row">
             <span className="pill">预览</span>
@@ -521,7 +542,7 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
                   type="submit"
                   disabled={captureSaving || !captureText.trim()}
                 >
-                    {captureSaving ? "保存中…" : "保存到 iCloud"}
+                    {captureSaving ? "保存中…" : `保存到 ${saveTarget}`}
                 </button>
               </div>
                 <span className="caption">默认不发布原文</span>
@@ -780,7 +801,11 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
       <section className="feedback-bar" aria-label="保存反馈">
         <div>
           <strong>本地成功先算完成，派生展示只在需要时更新</strong>
-          <span>记录先落在 iCloud 私人真相源；Google 与 XLSX 只按需派生，失败不回滚本地结果。</span>
+          <span>
+            {mode === "sites"
+              ? "记录先写入 D1 唯一真相源；成功后进入 iCloud 单向冷备队列。"
+              : "记录先落在 iCloud 私人真相源；Google 与 XLSX 只按需派生，失败不回滚本地结果。"}
+          </span>
         </div>
         <span className="feedback-state">local saved</span>
       </section>
@@ -826,6 +851,7 @@ export function RecordsPage({ dashboard, client, onSaved }: RecordsPageProps) {
                   key={item.id}
                   journal={item}
                   client={client}
+                  mode={mode}
                   onChanged={onSaved}
                 />
               ))}
