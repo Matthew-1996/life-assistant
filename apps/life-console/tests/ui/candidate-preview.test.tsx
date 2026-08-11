@@ -28,7 +28,10 @@ describe("Life Console candidate preview", () => {
     expect(screen.getByText("Life Console · Candidate")).toBeTruthy();
     expect(screen.getByText("候选预览 · 合成数据")).toBeTruthy();
     expect(
-      screen.getByText("只读预览模式：候选不可写"),
+      screen.getByText("私有合成候选：不绑定真实数据或存储"),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: "HTTPS 回环与 Worker 容量 POC" }),
     ).toBeTruthy();
 
     await user.click(navigationButton("记录"));
