@@ -15,7 +15,7 @@ const navigation: Array<{
 interface AppShellProps {
   activePage: PageId;
   date: string;
-  mode?: "local" | "sites";
+  mode?: "local" | "sites" | "candidate-preview";
   children: ReactNode;
   onNavigate: (page: PageId) => void;
 }
@@ -33,17 +33,30 @@ export function AppShell({
       <header className="global-nav topbar">
         <div className="topbar-inner">
           <button
-            aria-label={`Life Console Trial Week，${date}`}
+            aria-label={`Life Console ${
+              mode === "candidate-preview"
+                ? "Candidate"
+                : mode === "sites" ? "Cloud" : "Trial Week"
+            }，${date}`}
             className="brand"
             onClick={() => onNavigate("today")}
             type="button"
           >
             <span className="brand-mark" aria-hidden="true" />
-            <span>Life Console · {mode === "sites" ? "Cloud" : "Trial Week"}</span>
+            <span>
+              Life Console · {mode === "candidate-preview"
+                ? "Candidate"
+                : mode === "sites" ? "Cloud" : "Trial Week"}
+            </span>
           </button>
 
           <div className="topbar-actions">
             {mode === "sites" && <span className="source-badge">Sites API</span>}
+            {mode === "candidate-preview" && (
+              <span className="source-badge source-badge--candidate">
+                候选预览 · 合成数据
+              </span>
+            )}
             <nav aria-label="全局导航">
               {navigation.map((item) => (
                 <button

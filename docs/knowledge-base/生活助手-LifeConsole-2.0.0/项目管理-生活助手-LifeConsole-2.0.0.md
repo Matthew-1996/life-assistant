@@ -2,15 +2,15 @@
 
 > PMO 负责人：Agent
 >
-> 产品阶段：待联调
+> 产品阶段：阶段 B 已由 PO 确认条件通过，已登录非 Owner 403 实测延期
 >
 > 最后更新：2026-08-11
 >
-> 关联分支：`agent/life-console-200`
+> 关联分支：`agent/life-console-200-preview`（堆叠于 `agent/life-console-200`）
 >
-> 关联 worktree：`.worktrees/life-console-200`
+> 关联 worktree：`.worktrees/life-console-200-preview`
 >
-> 当前 PR：#36 Ready for review
+> 当前 PR：#36 Ready for review；#37 Draft（阶段 B 堆叠 PR）
 
 ## 1. 当前目标（2026-08-11 首轮）
 
@@ -56,6 +56,7 @@ Gate 2 已通过；进入阶段 A 合成数据联调，按每个工作块不超�
 | 隐私体检 | ✅ 已完成 | 治理、索引与历史隐私检查通过；工具测试通过 |
 | PR #36 | ✅ Ready for review | Gate 1 与 Gate 2 均已确认；当前工作树包含待提交的评审与首批实现变更 |
 | IMPL-A1 - A12 | ✅ 阶段 A 通用开发已完成 | Sites 双模式、D1 12 表、Worker API、安全/加密、CRUD、迁移状态机、R2 备份/恢复包/轮换、iCloud 冷备代理、加密草稿与系统/写入 UI 已实现；不含正式绑定、部署和真实迁移 |
+| IMPL-B1 候选不可写预览 | ✅ PO 确认条件通过 | `candidate-preview` 合成只读构建与独立 Owner-only 候选已发布；Owner 授权首页 200、候选 API 403、环境变量 0 项；已登录非 Owner 403 未实测且已明确延期，不冒充为通过 |
 
 ## 4. 当前事实入口
 
@@ -116,6 +117,7 @@ gantt
 | 4 | iCloud 应急追加队列仍有被误用为业务记录的风险 | **中** | 独立目录与事件 Schema；仅追加；携带幂等键和 `base_revision`；恢复后受控导入，冲突人工处理 |
 | 5 | 文档中引用 `docs/operations/product-surfaces.json` 变更需要实现阶段 F 同步完成 | **低** | PMO 阶段 F 显式列检查项 |
 | 6 | Cloudflare Worker/D1/R2 配额变更 | **低（单用户规模）** | 阶段 C 记录当前套餐；超出时及时升级 |
+| 7 | 当前只有 Owner 身份，无法实测「已登录非 Owner」 403 | **中（阻塞阶段 B 完整验收）** | 候选已保持仅 Owner 白名单；得到第二个非 Owner ChatGPT 身份后仅执行访问测试，不修改站点权限 |
 
 ## 7. 实现阶段子任务拆分（预估，每个子任务 ≤ 4 小时）
 
@@ -135,8 +137,8 @@ gantt
 | IMPL-A10 | 前端 useWritableForm Hook + 写交互四态 UI + 409 差异卡片 | 3h | |
 | IMPL-A11 | 前端模式改造 local-hub / sites-api 双模式 | 2h | `main.tsx` + `api-client-sites.ts` |
 | IMPL-A12 | 系统页 6 分区新卡片（真相源/加密/同步/迁移/审计）| 3h | `SystemPage.tsx` 分区组件 |
-| IMPL-A13 | Miniflare 合成集成测试 | 3h | 合成夹具 + 链路测试 |
-| IMPL-A14 | Playwright 合成 E2E（写交互完整链路）| 2h | |
+| IMPL-A13 | Miniflare 合成集成测试 | 3h | ✅ 26/26；真实 workerd + 临时 D1/R2 + 合成 KEK |
+| IMPL-A14 | Playwright 合成 E2E（写交互完整链路）| 2h | ✅ 2/2；本地 trace 覆盖 revision 409 与完整删除计划/purge |
 | IMPL-B/C1 | 候选预览 + Owner-only + KEK + R2 部署脚本 | 3h | `deploy-sites-200.sh`（私有，不进 Git 模板）|
 | IMPL-D/E1 | 真实迁移执行 + 同步代理首次跑通 | 3h | |
 
@@ -159,6 +161,11 @@ gantt
 | 2026-08-11 | 阶段 A 首个工作块完成：Sites 构建骨架 + API 默认关闭 Worker + D1 12 表 Schema + 结构测试 | Agent | ✅ Worker 3/3、D1 6/6、Vitest 62/62、Hub 75/75、打包 7/7、E2E 1/1；默认构建与 Sites 构建通过 |
 | 2026-08-11 | 阶段 A 通用开发收口：完整 Worker API、字段级加密、revision/幂等/审计、迁移与回滚、R2 完整备份、加密 ZIP 恢复包、预配置 v2 KEK 轮换、版本化 iCloud 冷备代理、Sites 写入 UI 与加密草稿 | Agent | ✅ Vitest 85/85、Hub 75/75、打包 7/7、既有合成 E2E 1/1、Sites 工具 5/5；默认与 Sites 构建通过。真实绑定、部署、迁移和切源未执行 |
 | 2026-08-11 | PO 确认阶段 A 通用开发签字，并要求 PR #36 转为 Ready | PO + PMO | ✅ 签字已写入工程验收 §7；授权提交并推送已验证变更到 PR #36。PR Ready 不等于合并、部署、真实迁移或切源授权 |
+| 2026-08-11 | PO 授权进入阶段 B，生成候选不可写预览环境 | PO + PMO | 🟡 候选构建、本地四页浏览器验证、写入拦截与无 API 请求验证已完成；独立私有 Sites URL 和非 owner 403 因当前运行时缺少 Sites connector 未完成 |
+| 2026-08-11 | PO 完成阶段 B 本地候选验收 | PO + PMO | ✅ 四页候选、只读边界、合成数据标识、恢复包确认行与迁移前置检查视觉修复通过；不包含私有 Sites URL、Owner/非 Owner 权限验收或阶段 C |
+| 2026-08-11 | 继续完成 IMPL-A13/A14 合成集成与浏览器 E2E | Agent | ✅ Miniflare 26/26、Playwright 2/2、Vitest 118/118、Python/打包/E2E 83/83；仅 loopback、临时 D1/R2 与合成 KEK/Owner，未触发真实资源或新门禁 |
+| 2026-08-11 | PO 授权继续阶段 B，创建并部署独立私有 Sites 候选 | PO + Agent | 🟡 候选 version 1 已发布；Owner 授权首页 200、未登录 401、候选 API 403、0 环境变量；正式项目未变，尚待第二身份补验已登录非 Owner 403 |
+| 2026-08-11 | PO 在暂无第二账号的情况下确认阶段 B 保持条件通过 | PO | ✅ 403 实测作为已披露限制延期，不再阻塞阶段 B 收口；未将未登录 401 冒充为已登录非 Owner 403 |
 
 ## 9. 下一步（按优先级）
 
@@ -167,10 +174,12 @@ gantt
 3. ✅ **已完成（本轮第 3 批）**：PO 完成设计开放项 O1-O4 与技术开放项 Q1-Q4 决策；结论已写回设计/技术方案 draft.2。
 4. ✅ **已完成（Gate 2）**：PO 明确完成设计与技术评审，并授权开始代码实现。
 5. ✅ **首个实现工作块完成**：IMPL-A1/A2（Sites 构建骨架 + D1 12 表 Schema + 结构测试）已通过完整验证。
-6. ✅ **阶段 A 通用开发完成**：IMPL-A3-A12 已实现并通过合成验证；Miniflare/正式 R2 与浏览器级 Sites E2E 留到阶段 B/C 候选环境执行。
+6. ✅ **阶段 A 通用开发与合成验证完成**：IMPL-A3-A14 已实现；Miniflare 26/26、Playwright 2/2，正式 R2 与线上 Sites 权限验证仍留在后续门禁。
 7. ✅ **PO 阶段 A 签字完成**：授权提交并推送通用开发变更，PR #36 保持 Ready for review。
-8. **下一门禁**：阶段 B 候选不可写预览需要 PO 当次确认；阶段 C 正式 Owner-only、D1/R2、KEK 和 Sites 部署需再次单独确认。
-9. **可延后/合并**：
+8. ✅ **阶段 B 本地候选已验收**：PO 已确认四页候选、只读交互与最新视觉修复；验收记录见工程验收 §8。
+9. ✅ **阶段 B 线上候选已条件通过收口**：独立私有候选、Owner 授权访问、候选 API 失败关闭及 0 环境变量已验证；已登录非 Owner 403 保留为延期证据，不伪装为已执行。
+10. **下一门禁**：阶段 C 正式 Owner-only、D1/R2、KEK 和 Sites 部署需再次单独确认。
+11. **可延后/合并**：
    - 1.1.0 Draft 代码人工提炼报告（IMPL-A1 的前置）：可延后到 Gate 2 通过后与 IMPL-A1 子任务合并，不提前做
    - 恢复包演练与灾难恢复手册：可延后到交付阶段 C（Owner-only/KEK 校验）之前完成
    - `docs/operations/product-surfaces.json` 更新：阶段 E（切源后）同步写入，当前阶段无需提前操作

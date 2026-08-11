@@ -1,5 +1,8 @@
 node_modules/
 dist/
+playwright-report/
+test-results/
+.openai/hosting.json
 coverage/
 *.log
 *.tsbuildinfo
