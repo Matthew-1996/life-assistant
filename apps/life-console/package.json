@@ -10,6 +10,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "build:candidate-preview": "tsc -b && vite build --mode candidate-preview --outDir dist/client && node scripts/prepare-candidate-preview-build.mjs",
+    "build:stage-a-candidate": "tsc -b && vite build --mode stage-a-candidate --outDir dist/client && node scripts/prepare-stage-a-candidate-build.mjs",
     "build:sites-200": "tsc -b && vite build --mode sites-200 --outDir dist/client && node scripts/prepare-sites-200-build.mjs",
     "generate:contracts": "openapi-typescript contracts/life-console.openapi.yaml -o src/contracts/life-console.ts",
     "generate:sites-contracts": "openapi-typescript contracts/life-console-sites.openapi.yaml -o src/contracts/life-console-sites.ts",
@@ -19,6 +20,7 @@
     "test:e2e:synthetic": "playwright test",
     "test:integration:miniflare": "vitest run tests/integration",
     "test:worker": "vitest run tests/worker",
+    "test:stage-a-candidate": "vitest run tests/worker/stage-a-candidate.test.ts tests/ui/stage-a-poc-panel.test.tsx",
     "test:python": "python3 -m unittest discover -v -s tests/hub -p 'test_*.py' && python3 -m unittest discover -v -s tests/packaging -p 'test_*.py' && python3 -m unittest discover -v -s tests/e2e -p 'test_*.py'",
     "start:e2e:synthetic": "npm run build:sites-200 && node scripts/start-synthetic-sites-server.mjs"
   },

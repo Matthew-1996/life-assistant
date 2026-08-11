@@ -14,6 +14,7 @@ import { AppShell, type PageId } from "./components/shell/AppShell";
 import { syntheticDashboard, type Dashboard } from "./data/dashboard";
 import { ProgressPage } from "./features/progress/ProgressPage";
 import { RecordsPage } from "./features/records/RecordsPage";
+import { StageAPocPanel } from "./features/system/StageAPocPanel";
 import { SystemPage } from "./features/system/SystemPage";
 import { TodayPage } from "./features/today/TodayPage";
 
@@ -131,9 +132,12 @@ export function App({ client, initialDashboard, mode = "local" }: AppProps) {
         </div>
       )}
       {mode === "candidate-preview" && (
-        <div className="service-banner service-banner--candidate" role="status">
-          只读预览模式：候选不可写
-        </div>
+        <>
+          <div className="service-banner service-banner--candidate" role="status">
+            私有合成候选：不绑定真实数据或存储
+          </div>
+          <StageAPocPanel />
+        </>
       )}
       <div
         className={mode === "candidate-preview" ? "candidate-preview" : undefined}
