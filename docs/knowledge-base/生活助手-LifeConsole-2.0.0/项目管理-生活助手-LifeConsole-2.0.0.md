@@ -2,20 +2,20 @@
 
 > PMO 负责人：Agent
 >
-> 产品阶段：阶段 B 已由 PO 确认条件通过，已登录非 Owner 403 实测延期
+> 产品阶段：阶段 C Owner-only / D1 / R2 / KEK / 恢复校验进行中
 >
 > 最后更新：2026-08-11
 >
-> 关联分支：`agent/life-console-200-preview`（堆叠于 `agent/life-console-200`）
+> 关联分支：`agent/life-console-200-stage-c`（基于已合并的 `main`）
 >
-> 关联 worktree：`.worktrees/life-console-200-preview`
+> 关联 worktree：`.worktrees/life-console-200-stage-c`
 >
-> 当前 PR：#36 Ready for review；#37 Draft（阶段 B 堆叠 PR）
+> 当前 PR：#36、#37 已合并；阶段 C 分支尚未创建 PR
 
 ## 1. 当前目标（2026-08-11 首轮）
 
 ### 唯一主项
-Gate 2 已通过；进入阶段 A 合成数据联调，按每个工作块不超过 4 小时的约束实现 Sites 构建骨架、D1 Schema、Worker API、加密与前端接入。
+执行阶段 C：在不读取 iCloud、不迁移和不切源的边界内，完成正式 Sites 候选部署、Owner-only、空白 D1、私有 R2、真实 KEK、恢复包和签名 URL 校验。
 
 ### 次项
 - 从 1.1.0 Draft（agent/life-console-sites / PR #35）提炼可复用的 `sites` 构建模式与前端骨架，列出 2.0.0 实现阶段的第一个子任务清单。
@@ -54,9 +54,11 @@ Gate 2 已通过；进入阶段 A 合成数据联调，按每个工作块不超�
 | PMO（本文件）| ✅ 进行中 | 进度、风险、决策日志、开放项 |
 | 知识库 README.md 登记 | ✅ 已完成 | 已增加 2.0.0 行并说明 1.1.0 处置 |
 | 隐私体检 | ✅ 已完成 | 治理、索引与历史隐私检查通过；工具测试通过 |
-| PR #36 | ✅ Ready for review | Gate 1 与 Gate 2 均已确认；当前工作树包含待提交的评审与首批实现变更 |
+| PR #36 | ✅ 已合并 | 2.0.0 云端基础、Gate 1/Gate 2 文档与阶段 A 通用实现已进入 `main` |
+| PR #37 | ✅ 已合并 | 阶段 B 候选、Miniflare/Playwright 合成验证及安全依赖修复已进入 `main` |
 | IMPL-A1 - A12 | ✅ 阶段 A 通用开发已完成 | Sites 双模式、D1 12 表、Worker API、安全/加密、CRUD、迁移状态机、R2 备份/恢复包/轮换、iCloud 冷备代理、加密草稿与系统/写入 UI 已实现；不含正式绑定、部署和真实迁移 |
 | IMPL-B1 候选不可写预览 | ✅ PO 确认条件通过 | `candidate-preview` 合成只读构建与独立 Owner-only 候选已发布；Owner 授权首页 200、候选 API 403、环境变量 0 项；已登录非 Owner 403 未实测且已明确延期，不冒充为通过 |
+| IMPL-C1 正式资源与恢复校验 | 🟡 进行中 | PO 已授权正式 Sites 候选、空白 D1、私有 R2、真实 KEK、恢复包与五分钟签名 URL 校验；真实 iCloud、迁移和切源仍禁止 |
 
 ## 4. 当前事实入口
 
@@ -111,7 +113,7 @@ gantt
 
 | # | 卡点 / 风险 | 严重度 | 缓解策略 |
 |---|---|---|---|
-| 1 | 阶段 A 通用代码已完成，但尚未接入正式 D1/R2/Owner 会话 | **高（阻塞阶段 C）** | 当前仅使用合成 KEK、Node SQLite D1 适配器和 R2 mock；正式绑定、密钥与部署继续等待阶段 C 当次确认 |
+| 1 | 阶段 C 已获授权，但当前会话未提供 ChatGPT Sites hosting connector，且本机未安装 `wrangler` | **高（阻塞正式资源操作）** | 先完成授权记录、构建与私有部署指令；使用具备 Sites connector 的会话执行正式项目、D1/R2/Secret 操作后回读证据 |
 | 2 | 1.1.0 Draft 代码与 2.0.0 Worker API 有定位矛盾（只读 vs 写入）| **中** | 明确禁止直接合并 PR #35；实现阶段首个子任务是人工提炼清单 |
 | 3 | 密码管理器自动填充与恢复包二次确认的浏览器兼容性 | **中** | Gate 2 后先做合成浏览器兼容测试，不保存口令到应用状态或日志 |
 | 4 | iCloud 应急追加队列仍有被误用为业务记录的风险 | **中** | 独立目录与事件 Schema；仅追加；携带幂等键和 `base_revision`；恢复后受控导入，冲突人工处理 |
@@ -166,6 +168,7 @@ gantt
 | 2026-08-11 | 继续完成 IMPL-A13/A14 合成集成与浏览器 E2E | Agent | ✅ Miniflare 26/26、Playwright 2/2、Vitest 118/118、Python/打包/E2E 83/83；仅 loopback、临时 D1/R2 与合成 KEK/Owner，未触发真实资源或新门禁 |
 | 2026-08-11 | PO 授权继续阶段 B，创建并部署独立私有 Sites 候选 | PO + Agent | 🟡 候选 version 1 已发布；Owner 授权首页 200、未登录 401、候选 API 403、0 环境变量；正式项目未变，尚待第二身份补验已登录非 Owner 403 |
 | 2026-08-11 | PO 在暂无第二账号的情况下确认阶段 B 保持条件通过 | PO | ✅ 403 实测作为已披露限制延期，不再阻塞阶段 B 收口；未将未登录 401 冒充为已登录非 Owner 403 |
+| 2026-08-11 | PO 要求合并 PR #36/#37 并进入阶段 C | PO + PMO | 🟡 两项 PR 已合并；阶段 C 独立分支已建立，正式 Sites/D1/R2/KEK 操作待具备 Sites connector 的会话执行 |
 
 ## 9. 下一步（按优先级）
 
@@ -178,8 +181,9 @@ gantt
 7. ✅ **PO 阶段 A 签字完成**：授权提交并推送通用开发变更，PR #36 保持 Ready for review。
 8. ✅ **阶段 B 本地候选已验收**：PO 已确认四页候选、只读交互与最新视觉修复；验收记录见工程验收 §8。
 9. ✅ **阶段 B 线上候选已条件通过收口**：独立私有候选、Owner 授权访问、候选 API 失败关闭及 0 环境变量已验证；已登录非 Owner 403 保留为延期证据，不伪装为已执行。
-10. **下一门禁**：阶段 C 正式 Owner-only、D1/R2、KEK 和 Sites 部署需再次单独确认。
-11. **可延后/合并**：
+10. ✅ **阶段 C 已获 PO 当次确认**：正式 Owner-only、空白 D1、私有 R2、真实 KEK、恢复包与签名 URL 校验进入执行；不含真实 iCloud、迁移和切源。
+11. **当前卡点**：当前会话没有 Sites hosting connector；需要在具备 connector 的会话执行正式资源操作并回传去敏证据。
+12. **可延后/合并**：
    - 1.1.0 Draft 代码人工提炼报告（IMPL-A1 的前置）：可延后到 Gate 2 通过后与 IMPL-A1 子任务合并，不提前做
    - 恢复包演练与灾难恢复手册：可延后到交付阶段 C（Owner-only/KEK 校验）之前完成
    - `docs/operations/product-surfaces.json` 更新：阶段 E（切源后）同步写入，当前阶段无需提前操作
