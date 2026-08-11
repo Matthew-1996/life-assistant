@@ -1,6 +1,6 @@
 # 工程评审与验收 - 生活助手 - Life Console - 2.0.0
 
-> 状态：技术方案评审已通过 / 阶段 A 通用开发、Miniflare 与 Playwright 合成验证完成 / 阶段 B 本地候选已验收，待私有 Sites 候选部署
+> 状态：技术方案评审已通过 / 阶段 A 通用开发、Miniflare 与 Playwright 合成验证完成 / 阶段 B 私有 Sites 候选已部署，待已登录非 Owner 403 补证
 >
 > 适用范围：通用仓库代码、合成数据测试、治理与隐私检查；真实数据迁移与验收仅在 iCloud 私有环境 + Sites owner-only 会话执行，证据不复制到 Git。
 
@@ -132,13 +132,13 @@ npm run build:sites-200
 | 候选模式 | 新增 `candidate-preview` 构建；仅加载仓库内合成投影，不构造 Local/Sites API client |
 | 强制只读 | App 捕获写表单与写按钮，写控件显示只读样式，触发时只显示「只读预览模式：候选不可写」 |
 | 静态 Worker | `/api/*` 恒定 403，非 GET/HEAD 静态请求恒定 405；CSP 为 `connect-src 'none'` |
-| Vitest | 92/92 通过；新增候选 UI 2 项、候选 Worker 3 项、系统布局 2 项 |
+| Vitest | 93/93 通过；新增候选 UI 2 项、候选 Worker 4 项（含旧 `dist/` 清理）、系统布局 2 项 |
 | Python / 打包 / 合成 E2E | 75/75、7/7、1/1 通过 |
 | 构建 | 默认构建、Sites 2.0.0 构建和候选构建全部通过 |
 | 浏览器检查 | 四页导航通过；系统页显示 `mode=CANDIDATE_PREVIEW · 合成数据`；写动作仅显示只读提示；恢复包确认项为紧凑单行；迁移前置检查采用“标题+状态首行、说明独立次行”，5 项边界测量均无重叠；网络请求中没有 `/api/` |
 | 治理 / 隐私 / diff | 全部通过 |
 
-未完成边界：当前 Agent 运行时未暴露 Sites hosting connector，无法调用 `create_site`、私有部署与权限读回。因此本节不勾选阶段 B 的临时 Sites 部署、Owner 登录和非 owner 403；不得把本地 URL 或 Worker 单测冒充线上权限验收。
+本节记录本地候选证据；线上部署与权限证据见 §2.10。
 
 ### 2.9 Miniflare 与 Playwright 合成验证证据（2026-08-11）
 
@@ -149,6 +149,21 @@ npm run build:sites-200
 | Trace | `trace: on`；每次合成 E2E 生成本地 trace，`test-results/` 已忽略，不进入 Git |
 | 浏览器兼容 | 优先读取 `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`；macOS 可复用本机 Chrome，其他环境回退到 Playwright Chromium |
 | 网络与数据边界 | 合成服务器仅监听 `127.0.0.1:47821`；使用临时 D1/R2、合成 KEK 与合成 Owner；未访问真实 Sites、Cloudflare、iCloud 或私人数据 |
+
+### 2.10 阶段 B 私有 Sites 候选证据（2026-08-11）
+
+| 验证项 | 结果 |
+|---|---|
+| 项目隔离 | 新建独立 Sites 候选项目并发布 version 1；正式项目版本号读回保持不变 |
+| 源与构建 | 部署源提交与 Draft PR #37 的候选提交一致；归档仅含 `dist/client`、`dist/server`与当地 hosting 绑定 |
+| Owner 访问 | Sites 权限读回为当前用户=Owner、白名单 1 人、0 组、0 外部访客；Owner 授权 `GET /` 返回 200 |
+| 未登录访问 | `GET /` 返回 401，由 Sites SIWC 门禁拦截 |
+| 已登录非 Owner | 当前没有第二个已登录、不在白名单的身份可供实测；不将未登录 401 冒充为非 Owner 403 |
+| 候选 API 边界 | Owner 授权 `GET /api/v1/bootstrap` 返回 403 + `candidate_preview_read_only` |
+| 环境变量 | Sites 生产环境变量为 0 项；未配置 KEK 或其他 Secret |
+| D1/R2/iCloud | 候选 Worker 仅使用 `ASSETS`，不引用 D1/R2；前端仅加载合成 fixture，不构造 API client；本次未读取或迁移 iCloud 数据 |
+
+精确 URL、响应码与时间戳保存在 iCloud 私有 `outputs/` 验收记录，不进入 Git。阶段 B 当前为「条件通过」：候选部署、Owner 可访问和无真实资源绑定已验证；尚待第二身份补验已登录非 Owner 403。
 
 ## 3. 六阶段交付验收方法
 
@@ -169,10 +184,10 @@ npm run build:sites-200
 验收人：QA + PO
 证据：截图（不泄露 Sites project ID 细节）
 清单：
-- [ ] 部署到临时 Sites 项目或子路径（不影响生产 URL）
-- [ ] Owner 登录后看到四页工作台
-- [ ] 所有写控件变灰，点击显示「只读预览模式：候选不可写」toast
-- [ ] 系统页显示 `mode=CANDIDATE_PREVIEW · 合成数据`
+- [x] 部署到临时 Sites 项目或子路径（不影响生产 URL）
+- [x] Owner 授权访问候选首页返回 200
+- [x] 所有写控件变灰，点击显示「只读预览模式：候选不可写」toast（本地候选验收）
+- [x] 系统页显示 `mode=CANDIDATE_PREVIEW · 合成数据`（本地候选验收）
 - [ ] 非 owner 登录尝试访问 → 403
 
 ### 阶段 C：Owner-only / 密钥 / 备份校验
@@ -274,3 +289,11 @@ CI 只证明通用检查通过；阶段 C/D/E/F 的真实部署与迁移证据�
   - 未验收独立私有 Sites URL、Owner 登录或非 Owner 403。
   - 未授权阶段 C 的正式 Owner-only、D1/R2、真实 KEK、恢复包或备份校验。
   - 未授权真实 iCloud 读取/迁移、真相源切换、正式 URL 覆盖、永久删除、合并或发布。
+
+## 9. PO 阶段 B 私有 Sites 候选授权与结果
+
+- 授权日期：2026-08-11。
+- PO 原话：`继续 Life Console 2.0.0 阶段 B。使用 agent/life-console-200-preview 创建一个新的独立私有 Sites 候选项目，部署 candidate-preview 构建。不得覆盖正式 URL，不绑定真实 D1/R2/KEK，不读取 iCloud。部署后验证 Owner 可访问、非 Owner 返回 403，并记录阶段 B 验收证据。`
+- 已执行：独立私有候选项目、`candidate-preview` version 1 部署、Owner 授权 200、候选 API 403、权限及 0 环境变量读回。
+- 已隔离：正式 Sites 项目未保存新版本、未部署、未修改权限；未配置真实 D1/R2/KEK；未读取或迁移 iCloud 数据。
+- 未完成：未登录请求返回 401，不等于“已登录非 Owner 403”；当前缺少第二个非 Owner 身份，因此本阶段结论为「条件通过」，不虚报 403 验收。

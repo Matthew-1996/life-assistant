@@ -2,7 +2,7 @@
 
 > PMO 负责人：Agent
 >
-> 产品阶段：阶段 B 本地候选已验收，待私有 Sites 候选部署
+> 产品阶段：阶段 B 私有 Sites 候选已部署，待已登录非 Owner 403 补证
 >
 > 最后更新：2026-08-11
 >
@@ -10,7 +10,7 @@
 >
 > 关联 worktree：`.worktrees/life-console-200-preview`
 >
-> 当前 PR：#36 Ready for review
+> 当前 PR：#36 Ready for review；#37 Draft（阶段 B 堆叠 PR）
 
 ## 1. 当前目标（2026-08-11 首轮）
 
@@ -56,7 +56,7 @@ Gate 2 已通过；进入阶段 A 合成数据联调，按每个工作块不超�
 | 隐私体检 | ✅ 已完成 | 治理、索引与历史隐私检查通过；工具测试通过 |
 | PR #36 | ✅ Ready for review | Gate 1 与 Gate 2 均已确认；当前工作树包含待提交的评审与首批实现变更 |
 | IMPL-A1 - A12 | ✅ 阶段 A 通用开发已完成 | Sites 双模式、D1 12 表、Worker API、安全/加密、CRUD、迁移状态机、R2 备份/恢复包/轮换、iCloud 冷备代理、加密草稿与系统/写入 UI 已实现；不含正式绑定、部署和真实迁移 |
-| IMPL-B1 候选不可写预览 | 🟡 本地候选完成，私有 Sites 部署阻塞 | `candidate-preview` 合成只读构建、静态无 API Worker、90 项 Vitest 与本地浏览器四页/写入拦截/无 API 请求验证通过；当前运行时未暴露 Sites hosting connector |
+| IMPL-B1 候选不可写预览 | 🟡 私有 Sites 候选已部署，待 403 补证 | `candidate-preview` 合成只读构建与独立 Owner-only 候选已发布；Owner 授权首页 200、候选 API 403、环境变量 0 项；尚缺已登录非 Owner 身份实测 403 |
 
 ## 4. 当前事实入口
 
@@ -117,7 +117,7 @@ gantt
 | 4 | iCloud 应急追加队列仍有被误用为业务记录的风险 | **中** | 独立目录与事件 Schema；仅追加；携带幂等键和 `base_revision`；恢复后受控导入，冲突人工处理 |
 | 5 | 文档中引用 `docs/operations/product-surfaces.json` 变更需要实现阶段 F 同步完成 | **低** | PMO 阶段 F 显式列检查项 |
 | 6 | Cloudflare Worker/D1/R2 配额变更 | **低（单用户规模）** | 阶段 C 记录当前套餐；超出时及时升级 |
-| 7 | 当前 Agent 运行时未暴露 Sites hosting connector，无法创建独立 owner-only 候选项目 | **高（阻塞阶段 B 线上验收）** | 保留已验证候选构建；切换到具备 Sites connector 的会话后调用 `create_site` 一次并执行私有部署，随后读回权限并验证非 owner 403 |
+| 7 | 当前只有 Owner 身份，无法实测「已登录非 Owner」 403 | **中（阻塞阶段 B 完整验收）** | 候选已保持仅 Owner 白名单；得到第二个非 Owner ChatGPT 身份后仅执行访问测试，不修改站点权限 |
 
 ## 7. 实现阶段子任务拆分（预估，每个子任务 ≤ 4 小时）
 
@@ -164,6 +164,7 @@ gantt
 | 2026-08-11 | PO 授权进入阶段 B，生成候选不可写预览环境 | PO + PMO | 🟡 候选构建、本地四页浏览器验证、写入拦截与无 API 请求验证已完成；独立私有 Sites URL 和非 owner 403 因当前运行时缺少 Sites connector 未完成 |
 | 2026-08-11 | PO 完成阶段 B 本地候选验收 | PO + PMO | ✅ 四页候选、只读边界、合成数据标识、恢复包确认行与迁移前置检查视觉修复通过；不包含私有 Sites URL、Owner/非 Owner 权限验收或阶段 C |
 | 2026-08-11 | 继续完成 IMPL-A13/A14 合成集成与浏览器 E2E | Agent | ✅ Miniflare 26/26、Playwright 2/2、Vitest 118/118、Python/打包/E2E 83/83；仅 loopback、临时 D1/R2 与合成 KEK/Owner，未触发真实资源或新门禁 |
+| 2026-08-11 | PO 授权继续阶段 B，创建并部署独立私有 Sites 候选 | PO + Agent | 🟡 候选 version 1 已发布；Owner 授权首页 200、未登录 401、候选 API 403、0 环境变量；正式项目未变，尚待第二身份补验已登录非 Owner 403 |
 
 ## 9. 下一步（按优先级）
 
@@ -175,7 +176,7 @@ gantt
 6. ✅ **阶段 A 通用开发与合成验证完成**：IMPL-A3-A14 已实现；Miniflare 26/26、Playwright 2/2，正式 R2 与线上 Sites 权限验证仍留在后续门禁。
 7. ✅ **PO 阶段 A 签字完成**：授权提交并推送通用开发变更，PR #36 保持 Ready for review。
 8. ✅ **阶段 B 本地候选已验收**：PO 已确认四页候选、只读交互与最新视觉修复；验收记录见工程验收 §8。
-9. 🟡 **阶段 B 线上候选仍待完成**：待具备 Sites connector 的会话创建独立 owner-only 候选项目，完成 URL、Owner 登录与非 owner 403 验收；不得覆盖正式 URL。
+9. 🟡 **阶段 B 线上候选条件通过**：独立私有候选、Owner 授权访问、候选 API 失败关闭及 0 环境变量已验证；只待第二身份补验已登录非 Owner 403。
 10. **下一门禁**：阶段 C 正式 Owner-only、D1/R2、KEK 和 Sites 部署需再次单独确认。
 11. **可延后/合并**：
    - 1.1.0 Draft 代码人工提炼报告（IMPL-A1 的前置）：可延后到 Gate 2 通过后与 IMPL-A1 子任务合并，不提前做
