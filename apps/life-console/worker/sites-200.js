@@ -9,7 +9,7 @@ const SECURITY_HEADERS = {
   "Content-Security-Policy": [
     "default-src 'self'",
     "base-uri 'none'",
-    "connect-src 'self'",
+    "connect-src 'self' http://127.0.0.1:47323",
     "font-src 'self'",
     "form-action 'self'",
     "frame-ancestors 'none'",
