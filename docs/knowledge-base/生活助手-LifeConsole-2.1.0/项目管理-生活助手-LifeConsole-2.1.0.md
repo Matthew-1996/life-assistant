@@ -11,6 +11,8 @@
 > 当前分支：`agent/life-console-210-requirements`
 >
 > 当前 worktree：`.worktrees/life-console-210-requirements`
+>
+> 当前 Draft PR：[#39](https://github.com/Matthew-1996/life-assistant/pull/39)
 
 ## 1. 当前唯一主项
 
@@ -42,6 +44,7 @@
 | 对象 | 当前状态 | 2.1.0 处置 |
 |---|---|---|
 | `main` | 已包含阶段 B 候选基线 | 需求评审分支从最新 `origin/main` 创建 |
+| PR #39 / `agent/life-console-210-requirements` | Draft，Gate 1 评审载体 | 只保存去敏 PRD、需求评审与 PMO；PO 确认前不进入设计或实现 |
 | PR #38 / `agent/life-console-200-stage-c` | Draft，CI 通过，含正式 Sites/D1/R2/Secret 与恢复包代码 | 暂不原样合并；Gate 2 后提炼有效能力并由 2.1 实现 PR 取代 |
 | PR #35 / `agent/life-console-sites` | 历史 Draft | 继续仅作历史底稿，不进入本轮活动实现 |
 | PO 原始 PRD | iCloud 私有输入 | 原文不改写、不上传；Git 只保存结构化去敏产品方案 |
