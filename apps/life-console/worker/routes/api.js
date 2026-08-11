@@ -3,6 +3,7 @@ import { HttpError } from "../lib/errors.js";
 import {
   createFullBackup,
   createRecoveryPack,
+  downloadRecoveryPack,
   rotateKeks,
   verifyRecoveryPack,
 } from "../lib/maintenance.js";
@@ -142,6 +143,7 @@ export async function handleApi(request, env) {
     env,
     ownerHash: owner.hash,
     auditContext: await requestAuditContext(request),
+    requestUrl: request.url,
   };
 
   if (request.method === "GET" && url.pathname === "/api/v1/system/status") {
@@ -212,6 +214,16 @@ export async function handleApi(request, env) {
   }
   if (request.method === "POST" && url.pathname === "/api/v1/crypto/recovery-pack") {
     return createRecoveryPack(db, await jsonBody(request), context);
+  }
+  if (
+    request.method === "GET"
+    && url.pathname === "/api/v1/crypto/recovery-pack/download"
+  ) {
+    return downloadRecoveryPack({
+      object_key: url.searchParams.get("object_key"),
+      expires: url.searchParams.get("expires"),
+      signature: url.searchParams.get("signature"),
+    }, context);
   }
   if (
     request.method === "POST"

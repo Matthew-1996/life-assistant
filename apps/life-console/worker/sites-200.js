@@ -49,7 +49,11 @@ function jsonResponse(payload, status, requestId = null) {
 async function serveApi(request, env) {
   const requestId = crypto.randomUUID();
   try {
-    return jsonResponse(await handleApi(request, env), 200, requestId);
+    const result = await handleApi(request, env);
+    if (result instanceof Response) {
+      return withSecurityHeaders(result);
+    }
+    return jsonResponse(result, 200, requestId);
   } catch (error) {
     const status = Number.isInteger(error?.status) ? error.status : 500;
     if (status >= 400 && status !== 401) {

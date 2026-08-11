@@ -5,6 +5,8 @@ const serverDirectory = "dist/server";
 const workerSource = "worker/sites-200.js";
 const workerTarget = `${serverDirectory}/index.js`;
 const legacySnapshot = `${clientDirectory}/life-console-snapshot.json`;
+const migrationsSource = "d1/migrations";
+const migrationsTarget = "dist/.openai/drizzle";
 
 await stat(`${clientDirectory}/index.html`);
 await stat(workerSource);
@@ -15,3 +17,6 @@ await mkdir(serverDirectory, { recursive: true });
 await copyFile(workerSource, workerTarget);
 await cp("worker/lib", `${serverDirectory}/lib`, { recursive: true });
 await cp("worker/routes", `${serverDirectory}/routes`, { recursive: true });
+await rm(migrationsTarget, { recursive: true, force: true });
+await mkdir(migrationsTarget, { recursive: true });
+await cp(migrationsSource, migrationsTarget, { recursive: true });

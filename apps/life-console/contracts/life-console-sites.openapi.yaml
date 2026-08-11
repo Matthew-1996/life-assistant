@@ -228,6 +228,19 @@ paths:
       requestBody: {$ref: "#/components/requestBodies/JsonObject"}
       responses:
         "200": {description: Encrypted recovery pack receipt, content: {application/json: {schema: {type: object}}}}
+  /api/v1/crypto/recovery-pack/download:
+    get:
+      operationId: downloadSitesRecoveryPack
+      parameters:
+        - {name: object_key, in: query, required: true, schema: {type: string}}
+        - {name: expires, in: query, required: true, schema: {type: integer}}
+        - {name: signature, in: query, required: true, schema: {type: string}}
+      responses:
+        "200":
+          description: Encrypted recovery pack bytes.
+          content: {application/octet-stream: {schema: {type: string, format: binary}}}
+        "403": {description: Invalid signature.}
+        "410": {description: Signed URL expired.}
   /api/v1/crypto/verify-recovery-pack:
     post:
       operationId: verifySitesRecoveryPack

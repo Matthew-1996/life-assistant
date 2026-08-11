@@ -36,7 +36,10 @@ describe("Life Console 2.0.0 synthetic Sites API", () => {
         }),
         get: vi.fn(async (key: string) => {
           const value = bucketObjects.get(key);
-          return value === undefined ? null : { text: async () => value };
+          return value === undefined ? null : {
+            body: value,
+            text: async () => value,
+          };
         }),
       },
     };
@@ -568,6 +571,8 @@ describe("Life Console 2.0.0 synthetic Sites API", () => {
   });
 
   it("writes encrypted full backups and passphrase-protected recovery packs to R2", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-11T12:00:00Z"));
     const csrf = await csrfToken();
     const writeHeaders = headers({
       Origin: origin,
@@ -601,9 +606,14 @@ describe("Life Console 2.0.0 synthetic Sites API", () => {
       env,
     );
     expect(recovery.status).toBe(200);
-    expect(await recovery.json()).toEqual(expect.objectContaining({
+    const recoveryPayload = await recovery.json() as {
+      download_url: string;
+      object_key: string;
+    };
+    expect(recoveryPayload).toEqual(expect.objectContaining({
       object_key: expect.stringMatching(/^recovery-packs\/.+\.zip\.enc$/),
       sha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+      download_url: expect.stringMatching(/^https:\/\/example\.test\/api\/v1\/crypto\/recovery-pack\/download\?/),
     }));
     const calls = (env.BACKUP_BUCKET as {
       put: ReturnType<typeof vi.fn>;
@@ -632,6 +642,21 @@ describe("Life Console 2.0.0 synthetic Sites API", () => {
       verified: true,
       key_ids: expect.arrayContaining(["journal-v1", "health-v1", "backup-v1"]),
     }));
+
+    const immediateDownload = await worker.fetch(
+      new Request(recoveryPayload.download_url, { headers: headers() }),
+      env,
+    );
+    expect(immediateDownload.status).toBe(200);
+    expect(await immediateDownload.text()).toBe(bucketObjects.get(recoveryKey));
+
+    vi.advanceTimersByTime(5 * 60 * 1000 + 1);
+    const expiredDownload = await worker.fetch(
+      new Request(recoveryPayload.download_url, { headers: headers() }),
+      env,
+    );
+    expect(expiredDownload.status).toBe(410);
+    vi.useRealTimers();
   });
 
   it("rotates journal envelopes only when the v2 KEK is preconfigured", async () => {

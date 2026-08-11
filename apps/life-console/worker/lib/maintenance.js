@@ -3,6 +3,7 @@ import {
   decryptWithPassphrase,
   encryptField,
   encryptWithPassphrase,
+  hmacHex,
   sha256Hex,
 } from "./crypto.js";
 import { all, batch } from "./db.js";
@@ -26,6 +27,62 @@ const BACKUP_TABLES = [
 ];
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
+const RECOVERY_DOWNLOAD_TTL_MS = 5 * 60 * 1000;
+
+function constantTimeEqual(left, right) {
+  const leftBytes = textEncoder.encode(left);
+  const rightBytes = textEncoder.encode(right);
+  const length = Math.max(leftBytes.length, rightBytes.length);
+  let difference = leftBytes.length ^ rightBytes.length;
+  for (let index = 0; index < length; index += 1) {
+    difference |= (leftBytes[index] ?? 0) ^ (rightBytes[index] ?? 0);
+  }
+  return difference === 0;
+}
+
+function downloadSecret(env) {
+  if (!env.SESSION_SECRET || env.SESSION_SECRET.length < 32) {
+    throw new HttpError(
+      503,
+      "security_not_configured",
+      "Recovery download signing is not configured.",
+    );
+  }
+  return env.SESSION_SECRET;
+}
+
+function recoveryObjectKey(value) {
+  if (
+    typeof value !== "string"
+    || !value.startsWith("recovery-packs/")
+    || !value.endsWith(".zip.enc")
+  ) {
+    throw new HttpError(400, "invalid_request", "Recovery object key is invalid.");
+  }
+  return value;
+}
+
+function downloadPayload(objectKey, expires) {
+  return `recovery-download.v1.${expires}.${objectKey}`;
+}
+
+export async function createRecoveryDownloadUrl(
+  requestUrl,
+  objectKey,
+  env,
+  now = Date.now(),
+) {
+  const expires = now + RECOVERY_DOWNLOAD_TTL_MS;
+  const signature = await hmacHex(
+    downloadSecret(env),
+    downloadPayload(objectKey, expires),
+  );
+  const url = new URL("/api/v1/crypto/recovery-pack/download", requestUrl);
+  url.searchParams.set("object_key", objectKey);
+  url.searchParams.set("expires", String(expires));
+  url.searchParams.set("signature", signature);
+  return url.toString();
+}
 
 function concatenate(chunks) {
   const size = chunks.reduce((total, chunk) => total + chunk.length, 0);
@@ -260,7 +317,43 @@ export async function createRecoveryPack(db, input, context) {
     sha256: digest,
     created_at: createdAt,
     key_ids: Object.keys(keys),
+    download_url: await createRecoveryDownloadUrl(
+      context.requestUrl,
+      objectKey,
+      context.env,
+    ),
   };
+}
+
+export async function downloadRecoveryPack(input, context, now = Date.now()) {
+  const objectKey = recoveryObjectKey(input.object_key);
+  const expires = Number(input.expires);
+  if (!Number.isSafeInteger(expires) || expires <= now) {
+    throw new HttpError(410, "download_url_expired", "Recovery download URL has expired.");
+  }
+  if (expires > now + RECOVERY_DOWNLOAD_TTL_MS) {
+    throw new HttpError(403, "download_signature_invalid", "Recovery download signature is invalid.");
+  }
+  const expected = await hmacHex(
+    downloadSecret(context.env),
+    downloadPayload(objectKey, expires),
+  );
+  if (
+    typeof input.signature !== "string"
+    || !constantTimeEqual(input.signature, expected)
+  ) {
+    throw new HttpError(403, "download_signature_invalid", "Recovery download signature is invalid.");
+  }
+  const object = await requireBucket(context.env).get(objectKey);
+  if (!object?.body) {
+    throw new HttpError(404, "not_found", "Recovery pack was not found.");
+  }
+  return new Response(object.body, {
+    headers: {
+      "Content-Disposition": "attachment; filename=life-console-recovery-pack.zip.enc",
+      "Content-Type": "application/octet-stream",
+    },
+  });
 }
 
 export async function verifyRecoveryPack(input, context) {
