@@ -121,9 +121,9 @@ async function derivePassphraseKey(passphrase, salt, iterations) {
     encoder.encode(passphrase),
     "PBKDF2",
     false,
-    ["deriveKey"],
+    ["deriveBits"],
   );
-  return crypto.subtle.deriveKey(
+  const derived = await crypto.subtle.deriveBits(
     {
       name: "PBKDF2",
       hash: "SHA-256",
@@ -131,10 +131,9 @@ async function derivePassphraseKey(passphrase, salt, iterations) {
       iterations,
     },
     material,
-    { name: "AES-GCM", length: 256 },
-    false,
-    ["encrypt", "decrypt"],
+    256,
   );
+  return importAesKey(new Uint8Array(derived), ["encrypt", "decrypt"]);
 }
 
 function assertRecoveryPassphrase(passphrase) {
