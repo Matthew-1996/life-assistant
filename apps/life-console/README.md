@@ -23,6 +23,12 @@ Implemented in phase one:
 - rebuildable LaunchAgent and local launcher generation;
 - a dedicated, ad-hoc-signed Mac app launcher so launchd-owned Python work can
   inherit the product's user-approved protected-file access.
+- a credential-free local backup core that validates `life-console-backup/1`,
+  writes a private temporary file, performs ZIP safety and digest checks, and
+  atomically replaces one caller-configured latest backup;
+- the Life Console 2.1.0 five-section System page and synthetic-only iCloud
+  backup state model. Worker export and browser-loopback integration remain
+  intentionally blocked until their separate POC gate passes.
 
 Not enabled or included in phase one:
 
@@ -109,11 +115,14 @@ hub/
   read_model/               whitelisted iCloud projection
   command_runner/           fixed atomic-tool adapters
   security/                 loopback/session/origin policy
+local_agent/
+  backup_store.py           ZIP validation, atomic replacement, receipts
 src/
   contracts/                shared TypeScript types
 tests/
   contract/                 OpenAPI and fixture checks
   hub/                      read/write/security integration checks
+  local_agent/              synthetic atomic-backup and failure tests
   e2e/                      synthetic full workflow
 ```
 

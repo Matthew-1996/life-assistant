@@ -21,7 +21,7 @@
     "test:integration:miniflare": "vitest run tests/integration",
     "test:worker": "vitest run tests/worker",
     "test:stage-a-candidate": "vitest run tests/worker/stage-a-candidate.test.ts tests/ui/stage-a-poc-panel.test.tsx",
-    "test:python": "python3 -m unittest discover -v -s tests/hub -p 'test_*.py' && python3 -m unittest discover -v -s tests/packaging -p 'test_*.py' && python3 -m unittest discover -v -s tests/e2e -p 'test_*.py'",
+    "test:python": "python3 -m unittest discover -v -s tests/hub -p 'test_*.py' && python3 -m unittest discover -v -s tests/packaging -p 'test_*.py' && python3 -m unittest discover -v -s tests/local_agent -p 'test_*.py' && python3 -m unittest discover -v -s tests/e2e -p 'test_*.py'",
     "start:e2e:synthetic": "npm run build:sites-200 && node scripts/start-synthetic-sites-server.mjs"
   },
   "dependencies": {
