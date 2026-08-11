@@ -80,6 +80,7 @@ async function serveApi(request, env) {
         method: request.method,
         path: new URL(request.url).pathname,
         status,
+        code: error?.code ?? "internal_error",
       });
     }
     return jsonResponse(errorPayload(error, requestId), status, requestId);

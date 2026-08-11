@@ -676,6 +676,38 @@ describe("Life Console 2.0.0 synthetic Sites API", () => {
     vi.useRealTimers();
   });
 
+  it("reports a private-storage failure without exposing provider details", async () => {
+    const csrf = await csrfToken();
+    (env.BACKUP_BUCKET as { put: ReturnType<typeof vi.fn> }).put = vi.fn(
+      async () => {
+        throw new Error("synthetic provider detail must stay private");
+      },
+    );
+    const response = await worker.fetch(
+      new Request(`${origin}/api/v1/crypto/recovery-pack`, {
+        method: "POST",
+        headers: headers({
+          Origin: origin,
+          "Content-Type": "application/json",
+          "X-Life-CSRF": csrf,
+        }),
+        body: JSON.stringify({
+          passphrase: "synthetic-passphrase-2026",
+          confirmation: "synthetic-passphrase-2026",
+          acknowledged: true,
+        }),
+      }),
+      env,
+    );
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual(expect.objectContaining({
+      error: expect.objectContaining({
+        code: "recovery_storage_write_failed",
+        message: "Encrypted recovery pack could not be written to private storage.",
+      }),
+    }));
+  });
+
   it("rotates journal envelopes only when the v2 KEK is preconfigured", async () => {
     const csrf = await csrfToken();
     const writeHeaders = headers({

@@ -193,6 +193,19 @@ function requireBucket(env) {
   return env.BACKUP_BUCKET;
 }
 
+async function recoveryStage(task, {
+  status,
+  code,
+  message,
+}) {
+  try {
+    return await task();
+  } catch (error) {
+    if (error instanceof HttpError) throw error;
+    throw new HttpError(status, code, message);
+  }
+}
+
 export async function createFullBackup(db, input, context) {
   const bucket = requireBucket(context.env);
   const exportedAt = nowIso();
@@ -277,14 +290,18 @@ export async function createRecoveryPack(db, input, context) {
     created_at: createdAt,
     key_ids: Object.keys(keys),
   };
-  const verifySample = {
+  const verifySample = await recoveryStage(async () => ({
     kid: sampleKid,
     encrypted: await encryptField(samplePlaintext, {
       kid: sampleKid,
       kekMaterial: keys[sampleKid],
     }),
     plaintext_sha256: await sha256Hex(samplePlaintext),
-  };
+  }), {
+    status: 503,
+    code: "recovery_key_validation_failed",
+    message: "Recovery encryption keys could not be validated.",
+  });
   const entries = {
     "manifest.json": JSON.stringify(manifest),
     "verify-sample.json": JSON.stringify(verifySample),
@@ -292,36 +309,65 @@ export async function createRecoveryPack(db, input, context) {
       Object.entries(keys).map(([kid, material]) => [`kek-${kid}.key`, material]),
     ),
   };
-  const encryptedPack = await encryptWithPassphrase(
-    zipToBase64(createZip(entries)),
-    input.passphrase,
+  const encryptedPack = await recoveryStage(
+    () => encryptWithPassphrase(
+      zipToBase64(createZip(entries)),
+      input.passphrase,
+    ),
+    {
+      status: 500,
+      code: "recovery_pack_encryption_failed",
+      message: "Recovery pack encryption could not be completed.",
+    },
   );
   const digest = await sha256Hex(encryptedPack);
   const objectKey = `recovery-packs/${packId}.zip.enc`;
-  await bucket.put(objectKey, encryptedPack, {
-    httpMetadata: { contentType: "application/octet-stream" },
-    customMetadata: { sha256: digest, created_at: createdAt },
-  });
-  await batch(db, [
-    auditStatement({
-      ...context,
-      resourceType: "crypto",
-      resourceId: packId,
-      action: "RESTORE_PACK",
-      createdAt,
+  await recoveryStage(
+    () => bucket.put(objectKey, encryptedPack, {
+      httpMetadata: { contentType: "application/octet-stream" },
+      customMetadata: { sha256: digest, created_at: createdAt },
     }),
-  ]);
+    {
+      status: 503,
+      code: "recovery_storage_write_failed",
+      message: "Encrypted recovery pack could not be written to private storage.",
+    },
+  );
+  await recoveryStage(
+    () => batch(db, [
+      auditStatement({
+        ...context,
+        resourceType: "crypto",
+        resourceId: packId,
+        action: "RESTORE_PACK",
+        createdAt,
+      }),
+    ]),
+    {
+      status: 500,
+      code: "recovery_audit_write_failed",
+      message: "Recovery pack audit receipt could not be written.",
+    },
+  );
+  const downloadUrl = await recoveryStage(
+    () => createRecoveryDownloadUrl(
+      context.requestUrl,
+      objectKey,
+      context.env,
+    ),
+    {
+      status: 500,
+      code: "recovery_download_signing_failed",
+      message: "Recovery download URL could not be signed.",
+    },
+  );
   return {
     pack_id: packId,
     object_key: objectKey,
     sha256: digest,
     created_at: createdAt,
     key_ids: Object.keys(keys),
-    download_url: await createRecoveryDownloadUrl(
-      context.requestUrl,
-      objectKey,
-      context.env,
-    ),
+    download_url: downloadUrl,
   };
 }
 
