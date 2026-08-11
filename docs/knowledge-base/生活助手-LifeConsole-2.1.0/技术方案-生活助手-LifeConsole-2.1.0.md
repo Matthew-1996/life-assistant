@@ -1,6 +1,6 @@
 # 技术方案 - 生活助手 - Life Console - 2.1.0
 
-> 状态：Gate 2A 首轮实现完成 / Worker 与 HTTPS 平台验证仍阻塞
+> 状态：Gate 2A 首轮实现完成 / Gate 2B 替代验收方案评审中
 >
 > 基线：复用 2.0.0 Owner-only Sites Worker、D1、字段级 AES/KEK、CRUD、revision、幂等、删除计划和最小审计
 >
@@ -54,6 +54,35 @@ flowchart LR
 - [MDN Local Network Access](https://developer.mozilla.org/en-US/docs/Web/Security/Defenses/Local_network_access)
 
 PO Gate 2 通过后，第一项实现工作必须是最小 POC：网页只调用本机 `/health` 和合成 `/backups`，验证权限、预检、Origin 和失败关闭；POC 不读取 D1 或 iCloud。
+
+### 3.1 Gate 2B：扩展不可用后的方案比较（待 PO 确认）
+
+Chrome 扩展只让 Agent 取得用户 Chrome 的自动化控制权，不参与候选页自身的 `fetch`、CORS、LNA 或 Worker 容量执行。因此“扩展无法安装”不等于“Owner 浏览器桥接架构不可行”。
+
+| 方案 | 结论 | 优点 | 代价与风险 |
+|---|---|---|---|
+| A. 普通 Chrome 人工 POC + 去敏回执 | **推荐** | 不改产品架构、不需要扩展、不引入新凭据；现有候选页已有三个合成测试入口 | 需要 Owner 手工点击一次；结果需通过去敏回执交给 Agent 核验 |
+| B. 浏览器下载 ZIP，再由本机工具导入 | 二级降级，暂不采用 | 完全移除 HTTPS → localhost 回环依赖 | 多一步人工导入；下载目录出现短暂明文副本；网页无法直接确认 iCloud 原子写入成功 |
+| C. 本机代理直接拉取云端导出 | 拒绝 | 本机可独立执行 | 需要复制 Owner Cookie/Token 或新增设备授权，扩大凭据面并违背 Q1 |
+| D. 新建候选或绕过 Cloudflare | 不在范围 | 可能换一个访问入口 | 重复项目、改变外部资源或绕过安全策略；现有授权不允许 |
+
+推荐方案 A 的验收回执格式为 `life-console-poc-receipt/1`。回执由页面内存中的合成结果生成，可由用户主动复制或下载；页面不得自动上传到第三方。固定字段如下：
+
+```json
+{
+  "format_version": "life-console-poc-receipt/1",
+  "synthetic": true,
+  "browser_mode": "manual-chrome",
+  "loopback": "passed-or-failed",
+  "transfer": "passed-or-failed",
+  "capacity": [],
+  "generated_at": "UTC timestamp"
+}
+```
+
+`capacity` 仅保留档位、输入字节、归档字节与耗时；不得写入完整 UA、IP、主机名、机器路径、Sites/资源标识、Cookie、Token、错误堆栈或个人数据。Agent 只能依据回执和用户对可见页面的确认记录验收，不得把“用户打开过页面”推断为测试通过。
+
+方案 A 若失败，恢复条件不是继续尝试安装扩展，而是记录普通 Chrome 的精确失败阶段并回到 Gate 2B：候选入口被拦截则处理测试环境；回环/LNA 失败则再评审方案 B。未经新门禁不修改正式 Sites 或产品数据链路。
 
 ## 4. 云端数据模型调整
 
@@ -286,3 +315,4 @@ Gate 2 通过后，直接在 PR #39 的唯一活动分支按文件提炼；不�
 - 确认对象：Q1-Q7、本技术方案和工程测试方案。
 - 已授权：阶段 A-E 的通用代码、合成数据、回环 POC、本地临时目录测试和 Draft PR。
 - 不包含：正式部署、真实 D1/iCloud 读取、真实备份、切源、资源解绑/删除、PR 合并。
+- Gate 2B：PO 已确认启动替代方案评审；3.1 节推荐方案 A 与降级边界尚待 PO 确认，当前不授权实现或部署。
