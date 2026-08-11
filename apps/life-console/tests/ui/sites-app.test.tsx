@@ -234,9 +234,9 @@ describe("Life Console Sites mode", () => {
     )?.set;
     const passphrase = screen.getByLabelText("恢复包保护口令") as HTMLInputElement;
     const confirmation = screen.getByLabelText("再次输入保护口令") as HTMLInputElement;
-    await user.click(screen.getByLabelText("我理解恢复包需要由本人安全保管"));
     valueSetter?.call(passphrase, "password-manager-passphrase-2026");
     valueSetter?.call(confirmation, "password-manager-passphrase-2026");
+    await user.click(screen.getByLabelText("我理解恢复包需要由本人安全保管"));
     await user.click(screen.getByRole("button", { name: "生成恢复包" }));
 
     await waitFor(() => {

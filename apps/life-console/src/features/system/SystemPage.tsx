@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 
 import type {
   SitesLifeConsoleClient,
@@ -96,8 +96,8 @@ function SitesSystemPage({
     result: string;
   }>>([]);
   const [passphrase, setPassphrase] = useState("");
-  const [confirmation, setConfirmation] = useState("");
   const [acknowledged, setAcknowledged] = useState(false);
+  const recoveryForm = useRef<HTMLFormElement>(null);
   const [recoveryState, setRecoveryState] = useState<
     "idle" | "saving" | "ready" | "verified" | "failed"
   >("idle");
@@ -136,7 +136,6 @@ function SitesSystemPage({
       return;
     }
     setPassphrase(submittedPassphrase);
-    setConfirmation(submittedConfirmation);
     setAcknowledged(submittedAcknowledged);
     setRecoveryState("saving");
     try {
@@ -178,7 +177,8 @@ function SitesSystemPage({
       setRecoveryState(result.verified ? "verified" : "failed");
       if (result.verified) {
         setPassphrase("");
-        setConfirmation("");
+        setAcknowledged(false);
+        recoveryForm.current?.reset();
       }
     } catch {
       setRecoveryState("failed");
@@ -312,16 +312,18 @@ function SitesSystemPage({
                     : recoveryState === "failed" ? "需检查" : "未创建"}
             </span>
           </div>
-          <form className="form-grid" onSubmit={(event) => void generateRecoveryPack(event)}>
+          <form
+            className="form-grid"
+            onSubmit={(event) => void generateRecoveryPack(event)}
+            ref={recoveryForm}
+          >
             <label>
               恢复包保护口令
               <input
                 autoComplete="new-password"
                 minLength={16}
                 name="passphrase"
-                onChange={(event) => setPassphrase(event.target.value)}
                 type="password"
-                value={passphrase}
               />
             </label>
             <label>
@@ -330,9 +332,7 @@ function SitesSystemPage({
                 autoComplete="new-password"
                 minLength={16}
                 name="confirmation"
-                onChange={(event) => setConfirmation(event.target.value)}
                 type="password"
-                value={confirmation}
               />
             </label>
             <label className="checkbox-row">
