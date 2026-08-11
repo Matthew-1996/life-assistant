@@ -65,7 +65,7 @@ jobs:
         run: tools/check_git_privacy.sh
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
           cache: npm
           cache-dependency-path: apps/life-console/package-lock.json
       - name: Run reusable Node tests (plan projection + Google Sheets payload tooling)
