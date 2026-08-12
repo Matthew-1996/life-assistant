@@ -1,11 +1,11 @@
 # 工程评审与验收 - 生活助手 - Life Console - 2.2.0
 
-> 状态：Gate 2 已确认 / 阶段 A-D 通用合成实现与本地验证通过
-> 当前证据：官方资料、现有代码基线和本地纯合成 PGlite/supabase-js POC；没有 Supabase 资源、托管迁移、部署或真实数据证据
+> 状态：Gate 2 已确认 / 阶段 A-D 通过 / 阶段 E 远端候选条件通过，OTP/UI 待 PO 补验
+> 当前证据：本地纯合成 PGlite/supabase-js、东京托管 migration/seed/权限矩阵/Advisors，以及 READY 的 Vercel Preview；无真实数据、Production 或切源证据
 
 ## 1. 工程评审结论
 
-PO 已确认 Gate 1 的 PRD/D1-D8，以及 Gate 2 的 O1-O5、Q1-Q7、本测试矩阵和 A-G 阶段计划。当前只允许阶段 A-D 的通用合成实现，不得把本地测试写成托管后端或线上验证通过。
+PO 已确认 Gate 1 的 PRD/D1-D8，以及 Gate 2 的 O1-O5、Q1-Q7、本测试矩阵和 A-G 阶段计划，并于 2026-08-12 单独授权阶段 E 的独立 Supabase 测试资源、纯合成 migration/seed 与 Vercel Preview。托管数据库与 Vercel Preview 技术链路已验证；可收件 OTP 与登录后 UI 行为仍必须按实际结果补验，不得用 SQL 身份矩阵冒充浏览器双账号证据。
 
 ## 2. 测试分层
 
@@ -72,15 +72,15 @@ PO 已确认 Gate 1 的 PRD/D1-D8，以及 Gate 2 的 O1-O5、Q1-Q7、本测试�
 |---|---|---|
 | PRD/需求/设计/技术/测试草案 | 通过 | 已形成 2.2.0 唯一版本知识库 |
 | 官方兼容性核对 | 通过 | 已核对 Supabase changelog、RLS、Data API、Auth、Edge Function、备份及 Vercel Vite/环境文档 |
-| Supabase 资源 | 未执行 | 不在授权范围 |
-| 托管数据库正式迁移与测试 | 未执行 | Gate 2 与独立资源授权后才允许 |
-| Vercel/Supabase 部署 | 未执行 | 不在授权范围 |
+| Supabase 资源 | 通过 | 独立东京测试项目已创建并保持纯合成；未记录项目 ID 或凭据 |
+| 托管数据库 migration、seed 与测试 | 通过 | 三个 migration、两名不可登录占位身份、幂等 seed 与 13/13 权限矩阵完成 |
+| Vercel Preview | 条件通过 | 隔离 Preview READY、安全头通过；候选会话与登录后 UI 待 PO 补验，Production 保持不变 |
 | 真实数据、切源、删除 | 未执行 | 明确禁止 |
 | 本地 PostgreSQL/RLS 合成 POC | 通过 | 7 项；Owner/非 Owner/anon、upsert、调用者权限 RPC |
 | supabase-js 浏览器契约 POC | 通过 | 4 项；OTP、publishable key、重试关闭、CSP 阻塞识别 |
 | `life-console-backup/1` 合成 POC | 通过 | 八类业务资源、canonical NDJSON/manifest、摘要/计数、ZIP 与既有 Agent 原子恢复 round-trip |
 | 完整本地 Supabase 栈 | 阻塞 | 本机无 Docker；未安装机器级依赖 |
-| 托管候选与大陆网络 | 延期 | 需要独立资源与部署授权，不能由 PGlite 替代 |
+| 托管候选与大陆网络 | 条件通过 | 东京 migration、权限矩阵与 Preview 完成；当前网络可打开 Auth Gate，登录后分时网络样本待补 |
 
 ## 8. 阶段 A 首个开发块证据
 
@@ -202,4 +202,22 @@ PO 已确认 Gate 1 的 PRD/D1-D8，以及 Gate 2 的 O1-O5、Q1-Q7、本测试�
 | UI/远端/真实路径 | 未执行 | 未接正式入口、下载、CSP、Supabase/Vercel 资源、部署或真实 iCloud |
 | 私人数据与 D3 | 未执行 | 仅合成记录；未读取、生成、上传或迁移真实日记/健康数据；字段加密仍是独立门禁 |
 
-阶段 D 证明用户可迁移包的本地格式兼容与恢复安全边界，不证明托管 RPC/PostgREST、浏览器真实下载、Vercel 响应头、桌面 Agent 探测、真实 iCloud 权限或真实数据恢复。阶段 E 的独立资源和候选部署必须由 PO 另行授权。
+阶段 D 证明用户可迁移包的本地格式兼容与恢复安全边界，不证明托管 RPC/PostgREST、浏览器真实下载、Vercel 响应头、桌面 Agent 探测、真实 iCloud 权限或真实数据恢复。
+
+## 15. 阶段 E 远端候选验收
+
+| 项目 | 当前状态 | 验收证据或剩余条件 |
+|---|---|---|
+| 独立 Supabase 测试项目 | 通过 | 项目名、东京 `ap-northeast-1`、健康状态、Data API 开启、自动暴露新表关闭与自动 RLS 启用均已复核 |
+| Production migration | 通过 | 三个版本化 migration 已应用；12 表、14 个契约索引、GRANT、RLS、trigger 与 authenticated-only RPC 和本地契约一致 |
+| 纯合成身份与 seed | 通过 | 两个无密码且不可登录的 A/B 占位身份；每个 Owner 的合成资源幂等写入，未使用真实生活数据 |
+| 托管权限矩阵 | 通过 | 13/13：anon、Owner、非 Owner、换绑、物理删除、revision、幂等、trigger 与导出 RPC；事务回滚后计数不变 |
+| Supabase Advisors | 条件通过 | 无 security error；保留 1 条无密码邮件登录场景非阻断 password warning；Performance 只有新项目 `unused_index` info |
+| Supabase Candidate 构建 | 通过 | 独立模式接入候选 Magic Link Gate 与四类 Repository；串行全量 260/260 Vitest、应用 Python 92/92，生产、静态 Candidate 与 Supabase Candidate 构建均通过 |
+| CSP/CORS | 通过 | Preview 响应头只放行精确 Supabase HTTPS/WSS Origin，无通配符；`no-referrer`、`nosniff`、`DENY` 与 `noindex` 读回通过 |
+| Vercel Preview | 条件通过 | 修复版 Preview READY、首页 200、只配置 URL 与 publishable key；未登录 Gate 现按实际环境显示“发送登录链接”，429 显示限额专用提示；默认 SMTP 内置发信配额为 2 封/小时，候选会话与 UI 待配额恢复后补验，六位 OTP 延期 |
+| Production、真实数据与切源 | 通过（保持禁止） | Production 部署记录未替换；未读取 iCloud、未上传真实记录、未切源、PR #40 保持 Draft |
+
+首次候选发布因部署白名单漏含纯合成 fixture 且干净环境暴露 Vite/Vitest 配置类型问题而失败；补齐 fixture 并将 `defineConfig` 改从 `vitest/config` 导入后发布成功。修复 Auth 文案时第一次直接文件树仍漏带该 fixture，读取去敏构建日志后在第二次发布补齐。最终修复版 Preview READY，Supabase Site URL 已同步，Production 创建记录保持不变。失败部署只保留平台历史记录，本轮未获授权删除资源。
+
+并行全量 Vitest 首轮有 Miniflare smoke 与跨语言备份回环各一项超过默认 5 秒；两项隔离复测均通过，随后单工作线程全量 36 个文件、260/260 通过，证明是本机并行资源争用而非断言失败。应用 Python 75+7+9+1=92 项通过，三类构建均通过；额外回归确认纯合成 seed 重放不会重复写入。

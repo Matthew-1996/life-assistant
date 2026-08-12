@@ -15,6 +15,28 @@ import type {
 export interface SupabaseAuthGateProps {
   auth: LifeConsoleAuthService;
   children: ReactNode;
+  deliveryMode?: "magic-link" | "otp";
+}
+
+function isEmailRateLimit(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const candidate = error as { code?: unknown; status?: unknown };
+  return candidate.code === "over_email_send_rate_limit"
+    || candidate.status === 429;
+}
+
+function requestErrorMessage(
+  error: unknown,
+  deliveryMode: "magic-link" | "otp",
+): string {
+  if (isEmailRateLimit(error)) {
+    return deliveryMode === "magic-link"
+      ? "测试环境的邮件发送额度暂时用完。请约 1 小时后再试，期间不要重复点击。"
+      : "邮件发送过于频繁，请稍后再试，期间不要重复点击。";
+  }
+  return deliveryMode === "magic-link"
+    ? "暂时无法发送登录链接，请稍后重试。"
+    : "暂时无法发送验证码，请稍后重试。";
 }
 
 function maskEmail(email: string): string {
@@ -29,13 +51,14 @@ function maskEmail(email: string): string {
 export function SupabaseAuthGate({
   auth,
   children,
+  deliveryMode = "otp",
 }: SupabaseAuthGateProps): ReactElement {
   const [session, setSession] = useState<AuthSession | null | undefined>(
     undefined,
   );
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
+  const [deliverySent, setDeliverySent] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const authEventVersion = useRef(0);
@@ -78,9 +101,9 @@ export function SupabaseAuthGate({
     try {
       await auth.requestOtp(email);
       setEmail(email.trim());
-      setOtpSent(true);
-    } catch {
-      setError("暂时无法发送验证码，请稍后重试。");
+      setDeliverySent(true);
+    } catch (requestError) {
+      setError(requestErrorMessage(requestError, deliveryMode));
     } finally {
       setPending(false);
     }
@@ -105,7 +128,7 @@ export function SupabaseAuthGate({
     try {
       await auth.signOut();
       setOtp("");
-      setOtpSent(false);
+      setDeliverySent(false);
       setSession(null);
     } catch {
       setError("暂时无法退出登录，请稍后重试。");
@@ -155,10 +178,12 @@ export function SupabaseAuthGate({
         <p className="auth-gate-eyebrow">OWNER ACCESS</p>
         <h1 id="auth-gate-title">登录 Life Console</h1>
         <p className="auth-gate-intro">
-          使用已授权邮箱获取一次性验证码。系统不会提示邮箱是否存在。
+          {deliveryMode === "magic-link"
+            ? "使用已授权邮箱获取一次性登录链接。系统不会提示邮箱是否存在。"
+            : "使用已授权邮箱获取一次性验证码。系统不会提示邮箱是否存在。"}
         </p>
 
-        {!otpSent ? (
+        {!deliverySent ? (
           <form className="auth-gate-form" onSubmit={requestOtp}>
             <label htmlFor="auth-email">邮箱</label>
             <input
@@ -174,9 +199,34 @@ export function SupabaseAuthGate({
               disabled={pending}
               type="submit"
             >
-              {pending ? "正在发送…" : "发送验证码"}
+              {pending
+                ? "正在发送…"
+                : deliveryMode === "magic-link"
+                  ? "发送登录链接"
+                  : "发送验证码"}
             </button>
           </form>
+        ) : deliveryMode === "magic-link" ? (
+          <div className="auth-gate-form">
+            <div
+              aria-live="polite"
+              className="auth-gate-notice"
+              role="status"
+            >
+              <p>若该邮箱已获授权，最新登录链接已发送至 {maskEmail(email)}</p>
+              <p>请打开最新邮件并点击一次，页面会自动完成登录。</p>
+            </div>
+            <button
+              className="secondary-button"
+              onClick={() => {
+                setDeliverySent(false);
+                setError(null);
+              }}
+              type="button"
+            >
+              更换邮箱
+            </button>
+          </div>
         ) : (
           <form className="auth-gate-form" onSubmit={verifyOtp}>
             <p aria-live="polite" className="auth-gate-notice" role="status">

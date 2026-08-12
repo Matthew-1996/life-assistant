@@ -1,12 +1,12 @@
 # Supabase 可行性调研与 POC - 生活助手 - Life Console - 2.2.0
 
-> 状态：本地合成 POC 通过 / 远端候选验证待单独授权
+> 状态：本地合成 POC 与东京托管权限验证通过 / Vercel Preview READY / OTP/UI 待 PO 补验
 > 日期：2026-08-12
-> 边界：未创建 Supabase 资源，未部署，未读取 iCloud，未使用真实数据或真实身份
+> 边界：独立东京 Supabase 项目只含 migration 与纯合成数据；未读取 iCloud、未上传真实生活记录、未部署 Production、未切源
 
 ## 1. 结论
 
-Supabase 作为 Life Console 2.2.0 后端候选 **可继续推进，但不能仅凭本地 POC 进入真实迁移**。当前已证明数据模型、RLS、调用者权限 View/RPC、同日原子 upsert 和浏览器 SDK 契约可行；区域网络、真实 OTP 邮件、托管 Data API、Vercel 跨域及两账号隔离必须在独立私有候选项目验证。
+Supabase 作为 Life Console 2.2.0 后端候选 **可继续推进，但仍不能直接进入真实迁移**。本地与托管证据已证明数据模型、RLS、调用者权限 View/RPC、同日原子 upsert、浏览器 SDK 契约、托管 Data API 权限和 Vercel 精确 CSP 可行；可收件 OTP、登录后浏览器 CRUD、大陆分时网络、1k/10k 托管容量与真实敏感字段加密仍需独立门禁。
 
 没有发现必须放弃 Supabase 的技术卡点，已发现六项必须提前处理的工程约束：
 
@@ -81,24 +81,24 @@ Supabase 作为 Life Console 2.2.0 后端候选 **可继续推进，但不能仅
 
 普通 CRUD 和一致性导出优先使用 RLS + Data API/RPC。只有需要隐藏第三方 secret、服务端编排或超出数据库函数职责时才引入 Edge Function。托管限制当前包括 256MB 内存、每请求 2 秒 CPU、150 秒请求空闲超时；Free worker 最长 150 秒。大备份不得把完整数据长期缓存在 Edge Function 内存。
 
-## 5. 尚未验证且不可在本机替代的项目
+## 5. 托管候选验证与剩余项目
 
-| 项目 | 原因 | 下一步验收 |
+| 项目 | 当前结果 | 下一步验收 |
 |---|---|---|
-| 中国大陆到 Supabase 的延迟和稳定性 | 没有真实项目端点，公共官网不代表项目链路 | 选定候选区域后，上海网络分时测 Auth/Data API/RPC |
-| 区域选择 | 创建后不能原地更换 | 创建前比较东京、新加坡、首尔等候选的合规和网络 |
-| OTP 实际到达 | 本地没有 GoTrue/SMTP | 候选项目使用合成邮箱；正式前测试自有 SMTP |
-| 托管 Postgres RLS/GRANT | PGlite 只覆盖核心 PostgreSQL 语义 | 应用正式 migration，运行 anon/A/B 三身份矩阵 |
-| Vercel Preview CORS/CSP | 本轮不部署 | 精确 Origin、安全头、无 secret/source map 检查 |
-| 1,000 行以上分页与备份容量 | 无托管端点和目标容量基线 | 合成 1k/10k/目标上限，测 RPC 大小、耗时和内存 |
-| 平台 Advisors/备份/暂停恢复 | 依赖托管项目及套餐 | 读取 Security/Performance Advisor，验证导出与恢复演练 |
-| 已登录非 Owner 端到端证据 | 需要第二个合成 Auth 用户 | 不得用未登录 401 代替 |
+| 中国大陆到 Supabase 的延迟和稳定性 | 当前网络可加载 Vercel Preview 与 Auth Gate；尚无登录后分时样本 | 上海网络分时测 Auth、Data API 与 RPC |
+| 区域选择 | 东京 `ap-northeast-1` 已创建并复核健康；区域不可原地变更 | 真实迁移前再确认数据驻留与网络 |
+| OTP 实际到达 | Auth 日志确认默认 SMTP 已发送 Magic Link；控制台在未配置自有 SMTP 时锁定模板编辑，无法改成 `{{ .Token }}` 六位 OTP；内置 SMTP 固定为每小时 2 封，邀请与首次登录链接已触发 429 限流；候选 UI 已改为 Magic Link 和 429 专用提示 | 配额窗口恢复后只发送一次最新 Magic Link 验证会话；六位 OTP 延期到自有 SMTP 评审 |
+| 托管 Postgres RLS/GRANT | 三个版本化迁移已应用；托管 anon/A/B 权限矩阵 13/13 通过 | 真实迁移前在最终项目重复执行 |
+| Vercel Preview CORS/CSP | Preview READY、HTTP 200；只放行精确 Supabase HTTPS/WSS Origin，安全头读回通过 | 登录后验证 CRUD、冲突、失败与退出 |
+| 1,000 行以上分页与备份容量 | 本地 2,000 条跨语言备份通过；托管 1k/10k 尚未执行 | 确定目标容量后测 RPC 大小、耗时和内存 |
+| 平台 Advisors/备份/暂停恢复 | Security 无 error，1 条无密码邮件登录场景非阻断 password warning；Performance 仅新项目未使用索引 info | 真实上线前复核 Advisor；平台恢复演练另立门禁 |
+| 非 Owner 隔离 | 托管 SQL 权限矩阵已验证 A/B 隔离；两个可登录 Auth 账号的浏览器 E2E 未执行 | 不得把 SQL 矩阵冒充双浏览器身份验证 |
 
 ## 6. 进入实现前建议门禁
 
-当前可以继续 Gate 1/2 方案确认和本地通用代码，但创建 Supabase 项目前需 PO 另行确认：区域候选、Free/Pro 成本、自有 SMTP 是否本版本必需、独立测试邮箱、资源生命周期和删除审批人。
+阶段 E 专项资源与 Preview 授权已经使用；当前只等待 PO 完成网页内 Magic Link/UI 验收以及 Agent 补齐治理检查，六位 OTP 单独延期。任何真实数据、Production、切源、资源删除、PR Ready 或合并仍需新的明确授权。
 
-独立私有候选 POC 建议控制在一个 ≤3 小时工作块，只放合成数据，完成后输出去敏证据；未经新授权不部署、不读取 iCloud、不接入真实日记/健康数据、不切换真相源。
+候选资源继续只放合成数据并输出去敏证据；未经新授权不读取 iCloud、不接入真实日记/健康数据、不切换真相源，也不提升 Preview 到 Production。
 
 ## 7. 官方依据
 

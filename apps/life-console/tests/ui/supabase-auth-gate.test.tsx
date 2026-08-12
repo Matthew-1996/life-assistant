@@ -101,6 +101,60 @@ describe("Supabase Auth gate", () => {
     ).toBeTruthy();
   });
 
+  it("uses a Magic Link handoff for the remote candidate without showing an OTP field", async () => {
+    const user = userEvent.setup();
+    const auth = createAuthService();
+    render(
+      <SupabaseAuthGate auth={auth} deliveryMode="magic-link">
+        <div>私有工作区</div>
+      </SupabaseAuthGate>,
+    );
+    await screen.findByRole("heading", { name: "登录 Life Console" });
+
+    await user.type(
+      screen.getByRole("textbox", { name: "邮箱" }),
+      "owner@example.invalid",
+    );
+    await user.click(screen.getByRole("button", { name: "发送登录链接" }));
+
+    expect(auth.requestOtp).toHaveBeenCalledWith("owner@example.invalid");
+    expect(screen.getByRole("status").textContent).toContain(
+      "最新登录链接已发送至 o***r@example.invalid",
+    );
+    expect(screen.getByRole("status").textContent).toContain(
+      "打开最新邮件并点击一次",
+    );
+    expect(screen.queryByRole("textbox", { name: "6 位验证码" })).toBeNull();
+  });
+
+  it("explains the hosted email limit instead of showing a generic send failure", async () => {
+    const user = userEvent.setup();
+    const auth = createAuthService();
+    auth.requestOtp = vi.fn(async () => {
+      throw Object.assign(new Error("synthetic rate limit"), {
+        code: "over_email_send_rate_limit",
+        status: 429,
+      });
+    });
+    render(
+      <SupabaseAuthGate auth={auth} deliveryMode="magic-link">
+        <div>私有工作区</div>
+      </SupabaseAuthGate>,
+    );
+    await screen.findByRole("heading", { name: "登录 Life Console" });
+
+    await user.type(
+      screen.getByRole("textbox", { name: "邮箱" }),
+      "owner@example.invalid",
+    );
+    await user.click(screen.getByRole("button", { name: "发送登录链接" }));
+
+    expect(screen.getByRole("alert").textContent).toContain(
+      "邮件发送额度暂时用完",
+    );
+    expect(screen.getByRole("alert").textContent).toContain("不要重复点击");
+  });
+
   it("requires six digits before verifying and reveals authenticated children", async () => {
     const user = userEvent.setup();
     const auth = createAuthService();

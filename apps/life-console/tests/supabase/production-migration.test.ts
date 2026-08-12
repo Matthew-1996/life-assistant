@@ -24,6 +24,7 @@ const ownerA = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const ownerB = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 
 let db: PGlite;
+let syntheticSeed: string;
 
 async function queryAs<T extends Record<string, unknown>>(
   role: "anon" | "authenticated",
@@ -51,10 +52,21 @@ beforeAll(async () => {
     "../../supabase/migrations/0001_life_console.sql",
     import.meta.url,
   );
+  const hardeningMigration = new URL(
+    "../../supabase/migrations/0002_harden_automatic_rls_helper.sql",
+    import.meta.url,
+  );
+  const foreignKeyIndexMigration = new URL(
+    "../../supabase/migrations/0003_cover_health_segment_foreign_key.sql",
+    import.meta.url,
+  );
   const seed = new URL("../../supabase/seed.synthetic.sql", import.meta.url);
   await db.exec(await readFile(authShim, "utf8"));
   await db.exec(await readFile(migration, "utf8"));
-  await db.exec(await readFile(seed, "utf8"));
+  await db.exec(await readFile(hardeningMigration, "utf8"));
+  await db.exec(await readFile(foreignKeyIndexMigration, "utf8"));
+  syntheticSeed = await readFile(seed, "utf8");
+  await db.exec(syntheticSeed);
 });
 
 afterAll(async () => {
@@ -62,6 +74,62 @@ afterAll(async () => {
 });
 
 describe("Life Console production Supabase migration", () => {
+  it("replays the synthetic seed without duplicating rows", async () => {
+    const before = await db.query<{ total: number }>(
+      `select (
+        select count(*) from public.profiles
+      ) + (
+        select count(*) from public.goals
+      ) + (
+        select count(*) from public.journals
+      ) + (
+        select count(*) from public.daily_checkins
+      ) + (
+        select count(*) from public.weekly_reviews
+      ) + (
+        select count(*) from public.phase_reviews
+      ) + (
+        select count(*) from public.health_days
+      ) + (
+        select count(*) from public.health_segments
+      ) + (
+        select count(*) from public.idempotency_keys
+      ) + (
+        select count(*) from public.backup_runs
+      ) + (
+        select count(*) from public.audit_events
+      ) as total`,
+    );
+
+    await db.exec(syntheticSeed);
+    const after = await db.query<{ total: number }>(
+      `select (
+        select count(*) from public.profiles
+      ) + (
+        select count(*) from public.goals
+      ) + (
+        select count(*) from public.journals
+      ) + (
+        select count(*) from public.daily_checkins
+      ) + (
+        select count(*) from public.weekly_reviews
+      ) + (
+        select count(*) from public.phase_reviews
+      ) + (
+        select count(*) from public.health_days
+      ) + (
+        select count(*) from public.health_segments
+      ) + (
+        select count(*) from public.idempotency_keys
+      ) + (
+        select count(*) from public.backup_runs
+      ) + (
+        select count(*) from public.audit_events
+      ) as total`,
+    );
+    expect(after.rows).toEqual(before.rows);
+  });
+
   it("creates the approved tables with RLS enabled", async () => {
     const tables = await db.query<{
       relname: string;
@@ -94,13 +162,14 @@ describe("Life Console production Supabase migration", () => {
            'phase_reviews_user_period_idx',
            'health_days_user_date_idx',
            'health_segments_user_day_idx',
+           'health_segments_health_day_id_idx',
            'idempotency_keys_user_expiry_idx',
            'backup_runs_user_created_idx',
            'audit_events_user_created_idx'
          )
        order by indexname`,
     );
-    expect(indexes.rows).toHaveLength(13);
+    expect(indexes.rows).toHaveLength(14);
   });
 
   it("uses invoker rights and an empty search path for snapshot export", async () => {

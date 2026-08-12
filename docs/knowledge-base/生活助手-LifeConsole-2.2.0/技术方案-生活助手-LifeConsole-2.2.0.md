@@ -1,7 +1,7 @@
 # 技术方案 - 生活助手 - Life Console - 2.2.0
 
-> 状态：Gate 2 已确认 / 阶段 A-D 通用合成实现与本地验证完成
-> 范围：允许通用代码、生产 migration 草案和合成测试；不创建 Supabase/Vercel 资源，不连接真实项目
+> 状态：Gate 2 已确认 / 阶段 A-D 完成 / 阶段 E 远端候选条件通过，OTP/UI 待 PO 补验
+> 范围：允许在独立东京测试项目执行纯合成 migration/seed、托管权限验证和 Vercel Preview；禁止真实数据、Production、切源和 PR 合并
 
 ## 1. 技术结论摘要
 
@@ -215,6 +215,23 @@ PO 已确认本轮只实现日记创建、读取、分页和修订，不实现�
 
 阶段 D 聚焦回归为备份与 production migration 35/35、Local Agent 9/9。包含该 POC 后的全量本地回归为 34 个 Vitest 文件、252/252，应用 Python 92/92，根工具测试 329/329；公开 Registry 干净安装审计 0，生产构建、项目验证、diff 与隐私检查通过。该证据不证明托管 Supabase RPC/PostgREST、Vercel 下载响应、真实 iCloud 写入、D3 字段加密或真实数据恢复。
 
+### 9.11 阶段 E 远端候选实现与验证
+
+PO 已于 2026-08-12 单独授权创建独立 Supabase 测试资源、执行纯合成 migration/seed，并部署 Vercel Preview。去敏实现与验证事实如下：
+
+- 独立 Supabase 测试项目已在东京 `ap-northeast-1` 创建，项目显示名为 `life-console-220-synthetic-test`。
+- Data API 保持开启，“自动暴露新表”关闭；自动 RLS 事件触发器处于启用状态。数据库密码、项目 ID、publishable key、测试邮箱和连接串均未写入 Git 或知识库。
+- 误建的空白悉尼测试项目已在 PO 当次明确授权后删除；既有暂停项目未修改。
+- 已按顺序应用 `0001_life_console.sql`、自动 RLS helper 收权迁移和健康片段外键索引迁移；后两项分别消除 helper 可直接执行与外键缺索引问题。
+- `auth-users.synthetic.sql` 只创建两个不可登录、无密码的 A/B 占位身份；`seed.synthetic.sql` 按元数据解析 Owner，并为两个 Owner 幂等生成纯合成记录。托管权限矩阵 13/13 通过，测试事务回滚后行数保持不变。
+- Security Advisor 当前无 error，保留 1 条“泄露密码保护未开启”warning；候选只使用无密码邮件登录且不开放密码登录，因此阶段 E 记录为已知非阻断项。Performance Advisor 只有新建项目的 `unused_index` info，不删除契约要求的索引。
+- 新增独立 `supabase-candidate` 入口和 `vercel.mjs` 动态配置；只接受精确 Supabase HTTPS Origin 与现代 publishable key，拒绝 secret key 和非 Preview 环境。CSP 只放行对应 HTTPS/WSS Origin，不使用通配符。
+- Vercel 仅在 Preview 环境保存 URL 与 publishable key；候选部署已 READY，首页返回 200，并读回 CSP、`no-referrer`、`nosniff`、`DENY` 与 `noindex`。现有 Production 部署记录与 URL 未改变。
+- 浏览器未登录态已显示 Auth Gate。默认 SMTP 实际发送 `magic_link`，且托管控制台要求先配置自有 SMTP 才允许将模板改为 `{{ .Token }}` 六位 OTP；因此本轮把候选 Site URL 修正为当前 Preview，用 Magic Link 只验证候选会话与 CRUD。`SupabaseAuthGate` 默认仍保持 OTP；只有 `supabase-candidate` 注入 `magic-link` 展示模式，发送后只提示打开最新邮件，429 `over_email_send_rate_limit` 映射为明确限额提示。六位 OTP 仍按原设计保留，并明确延期到自有 SMTP 评审，不得用 Magic Link 冒充 OTP 通过。邮箱、链接与验证码均不进入聊天或文档。
+- 候选 Origin 校验收紧为单层 `*.supabase.co` 托管项目 hostname，并拒绝显式端口、嵌套子域、凭据、路径、查询和片段；`supabase-candidate` 不再初始化未使用的本地 API client。
+
+本轮没有读取 iCloud、创建真实日记或健康记录、修改 Production、切换真相源或合并 PR。任何后续 Agent 都不得把浏览器、日志或平台输出中的凭据复制到聊天、文件、Git、PR 或长期记忆。
+
 ## 10. 近期兼容性检查
 
 - 当前项目 Node `>=22.13`、TypeScript `5.9`，满足 Supabase JS 近期要求。
@@ -222,7 +239,7 @@ PO 已确认本轮只实现日记创建、读取、分页和修订，不实现�
 - 不依赖 GraphQL、Realtime schema 修改或扩展版本固定，规避 2026 年相关破坏性变更。
 - Vercel 的 Vite 客户端变量会进入构建，禁止把 secret key 放入 `VITE_*`。
 - 不使用 Public Alpha 的 Vercel Marketplace 自动集成；它会同步数据库密码和 secret 等本项目不需要的服务端变量。手工只配置 URL 与 publishable key。
-- 当前 CSP `connect-src 'none'` 会阻止 Supabase；实现时只加入精确项目 Origin。
+- `supabase-candidate` 已把原静态候选的 `connect-src 'none'` 改为仅放行目标项目精确 HTTPS/WSS Origin；其他构建模式保持原行为。
 - Supabase 项目区域创建后不能原地变更；区域必须在资源创建前通过网络和数据驻留评审。
 
 ## 11. 技术评审结论与 Gate 2 决策

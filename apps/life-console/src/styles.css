@@ -1632,6 +1632,57 @@ pre {
   box-shadow: var(--shadow-sm);
 }
 
+.supabase-candidate-stack {
+  display: grid;
+  gap: 18px;
+}
+
+.supabase-candidate-system {
+  padding: 24px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  box-shadow: var(--shadow-sm);
+}
+
+.supabase-candidate-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 20px 0 0;
+}
+
+.supabase-candidate-facts > div {
+  padding: 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+  background: var(--gray-soft);
+}
+
+.supabase-candidate-facts dt {
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+
+.supabase-candidate-facts dd {
+  margin: 6px 0 0;
+  font-weight: 650;
+}
+
+@media (max-width: 720px) {
+  .supabase-checkin-ratings,
+  .supabase-checkin-anchors,
+  .supabase-review-columns,
+  .supabase-candidate-facts {
+    grid-template-columns: 1fr;
+  }
+
+  .supabase-journal-create,
+  .supabase-journal-edit {
+    grid-template-columns: 1fr;
+  }
+}
+
 .supabase-review-columns {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -1,9 +1,9 @@
 // @vitest-environment node
 
-import { readFile } from "node:fs/promises";
-
 import { createClient } from "@supabase/supabase-js";
 import { describe, expect, it } from "vitest";
+
+import { candidateContentSecurityPolicy } from "../../scripts/supabase-candidate-config.mjs";
 
 interface CapturedRequest {
   url: URL;
@@ -78,18 +78,14 @@ describe("supabase-js browser contract feasibility", () => {
     expect(JSON.stringify(requests[0])).not.toContain("sb_secret_");
   });
 
-  it("characterizes the current Vercel CSP as a pre-integration blocker", async () => {
-    const vercelConfig = JSON.parse(
-      await readFile(new URL("../../vercel.json", import.meta.url), "utf8"),
+  it("allows only the exact Supabase origins in the candidate CSP", () => {
+    const csp = candidateContentSecurityPolicy({
+      VITE_SUPABASE_URL: "https://synthetic.supabase.co",
+    });
+    expect(csp).toContain(
+      "connect-src 'self' https://synthetic.supabase.co wss://synthetic.supabase.co",
     );
-    const csp = vercelConfig.headers
-      .flatMap((entry: { headers: Array<{ key: string; value: string }> }) =>
-        entry.headers,
-      )
-      .find((entry: { key: string }) =>
-        entry.key.toLowerCase() === "content-security-policy",
-      )?.value;
-    expect(csp).toContain("connect-src 'none'");
+    expect(csp).not.toContain("*.supabase.co");
   });
 
   it("can disable automatic Data API retries so repository code owns write semantics", async () => {
