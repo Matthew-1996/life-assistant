@@ -187,6 +187,18 @@ Gate 2A 首轮实现不改变阶段 A 的总状态：**HTTPS 页面回环与 Wor
 | Owner 页面实测 | 阻塞 | Sites 读回当前用户为 Owner 且新版本已上线，但 in-app Browser 仍停在 Cloudflare 外层安全页，未到达应用 |
 | 普通 Chrome POC | 待执行 | 仍需 Owner 在普通 Chrome 运行回环、合成 ZIP 转发和 Worker S/M/L，并下载去敏回执后方可判定阶段 A |
 
+#### Vercel 合成静态预览验收（2026-08-12）
+
+| 项目 | 结果 | 去敏结论 |
+|---|---|---|
+| 授权与范围 | 通过 | PO 明确要求部署到 Vercel 并交付可访问 URL；仅发布内置合成投影，不扩大到真实数据或真相源切换 |
+| 独立构建 | 通过 | `build:vercel-preview` 使用 `candidate-preview` 模式；不打包 Worker、阶段 A POC、D1、R2、KEK 或 iCloud 内容 |
+| 公网访问 | 通过 | 稳定 Vercel 别名在无登录请求下返回 200 与 HTML；部署状态为 Ready |
+| 安全响应头 | 通过 | CSP 固定 `connect-src 'none'`，并设置 no-referrer、nosniff、DENY framing |
+| 浏览器主路径 | 通过 | 工作台、记录、进展、系统四页均可打开；合成/只读标识准确，未出现阶段 A POC，浏览器控制台无错误 |
+| 后端与存储 | 不适用 | 本轮为纯静态预览；未创建 Supabase 或其他后端资源。后续后端按 PO 指定使用 Supabase 并重新评审 |
+| 正式产品结论 | 不变 | Vercel 预览不替代 Owner-only Sites，也不证明 HTTPS 回环、Worker 容量、真实备份或迁移通过 |
+
 ## 4. Worker 与 D1 测试用例
 
 | ID | 用例 | 通过标准 |

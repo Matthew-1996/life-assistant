@@ -105,6 +105,25 @@ machine. Logs stay inside the permission-restricted runtime directory. These
 files are not installed or loaded automatically; they are runtime artifacts,
 not portable source files, and must not be committed.
 
+## Vercel synthetic preview
+
+`npm run build:vercel-preview` creates a static, read-only candidate in
+`dist/vercel-preview`. It contains only committed synthetic fixtures and does
+not include the Stage A Worker POC, Sites authentication, D1, R2, KEK, iCloud,
+or any personal record. `vercel.json` configures this build and fail-closed
+browser security headers.
+
+Use a pinned Vercel CLI and link the directory to the intended project before
+deployment. `.vercel/` and `.env*` are local runtime state and must never be
+committed. Verify a deployment with an unauthenticated HTTP request and a
+browser walk through Workbench, Records, Progress, and System before handing
+out its stable alias.
+
+This preview has no backend. If a future version needs authentication,
+database storage, or APIs, the PO-selected backend is Supabase. That change
+requires a separate Auth, RLS, data model, migration, privacy, and test review;
+do not silently move the existing Sites/D1 data path.
+
 ## Structure
 
 ```text

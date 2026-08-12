@@ -22,9 +22,15 @@ interface AppProps {
   client?: LifeConsoleClient;
   initialDashboard?: Dashboard;
   mode?: "local" | "sites" | "candidate-preview";
+  stageAPocEnabled?: boolean;
 }
 
-export function App({ client, initialDashboard, mode = "local" }: AppProps) {
+export function App({
+  client,
+  initialDashboard,
+  mode = "local",
+  stageAPocEnabled = false,
+}: AppProps) {
   const [activePage, setActivePage] = useState<PageId>("today");
   const [dashboard, setDashboard] = useState<Dashboard | null>(
     initialDashboard ?? (client ? null : syntheticDashboard),
@@ -134,9 +140,9 @@ export function App({ client, initialDashboard, mode = "local" }: AppProps) {
       {mode === "candidate-preview" && (
         <>
           <div className="service-banner service-banner--candidate" role="status">
-            私有合成候选：不绑定真实数据或存储
+            合成候选预览：不绑定真实数据或存储
           </div>
-          <StageAPocPanel />
+          {stageAPocEnabled && <StageAPocPanel />}
         </>
       )}
       <div

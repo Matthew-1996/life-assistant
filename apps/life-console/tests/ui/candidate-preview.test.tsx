@@ -28,11 +28,9 @@ describe("Life Console candidate preview", () => {
     expect(screen.getByText("Life Console · Candidate")).toBeTruthy();
     expect(screen.getByText("候选预览 · 合成数据")).toBeTruthy();
     expect(
-      screen.getByText("私有合成候选：不绑定真实数据或存储"),
+      screen.getByText("合成候选预览：不绑定真实数据或存储"),
     ).toBeTruthy();
-    expect(
-      screen.getByRole("heading", { name: "HTTPS 回环与 Worker 容量 POC" }),
-    ).toBeTruthy();
+    expect(screen.queryByText("HTTPS 回环与 Worker 容量 POC")).toBeNull();
 
     await user.click(navigationButton("记录"));
     expect(screen.getByRole("heading", { name: "先预览，再写入。" })).toBeTruthy();
@@ -44,6 +42,20 @@ describe("Life Console candidate preview", () => {
 
     await user.click(navigationButton("系统"));
     expect(screen.getByText("mode=CANDIDATE_PREVIEW · 合成数据")).toBeTruthy();
+  });
+
+  it("only exposes the Stage A POC controls in the dedicated build", () => {
+    render(
+      <App
+        initialDashboard={syntheticDashboard}
+        mode="candidate-preview"
+        stageAPocEnabled
+      />,
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "HTTPS 回环与 Worker 容量 POC" }),
+    ).toBeTruthy();
   });
 
   it("intercepts write controls without invoking a client", async () => {

@@ -84,6 +84,16 @@ Chrome 扩展只让 Agent 取得用户 Chrome 的自动化控制权，不参与�
 
 方案 A 若失败，恢复条件不是继续尝试安装扩展，而是记录普通 Chrome 的精确失败阶段并回到 Gate 2B：候选入口被拦截则处理测试环境；回环/LNA 失败则再评审方案 B。未经新门禁不修改正式 Sites 或产品数据链路。
 
+### 3.2 Vercel 合成静态预览（PO 已授权）
+
+PO 于 2026-08-12 直接授权将网站部署到 Vercel，并要求交付可访问 URL。该授权按以下最小数据边界落地：
+
+- Vercel 只承载 `candidate-preview` 静态构建与内置合成投影，不承载 Sites Worker、Owner 会话、D1、R2、KEK、iCloud 或真实生活数据。
+- Vercel 预览允许无登录访问，因此页面不得声称 Owner-only；必须明确标记“合成候选预览”和“不可写”。
+- `candidate-preview` 不显示依赖 Worker 的阶段 A POC 控件；`stage-a-candidate` 继续保留 POC，两个构建目标不得混用。
+- Vercel 发布不改变正式 Sites、当前真相源、迁移门禁或阶段 A 结论，也不构成真实数据上线。
+- 若后续需要登录、数据库或后端 API，按 PO 指定统一使用 Supabase，并重新完成数据模型、Auth、RLS、备份、迁移与测试方案评审；本轮不创建 Supabase 项目或资源，也不自动迁移现有 D1 数据。
+
 ## 4. 云端数据模型调整
 
 ### 4.1 继续保留

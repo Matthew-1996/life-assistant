@@ -60,6 +60,7 @@
 - 不删除代码、D1、R2、Secret、对象或个人数据。
 - 不正式部署，不读取或备份真实数据，不切换真相源，不删除云资源或真实数据，不合并 PR。
 - 不修改 `docs/operations/product-surfaces.json`。
+- 不为合成静态预览创建 Supabase、Vercel 数据库或其他后端资源；后端需求另行评审并按 PO 指定使用 Supabase。
 
 ## 3. 依赖与 PR 关系
 
@@ -135,6 +136,8 @@
 | 2026-08-12 | 去敏回执白名单、下载门禁与本地导出实现完成；8 项聚焦合成测试、131 项 Vitest、90 项 Life Console Python、333 项项目级 Python、生产与未部署候选构建通过 | Agent / QA | 阶段 2B-1 本地完成 |
 | 2026-08-12 | PO 单独授权候选部署；复用既有私有候选项目发布当前合成 POC 构建，未绑定环境变量、D1、R2 或 KEK，未读取 iCloud | PO / Agent | 候选部署完成 |
 | 2026-08-12 | 部署后验证 Owner/custom/单用户和未登录 401；in-app Browser 仍被 Cloudflare 外层拦截，普通 Chrome 三项 POC 与非 Owner 403 均未冒充通过 | Agent / QA | 条件通过，人工 POC 待执行 |
+| 2026-08-12 | PO 要求使用 Vercel 部署网站并交付可访问 URL；授权按独立合成静态预览落地，不改变正式 Sites 或数据边界 | PO / Agent | 已完成部署与在线验收 |
+| 2026-08-12 | PO 指定后续如需后端统一使用 Supabase；本轮纯静态预览无后端需求，不创建 Supabase 资源 | PO / Agent | 技术边界已记录 |
 
 ## 8. 当前验证记录
 
@@ -152,9 +155,11 @@
 | 阶段 2B 私有候选部署 | 通过 | 复用既有候选 URL，精确源码提交与合成归档已发布；0 环境变量、0 D1、0 R2 |
 | 候选访问控制 | 条件通过 | Owner/custom/单用户读回正常，未登录实际 401；无第二账号，非 Owner 403 延期 |
 | Owner 页面与普通 Chrome POC | 阻塞 | in-app Browser 仍被 Cloudflare 外层拦截；普通 Chrome 回环、转发、S/M/L 和回执尚未执行 |
+| Vercel 合成静态预览 | 通过 | 稳定公网别名返回 200；四个核心页面、合成只读标识与安全响应头通过在线验收，控制台无错误 |
+| Vercel 后端 | 不适用 | 未创建数据库、Auth、API 或 Secret；未来后端按 PO 指定使用 Supabase 并重新评审 |
 
 ## 9. 下一步
 
-1. 保持阶段 2B-1 源码在 Draft PR #39；候选部署已完成，不重复创建或发布候选项目。
-2. 由 Owner 在普通 Chrome 打开既有候选 URL，运行三项合成 POC 并下载去敏回执；Agent 收到回执后再判定阶段 A。
-3. 正式部署、Worker 正式导出、真实备份、迁移、切源、资源清理和 PR 合并继续分别确认。
+1. 保持阶段 2B-1 与 Vercel 合成预览源码在 Draft PR #39；Vercel 仅作为已验收的无真实数据展示面。
+2. 由 Owner 在普通 Chrome 打开既有 Sites 候选 URL，运行三项合成 POC 并下载去敏回执；Vercel 静态预览不能替代该证据。
+3. Supabase 后端、正式 Sites、Worker 正式导出、真实备份、迁移、切源、资源清理和 PR 合并继续分别确认。

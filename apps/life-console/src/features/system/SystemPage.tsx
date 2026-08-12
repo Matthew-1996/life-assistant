@@ -133,7 +133,7 @@ function SitesSystemPage({
       <section className="section grid two system-status-grid">
         <article className="card pad">
           <span className="status blue">运行模式</span>
-          <h2>{candidatePreview ? "Static preview / Owner-only" : "Sites API / Owner-only"}</h2>
+          <h2>{candidatePreview ? "Static preview / Synthetic only" : "Sites API / Owner-only"}</h2>
           <p className="quiet">
             {candidatePreview
               ? "仅加载内置合成投影；不连接任何真实数据或存储。"
@@ -189,7 +189,7 @@ function SitesSystemPage({
         <div className="signal-list">
           <div className="day-row">
             <strong>访问范围</strong>
-            <span>Owner-only</span>
+            <span>{candidatePreview ? "合成只读预览" : "Owner-only"}</span>
           </div>
           <div className="day-row">
             <strong>当前真相源</strong>
@@ -203,7 +203,7 @@ function SitesSystemPage({
       </section>
 
       <p className="footer-note">
-        当前只实现合成界面状态；不调用 Worker 导出、不执行部署、不读取真实数据，也不切换真相源。
+        当前只实现合成界面状态；不调用 Worker 导出、不读取真实数据，也不切换真相源。
       </p>
     </section>
   );

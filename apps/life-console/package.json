@@ -10,6 +10,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "build:candidate-preview": "tsc -b && vite build --mode candidate-preview --outDir dist/client && node scripts/prepare-candidate-preview-build.mjs",
+    "build:vercel-preview": "tsc -b && vite build --mode candidate-preview --outDir dist/vercel-preview",
     "build:stage-a-candidate": "tsc -b && vite build --mode stage-a-candidate --outDir dist/client && node scripts/prepare-stage-a-candidate-build.mjs",
     "build:sites-200": "tsc -b && vite build --mode sites-200 --outDir dist/client && node scripts/prepare-sites-200-build.mjs",
     "generate:contracts": "openapi-typescript contracts/life-console.openapi.yaml -o src/contracts/life-console.ts",
