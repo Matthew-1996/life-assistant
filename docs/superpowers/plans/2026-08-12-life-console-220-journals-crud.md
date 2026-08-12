@@ -227,12 +227,12 @@ panel is not production-wired.
 Run governance, index/history privacy, root project validation, tool tests,
 public-Registry `npm ci`, focused tests, full `npm test`, and `npm run build`.
 
-- [ ] **Step 3: Commit and push**
+- [x] **Step 3: Commit and push**
 
 Commit only generic code, synthetic tests, and redacted documentation to the
 existing `agent/life-console-220-supabase` branch and Draft PR #40.
 
-- [ ] **Step 4: Record actual CI**
+- [x] **Step 4: Record actual CI**
 
 Wait for `node`, `python`, and `privacy`; record only observed results. Do not
 create resources, deploy, connect real data, change CSP, turn the PR Ready, or
