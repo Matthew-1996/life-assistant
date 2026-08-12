@@ -134,6 +134,12 @@ Supabase 可以继续作为 2.2.0 唯一新后端候选，但本地 POC 不能�
 
 Gate 2 之外，创建独立 Supabase 候选资源前还需 PO 单独确认区域候选、套餐成本、测试邮箱和资源生命周期。正式个人数据前必须另行完成字段加密威胁模型、自有 SMTP、备份恢复演练、真实迁移和切源门禁。本节不构成资源创建、部署或真实数据授权。
 
+### 9.4 阶段 A 生产 migration 草案
+
+首个 Gate 2 开发块新增 `supabase/migrations/0001_life_console.sql`，生产 SQL 不包含测试角色、合成用户或平台资源标识。独立 `auth-shim.sql` 只为 PGlite 提供 Supabase 托管环境原本具有的 `auth.users`、`auth.uid()`、`anon` 和 `authenticated`；`seed.synthetic.sql` 只含两名无真实关联的测试用户和合成记录。
+
+聚焦测试 9 项通过，覆盖 12 张表、RLS、所有权/外键索引、最小 GRANT、UPDATE `USING` + `WITH CHECK`、无物理 DELETE、Owner A/B 隔离、anon 拒绝、换绑拒绝、null 与小数保真、revision 冲突和 `security invoker` 导出 RPC。该证据只证明 PostgreSQL/PGlite 语义，不替代托管 Supabase 的 Auth、PostgREST、Advisors 或真实网络验证。
+
 ## 10. 近期兼容性检查
 
 - 当前项目 Node `>=22.13`、TypeScript `5.9`，满足 Supabase JS 近期要求。

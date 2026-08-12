@@ -1,0 +1,380 @@
+-- Life Console 2.2.0 initial Supabase schema.
+-- Supabase provides auth.users, auth.uid(), anon, and authenticated.
+
+create table public.profiles (
+  user_id uuid primary key references auth.users(id) on delete restrict,
+  display_name text check (char_length(display_name) <= 80),
+  status text not null default 'active'
+    check (status in ('active', 'disabled')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table public.goals (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references auth.users(id) on delete restrict,
+  title text not null check (char_length(title) between 1 and 200),
+  domain text,
+  status text not null default 'active'
+    check (status in ('draft', 'active', 'completed', 'archived')),
+  priority smallint check (priority between 0 and 9),
+  start_date date,
+  target_date date,
+  revision bigint not null default 1 check (revision > 0),
+  deleted_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  check (target_date is null or start_date is null or target_date >= start_date)
+);
+
+create table public.journals (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references auth.users(id) on delete restrict,
+  event_date date not null,
+  title text check (char_length(title) <= 200),
+  content text not null check (char_length(content) <= 100000),
+  tags text[] not null default '{}',
+  revision bigint not null default 1 check (revision > 0),
+  deleted_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table public.journal_revisions (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references auth.users(id) on delete restrict,
+  journal_id bigint not null references public.journals(id) on delete restrict,
+  revision bigint not null check (revision > 0),
+  snapshot jsonb not null,
+  reason text,
+  created_at timestamptz not null default now(),
+  unique (journal_id, revision)
+);
+
+create table public.daily_checkins (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references auth.users(id) on delete restrict,
+  checkin_date date not null,
+  sleep_quality numeric(3, 1) check (sleep_quality between 0 and 10),
+  energy numeric(3, 1) check (energy between 0 and 10),
+  mood numeric(3, 1) check (mood between 0 and 10),
+  life_feeling numeric(3, 1) check (life_feeling between 0 and 10),
+  anchors jsonb,
+  notes text,
+  revision bigint not null default 1 check (revision > 0),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_id, checkin_date)
+);
+
+create table public.weekly_reviews (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references auth.users(id) on delete restrict,
+  week_start date not null,
+  content text not null,
+  revision bigint not null default 1 check (revision > 0),
+  deleted_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_id, week_start)
+);
+
+create table public.phase_reviews (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references auth.users(id) on delete restrict,
+  period_start date not null,
+  period_end date not null,
+  content text not null,
+  revision bigint not null default 1 check (revision > 0),
+  deleted_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  check (period_end >= period_start)
+);
+
+create table public.health_days (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references auth.users(id) on delete restrict,
+  health_date date not null,
+  summary jsonb not null default '{}',
+  source_revision text,
+  revision bigint not null default 1 check (revision > 0),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_id, health_date)
+);
+
+create table public.health_segments (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references auth.users(id) on delete restrict,
+  health_day_id bigint not null references public.health_days(id) on delete restrict,
+  start_at timestamptz not null,
+  end_at timestamptz not null,
+  source text,
+  details jsonb,
+  created_at timestamptz not null default now(),
+  check (end_at > start_at),
+  check (end_at <= start_at + interval '18 hours')
+);
+
+create table public.idempotency_keys (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references auth.users(id) on delete restrict,
+  key text not null check (char_length(key) between 16 and 200),
+  operation text not null,
+  result_ref jsonb,
+  expires_at timestamptz not null,
+  created_at timestamptz not null default now(),
+  unique (user_id, key)
+);
+
+create table public.backup_runs (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references auth.users(id) on delete restrict,
+  status text not null
+    check (status in ('pending', 'success', 'failed')),
+  manifest_version integer not null check (manifest_version > 0),
+  record_counts jsonb not null default '{}',
+  content_digest text,
+  created_at timestamptz not null default now(),
+  completed_at timestamptz
+);
+
+create table public.audit_events (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references auth.users(id) on delete restrict,
+  action text not null,
+  entity_type text not null,
+  entity_id text,
+  result text not null,
+  created_at timestamptz not null default now()
+);
+
+create index profiles_user_id_idx
+  on public.profiles (user_id);
+create index goals_user_status_idx
+  on public.goals (user_id, status, id desc);
+create index journals_user_event_idx
+  on public.journals (user_id, event_date desc, id desc);
+create index journal_revisions_user_journal_idx
+  on public.journal_revisions (user_id, journal_id, revision desc);
+create index daily_checkins_user_date_idx
+  on public.daily_checkins (user_id, checkin_date desc, id desc);
+create index weekly_reviews_user_week_idx
+  on public.weekly_reviews (user_id, week_start desc, id desc);
+create index phase_reviews_user_period_idx
+  on public.phase_reviews (user_id, period_start desc, id desc);
+create index health_days_user_date_idx
+  on public.health_days (user_id, health_date desc, id desc);
+create index health_segments_user_day_idx
+  on public.health_segments (user_id, health_day_id, start_at, id);
+create index idempotency_keys_user_expiry_idx
+  on public.idempotency_keys (user_id, expires_at, id);
+create index backup_runs_user_created_idx
+  on public.backup_runs (user_id, created_at desc, id desc);
+create index audit_events_user_created_idx
+  on public.audit_events (user_id, created_at desc, id desc);
+
+alter table public.profiles enable row level security;
+alter table public.goals enable row level security;
+alter table public.journals enable row level security;
+alter table public.journal_revisions enable row level security;
+alter table public.daily_checkins enable row level security;
+alter table public.weekly_reviews enable row level security;
+alter table public.phase_reviews enable row level security;
+alter table public.health_days enable row level security;
+alter table public.health_segments enable row level security;
+alter table public.idempotency_keys enable row level security;
+alter table public.backup_runs enable row level security;
+alter table public.audit_events enable row level security;
+
+revoke all on all tables in schema public from anon, authenticated;
+revoke all on all sequences in schema public from anon, authenticated;
+
+grant select, insert, update on public.profiles to authenticated;
+grant select, insert, update on public.goals to authenticated;
+grant select, insert, update on public.journals to authenticated;
+grant select, insert on public.journal_revisions to authenticated;
+grant select, insert, update on public.daily_checkins to authenticated;
+grant select, insert, update on public.weekly_reviews to authenticated;
+grant select, insert, update on public.phase_reviews to authenticated;
+grant select, insert, update on public.health_days to authenticated;
+grant select, insert on public.health_segments to authenticated;
+grant select, insert on public.idempotency_keys to authenticated;
+grant select, insert, update on public.backup_runs to authenticated;
+grant select, insert on public.audit_events to authenticated;
+grant usage, select on all sequences in schema public to authenticated;
+
+create policy profiles_select on public.profiles
+  for select to authenticated using ((select auth.uid()) = user_id);
+create policy profiles_insert on public.profiles
+  for insert to authenticated with check ((select auth.uid()) = user_id);
+create policy profiles_update on public.profiles
+  for update to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
+create policy goals_select on public.goals
+  for select to authenticated using ((select auth.uid()) = user_id);
+create policy goals_insert on public.goals
+  for insert to authenticated with check ((select auth.uid()) = user_id);
+create policy goals_update on public.goals
+  for update to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
+create policy journals_select on public.journals
+  for select to authenticated using ((select auth.uid()) = user_id);
+create policy journals_insert on public.journals
+  for insert to authenticated with check ((select auth.uid()) = user_id);
+create policy journals_update on public.journals
+  for update to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
+create policy journal_revisions_select on public.journal_revisions
+  for select to authenticated using ((select auth.uid()) = user_id);
+create policy journal_revisions_insert on public.journal_revisions
+  for insert to authenticated with check (
+    (select auth.uid()) = user_id
+    and exists (
+      select 1
+      from public.journals
+      where journals.id = journal_id
+        and journals.user_id = (select auth.uid())
+    )
+  );
+
+create policy daily_checkins_select on public.daily_checkins
+  for select to authenticated using ((select auth.uid()) = user_id);
+create policy daily_checkins_insert on public.daily_checkins
+  for insert to authenticated with check ((select auth.uid()) = user_id);
+create policy daily_checkins_update on public.daily_checkins
+  for update to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
+create policy weekly_reviews_select on public.weekly_reviews
+  for select to authenticated using ((select auth.uid()) = user_id);
+create policy weekly_reviews_insert on public.weekly_reviews
+  for insert to authenticated with check ((select auth.uid()) = user_id);
+create policy weekly_reviews_update on public.weekly_reviews
+  for update to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
+create policy phase_reviews_select on public.phase_reviews
+  for select to authenticated using ((select auth.uid()) = user_id);
+create policy phase_reviews_insert on public.phase_reviews
+  for insert to authenticated with check ((select auth.uid()) = user_id);
+create policy phase_reviews_update on public.phase_reviews
+  for update to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
+create policy health_days_select on public.health_days
+  for select to authenticated using ((select auth.uid()) = user_id);
+create policy health_days_insert on public.health_days
+  for insert to authenticated with check ((select auth.uid()) = user_id);
+create policy health_days_update on public.health_days
+  for update to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
+create policy health_segments_select on public.health_segments
+  for select to authenticated using ((select auth.uid()) = user_id);
+create policy health_segments_insert on public.health_segments
+  for insert to authenticated with check (
+    (select auth.uid()) = user_id
+    and exists (
+      select 1
+      from public.health_days
+      where health_days.id = health_day_id
+        and health_days.user_id = (select auth.uid())
+    )
+  );
+
+create policy idempotency_keys_select on public.idempotency_keys
+  for select to authenticated using ((select auth.uid()) = user_id);
+create policy idempotency_keys_insert on public.idempotency_keys
+  for insert to authenticated with check ((select auth.uid()) = user_id);
+
+create policy backup_runs_select on public.backup_runs
+  for select to authenticated using ((select auth.uid()) = user_id);
+create policy backup_runs_insert on public.backup_runs
+  for insert to authenticated with check ((select auth.uid()) = user_id);
+create policy backup_runs_update on public.backup_runs
+  for update to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
+create policy audit_events_select on public.audit_events
+  for select to authenticated using ((select auth.uid()) = user_id);
+create policy audit_events_insert on public.audit_events
+  for insert to authenticated with check ((select auth.uid()) = user_id);
+
+create function public.export_life_console_snapshot()
+returns jsonb
+language sql
+stable
+security invoker
+set search_path = ''
+as $$
+  select jsonb_build_object(
+    'schema_version', 1,
+    'exported_at', transaction_timestamp(),
+    'profiles', coalesce((
+      select jsonb_agg(to_jsonb(row_value) order by row_value.user_id)
+      from public.profiles as row_value
+      where row_value.user_id = (select auth.uid())
+    ), '[]'::jsonb),
+    'goals', coalesce((
+      select jsonb_agg(to_jsonb(row_value) order by row_value.id)
+      from public.goals as row_value
+      where row_value.user_id = (select auth.uid())
+    ), '[]'::jsonb),
+    'journals', coalesce((
+      select jsonb_agg(to_jsonb(row_value) order by row_value.event_date, row_value.id)
+      from public.journals as row_value
+      where row_value.user_id = (select auth.uid())
+    ), '[]'::jsonb),
+    'journal_revisions', coalesce((
+      select jsonb_agg(to_jsonb(row_value) order by row_value.journal_id, row_value.revision)
+      from public.journal_revisions as row_value
+      where row_value.user_id = (select auth.uid())
+    ), '[]'::jsonb),
+    'daily_checkins', coalesce((
+      select jsonb_agg(to_jsonb(row_value) order by row_value.checkin_date, row_value.id)
+      from public.daily_checkins as row_value
+      where row_value.user_id = (select auth.uid())
+    ), '[]'::jsonb),
+    'weekly_reviews', coalesce((
+      select jsonb_agg(to_jsonb(row_value) order by row_value.week_start, row_value.id)
+      from public.weekly_reviews as row_value
+      where row_value.user_id = (select auth.uid())
+    ), '[]'::jsonb),
+    'phase_reviews', coalesce((
+      select jsonb_agg(to_jsonb(row_value) order by row_value.period_start, row_value.id)
+      from public.phase_reviews as row_value
+      where row_value.user_id = (select auth.uid())
+    ), '[]'::jsonb),
+    'health_days', coalesce((
+      select jsonb_agg(to_jsonb(row_value) order by row_value.health_date, row_value.id)
+      from public.health_days as row_value
+      where row_value.user_id = (select auth.uid())
+    ), '[]'::jsonb),
+    'health_segments', coalesce((
+      select jsonb_agg(to_jsonb(row_value) order by row_value.start_at, row_value.id)
+      from public.health_segments as row_value
+      where row_value.user_id = (select auth.uid())
+    ), '[]'::jsonb),
+    'backup_runs', coalesce((
+      select jsonb_agg(to_jsonb(row_value) order by row_value.created_at, row_value.id)
+      from public.backup_runs as row_value
+      where row_value.user_id = (select auth.uid())
+    ), '[]'::jsonb)
+  )
+$$;
+
+revoke all on function public.export_life_console_snapshot() from public;
+grant execute on function public.export_life_console_snapshot() to authenticated;

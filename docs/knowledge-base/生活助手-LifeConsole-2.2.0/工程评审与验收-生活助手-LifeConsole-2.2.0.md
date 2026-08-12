@@ -80,3 +80,16 @@ PO 已确认 Gate 1 的 PRD/D1-D8，以及 Gate 2 的 O1-O5、Q1-Q7、本测试�
 | supabase-js 浏览器契约 POC | 通过 | 4 项；OTP、publishable key、重试关闭、CSP 阻塞识别 |
 | 完整本地 Supabase 栈 | 阻塞 | 本机无 Docker；未安装机器级依赖 |
 | 托管候选与大陆网络 | 延期 | 需要独立资源与部署授权，不能由 PGlite 替代 |
+
+## 8. 阶段 A 首个开发块证据
+
+| 项目 | 结果 | 边界 |
+|---|---|---|
+| 生产 migration 草案 | 通过 | 12 张表、约束、索引、GRANT、RLS 和导出 RPC；尚未应用到托管 Supabase |
+| 合成 Auth 兼容层 | 通过 | 仅供 PGlite 模拟 Supabase 已提供的角色和 `auth.uid()` |
+| 纯合成 seed | 通过 | 两名无真实关联用户，覆盖 12 表最小关系数据 |
+| 聚焦权限测试 | 9/9 通过 | Owner A/B、anon、换绑、删除、null/小数、revision 和 RPC 隔离 |
+| 远端资源与部署 | 未执行 | 未创建 Supabase/Vercel 资源，未部署 |
+| 私人数据 | 未接触 | 未读取、上传或迁移 iCloud、日记或健康数据 |
+
+本地 PGlite 证据不替代托管 Supabase 的 Auth、PostgREST、Advisors、网络、OTP 和 Vercel Preview 验收。

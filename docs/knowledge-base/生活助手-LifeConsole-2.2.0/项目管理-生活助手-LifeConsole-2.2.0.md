@@ -2,7 +2,7 @@
 
 > PMO：Agent
 > 主阶段：待联调
-> 子状态：Gate 1 / Gate 2 已确认 / 阶段 A 首个开发块进行中
+> 子状态：Gate 1 / Gate 2 已确认 / 阶段 A 首个开发块本地验证完成
 > 当前分支：`agent/life-console-220-supabase`
 > 当前 worktree：`.worktrees/life-console-220-supabase`
 > 当前 Draft PR：[#40](https://github.com/Matthew-1996/life-assistant/pull/40)
@@ -30,7 +30,7 @@
 | 需求评审 | 已完成 | PO 已确认 PRD draft.1、D1-D8 与“有条件通过”结论 |
 | 设计方案评审 | 已完成 | PO 已确认 O1-O5 |
 | 技术/测试评审 | 已完成 | PO 已确认 Q1-Q7、测试矩阵和阶段计划 |
-| 开发与联调 | 进行中 | 先完成阶段 A 生产 migration 草案与合成权限测试 |
+| 开发与联调 | 进行中 | 阶段 A 首块 9/9 通过；下一块为 Auth 与 Repository |
 | 测试资源与候选部署 | 待开始 | 独立资源、成本与部署授权 |
 | 真实数据与上线 | 待开始 | 独立迁移、切源、验收和上线门禁 |
 
@@ -66,9 +66,10 @@
 | 2026-08-12 | 将调研结论纳入唯一技术方案；清除 lockfile 的字节内网下载地址，统一使用 npm 官方 Registry | PO / Agent | 已完成；PR #40 Node/Python/privacy CI 全通过 |
 | 2026-08-12 | Gate 1：确认 PRD draft.1、D1-D8，并接受需求评审“有条件通过”结论 | PO | 已确认；进入 Gate 2 定稿，不含实现、资源、部署、真实数据、切源、删除或合并授权 |
 | 2026-08-12 | Gate 2：确认 O1-O5、Q1-Q7、测试矩阵和 A-G 阶段计划 | PO | 已确认；允许不含远端资源的通用合成实现，首块为生产 migration 草案与 RLS/权限测试 |
+| 2026-08-12 | 阶段 A 首个开发块完成本地验证 | Agent | 生产 migration、纯合成 seed、PGlite Auth shim 与权限测试 9/9 通过；未创建资源、部署或接触真实数据 |
 
 ## 7. 下一步（最多三项）
 
-1. 完成生产 migration 草案、纯合成 seed 与 RLS/权限测试。
-2. 验证通过后，再推进 Auth 与 Repository 工作块。
+1. 将首个开发块推送到 Draft PR #40 并等待 CI。
+2. CI 通过后，再推进 Auth 与 Repository 工作块。
 3. 独立 Supabase 资源、候选部署与真实数据继续分别授权。
