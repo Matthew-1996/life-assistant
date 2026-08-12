@@ -228,7 +228,7 @@ test(life-console): verify synthetic backup round trip
 - Modify: `docs/knowledge-base/生活助手-LifeConsole-2.2.0/项目管理-生活助手-LifeConsole-2.2.0.md`
 - Modify: `docs/superpowers/plans/2026-08-12-life-console-220-synthetic-backup-poc.md`
 
-- [ ] **Step 1: Run focused regression**
+- [x] **Step 1: Run focused regression**
 
 Run:
 
@@ -239,13 +239,13 @@ python3 -m unittest discover -v -s tests/local_agent -p 'test_*.py'
 
 Expected: all focused tests PASS.
 
-- [ ] **Step 2: Run repository gates**
+- [x] **Step 2: Run repository gates**
 
 Run `git diff --check`, privacy checks, root project validation, tool unit tests, application `npm ci`, `npm test`, and `npm run build` using the existing project commands and public npm registry.
 
 Expected: every gate exits 0; no secret, private mount path, internal registry, or real personal payload is introduced.
 
-- [ ] **Step 3: Update the 2.2.0 knowledge base**
+- [x] **Step 3: Update the 2.2.0 knowledge base**
 
 Record:
 
@@ -255,7 +255,7 @@ Record:
 - Evidence covers empty, populated, malformed, truncated, duplicate-path, traversal, digest/count mismatch, atomic replacement, and failure preservation.
 - No UI wiring, remote resource, deployment, real iCloud path, real data, D3 encryption decision, or truth-source switch occurred.
 
-- [ ] **Step 4: Mark this plan complete and commit evidence**
+- [x] **Step 4: Mark this plan complete and commit evidence**
 
 Commit:
 

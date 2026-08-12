@@ -1,6 +1,6 @@
 # 工程评审与验收 - 生活助手 - Life Console - 2.2.0
 
-> 状态：Gate 2 已确认 / 阶段 A、B 通过 / 阶段 C 复盘 CRUD 聚焦验证通过
+> 状态：Gate 2 已确认 / 阶段 A-D 通用合成实现与本地验证通过
 > 当前证据：官方资料、现有代码基线和本地纯合成 PGlite/supabase-js POC；没有 Supabase 资源、托管迁移、部署或真实数据证据
 
 ## 1. 工程评审结论
@@ -78,6 +78,7 @@ PO 已确认 Gate 1 的 PRD/D1-D8，以及 Gate 2 的 O1-O5、Q1-Q7、本测试�
 | 真实数据、切源、删除 | 未执行 | 明确禁止 |
 | 本地 PostgreSQL/RLS 合成 POC | 通过 | 7 项；Owner/非 Owner/anon、upsert、调用者权限 RPC |
 | supabase-js 浏览器契约 POC | 通过 | 4 项；OTP、publishable key、重试关闭、CSP 阻塞识别 |
+| `life-console-backup/1` 合成 POC | 通过 | 八类业务资源、canonical NDJSON/manifest、摘要/计数、ZIP 与既有 Agent 原子恢复 round-trip |
 | 完整本地 Supabase 栈 | 阻塞 | 本机无 Docker；未安装机器级依赖 |
 | 托管候选与大陆网络 | 延期 | 需要独立资源与部署授权，不能由 PGlite 替代 |
 
@@ -183,3 +184,21 @@ PO 已确认 Gate 1 的 PRD/D1-D8，以及 Gate 2 的 O1-O5、Q1-Q7、本测试�
 | 正式入口与远端 | 未执行 | 未接入口、创建资源、部署或接触真实复盘数据 |
 
 复盘聚焦证据不证明托管 Supabase RPC/PostgREST、Auth/RLS 或 Preview 网络行为。
+
+## 14. 阶段 D 合成备份 POC 证据
+
+| 项目 | 结果 | 边界 |
+|---|---|---|
+| 一致性快照读取 | 通过 | 单次调用现有 invoker RPC；非法 schema/资源 fail closed；只读瞬时失败最多额外尝试一次 |
+| 兼容资源集合 | 通过 | 固定八类业务资源；排除 `profiles`、`backup_runs`、审计、幂等、认证和会话状态 |
+| NDJSON 与 manifest | 通过 | UTF-8、递归键排序、紧凑 JSON、LF 结尾、逐资源 count/SHA-256 和 canonical content digest |
+| ZIP 安全边界 | 通过 | 固定成员路径；既有 Agent 拒绝截断、重复成员、路径穿越、符号链接、摘要/计数错误和超限压缩 |
+| 原子恢复 round-trip | 通过 | TypeScript 生成包由既有 Python Agent 在显式临时目录安装，字节一致；失败保留旧备份 |
+| 规模档位 | 通过 | 空资源、小规模与单资源 2,000 条纯合成记录均完成打包与校验 |
+| 聚焦回归 | 通过 | backup + production migration 35/35；Local Agent 9/9 |
+| Life Console 全量 | 通过 | 34 个 Vitest 文件、252/252；应用 Python 92/92；生产构建通过 |
+| 项目级验证 | 通过 | 根工具测试 329/329；公开 Registry 安装审计 0；项目、diff 与隐私检查通过 |
+| UI/远端/真实路径 | 未执行 | 未接正式入口、下载、CSP、Supabase/Vercel 资源、部署或真实 iCloud |
+| 私人数据与 D3 | 未执行 | 仅合成记录；未读取、生成、上传或迁移真实日记/健康数据；字段加密仍是独立门禁 |
+
+阶段 D 证明用户可迁移包的本地格式兼容与恢复安全边界，不证明托管 RPC/PostgREST、浏览器真实下载、Vercel 响应头、桌面 Agent 探测、真实 iCloud 权限或真实数据恢复。阶段 E 的独立资源和候选部署必须由 PO 另行授权。

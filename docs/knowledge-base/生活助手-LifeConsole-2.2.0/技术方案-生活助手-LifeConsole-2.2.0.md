@@ -1,6 +1,6 @@
 # 技术方案 - 生活助手 - Life Console - 2.2.0
 
-> 状态：Gate 2 已确认 / 阶段 A、B 通过 / 阶段 C 核心 CRUD 合成实现完成
+> 状态：Gate 2 已确认 / 阶段 A-D 通用合成实现与本地验证完成
 > 范围：允许通用代码、生产 migration 草案和合成测试；不创建 Supabase/Vercel 资源，不连接真实项目
 
 ## 1. 技术结论摘要
@@ -98,7 +98,9 @@ Vercel Preview、Production 与本地开发使用独立环境变量。`VITE_` �
 
 Supabase 平台备份是平台灾难恢复能力，不等于用户可迁移备份：免费项目需要主动逻辑导出；物理备份/PITR 可能不可下载，Storage 对象也不随数据库备份恢复。
 
-2.2.0 延续版本化 `life-console-backup`：单条调用者权限 RPC 一致性读取 → 规范化 NDJSON/manifest → 计数与摘要 → 浏览器返回 → 本机 Agent 校验并原子替换 iCloud 最新备份。首轮只用合成数据验证，不接触真实 iCloud。
+2.2.0 延续版本化 `life-console-backup/1`：单条调用者权限 RPC 一致性读取 → 浏览器侧规范化 NDJSON/manifest → 计数与摘要 → ZIP 返回 → 本机 Agent 校验并原子替换 iCloud 最新备份。阶段 D 已用显式临时目录和纯合成数据证明 2.2.0 生成包可被既有 2.1.0 Agent 原样安装；未连接真实 iCloud。
+
+兼容包固定包含 `goals`、`journals`、`journal_revisions`、`daily_checkins`、`weekly_reviews`、`phase_reviews`、`health_days`、`health_segments` 八类业务资源。`profiles`、`backup_runs`、审计、幂等、认证与会话状态不进入用户可迁移包。ZIP 成员路径由固定资源表生成，调用方不能注入归档路径。
 
 ## 9. Supabase 技术调研结论与实施约束
 
@@ -125,7 +127,7 @@ Supabase 可以继续作为 2.2.0 唯一新后端候选，但本地 POC 不能�
 
 - PostgreSQL/RLS：7 项通过，包括复合索引、Owner/非 Owner/anon、UPDATE `WITH CHECK`、原子 upsert 和单事务导出 RPC。
 - 浏览器 SDK：4 项通过，包括 `shouldCreateUser=false`、仅 publishable key、关闭 Data API 自动重试和 CSP 阻塞识别。
-- 当前全量本地回归：Life Console 29 个 Vitest 文件、211 项测试通过；应用 Python 90 项测试通过。
+- 当前全量本地回归：Life Console 34 个 Vitest 文件、252 项测试通过；应用 Python 92 项测试通过。
 - 尚未验证：大陆到真实项目端点的网络、真实 OTP、托管 RLS/GRANT、Vercel Preview CORS/CSP、1k/10k 容量、平台 Advisors/备份和第二个 Auth 用户端到端隔离。
 
 详细可复现方法和远端待测矩阵见 [Supabase 可行性调研与 POC](Supabase可行性调研与POC-生活助手-LifeConsole-2.2.0.md)。
@@ -200,6 +202,18 @@ PO 已确认本轮只实现日记创建、读取、分页和修订，不实现�
 复盘模块聚焦回归 46/46 通过，其中 production migration 25 项、Repository foundation 11 项、Review Repository 5 项、Reviews Panel 5 项。该证据不替代托管 RPC/PostgREST、两用户 Auth/RLS、CSP 或真实网络验证。
 
 包含复盘模块后的全量本地回归为 33 个 Vitest 文件、242/242，应用 Python 90/90，工具测试 333 项通过且 1 项跳过；公开 Registry 干净安装审计 0，生产构建通过。
+
+### 9.10 阶段 D 合成备份 POC
+
+阶段 D 保持 `life-console-backup/1` 格式不变，没有新增恢复协议、口令、云端资源或真实路径：
+
+- `BackupRepository` 只调用现有 authenticated-only `export_life_console_snapshot`，复用只读瞬时错误最多额外尝试一次的边界，并拒绝未知 schema 或缺失资源数组。
+- `createBackupArchive` 对八类固定资源递归排序对象字段，生成 UTF-8、紧凑 JSON、LF 结尾 NDJSON；逐资源计算 SHA-256、计数与 Python Agent 兼容的 canonical content digest。
+- 浏览器 ZIP 使用固定版本 `fflate 0.8.2`；锁文件只指向 npm 官方 Registry，公开 Registry 干净安装和审计 0。
+- 跨语言测试由 TypeScript 生成纯合成 ZIP，再调用既有 Python `BackupStore` 在显式临时目录校验并原子安装；安装后字节与原 ZIP 完全一致，公开 receipt 不含正文或机器路径。
+- 验证覆盖空资源、小规模、2,000 条合成记录、Unicode、嵌套字段、摘要/计数错误、截断、重复成员、路径穿越、符号链接、压缩比、并发锁、幂等和失败保留旧备份。
+
+阶段 D 聚焦回归为备份与 production migration 35/35、Local Agent 9/9。包含该 POC 后的全量本地回归为 34 个 Vitest 文件、252/252，应用 Python 92/92，根工具测试 329/329；公开 Registry 干净安装审计 0，生产构建、项目验证、diff 与隐私检查通过。该证据不证明托管 Supabase RPC/PostgREST、Vercel 下载响应、真实 iCloud 写入、D3 字段加密或真实数据恢复。
 
 ## 10. 近期兼容性检查
 
