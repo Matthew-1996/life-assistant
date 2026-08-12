@@ -179,7 +179,7 @@ PO 已确认 Gate 1 的 PRD/D1-D8，以及 Gate 2 的 O1-O5、Q1-Q7、本测试�
 | 复盘聚焦回归 | 46/46 通过 | migration 25 + foundation 11 + domain 5 + UI 5 |
 | Life Console 全量 | 242/242 通过 | 33 个 Vitest 文件；应用 Python 90/90；公开 Registry 安装审计 0；生产构建通过 |
 | 项目级验证 | 通过 | 根项目校验、治理检查、工具测试 333 项通过且 1 项跳过 |
-| PR #40 CI | 待执行 | 提交和推送后等待 `node`、`python`、`privacy` 实际结果；PR 保持 Draft |
+| PR #40 CI | 通过 | 实现提交 `158a576` 的 `node`、`python`、`privacy` 全部成功；PR 保持 Draft |
 | 正式入口与远端 | 未执行 | 未接入口、创建资源、部署或接触真实复盘数据 |
 
 复盘聚焦证据不证明托管 Supabase RPC/PostgREST、Auth/RLS 或 Preview 网络行为。

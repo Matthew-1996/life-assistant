@@ -87,6 +87,6 @@ TypeScript 5.9, `@supabase/supabase-js`, Vitest, Testing Library.
 - [x] Record focused evidence and hosted-verification limits.
 - [x] Run governance, privacy, root project, tool, public clean-install, full
   test, and production build gates.
-- [ ] Commit and push only generic code, synthetic tests, and redacted
+- [x] Commit and push only generic code, synthetic tests, and redacted
   documentation to existing Draft PR #40.
-- [ ] Wait for `node`, `python`, and `privacy`; record observed results only.
+- [x] Wait for `node`, `python`, and `privacy`; record observed results only.
