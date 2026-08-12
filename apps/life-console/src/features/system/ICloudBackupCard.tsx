@@ -102,6 +102,9 @@ export function ICloudBackupCard({
       <p className="backup-safety-note">
         新备份校验完成前，上一份有效备份不会被覆盖。
       </p>
+      <p className="quiet">
+        此备份可在换机或项目重建时，由 Agent 协助恢复。
+      </p>
       <button
         className="button primary"
         data-readonly={readOnly}

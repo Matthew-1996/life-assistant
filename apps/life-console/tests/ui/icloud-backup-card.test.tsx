@@ -20,6 +20,7 @@ describe("iCloud latest backup card", () => {
     expect(screen.getByRole("heading", { name: "iCloud 最新备份" })).toBeTruthy();
     expect(screen.getByText("完整数据")).toBeTruthy();
     expect(screen.getByText(/上一份有效备份不会被覆盖/)).toBeTruthy();
+    expect(screen.getByText("此备份可在换机或项目重建时，由 Agent 协助恢复。")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "立即备份" }));
     expect(action).toHaveBeenCalledTimes(1);
   });

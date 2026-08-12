@@ -179,46 +179,6 @@ a:focus-visible {
   background: rgb(88 86 214 / 8%);
 }
 
-.migration-hero {
-  margin-top: 28px;
-}
-
-.day-row.migration-check-row {
-  align-items: start;
-  grid-template-columns: minmax(0, 1fr) auto;
-  row-gap: 6px;
-}
-
-.day-row.migration-check-row > strong {
-  min-width: 0;
-  white-space: normal;
-  line-height: 1.45;
-}
-
-.day-row.migration-check-row > span:not(.status) {
-  grid-column: 1 / -1;
-  grid-row: 2;
-  min-width: 0;
-  overflow-wrap: anywhere;
-  line-height: 1.45;
-}
-
-.day-row.migration-check-row > .status {
-  grid-column: 2;
-  grid-row: 1;
-  justify-self: end;
-  white-space: nowrap;
-}
-
-.migration-steps {
-  display: grid;
-  gap: 12px;
-  margin: 18px 0 24px;
-  padding-left: 24px;
-  color: var(--muted-foreground);
-  line-height: 1.55;
-}
-
 .system-status-grid .card h2 {
   margin: 14px 0 8px;
 }

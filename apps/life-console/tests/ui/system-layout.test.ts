@@ -23,19 +23,4 @@ describe("system page layout contracts", () => {
     expect(scope).toContain("border-radius: 14px");
     expect(safety).toContain("font-weight: 600");
   });
-
-  it("gives migration checks dedicated wrapping columns", () => {
-    const row = rule(".day-row.migration-check-row");
-    const title = rule(".day-row.migration-check-row > strong");
-    const description = rule(
-      ".day-row.migration-check-row > span:not(.status)",
-    );
-
-    expect(row).toContain(
-      "grid-template-columns: minmax(0, 1fr) auto",
-    );
-    expect(title).toContain("white-space: normal");
-    expect(description).toContain("grid-column: 1 / -1");
-    expect(description).toContain("overflow-wrap: anywhere");
-  });
 });

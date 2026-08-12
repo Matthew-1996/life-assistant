@@ -107,7 +107,7 @@ describe("Life Console Sites mode", () => {
     expect(screen.getByRole("button", { name: "保存到 云端真相源" })).toBeTruthy();
   });
 
-  it("renders the five-section 2.1 system summary and independent migration page", async () => {
+  it("keeps iCloud backup as the only recovery-facing system module", async () => {
     const user = userEvent.setup();
     render(
       <App
@@ -127,18 +127,9 @@ describe("Life Console Sites mode", () => {
     expect(screen.queryByText("恢复包")).toBeNull();
     expect(screen.queryByText("审计事件摘要")).toBeNull();
     expect(screen.queryByText("完整加密备份")).toBeNull();
-    await user.click(screen.getByRole("button", { name: "打开迁移向导" }));
-    expect(
-      screen.getByRole("heading", { name: "迁移只在全量校验通过后切源。" }),
-    ).toBeTruthy();
-    expect(
-      (screen.getByRole("button", {
-        name: "等待阶段 D 迁移授权",
-      }) as HTMLButtonElement).disabled,
-    ).toBe(true);
-    expect(
-      screen.getByText("Owner-only 会话").closest(".day-row")?.classList,
-    ).toContain("migration-check-row");
+    expect(screen.queryByText("迁移与恢复边界")).toBeNull();
+    expect(screen.queryByRole("button", { name: "打开迁移向导" })).toBeNull();
+    expect(screen.getByText("此备份可在换机或项目重建时，由 Agent 协助恢复。")).toBeTruthy();
   });
 
   it("keeps backup UI synthetic while the loopback bridge is blocked", async () => {

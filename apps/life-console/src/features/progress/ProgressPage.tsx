@@ -342,13 +342,6 @@ export function ProgressPage({
                 </span>
               </div>
             ))}
-            <div className="signal">
-              <strong>恢复边界</strong>
-              <div className="bar" aria-label="恢复边界">
-                <span style={{ "--value": "70%" } as React.CSSProperties} />
-              </div>
-              <span className="status gray">继续观察</span>
-            </div>
           </div>
         </article>
 

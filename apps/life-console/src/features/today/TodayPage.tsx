@@ -338,7 +338,7 @@ export function TodayPage({
               : mode === "sites"
               ? sitesPrimary
                 ? "Life Console 通过 Owner-only Sites API 读取和写入 D1；日记原文与健康明细使用字段级加密，iCloud 只接收单向冷备。"
-                : "Life Console 已连接 Owner-only Sites API 与空白 D1；当前仍处于迁移前，真实生活数据和真相源继续保留在 iCloud。"
+                : "Life Console 已连接 Owner-only Sites API 与空白 D1；真实生活数据和唯一真相源继续保留在 iCloud。"
               : "Life Console 是本地工作站界面。它帮助你读懂 iCloud 项目中的事实，但不会把敏感内容默认发布到网页、表格或任何外部服务。"}
           </p>
         </div>
@@ -354,14 +354,14 @@ export function TodayPage({
             <span className="step-index">02</span>
             <div>
               <h3>{mode === "candidate-preview" ? "不绑定真相源" : mode === "sites" ? sitesPrimary ? "D1 唯一真相源" : "iCloud 真相源" : "iCloud 真相源"}</h3>
-              <p>{mode === "candidate-preview" ? "候选环境不连接 D1、R2 或 iCloud。" : mode === "sites" ? sitesPrimary ? "所有写入使用 revision、幂等、审计与字段级加密。" : "空白 D1 只用于阶段 C 基础设施验收；尚未读取、上传或迁移真实 iCloud 数据。" : "日记、目标、台账与阶段决定以 iCloud 项目文件为准。"}</p>
+              <p>{mode === "candidate-preview" ? "候选环境不连接 D1、R2 或 iCloud。" : mode === "sites" ? sitesPrimary ? "所有写入使用 revision、幂等、审计与字段级加密。" : "空白 D1 只用于阶段 C 基础设施验收；尚未读取或上传真实 iCloud 数据。" : "日记、目标、台账与阶段决定以 iCloud 项目文件为准。"}</p>
             </div>
           </article>
           <article className="chain-step">
             <span className="step-index">03</span>
             <div>
               <h3>{mode === "candidate-preview" ? "候选不可写" : "真实写入需确认"}</h3>
-              <p>{mode === "candidate-preview" ? "所有写控件仅展示禁用态，触发时只显示只读提示。" : mode === "sites" ? sitesPrimary ? "写入成功后进入 iCloud 单向冷备队列；冲突不会静默覆盖。" : "切换真相源和迁移真实数据仍需后续独立门禁；当前不执行写入验收。" : "任何会改变记录、同步状态或长期记忆的动作，都需要当次明确确认。"}</p>
+              <p>{mode === "candidate-preview" ? "所有写控件仅展示禁用态，触发时只显示只读提示。" : mode === "sites" ? sitesPrimary ? "写入成功后进入 iCloud 单向冷备队列；冲突不会静默覆盖。" : "真实数据写入仍需后续独立确认；当前只验证基础设施。" : "任何会改变记录、同步状态或长期记忆的动作，都需要当次明确确认。"}</p>
             </div>
           </article>
         </div>
@@ -372,7 +372,7 @@ export function TodayPage({
           : mode === "sites"
           ? sitesPrimary
             ? "页面只呈现安全投影；D1 是唯一真相源，iCloud 是单向冷备。"
-            : "阶段 C 迁移前状态：真实记录仍以 iCloud 为准；空白 D1 未接收真实生活数据。"
+            : "阶段 C 基础设施状态：真实记录仍以 iCloud 为准；空白 D1 未接收真实生活数据。"
           : "页面只呈现安全投影；真实记录与状态仍以 iCloud 项目为准。"}
       </p>
     </section>

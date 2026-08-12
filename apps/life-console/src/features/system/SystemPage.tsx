@@ -14,72 +14,6 @@ interface SystemPageProps {
   sitesStatus?: SitesSystemStatus | null;
 }
 
-function SitesMigrationPage({
-  status,
-  onBack,
-}: {
-  status: SitesSystemStatus | null;
-  onBack: () => void;
-}) {
-  const checks = [
-    ["Owner-only 会话", "访问边界已建立；真实迁移仍需单独门禁"],
-    ["云端数据结构", "版本化结构与迁移状态机继续保留"],
-    ["数据保护", "敏感字段继续加密保存"],
-    ["iCloud 最新备份", "本机原子覆盖核心已进入合成验证"],
-    ["真实 iCloud 来源", "尚未授权读取或迁移"],
-  ];
-  return (
-    <section aria-labelledby="migration-title">
-      <button className="secondary-button" onClick={onBack} type="button">
-        返回系统页
-      </button>
-      <section className="hero migration-hero">
-        <div>
-          <p className="eyebrow">独立迁移向导 · 阶段 D/E 门禁</p>
-          <h1 id="migration-title">迁移只在全量校验通过后切源。</h1>
-          <p className="lead">
-            当前页面只展示通用能力与前置检查，不读取真实 iCloud 数据，也不允许切换真相源。
-          </p>
-        </div>
-        <aside className="card hero-card">
-          <span className="status blue">{status?.migration.phase ?? "NOT_STARTED"}</span>
-          <h2>{status?.source_truth ?? "ICLOUD_PRIMARY"}</h2>
-          <p className="quiet">真实迁移计划、上传校验和切源都需要后续当次确认。</p>
-        </aside>
-      </section>
-      <section className="section card pad">
-        <div className="section-head">
-          <h2>前置检查</h2>
-          <span className="status gray">候选环境</span>
-        </div>
-        <div className="signal-list">
-          {checks.map(([title, description], index) => (
-            <div className="day-row migration-check-row" key={title}>
-              <strong>{title}</strong>
-              <span>{description}</span>
-              <span className={`status ${index < 3 ? "green" : "gray"}`}>
-                {index < 3 ? "已验证" : "待门禁"}
-              </span>
-            </div>
-          ))}
-        </div>
-      </section>
-      <section className="section card pad">
-        <h2>后续受控步骤</h2>
-        <ol className="migration-steps">
-          <li>生成仅包含数量和影响范围的迁移计划。</li>
-          <li>上传后校验数量、ID、revision、摘要哈希与加密 round-trip。</li>
-          <li>PO 输入精确确认文字后切换到 D1。</li>
-          <li>在已确认的回滚窗口内保留可逆路径。</li>
-        </ol>
-        <button className="button primary" disabled type="button">
-          等待阶段 D 迁移授权
-        </button>
-      </section>
-    </section>
-  );
-}
-
 function SitesSystemPage({
   candidatePreview,
   status,
@@ -87,16 +21,7 @@ function SitesSystemPage({
   candidatePreview?: boolean;
   status: SitesSystemStatus | null;
 }) {
-  const [showMigration, setShowMigration] = useState(false);
   const [showConnectionHelp, setShowConnectionHelp] = useState(false);
-  if (showMigration) {
-    return (
-      <SitesMigrationPage
-        status={status}
-        onBack={() => setShowMigration(false)}
-      />
-    );
-  }
   const sourceTruth = candidatePreview
     ? "SYNTHETIC_ONLY"
     : status?.source_truth ?? "ICLOUD_PRIMARY";
@@ -116,7 +41,7 @@ function SitesSystemPage({
               : "云端可用，备份路径保持清晰。"}
           </h1>
           <p className="lead">
-            系统页只保留运行状态、数据保护、iCloud 最新备份、迁移边界和必要系统信息。
+            系统页只保留运行状态、数据保护、iCloud 最新备份和必要系统信息。
           </p>
         </div>
         <aside className="card hero-card">
@@ -124,9 +49,7 @@ function SitesSystemPage({
             {sourceTruth}
           </span>
           <h2>Life Console {status?.version ?? "2.1.0"}</h2>
-          <p className="quiet">
-            当前迁移阶段：{status?.migration.phase ?? "NOT_STARTED"}
-          </p>
+          <p className="quiet">备份完整并校验通过后，可由 Agent 协助未来重建。</p>
         </aside>
       </section>
 
@@ -164,23 +87,6 @@ function SitesSystemPage({
       <section className="section card pad">
         <div className="section-head">
           <div>
-            <h2>迁移与恢复边界</h2>
-            <p className="quiet">迁移和恢复继续使用独立受控流程；当前系统页不直接执行。</p>
-          </div>
-          <span className="status gray">{status?.migration.phase ?? "NOT_STARTED"}</span>
-        </div>
-        <button
-          className="button primary"
-          onClick={() => setShowMigration(true)}
-          type="button"
-        >
-          打开迁移向导
-        </button>
-      </section>
-
-      <section className="section card pad">
-        <div className="section-head">
-          <div>
             <h2>系统信息</h2>
             <p className="quiet">保留必要边界，不展示底层资源、密钥版本或运维事件。</p>
           </div>
@@ -203,7 +109,7 @@ function SitesSystemPage({
       </section>
 
       <p className="footer-note">
-        当前只实现合成界面状态；不调用 Worker 导出、不读取真实数据，也不切换真相源。
+        当前只实现合成界面状态；不调用 Worker 导出、不读取真实数据，也不改变数据来源。
       </p>
     </section>
   );
