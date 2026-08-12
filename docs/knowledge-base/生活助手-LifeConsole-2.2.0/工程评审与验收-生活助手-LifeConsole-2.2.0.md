@@ -1,6 +1,6 @@
 # 工程评审与验收 - 生活助手 - Life Console - 2.2.0
 
-> 状态：Gate 2 已确认 / 阶段 A、B 通过 / 阶段 C 日记 CRUD 聚焦验证通过
+> 状态：Gate 2 已确认 / 阶段 A、B 通过 / 阶段 C 复盘 CRUD 聚焦验证通过
 > 当前证据：官方资料、现有代码基线和本地纯合成 PGlite/supabase-js POC；没有 Supabase 资源、托管迁移、部署或真实数据证据
 
 ## 1. 工程评审结论
@@ -167,3 +167,19 @@ PO 已确认 Gate 1 的 PRD/D1-D8，以及 Gate 2 的 O1-O5、Q1-Q7、本测试�
 | 远端与私人数据 | 未执行 | 未创建资源、部署或读取、生成、上传、迁移真实日记 |
 
 日记聚焦证据不证明托管 Supabase trigger/RPC、PostgREST、Auth/RLS、字段加密或 Preview 网络行为。
+
+## 13. 阶段 C 复盘 CRUD 证据
+
+| 项目 | 结果 | 边界 |
+|---|---|---|
+| Review RPC | 通过 | weekly/phase 均为 invoker、空 `search_path`、authenticated-only、幂等重放、Owner 隔离与最小审计 |
+| 日期约束 | 通过 | weekly 每用户/周起始日唯一；phase 只校验结束日不早于开始日，不推断重叠规则 |
+| Review Repository | 5/5 通过 | 固定 active 日期游标、输入校验、RPC 映射、revision 更新和写入不重试 |
+| Reviews Panel | 5/5 通过 | 双区块空态、weekly/phase 创建、冲突保留与同 key 重试 |
+| 复盘聚焦回归 | 46/46 通过 | migration 25 + foundation 11 + domain 5 + UI 5 |
+| Life Console 全量 | 242/242 通过 | 33 个 Vitest 文件；应用 Python 90/90；公开 Registry 安装审计 0；生产构建通过 |
+| 项目级验证 | 通过 | 根项目校验、治理检查、工具测试 333 项通过且 1 项跳过 |
+| PR #40 CI | 待执行 | 提交和推送后等待 `node`、`python`、`privacy` 实际结果；PR 保持 Draft |
+| 正式入口与远端 | 未执行 | 未接入口、创建资源、部署或接触真实复盘数据 |
+
+复盘聚焦证据不证明托管 Supabase RPC/PostgREST、Auth/RLS 或 Preview 网络行为。

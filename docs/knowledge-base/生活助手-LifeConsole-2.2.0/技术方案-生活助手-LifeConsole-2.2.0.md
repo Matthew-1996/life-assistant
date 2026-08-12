@@ -1,6 +1,6 @@
 # 技术方案 - 生活助手 - Life Console - 2.2.0
 
-> 状态：Gate 2 已确认 / 阶段 A、B 通过 / 阶段 C 目标、每日状态与日记 CRUD 合成实现完成
+> 状态：Gate 2 已确认 / 阶段 A、B 通过 / 阶段 C 核心 CRUD 合成实现完成
 > 范围：允许通用代码、生产 migration 草案和合成测试；不创建 Supabase/Vercel 资源，不连接真实项目
 
 ## 1. 技术结论摘要
@@ -188,6 +188,18 @@ PO 已确认本轮只实现日记创建、读取、分页和修订，不实现�
 日记模块聚焦回归 45/45 通过，其中 production migration 22 项、Repository foundation 10 项、Journal Repository 7 项、Journals Panel 6 项。该证据不替代 D3、托管 trigger/RPC/PostgREST、两用户 Auth/RLS、CSP 或真实网络验证。
 
 包含日记模块后的全量本地回归为 31 个 Vitest 文件、228/228，应用 Python 90/90，工具测试 333 项通过且 1 项跳过；公开 Registry 干净安装审计 0，生产构建通过。
+
+### 9.9 阶段 C 复盘 CRUD 合成实现
+
+周复盘与阶段复盘保持独立：周复盘沿用 `(user_id,week_start)` 唯一约束；阶段复盘只校验结束日期不早于开始日期，不新增重叠限制或自动汇总语义。
+
+- `create_weekly_review` 与 `create_phase_review` 是 authenticated-only、invoker、空 `search_path` RPC；在同一事务内完成创建、幂等回执与不含正文的最小审计。
+- `ReviewRepository` 只开放固定的 `weekly_reviews/week_start` 和 `phase_reviews/period_start` 日期游标，默认过滤 `deleted_at is null`；创建不隐式重试，更新使用 revision 条件。
+- `SupabaseReviewsPanel` 将两类复盘分区展示，覆盖真实空态、创建、修订、冲突保留和同 key 重试；不自动生成内容、不提供删除，也未接正式入口。
+
+复盘模块聚焦回归 46/46 通过，其中 production migration 25 项、Repository foundation 11 项、Review Repository 5 项、Reviews Panel 5 项。该证据不替代托管 RPC/PostgREST、两用户 Auth/RLS、CSP 或真实网络验证。
+
+包含复盘模块后的全量本地回归为 33 个 Vitest 文件、242/242，应用 Python 90/90，工具测试 333 项通过且 1 项跳过；公开 Registry 干净安装审计 0，生产构建通过。
 
 ## 10. 近期兼容性检查
 

@@ -31,6 +31,18 @@ export type ListPageOptions =
     cursor?: Cursor;
   }
   | {
+    table: "weekly_reviews";
+    sortColumn: "week_start";
+    pageSize?: number;
+    cursor?: Cursor;
+  }
+  | {
+    table: "phase_reviews";
+    sortColumn: "period_start";
+    pageSize?: number;
+    cursor?: Cursor;
+  }
+  | {
     table: "audit_events" | "backup_runs";
     sortColumn: "created_at";
     pageSize?: number;
@@ -148,14 +160,18 @@ function pageSize(value: number | undefined): number {
 }
 
 function validateCursor(
-  sortColumn: "event_date" | "checkin_date" | "created_at",
+  sortColumn:
+    | "event_date"
+    | "checkin_date"
+    | "week_start"
+    | "period_start"
+    | "created_at",
   cursor: Cursor,
 ): void {
   if (!Number.isSafeInteger(cursor.id) || cursor.id < 1) {
     throw validationError("Cursor id must be a positive integer");
   }
-  const validSortValue = sortColumn === "event_date"
-    || sortColumn === "checkin_date"
+  const validSortValue = sortColumn !== "created_at"
     ? /^\d{4}-\d{2}-\d{2}$/.test(cursor.sortValue)
     : /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(
       cursor.sortValue,
@@ -166,7 +182,12 @@ function validateCursor(
 }
 
 function compositeCursorFilter(
-  sortColumn: "event_date" | "checkin_date" | "created_at",
+  sortColumn:
+    | "event_date"
+    | "checkin_date"
+    | "week_start"
+    | "period_start"
+    | "created_at",
   cursor: Cursor,
 ): string {
   return `${sortColumn}.lt.${cursor.sortValue},and(${sortColumn}.eq.${cursor.sortValue},id.lt.${cursor.id})`;
@@ -212,6 +233,8 @@ export class LifeConsoleRepository {
       }
       if (
         options.table === "journals"
+        || options.table === "weekly_reviews"
+        || options.table === "phase_reviews"
         || (
           options.table === "goals"
           && options.excludeDeleted

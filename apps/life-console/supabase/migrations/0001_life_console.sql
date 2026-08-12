@@ -714,6 +714,284 @@ grant execute on function public.create_goal(
   date
 ) to authenticated;
 
+create function public.create_weekly_review(
+  p_idempotency_key text,
+  p_week_start date,
+  p_content text
+)
+returns setof public.weekly_reviews
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  v_user_id uuid := (select auth.uid());
+  v_fingerprint text;
+  v_existing_operation text;
+  v_existing_result jsonb;
+  v_review public.weekly_reviews%rowtype;
+begin
+  if v_user_id is null then
+    raise exception using
+      errcode = '42501',
+      message = 'Authentication is required';
+  end if;
+
+  v_fingerprint := md5(jsonb_build_object(
+    'week_start', p_week_start,
+    'content', p_content
+  )::text);
+
+  select operation, result_ref
+  into v_existing_operation, v_existing_result
+  from public.idempotency_keys
+  where user_id = v_user_id
+    and key = p_idempotency_key;
+
+  if found then
+    if v_existing_operation <> 'weekly_review.create'
+      or v_existing_result ->> 'request_fingerprint' <> v_fingerprint
+    then
+      raise exception using
+        errcode = '22023',
+        message = 'Idempotency key was reused with a different request';
+    end if;
+
+    return query
+      select row_value.*
+      from public.weekly_reviews as row_value
+      where row_value.user_id = v_user_id
+        and row_value.id = (v_existing_result ->> 'id')::bigint;
+    return;
+  end if;
+
+  begin
+    insert into public.weekly_reviews (
+      user_id,
+      week_start,
+      content
+    ) values (
+      v_user_id,
+      p_week_start,
+      p_content
+    )
+    returning * into v_review;
+
+    insert into public.idempotency_keys (
+      user_id,
+      key,
+      operation,
+      result_ref,
+      expires_at
+    ) values (
+      v_user_id,
+      p_idempotency_key,
+      'weekly_review.create',
+      jsonb_build_object(
+        'entity_type', 'weekly_review',
+        'id', v_review.id,
+        'request_fingerprint', v_fingerprint
+      ),
+      transaction_timestamp() + interval '24 hours'
+    );
+
+    insert into public.audit_events (
+      user_id,
+      action,
+      entity_type,
+      entity_id,
+      result
+    ) values (
+      v_user_id,
+      'CREATE',
+      'weekly_review',
+      v_review.id::text,
+      'success'
+    );
+
+    return next v_review;
+    return;
+  exception
+    when unique_violation then
+      select operation, result_ref
+      into v_existing_operation, v_existing_result
+      from public.idempotency_keys
+      where user_id = v_user_id
+        and key = p_idempotency_key;
+
+      if not found then
+        raise;
+      end if;
+      if v_existing_operation <> 'weekly_review.create'
+        or v_existing_result ->> 'request_fingerprint' <> v_fingerprint
+      then
+        raise exception using
+          errcode = '22023',
+          message = 'Idempotency key was reused with a different request';
+      end if;
+
+      return query
+        select row_value.*
+        from public.weekly_reviews as row_value
+        where row_value.user_id = v_user_id
+          and row_value.id = (v_existing_result ->> 'id')::bigint;
+      return;
+  end;
+end
+$$;
+
+revoke all on function public.create_weekly_review(
+  text,
+  date,
+  text
+) from public;
+grant execute on function public.create_weekly_review(
+  text,
+  date,
+  text
+) to authenticated;
+
+create function public.create_phase_review(
+  p_idempotency_key text,
+  p_period_start date,
+  p_period_end date,
+  p_content text
+)
+returns setof public.phase_reviews
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  v_user_id uuid := (select auth.uid());
+  v_fingerprint text;
+  v_existing_operation text;
+  v_existing_result jsonb;
+  v_review public.phase_reviews%rowtype;
+begin
+  if v_user_id is null then
+    raise exception using
+      errcode = '42501',
+      message = 'Authentication is required';
+  end if;
+
+  v_fingerprint := md5(jsonb_build_object(
+    'period_start', p_period_start,
+    'period_end', p_period_end,
+    'content', p_content
+  )::text);
+
+  select operation, result_ref
+  into v_existing_operation, v_existing_result
+  from public.idempotency_keys
+  where user_id = v_user_id
+    and key = p_idempotency_key;
+
+  if found then
+    if v_existing_operation <> 'phase_review.create'
+      or v_existing_result ->> 'request_fingerprint' <> v_fingerprint
+    then
+      raise exception using
+        errcode = '22023',
+        message = 'Idempotency key was reused with a different request';
+    end if;
+
+    return query
+      select row_value.*
+      from public.phase_reviews as row_value
+      where row_value.user_id = v_user_id
+        and row_value.id = (v_existing_result ->> 'id')::bigint;
+    return;
+  end if;
+
+  begin
+    insert into public.phase_reviews (
+      user_id,
+      period_start,
+      period_end,
+      content
+    ) values (
+      v_user_id,
+      p_period_start,
+      p_period_end,
+      p_content
+    )
+    returning * into v_review;
+
+    insert into public.idempotency_keys (
+      user_id,
+      key,
+      operation,
+      result_ref,
+      expires_at
+    ) values (
+      v_user_id,
+      p_idempotency_key,
+      'phase_review.create',
+      jsonb_build_object(
+        'entity_type', 'phase_review',
+        'id', v_review.id,
+        'request_fingerprint', v_fingerprint
+      ),
+      transaction_timestamp() + interval '24 hours'
+    );
+
+    insert into public.audit_events (
+      user_id,
+      action,
+      entity_type,
+      entity_id,
+      result
+    ) values (
+      v_user_id,
+      'CREATE',
+      'phase_review',
+      v_review.id::text,
+      'success'
+    );
+
+    return next v_review;
+    return;
+  exception
+    when unique_violation then
+      select operation, result_ref
+      into v_existing_operation, v_existing_result
+      from public.idempotency_keys
+      where user_id = v_user_id
+        and key = p_idempotency_key;
+
+      if not found
+        or v_existing_operation <> 'phase_review.create'
+        or v_existing_result ->> 'request_fingerprint' <> v_fingerprint
+      then
+        raise exception using
+          errcode = '22023',
+          message = 'Idempotency key was reused with a different request';
+      end if;
+
+      return query
+        select row_value.*
+        from public.phase_reviews as row_value
+        where row_value.user_id = v_user_id
+          and row_value.id = (v_existing_result ->> 'id')::bigint;
+      return;
+  end;
+end
+$$;
+
+revoke all on function public.create_phase_review(
+  text,
+  date,
+  date,
+  text
+) from public;
+grant execute on function public.create_phase_review(
+  text,
+  date,
+  date,
+  text
+) to authenticated;
+
 create function public.create_daily_checkin(
   p_idempotency_key text,
   p_checkin_date date,

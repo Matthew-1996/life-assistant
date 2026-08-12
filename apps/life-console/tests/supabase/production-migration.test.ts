@@ -587,6 +587,211 @@ describe("Life Console production Supabase migration", () => {
     expect(revisionCount.rows).toEqual([{ count: 2 }]);
   });
 
+  it("protects weekly and phase review creation RPCs", async () => {
+    const functions = await db.query<{
+      proname: string;
+      prosecdef: boolean;
+      proretset: boolean;
+      search_path: string[];
+    }>(
+      `select p.proname, p.prosecdef, p.proretset,
+              p.proconfig[1:] as search_path
+       from pg_proc p
+       join pg_namespace n on n.oid = p.pronamespace
+       where n.nspname = 'public'
+         and p.proname in (
+           'create_phase_review',
+           'create_weekly_review'
+         )
+       order by p.proname`,
+    );
+    expect(functions.rows).toEqual([
+      {
+        proname: "create_phase_review",
+        prosecdef: false,
+        proretset: true,
+        search_path: ['search_path=""'],
+      },
+      {
+        proname: "create_weekly_review",
+        prosecdef: false,
+        proretset: true,
+        search_path: ['search_path=""'],
+      },
+    ]);
+
+    const grants = await db.query<{
+      grantee: string;
+      routine_name: string;
+    }>(
+      `select grantee, routine_name
+       from information_schema.routine_privileges
+       where routine_schema = 'public'
+         and routine_name in (
+           'create_phase_review',
+           'create_weekly_review'
+         )
+         and grantee <> 'postgres'
+       order by routine_name, grantee`,
+    );
+    expect(grants.rows).toEqual([
+      {
+        grantee: "authenticated",
+        routine_name: "create_phase_review",
+      },
+      {
+        grantee: "authenticated",
+        routine_name: "create_weekly_review",
+      },
+    ]);
+
+    await expect(
+      queryAs(
+        "anon",
+        null,
+        `select id from public.create_weekly_review(
+          'synthetic-review-anon-0001',
+          date '2030-04-01',
+          'Anonymous synthetic review'
+        )`,
+      ),
+    ).rejects.toThrow();
+  });
+
+  it("creates idempotent weekly and phase reviews with minimal audit", async () => {
+    const createWeekly = () =>
+      queryAs<{ id: number; revision: number }>(
+        "authenticated",
+        ownerA,
+        `select id, revision
+         from public.create_weekly_review(
+           'synthetic-weekly-key-0001',
+           date '2030-04-01',
+           'Synthetic weekly content'
+         )`,
+      );
+    const weekly = await createWeekly();
+    expect((await createWeekly()).rows).toEqual(weekly.rows);
+
+    const createPhase = () =>
+      queryAs<{ id: number; revision: number }>(
+        "authenticated",
+        ownerA,
+        `select id, revision
+         from public.create_phase_review(
+           'synthetic-phase-key-0001',
+           date '2030-04-01',
+           date '2030-04-30',
+           'Synthetic phase content'
+         )`,
+      );
+    const phase = await createPhase();
+    expect((await createPhase()).rows).toEqual(phase.rows);
+    expect(weekly.rows[0].revision).toBe(1);
+    expect(phase.rows[0].revision).toBe(1);
+
+    const audit = await queryAs<{
+      action: string;
+      entity_type: string;
+      result: string;
+    }>(
+      "authenticated",
+      ownerA,
+      `select action, entity_type, result
+       from public.audit_events
+       where (entity_type = 'weekly_review' and entity_id = $1)
+          or (entity_type = 'phase_review' and entity_id = $2)
+       order by entity_type`,
+      [String(weekly.rows[0].id), String(phase.rows[0].id)],
+    );
+    expect(audit.rows).toEqual([
+      {
+        action: "CREATE",
+        entity_type: "phase_review",
+        result: "success",
+      },
+      {
+        action: "CREATE",
+        entity_type: "weekly_review",
+        result: "success",
+      },
+    ]);
+    expect(JSON.stringify(audit.rows)).not.toContain("Synthetic");
+  });
+
+  it("enforces review replay, weekly uniqueness, dates, and owner scope", async () => {
+    await queryAs(
+      "authenticated",
+      ownerA,
+      `select id from public.create_weekly_review(
+        'synthetic-weekly-key-0002',
+        date '2030-04-08',
+        'Synthetic weekly original'
+      )`,
+    );
+    await expect(
+      queryAs(
+        "authenticated",
+        ownerA,
+        `select id from public.create_weekly_review(
+          'synthetic-weekly-key-0002',
+          date '2030-04-08',
+          'Synthetic weekly changed'
+        )`,
+      ),
+    ).rejects.toThrow(/different request/i);
+    await expect(
+      queryAs(
+        "authenticated",
+        ownerA,
+        `select id from public.create_weekly_review(
+          'synthetic-weekly-key-0003',
+          date '2030-04-08',
+          'Synthetic weekly duplicate'
+        )`,
+      ),
+    ).rejects.toThrow();
+    await expect(
+      queryAs(
+        "authenticated",
+        ownerA,
+        `select id from public.create_phase_review(
+          'synthetic-phase-key-0002',
+          date '2030-05-01',
+          date '2030-04-01',
+          'Synthetic invalid phase'
+        )`,
+      ),
+    ).rejects.toThrow();
+
+    const sharedKey = "synthetic-review-shared-0001";
+    const ownerAReview = await queryAs<{ id: number; user_id: string }>(
+      "authenticated",
+      ownerA,
+      `select id, user_id from public.create_phase_review(
+        $1,
+        date '2030-05-01',
+        date '2030-05-31',
+        'Synthetic owner A phase'
+      )`,
+      [sharedKey],
+    );
+    const ownerBReview = await queryAs<{ id: number; user_id: string }>(
+      "authenticated",
+      ownerB,
+      `select id, user_id from public.create_phase_review(
+        $1,
+        date '2030-05-01',
+        date '2030-05-31',
+        'Synthetic owner B phase'
+      )`,
+      [sharedKey],
+    );
+    expect(ownerAReview.rows[0].user_id).toBe(ownerA);
+    expect(ownerBReview.rows[0].user_id).toBe(ownerB);
+    expect(ownerAReview.rows[0].id).not.toBe(ownerBReview.rows[0].id);
+  });
+
   it("stores nullable daily ratings as approved 1-5 small integers", async () => {
     const columns = await db.query<{
       column_name: string;

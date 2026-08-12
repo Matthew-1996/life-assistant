@@ -137,6 +137,35 @@ describe("Life Console Supabase Repository", () => {
     );
   });
 
+  it("uses fixed active review date cursors", async () => {
+    const { repository, requests } = createRepository([
+      { status: 200, body: [] },
+      { status: 200, body: [] },
+    ]);
+
+    await repository.listPage({
+      table: "weekly_reviews",
+      sortColumn: "week_start",
+      cursor: { sortValue: "2030-04-01", id: 7 },
+    });
+    await repository.listPage({
+      table: "phase_reviews",
+      sortColumn: "period_start",
+      cursor: { sortValue: "2030-04-01", id: 8 },
+    });
+
+    const weeklyUrl = new URL(requests[0].url);
+    expect(weeklyUrl.searchParams.get("deleted_at")).toBe("is.null");
+    expect(weeklyUrl.searchParams.get("or")).toBe(
+      "(week_start.lt.2030-04-01,and(week_start.eq.2030-04-01,id.lt.7))",
+    );
+    const phaseUrl = new URL(requests[1].url);
+    expect(phaseUrl.searchParams.get("deleted_at")).toBe("is.null");
+    expect(phaseUrl.searchParams.get("or")).toBe(
+      "(period_start.lt.2030-04-01,and(period_start.eq.2030-04-01,id.lt.8))",
+    );
+  });
+
   it("rejects invalid page sizes and cursor values before fetching", async () => {
     const { repository, requests } = createRepository([]);
 
