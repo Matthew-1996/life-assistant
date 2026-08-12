@@ -366,8 +366,9 @@ npm run build
 | 无登录 HTTP 与安全头 | 通过 | 稳定别名返回 200；CSP `connect-src 'none'`、no-referrer、nosniff、DENY framing 均生效 |
 | 浏览器线上验收 | 通过 | 工作台、记录、进展、系统可访问；迁移卡片/向导/阶段与恢复边界指标均不存在，Agent 恢复说明可见，控制台无错误 |
 | 数据与资源边界 | 通过 | 仍为内置合成投影；未创建 Supabase、数据库、Auth、API 或 Secret，未读取 iCloud 或真实生活数据 |
+| PO 视觉与信息架构验收 | 通过 | PO 于 2026-08-12 确认当前 Vercel Gate 2C 版本“验收完成，符合预期”，允许进入后续开发 |
 
-结论：Gate 2C 代码、合成测试和既有 Vercel 合成预览更新均已验收；该发布不替代正式 Sites，也不改变阶段 A 平台 POC 阻塞状态。
+结论：Gate 2C 代码、合成测试、既有 Vercel 合成预览更新及 PO 视觉/信息架构验收均已完成。该结论不扩大为真实备份、Supabase 后端或全链路验收，也不改变阶段 A 平台 POC 的历史阻塞事实。
 
 ## 13. PO Gate 2 确认记录
 
