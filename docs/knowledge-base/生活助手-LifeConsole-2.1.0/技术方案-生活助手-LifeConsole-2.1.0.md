@@ -1,6 +1,6 @@
 # 技术方案 - 生活助手 - Life Console - 2.1.0
 
-> 状态：Gate 2A 首轮实现完成 / Gate 2B 替代验收方案评审中
+> 状态：Gate 2B 已确认 / 阶段 2B-1 去敏回执本地实现完成
 >
 > 基线：复用 2.0.0 Owner-only Sites Worker、D1、字段级 AES/KEK、CRUD、revision、幂等、删除计划和最小审计
 >
@@ -55,7 +55,7 @@ flowchart LR
 
 PO Gate 2 通过后，第一项实现工作必须是最小 POC：网页只调用本机 `/health` 和合成 `/backups`，验证权限、预检、Origin 和失败关闭；POC 不读取 D1 或 iCloud。
 
-### 3.1 Gate 2B：扩展不可用后的方案比较（待 PO 确认）
+### 3.1 Gate 2B：扩展不可用后的方案比较（PO 已确认）
 
 Chrome 扩展只让 Agent 取得用户 Chrome 的自动化控制权，不参与候选页自身的 `fetch`、CORS、LNA 或 Worker 容量执行。因此“扩展无法安装”不等于“Owner 浏览器桥接架构不可行”。
 
@@ -315,4 +315,5 @@ Gate 2 通过后，直接在 PR #39 的唯一活动分支按文件提炼；不�
 - 确认对象：Q1-Q7、本技术方案和工程测试方案。
 - 已授权：阶段 A-E 的通用代码、合成数据、回环 POC、本地临时目录测试和 Draft PR。
 - 不包含：正式部署、真实 D1/iCloud 读取、真实备份、切源、资源解绑/删除、PR 合并。
-- Gate 2B：PO 已确认启动替代方案评审；3.1 节推荐方案 A 与降级边界尚待 PO 确认，当前不授权实现或部署。
+- Gate 2B：PO 已确认 B1-B3 与方案 A、二级降级边界；授权仅覆盖阶段 2B-1 通用代码和合成测试，不包含候选/正式部署、真实数据、Worker 正式导出、资源删除、切源或 PR 合并。
+- 阶段 2B-1 实现：`stageAPocReceipt.ts` 以白名单字段构建并序列化 `life-console-poc-receipt/1`；页面仅在三项测试全部进入 passed/failed 后允许用户主动下载，下载后立即释放 Blob URL，不自动上传或持久化结果。

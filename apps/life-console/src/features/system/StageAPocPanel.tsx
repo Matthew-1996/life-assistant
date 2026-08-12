@@ -1,17 +1,16 @@
 import { useState } from "react";
 
+import {
+  createStageAPocReceipt,
+  serializeStageAPocReceipt,
+  stageAPocReceiptFilename,
+  type PocCapacityResult,
+} from "./stageAPocReceipt";
+
 const LOOPBACK_BASE_URL = "http://127.0.0.1:47323";
 const PROFILES = ["S", "M", "L"] as const;
 
 type TestState = "idle" | "running" | "passed" | "failed";
-
-interface CapacityResult {
-  archive_bytes: number;
-  elapsed_ms: number;
-  input_bytes: number;
-  profile: "S" | "M" | "L";
-  synthetic: true;
-}
 
 function stateLabel(state: TestState) {
   if (state === "running") return "运行中";
@@ -20,11 +19,15 @@ function stateLabel(state: TestState) {
   return "未运行";
 }
 
+function isTerminalState(state: TestState): state is "failed" | "passed" {
+  return state === "passed" || state === "failed";
+}
+
 export function StageAPocPanel() {
   const [loopbackState, setLoopbackState] = useState<TestState>("idle");
   const [transferState, setTransferState] = useState<TestState>("idle");
   const [capacityState, setCapacityState] = useState<TestState>("idle");
-  const [capacity, setCapacity] = useState<CapacityResult[]>([]);
+  const [capacity, setCapacity] = useState<PocCapacityResult[]>([]);
   const [message, setMessage] = useState("等待阶段 A 实测。所有内容均为合成数据。");
 
   async function testLoopback() {
@@ -80,12 +83,12 @@ export function StageAPocPanel() {
     setCapacity([]);
     setMessage("正在依次运行 Worker S/M/L 合成容量档…");
     try {
-      const results: CapacityResult[] = [];
+      const results: PocCapacityResult[] = [];
       for (const profile of PROFILES) {
         const response = await fetch(`/api/v1/poc/capacity?profile=${profile}`, {
           cache: "no-store",
         });
-        const payload = await response.json() as CapacityResult;
+        const payload = await response.json() as PocCapacityResult;
         if (!response.ok || payload.synthetic !== true || payload.profile !== profile) {
           throw new Error("capacity_failed");
         }
@@ -97,6 +100,38 @@ export function StageAPocPanel() {
     } catch {
       setCapacityState("failed");
       setMessage("Worker 容量测试失败；阶段 B-E 不会自动启动。");
+    }
+  }
+
+  const receiptReady = [loopbackState, transferState, capacityState]
+    .every(isTerminalState);
+
+  function downloadReceipt() {
+    if (
+      !isTerminalState(loopbackState)
+      || !isTerminalState(transferState)
+      || !isTerminalState(capacityState)
+    ) return;
+    try {
+      const receipt = createStageAPocReceipt({
+        capacity,
+        capacityState,
+        loopbackState,
+        transferState,
+      });
+      const objectUrl = URL.createObjectURL(new Blob(
+        [serializeStageAPocReceipt(receipt)],
+        { type: "application/json;charset=utf-8" },
+      ));
+      const anchor = document.createElement("a");
+      anchor.download = stageAPocReceiptFilename(receipt.generated_at);
+      anchor.href = objectUrl;
+      anchor.rel = "noopener";
+      anchor.click();
+      URL.revokeObjectURL(objectUrl);
+      setMessage("去敏验收回执已生成；请将 JSON 文件交给 Agent 核验。未包含个人数据、凭据或机器信息，也不会自动上传。");
+    } catch {
+      setMessage("验收回执未生成；请确认三项测试均已结束后重试。");
     }
   }
 
@@ -146,6 +181,12 @@ export function StageAPocPanel() {
           ))}
         </div>
       )}
+      <div className="button-row">
+        <button className="button secondary" disabled={!receiptReady} onClick={downloadReceipt} type="button">
+          下载去敏验收回执
+        </button>
+        <span className="quiet">完成三项合成测试后可下载；回执不会自动上传。</span>
+      </div>
       <p aria-live="polite" className="quiet" data-testid="poc-message">{message}</p>
     </section>
   );
