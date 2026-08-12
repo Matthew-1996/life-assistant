@@ -361,9 +361,13 @@ npm run build
 | Life Console 全量回归 | 通过 | 18 个 Vitest 文件、131 项通过；Life Console Python 90 项通过 |
 | 构建 | 通过 | 生产构建与 Vercel `candidate-preview` 构建均通过 |
 | 治理与隐私 | 通过 | 最高规范完整性、Git 索引与 `origin/main..HEAD` 历史隐私、`git diff --check` 均通过 |
-| 外部部署 | 未执行 | 本次授权不包含新一轮 Vercel 或正式 Sites 发布，现有线上预览仍是上一提交版本 |
+| Vercel 更新授权 | 通过 | PO 明确要求当前 Vercel 网站展示 Gate 2C 新版；只覆盖既有合成静态预览，不创建项目或后端资源 |
+| Vercel 生产发布 | 通过 | 从已验收提交生成 `candidate-preview` 生产构建，部署 Ready，并重新绑定既有稳定别名 |
+| 无登录 HTTP 与安全头 | 通过 | 稳定别名返回 200；CSP `connect-src 'none'`、no-referrer、nosniff、DENY framing 均生效 |
+| 浏览器线上验收 | 通过 | 工作台、记录、进展、系统可访问；迁移卡片/向导/阶段与恢复边界指标均不存在，Agent 恢复说明可见，控制台无错误 |
+| 数据与资源边界 | 通过 | 仍为内置合成投影；未创建 Supabase、数据库、Auth、API 或 Secret，未读取 iCloud 或真实生活数据 |
 
-结论：Gate 2C 代码和合成测试已完成，可进入 Draft PR 评审；不代表线上版本已更新，也不改变阶段 A 平台 POC 阻塞状态。
+结论：Gate 2C 代码、合成测试和既有 Vercel 合成预览更新均已验收；该发布不替代正式 Sites，也不改变阶段 A 平台 POC 阻塞状态。
 
 ## 13. PO Gate 2 确认记录
 
