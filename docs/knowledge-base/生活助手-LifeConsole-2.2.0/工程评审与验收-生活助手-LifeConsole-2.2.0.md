@@ -107,6 +107,7 @@ PO 已确认 Gate 1 的 PRD/D1-D8，以及 Gate 2 的 O1-O5、Q1-Q7、本测试�
 | Repository | 8/8 通过 | 复合游标、页长校验、HTTP/网络只读瞬时重试、写入不重试、错误归一化、revision 冲突与幂等边界 |
 | 聚焦测试 | 23/23 通过 | 真实 `supabase-js` 查询构造器 + 合成 fetch/Auth port，不含远端调用 |
 | Life Console 全量 | 174/174 通过 | 25 个 Vitest 文件；应用 Python 90/90；生产构建通过 |
+| PR #40 CI | 通过 | 实现提交 `5dade35` 的 `node`、`python`、`privacy` 全部成功；PR 保持 Draft |
 | Supabase/Vercel 资源 | 未执行 | 未创建、绑定或修改任何远端资源 |
 | 托管 Auth/PostgREST/SMTP/CSP | 未验证 | 必须在后续独立测试资源与候选部署门禁中验证 |
 | 私人数据 | 未接触 | 未读取、上传、生成或迁移真实日记、健康和 iCloud 数据 |

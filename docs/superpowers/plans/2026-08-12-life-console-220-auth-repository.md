@@ -148,7 +148,7 @@ export class LifeConsoleRepository {
 - Modify: `docs/superpowers/plans/2026-08-12-life-console-220-auth-repository.md`
 
 - [x] Record focused-test counts and state that no hosted Auth/PostgREST behavior was claimed.
-- [ ] Run `git diff --check`, governance, index/history privacy, root `validate_project.py`, and tool tests.
-- [ ] Run public-registry `npm ci`, focused tests, `npm test`, and `npm run build`.
-- [ ] Commit only generic client/Auth/Repository/UI code, synthetic tests, and updated documentation.
-- [ ] Push to existing Draft PR #40, wait for `node`, `python`, and `privacy`, and record actual results.
+- [x] Run `git diff --check`, governance, index/history privacy, root `validate_project.py`, and tool tests.
+- [x] Run public-registry `npm ci`, focused tests, `npm test`, and `npm run build`.
+- [x] Commit only generic client/Auth/Repository/UI code, synthetic tests, and updated documentation.
+- [x] Push to existing Draft PR #40, wait for `node`, `python`, and `privacy`, and record actual results.
