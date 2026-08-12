@@ -88,11 +88,11 @@ Vitest 3, Testing Library.
 
 - [x] Record focused counts and explicitly state that no hosted
   Auth/PostgREST behavior was verified.
-- [ ] Run `git diff --check`, governance, index/history privacy, root
+- [x] Run `git diff --check`, governance, index/history privacy, root
   `validate_project.py`, and tool tests.
 - [x] Run public-registry `npm ci`, focused tests, `npm test`, and
   `npm run build`.
-- [ ] Commit only generic goal CRUD code, synthetic tests, and updated
+- [x] Commit only generic goal CRUD code, synthetic tests, and updated
   documentation.
-- [ ] Push to the existing Draft PR #40, wait for `node`, `python`, and
+- [x] Push to the existing Draft PR #40, wait for `node`, `python`, and
   `privacy`, and record actual results.

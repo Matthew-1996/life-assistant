@@ -2,7 +2,7 @@
 
 > PMO：Agent
 > 主阶段：待联调
-> 子状态：Gate 1 / Gate 2 已确认 / 阶段 C 目标 CRUD 聚焦验证通过
+> 子状态：Gate 1 / Gate 2 已确认 / 阶段 C 目标 CRUD 与 PR CI 通过
 > 当前分支：`agent/life-console-220-supabase`
 > 当前 worktree：`.worktrees/life-console-220-supabase`
 > 当前 Draft PR：[#40](https://github.com/Matthew-1996/life-assistant/pull/40)
@@ -30,7 +30,7 @@
 | 需求评审 | 已完成 | PO 已确认 PRD draft.1、D1-D8 与“有条件通过”结论 |
 | 设计方案评审 | 已完成 | PO 已确认 O1-O5 |
 | 技术/测试评审 | 已完成 | PO 已确认 Q1-Q7、测试矩阵和阶段计划 |
-| 开发与联调 | 进行中 | 阶段 A、B 已通过 PR CI；阶段 C 目标 CRUD 聚焦 34/34、全量 191/191 通过，待 PR CI |
+| 开发与联调 | 进行中 | 阶段 A、B 和阶段 C 目标 CRUD 已通过 PR CI；下一块为每日状态 CRUD |
 | 测试资源与候选部署 | 待开始 | 独立资源、成本与部署授权 |
 | 真实数据与上线 | 待开始 | 独立迁移、切源、验收和上线门禁 |
 
@@ -69,10 +69,10 @@
 | 2026-08-12 | 阶段 A 首个开发块完成本地验证 | Agent | 生产 migration、纯合成 seed、PGlite Auth shim 与权限测试 9/9 通过；未创建资源、部署或接触真实数据 |
 | 2026-08-12 | 阶段 A 首个开发块通过 PR #40 CI | Agent | Life Console 151/151、Python 90/90、工具 333 项通过且 1 项跳过；`node`、`python`、`privacy` 全部成功 |
 | 2026-08-12 | 阶段 B Auth 与 Repository 完成合成验证与 PR #40 CI | Agent | 聚焦测试 23/23、Life Console 174/174、应用 Python 90/90、工具 333 项通过且 1 项跳过、生产构建通过；实现提交 `5dade35` 的 `node`、`python`、`privacy` 全部成功 |
-| 2026-08-12 | 阶段 C 目标 CRUD 完成本地合成验证 | Agent | 聚焦 34/34、Life Console 191/191、应用 Python 90/90、工具 333 项通过且 1 项跳过、生产构建通过；未接正式入口、远端资源或真实数据 |
+| 2026-08-12 | 阶段 C 目标 CRUD 完成合成验证与 PR #40 CI | Agent | 聚焦 34/34、Life Console 191/191、应用 Python 90/90、工具 333 项通过且 1 项跳过、生产构建通过；实现提交 `5100b7b` 的 `node`、`python`、`privacy` 全部成功 |
 
 ## 7. 下一步（最多三项）
 
-1. 完成目标 CRUD 全量治理、隐私、构建检查并推送现有 Draft PR #40 等待 CI。
-2. CI 通过后继续每日状态 CRUD；日记修订原子性在进入日记模块前单独核对。
+1. 继续每日状态 CRUD，仍只使用合成数据并独立验收。
+2. 日记修订原子性在进入日记模块前单独核对。
 3. 独立 Supabase 资源、候选部署与真实数据继续分别授权，可延后。
