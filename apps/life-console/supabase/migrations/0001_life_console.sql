@@ -154,6 +154,8 @@ create index profiles_user_id_idx
   on public.profiles (user_id);
 create index goals_user_status_idx
   on public.goals (user_id, status, id desc);
+create index goals_user_created_idx
+  on public.goals (user_id, created_at desc, id desc);
 create index journals_user_event_idx
   on public.journals (user_id, event_date desc, id desc);
 create index journal_revisions_user_journal_idx
@@ -312,6 +314,165 @@ create policy audit_events_select on public.audit_events
   for select to authenticated using ((select auth.uid()) = user_id);
 create policy audit_events_insert on public.audit_events
   for insert to authenticated with check ((select auth.uid()) = user_id);
+
+create function public.create_goal(
+  p_idempotency_key text,
+  p_title text,
+  p_domain text,
+  p_status text,
+  p_priority smallint,
+  p_start_date date,
+  p_target_date date
+)
+returns setof public.goals
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  v_user_id uuid := (select auth.uid());
+  v_fingerprint text;
+  v_existing_operation text;
+  v_existing_result jsonb;
+  v_goal public.goals%rowtype;
+begin
+  if v_user_id is null then
+    raise exception using
+      errcode = '42501',
+      message = 'Authentication is required';
+  end if;
+
+  v_fingerprint := md5(jsonb_build_object(
+    'title', p_title,
+    'domain', p_domain,
+    'status', p_status,
+    'priority', p_priority,
+    'start_date', p_start_date,
+    'target_date', p_target_date
+  )::text);
+
+  select operation, result_ref
+  into v_existing_operation, v_existing_result
+  from public.idempotency_keys
+  where user_id = v_user_id
+    and key = p_idempotency_key;
+
+  if found then
+    if v_existing_operation <> 'goal.create'
+      or v_existing_result ->> 'request_fingerprint' <> v_fingerprint
+    then
+      raise exception using
+        errcode = '22023',
+        message = 'Idempotency key was reused with a different request';
+    end if;
+
+    return query
+      select row_value.*
+      from public.goals as row_value
+      where row_value.user_id = v_user_id
+        and row_value.id = (v_existing_result ->> 'id')::bigint;
+    return;
+  end if;
+
+  begin
+    insert into public.goals (
+      user_id,
+      title,
+      domain,
+      status,
+      priority,
+      start_date,
+      target_date
+    ) values (
+      v_user_id,
+      p_title,
+      p_domain,
+      p_status,
+      p_priority,
+      p_start_date,
+      p_target_date
+    )
+    returning * into v_goal;
+
+    insert into public.idempotency_keys (
+      user_id,
+      key,
+      operation,
+      result_ref,
+      expires_at
+    ) values (
+      v_user_id,
+      p_idempotency_key,
+      'goal.create',
+      jsonb_build_object(
+        'entity_type', 'goal',
+        'id', v_goal.id,
+        'request_fingerprint', v_fingerprint
+      ),
+      transaction_timestamp() + interval '24 hours'
+    );
+
+    insert into public.audit_events (
+      user_id,
+      action,
+      entity_type,
+      entity_id,
+      result
+    ) values (
+      v_user_id,
+      'CREATE',
+      'goal',
+      v_goal.id::text,
+      'success'
+    );
+
+    return next v_goal;
+    return;
+  exception
+    when unique_violation then
+      select operation, result_ref
+      into v_existing_operation, v_existing_result
+      from public.idempotency_keys
+      where user_id = v_user_id
+        and key = p_idempotency_key;
+
+      if not found
+        or v_existing_operation <> 'goal.create'
+        or v_existing_result ->> 'request_fingerprint' <> v_fingerprint
+      then
+        raise exception using
+          errcode = '22023',
+          message = 'Idempotency key was reused with a different request';
+      end if;
+
+      return query
+        select row_value.*
+        from public.goals as row_value
+        where row_value.user_id = v_user_id
+          and row_value.id = (v_existing_result ->> 'id')::bigint;
+      return;
+  end;
+end
+$$;
+
+revoke all on function public.create_goal(
+  text,
+  text,
+  text,
+  text,
+  smallint,
+  date,
+  date
+) from public;
+grant execute on function public.create_goal(
+  text,
+  text,
+  text,
+  text,
+  smallint,
+  date,
+  date
+) to authenticated;
 
 create function public.export_life_console_snapshot()
 returns jsonb

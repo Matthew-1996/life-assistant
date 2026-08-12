@@ -86,6 +86,7 @@ describe("Life Console production Supabase migration", () => {
          and indexname in (
            'profiles_user_id_idx',
            'goals_user_status_idx',
+           'goals_user_created_idx',
            'journals_user_event_idx',
            'journal_revisions_user_journal_idx',
            'daily_checkins_user_date_idx',
@@ -99,7 +100,7 @@ describe("Life Console production Supabase migration", () => {
          )
        order by indexname`,
     );
-    expect(indexes.rows).toHaveLength(12);
+    expect(indexes.rows).toHaveLength(13);
   });
 
   it("uses invoker rights and an empty search path for snapshot export", async () => {
@@ -116,6 +117,175 @@ describe("Life Console production Supabase migration", () => {
     expect(functions.rows).toEqual([
       { prosecdef: false, search_path: ['search_path=""'] },
     ]);
+  });
+
+  it("protects goal creation RPC with invoker rights and authenticated execute", async () => {
+    const functions = await db.query<{
+      prosecdef: boolean;
+      proretset: boolean;
+      search_path: string[];
+    }>(
+      `select p.prosecdef, p.proretset, p.proconfig[1:] as search_path
+       from pg_proc p
+       join pg_namespace n on n.oid = p.pronamespace
+       where n.nspname = 'public'
+         and p.proname = 'create_goal'`,
+    );
+    expect(functions.rows).toEqual([
+      {
+        prosecdef: false,
+        proretset: true,
+        search_path: ['search_path=""'],
+      },
+    ]);
+
+    const grants = await db.query<{
+      grantee: string;
+      privilege_type: string;
+    }>(
+      `select grantee, privilege_type
+       from information_schema.routine_privileges
+       where routine_schema = 'public'
+         and routine_name = 'create_goal'
+         and grantee <> 'postgres'
+       order by grantee, privilege_type`,
+    );
+    expect(grants.rows).toEqual([
+      { grantee: "authenticated", privilege_type: "EXECUTE" },
+    ]);
+
+    await expect(
+      queryAs(
+        "anon",
+        null,
+        `select id from public.create_goal(
+          'synthetic-anon-key-0001',
+          'Anonymous goal',
+          null,
+          'active',
+          null,
+          null,
+          null
+        )`,
+      ),
+    ).rejects.toThrow();
+  });
+
+  it("creates a goal once for an idempotent replay and writes one audit event", async () => {
+    const before = await queryAs<{ count: number }>(
+      "authenticated",
+      ownerA,
+      "select count(*)::int as count from public.goals",
+    );
+    const create = () =>
+      queryAs<{
+        id: number;
+        revision: number;
+        title: string;
+      }>(
+        "authenticated",
+        ownerA,
+        `select id, revision, title
+         from public.create_goal($1, $2, $3, $4, $5, $6, $7)`,
+        [
+          "synthetic-goal-key-0001",
+          "Synthetic Goal Created",
+          "test",
+          "active",
+          2,
+          "2030-02-01",
+          "2030-02-28",
+        ],
+      );
+
+    const first = await create();
+    const replay = await create();
+
+    expect(replay.rows).toEqual(first.rows);
+    expect(first.rows).toEqual([
+      expect.objectContaining({
+        revision: 1,
+        title: "Synthetic Goal Created",
+      }),
+    ]);
+    const after = await queryAs<{ count: number }>(
+      "authenticated",
+      ownerA,
+      "select count(*)::int as count from public.goals",
+    );
+    expect(after.rows[0].count).toBe(before.rows[0].count + 1);
+
+    const audit = await queryAs<{
+      action: string;
+      entity_type: string;
+      result: string;
+    }>(
+      "authenticated",
+      ownerA,
+      `select action, entity_type, result
+       from public.audit_events
+       where entity_type = 'goal'
+         and entity_id = $1`,
+      [String(first.rows[0].id)],
+    );
+    expect(audit.rows).toEqual([
+      {
+        action: "CREATE",
+        entity_type: "goal",
+        result: "success",
+      },
+    ]);
+  });
+
+  it("rejects an idempotency key reused with a changed body", async () => {
+    await queryAs(
+      "authenticated",
+      ownerA,
+      `select id from public.create_goal(
+        'synthetic-goal-key-0002',
+        'Synthetic Original',
+        null,
+        'active',
+        null,
+        null,
+        null
+      )`,
+    );
+
+    await expect(
+      queryAs(
+        "authenticated",
+        ownerA,
+        `select id from public.create_goal(
+          'synthetic-goal-key-0002',
+          'Synthetic Changed',
+          null,
+          'active',
+          null,
+          null,
+          null
+        )`,
+      ),
+    ).rejects.toThrow(/different request/i);
+  });
+
+  it("scopes identical idempotency keys by authenticated owner", async () => {
+    const key = "synthetic-shared-key-0001";
+    const createFor = (userId: string, title: string) =>
+      queryAs<{ id: number; user_id: string; title: string }>(
+        "authenticated",
+        userId,
+        `select id, user_id, title
+         from public.create_goal($1, $2, null, 'active', null, null, null)`,
+        [key, title],
+      );
+
+    const ownerAGoal = await createFor(ownerA, "Synthetic Owner A Goal");
+    const ownerBGoal = await createFor(ownerB, "Synthetic Owner B Goal");
+
+    expect(ownerAGoal.rows[0].user_id).toBe(ownerA);
+    expect(ownerBGoal.rows[0].user_id).toBe(ownerB);
+    expect(ownerAGoal.rows[0].id).not.toBe(ownerBGoal.rows[0].id);
   });
 
   it("does not grant physical delete on personal tables", async () => {

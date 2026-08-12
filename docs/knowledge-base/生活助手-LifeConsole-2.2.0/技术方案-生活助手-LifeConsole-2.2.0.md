@@ -1,6 +1,6 @@
 # 技术方案 - 生活助手 - Life Console - 2.2.0
 
-> 状态：Gate 2 已确认 / 阶段 A 与阶段 B 本地合成实现通过
+> 状态：Gate 2 已确认 / 阶段 A、B 通过 / 阶段 C 目标 CRUD 合成实现完成
 > 范围：允许通用代码、生产 migration 草案和合成测试；不创建 Supabase/Vercel 资源，不连接真实项目
 
 ## 1. 技术结论摘要
@@ -125,7 +125,7 @@ Supabase 可以继续作为 2.2.0 唯一新后端候选，但本地 POC 不能�
 
 - PostgreSQL/RLS：7 项通过，包括复合索引、Owner/非 Owner/anon、UPDATE `WITH CHECK`、原子 upsert 和单事务导出 RPC。
 - 浏览器 SDK：4 项通过，包括 `shouldCreateUser=false`、仅 publishable key、关闭 Data API 自动重试和 CSP 阻塞识别。
-- 当前全量本地回归：Life Console 25 个 Vitest 文件、174 项测试通过；应用 Python 90 项测试通过。
+- 当前全量本地回归：Life Console 27 个 Vitest 文件、191 项测试通过；应用 Python 90 项测试通过。
 - 尚未验证：大陆到真实项目端点的网络、真实 OTP、托管 RLS/GRANT、Vercel Preview CORS/CSP、1k/10k 容量、平台 Advisors/备份和第二个 Auth 用户端到端隔离。
 
 详细可复现方法和远端待测矩阵见 [Supabase 可行性调研与 POC](Supabase可行性调研与POC-生活助手-LifeConsole-2.2.0.md)。
@@ -150,6 +150,18 @@ Gate 2 之外，创建独立 Supabase 候选资源前还需 PO 单独确认区�
 - `supabase/repository.ts`：只允许已批准表名/排序列，列表使用 `(event_date,id)` 或 `(created_at,id)` 降序游标；页长限制为 1-100；瞬时只读失败最多额外尝试一次；更新固定使用 `id + revision` 条件，零行映射 409；写入不做隐式重试。
 
 聚焦合成测试 23/23 通过，其中 browser client 4 项、Auth 5 项、OTP Gate 6 项、Repository 8 项。Repository 测试使用真实 `supabase-js` 查询构造器与合成 fetch transport，证明本地请求契约、错误归一化和重试边界；它不证明托管 Auth、PostgREST、SMTP、CORS/CSP、RLS 或真实网络行为。正式启动入口、精确 CSP Origin、远端资源和部署仍需后续独立授权。
+
+### 9.6 阶段 C 目标 CRUD 合成实现
+
+阶段 C 首个独立模块选择目标，避免在日记修订原子性尚未单独实现前混合多个业务域：
+
+- `create_goal` 是 `security invoker`、空 `search_path` 的 authenticated-only RPC；使用 `auth.uid()`、现有 `(user_id,key)` 唯一约束和请求指纹，在同一事务内创建目标、记录幂等结果和写入不含正文的最小审计事件。
+- 目标列表固定使用 `(created_at,id)` 降序游标和 `deleted_at is null` 谓词，不接受调用方传入任意表、排序列或过滤片段。
+- `GoalRepository` 负责输入归一化、幂等创建、revision 条件更新、归档和恢复；所有写调用只执行一次，网络失败不做不可见重试。
+- `SupabaseGoalsPanel` 通过依赖注入展示 loading、真实空态、创建、修订、冲突、失败重试和归档；失败时保留输入及同一幂等键，未接入 `App.tsx` 或 `main.tsx`。
+- TypeScript 配置显式限定全局 types，避免 iCloud 生成的重复 `@types/* 2` 目录被自动发现；不改变运行时依赖与产品行为。
+
+目标模块聚焦测试 34/34 通过，其中 migration 13 项、Repository foundation 9 项、Goal Repository 6 项、Goals Panel 6 项；本轮新增 17 项目标相关断言。该证据只覆盖 PGlite、真实 `supabase-js` 查询构造器、合成 fetch 和注入 UI，不替代托管 Postgres/PostgREST、两用户 Auth、CSP 或网络验收。
 
 ## 10. 近期兼容性检查
 

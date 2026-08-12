@@ -1,6 +1,6 @@
 # 工程评审与验收 - 生活助手 - Life Console - 2.2.0
 
-> 状态：Gate 2 已确认 / 阶段 A 与阶段 B 本地合成开发块通过
+> 状态：Gate 2 已确认 / 阶段 A、B 通过 / 阶段 C 目标 CRUD 聚焦验证通过
 > 当前证据：官方资料、现有代码基线和本地纯合成 PGlite/supabase-js POC；没有 Supabase 资源、托管迁移、部署或真实数据证据
 
 ## 1. 工程评审结论
@@ -113,3 +113,19 @@ PO 已确认 Gate 1 的 PRD/D1-D8，以及 Gate 2 的 O1-O5、Q1-Q7、本测试�
 | 私人数据 | 未接触 | 未读取、上传、生成或迁移真实日记、健康和 iCloud 数据 |
 
 阶段 B 目前只证明通用代码和合成契约可用。远端资源、候选部署、正式入口接线、精确 CSP 放行、真实 OTP、两用户托管 RLS 和大陆网络仍不得标记通过。
+
+## 10. 阶段 C 目标 CRUD 证据
+
+| 项目 | 结果 | 边界 |
+|---|---|---|
+| 目标创建 RPC | 通过 | invoker、空 `search_path`、authenticated-only、幂等重放、请求漂移拒绝、Owner 隔离与最小审计 |
+| Goal Repository | 6/6 通过 | 固定 active list、RPC 映射、校验、revision 更新、归档/恢复、写入不重试 |
+| Repository foundation | 9/9 通过 | 新增 goals 固定 `deleted_at is null` 与 `created_at/id` 游标约束 |
+| Goals Panel | 6/6 通过 | loading、真实空态、创建、冲突保留、同 key 重试和显式归档 |
+| 目标模块聚焦 | 34/34 通过 | migration 13 + foundation 9 + goals 6 + UI 6；新增 17 项目标相关断言 |
+| Life Console 全量 | 191/191 通过 | 27 个 Vitest 文件；应用 Python 90/90；公开 Registry 安装审计 0；生产构建通过 |
+| 项目级验证 | 通过 | 根项目校验、治理检查、工具测试 333 项通过且 1 项跳过 |
+| 正式入口 | 未接入 | 未修改 `App.tsx`、`main.tsx`、CSP 或托管 URL |
+| 远端与私人数据 | 未执行 | 未创建资源、部署或读取、生成、上传、迁移真实生活数据 |
+
+目标 CRUD 聚焦证据不证明托管 Supabase RPC 暴露、PostgREST 错误映射、两用户 Auth/RLS 或 Vercel Preview 行为；这些继续由阶段 E 的独立资源和部署门禁验证。

@@ -18,6 +18,13 @@ export type ListPageOptions =
     cursor?: Cursor;
   }
   | {
+    table: "goals";
+    sortColumn: "created_at";
+    excludeDeleted: true;
+    pageSize?: number;
+    cursor?: Cursor;
+  }
+  | {
     table: "audit_events" | "backup_runs";
     sortColumn: "created_at";
     pageSize?: number;
@@ -180,6 +187,12 @@ export class LifeConsoleRepository {
         query = query.or(
           compositeCursorFilter(options.sortColumn, options.cursor),
         );
+      }
+      if (
+        options.table === "goals"
+        && options.excludeDeleted
+      ) {
+        query = query.is("deleted_at", null);
       }
       return await query as SupabaseResult<T[]>;
     };

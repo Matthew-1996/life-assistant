@@ -1286,6 +1286,87 @@ pre {
   white-space: nowrap;
 }
 
+.supabase-goals-panel {
+  padding: 24px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  box-shadow: var(--shadow-sm);
+}
+
+.supabase-goal-create {
+  display: grid;
+  gap: 8px;
+  margin: 22px 0;
+}
+
+.supabase-goal-create label,
+.supabase-goal-list label {
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.supabase-goal-create > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.supabase-goal-create input,
+.supabase-goal-list input {
+  width: 100%;
+  min-height: 42px;
+}
+
+.supabase-goal-create button {
+  min-width: 112px;
+}
+
+.supabase-goal-list {
+  display: grid;
+  gap: 10px;
+  padding: 0;
+  margin: 18px 0 0;
+  list-style: none;
+}
+
+.supabase-goal-list > li {
+  display: flex;
+  min-height: 58px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 12px 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+  background: var(--gray-soft);
+}
+
+.supabase-goal-list > li > div:first-child {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.supabase-goal-list > li > div:first-child strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.supabase-goal-list form {
+  display: grid;
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+}
+
+.supabase-goal-list form label {
+  grid-column: 1 / -1;
+}
+
 .auth-gate-shell {
   display: grid;
   min-height: 100vh;

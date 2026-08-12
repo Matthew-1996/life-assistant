@@ -95,6 +95,26 @@ describe("Life Console Supabase Repository", () => {
     );
   });
 
+  it("uses the fixed active-goal predicate for goal pages", async () => {
+    const { repository, requests } = createRepository([
+      { status: 200, body: [] },
+    ]);
+
+    await repository.listPage({
+      table: "goals",
+      sortColumn: "created_at",
+      excludeDeleted: true,
+      pageSize: 20,
+    });
+
+    const url = new URL(requests[0].url);
+    expect(url.pathname).toBe("/rest/v1/goals");
+    expect(url.searchParams.get("deleted_at")).toBe("is.null");
+    expect(url.searchParams.get("order")).toBe(
+      "created_at.desc,id.desc",
+    );
+  });
+
   it("rejects invalid page sizes and cursor values before fetching", async () => {
     const { repository, requests } = createRepository([]);
 
