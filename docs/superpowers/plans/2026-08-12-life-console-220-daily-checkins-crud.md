@@ -82,8 +82,8 @@ failure retention, and unknown-value semantics without production wiring.
   `docs/superpowers/plans/2026-08-12-life-console-220-daily-checkins-crud.md`
 
 - [x] Record focused evidence and hosted-verification limits.
-- [ ] Run governance, privacy, project, tool, clean-install, full test, and
+- [x] Run governance, privacy, project, tool, clean-install, full test, and
   production build gates.
-- [ ] Commit and push only generic code, synthetic tests, and documentation to
+- [x] Commit and push only generic code, synthetic tests, and documentation to
   Draft PR #40.
-- [ ] Wait for `node`, `python`, and `privacy`, then record actual results.
+- [x] Wait for `node`, `python`, and `privacy`, then record actual results.

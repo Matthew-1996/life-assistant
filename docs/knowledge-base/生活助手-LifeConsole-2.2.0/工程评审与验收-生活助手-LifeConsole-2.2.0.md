@@ -143,7 +143,7 @@ PO 已确认 Gate 1 的 PRD/D1-D8，以及 Gate 2 的 O1-O5、Q1-Q7、本测试�
 | 每日状态聚焦 | 49/49 通过 | migration 18 + POC 7 + foundation 10 + domain 7 + UI 7；新增 20 项状态相关断言 |
 | Life Console 全量 | 211/211 通过 | 29 个 Vitest 文件；应用 Python 90/90；公开 Registry 安装审计 0；生产构建通过 |
 | 项目级验证 | 通过 | 根项目校验、治理检查、工具测试 333 项通过且 1 项跳过 |
-| PR #40 CI | 待执行 | 提交和推送后等待 `node`、`python`、`privacy` 实际结果；PR 保持 Draft |
+| PR #40 CI | 通过 | 实现提交 `07ef944` 的 `node`、`python`、`privacy` 全部成功；PR 保持 Draft |
 | 正式入口 | 未接入 | 未修改 `App.tsx`、`main.tsx`、CSP 或托管 URL |
 | 远端与私人数据 | 未执行 | 未创建资源、部署或读取、生成、上传、迁移真实状态数据 |
 

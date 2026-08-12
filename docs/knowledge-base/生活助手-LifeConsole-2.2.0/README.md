@@ -1,6 +1,6 @@
 # 生活助手 / Life Console / 2.2.0
 
-本目录是 Life Console 2.2.0「Vercel + Supabase 在线生活工作台」的唯一版本知识库。当前已完成 Gate 1/2、阶段 A/B 和阶段 C 目标 CRUD；每日状态 CRUD 已完成本地全量合成验证，待 PR CI。没有创建 Supabase 资源，不接入真实数据，不部署、不切源、不永久删除资源，也不合并本版本 PR。
+本目录是 Life Console 2.2.0「Vercel + Supabase 在线生活工作台」的唯一版本知识库。当前已完成 Gate 1/2、阶段 A/B，以及阶段 C 目标与每日状态 CRUD 的本地全量合成验证和 PR CI。没有创建 Supabase 资源，不接入真实数据，不部署、不切源、不永久删除资源，也不合并本版本 PR。
 
 | 文档 | 职责 | 当前状态 |
 |---|---|---|
@@ -9,7 +9,7 @@
 | [设计方案](设计方案-生活助手-LifeConsole-2.2.0.md) | 登录、加载、读写、错误、备份和移动端体验 | Gate 2 已确认 |
 | [技术方案](技术方案-生活助手-LifeConsole-2.2.0.md) | Vercel、Supabase Auth/Postgres/API/RLS、数据模型与迁移边界 | Gate 2 已确认 / 阶段 C 每日状态 CRUD 聚焦验证完成 |
 | [Supabase 可行性调研与 POC](Supabase可行性调研与POC-生活助手-LifeConsole-2.2.0.md) | 本地环境、官方约束、合成验证、已知卡点和远端待验证项 | 本地 11 项通过 / 远端待授权 |
-| [工程评审与验收](工程评审与验收-生活助手-LifeConsole-2.2.0.md) | 测试方案、分阶段开发、验收矩阵与阻塞条件 | 目标 CRUD 已通过 PR CI / 每日状态 CRUD 本地全量验证通过，待 PR CI |
+| [工程评审与验收](工程评审与验收-生活助手-LifeConsole-2.2.0.md) | 测试方案、分阶段开发、验收矩阵与阻塞条件 | 目标与每日状态 CRUD 已通过本地全量验证和 PR CI |
 | [项目管理](项目管理-生活助手-LifeConsole-2.2.0.md) | 范围、依赖、风险、门禁、进度和 PR 关系 | 待联调 / 进行中 |
 
 ## 版本关系
