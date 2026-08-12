@@ -1,7 +1,7 @@
 # 技术方案 - 生活助手 - Life Console - 2.2.0
 
-> 状态：Gate 1 已确认 / Supabase 本地合成 POC 通过 / 待 Gate 2
-> 范围：架构与契约，不创建 Supabase/Vercel 资源，不写迁移脚本，不连接真实项目
+> 状态：Gate 2 已确认 / Supabase 本地合成 POC 通过
+> 范围：允许通用代码、生产 migration 草案和合成测试；不创建 Supabase/Vercel 资源，不连接真实项目
 
 ## 1. 技术结论摘要
 
@@ -156,7 +156,7 @@ Gate 2 之外，创建独立 Supabase 候选资源前还需 PO 单独确认区�
 | Q6 | 用户可迁移备份与平台备份分层，合成 round-trip 先行 |
 | Q7 | 先本地/合成实现，再申请独立 Supabase 测试资源和 Vercel Preview；每步单独门禁 |
 
-PO 未确认 Q1-Q7 前，不进入实现。
+PO 已于 2026-08-12 确认 Q1-Q7，允许从生产 migration 草案与合成 RLS/权限测试开始通用实现。Supabase/Vercel 资源、部署、真实数据、切源、资源删除和 PR 合并仍需分别取得当次授权。
 
 ## 12. 官方依据
 
