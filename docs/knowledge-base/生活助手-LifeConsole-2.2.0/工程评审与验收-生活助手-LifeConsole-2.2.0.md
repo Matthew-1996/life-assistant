@@ -198,6 +198,7 @@ PO 已确认 Gate 1 的 PRD/D1-D8，以及 Gate 2 的 O1-O5、Q1-Q7、本测试�
 | 聚焦回归 | 通过 | backup + production migration 35/35；Local Agent 9/9 |
 | Life Console 全量 | 通过 | 34 个 Vitest 文件、252/252；应用 Python 92/92；生产构建通过 |
 | 项目级验证 | 通过 | 根工具测试 329/329；公开 Registry 安装审计 0；项目、diff 与隐私检查通过 |
+| PR #40 CI | 通过 | 修复提交 `80a478a` 的 `node`、`python`、`privacy` 全部成功；PR 保持 Draft |
 | UI/远端/真实路径 | 未执行 | 未接正式入口、下载、CSP、Supabase/Vercel 资源、部署或真实 iCloud |
 | 私人数据与 D3 | 未执行 | 仅合成记录；未读取、生成、上传或迁移真实日记/健康数据；字段加密仍是独立门禁 |
 

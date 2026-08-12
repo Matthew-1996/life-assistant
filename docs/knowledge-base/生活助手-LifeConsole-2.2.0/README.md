@@ -1,6 +1,6 @@
 # 生活助手 / Life Console / 2.2.0
 
-本目录是 Life Console 2.2.0「Vercel + Supabase 在线生活工作台」的唯一版本知识库。当前已完成 Gate 1/2、阶段 A-D 通用合成实现与本地全量验证；阶段 C 已通过 PR CI，阶段 D PR CI 待本轮提交后确认。没有创建 Supabase 资源，不接入真实数据或真实 iCloud，不部署、不切源、不永久删除资源，也不合并本版本 PR。
+本目录是 Life Console 2.2.0「Vercel + Supabase 在线生活工作台」的唯一版本知识库。当前已完成 Gate 1/2、阶段 A-D 通用合成实现、本地全量验证与 PR CI。没有创建 Supabase 资源，不接入真实数据或真实 iCloud，不部署、不切源、不永久删除资源，也不合并本版本 PR。
 
 | 文档 | 职责 | 当前状态 |
 |---|---|---|

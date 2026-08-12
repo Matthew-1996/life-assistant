@@ -263,6 +263,6 @@ Commit:
 docs(life-console): record synthetic backup validation
 ```
 
-- [ ] **Step 5: Push only to the existing Draft PR**
+- [x] **Step 5: Push only to the existing Draft PR**
 
 Push `agent/life-console-220-supabase`, wait for Node, Python, and privacy checks, and confirm PR #40 remains Draft. Do not create a PR, turn it Ready, merge it, deploy it, or create Supabase/Vercel resources.

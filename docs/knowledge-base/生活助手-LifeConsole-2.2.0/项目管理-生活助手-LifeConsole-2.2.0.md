@@ -30,7 +30,7 @@
 | 需求评审 | 已完成 | PO 已确认 PRD draft.1、D1-D8 与“有条件通过”结论 |
 | 设计方案评审 | 已完成 | PO 已确认 O1-O5 |
 | 技术/测试评审 | 已完成 | PO 已确认 Q1-Q7、测试矩阵和阶段计划 |
-| 开发与联调 | 本地阶段完成 | 阶段 A-D 通用合成实现已通过本地全量验证；阶段 D PR CI 待本轮提交后确认 |
+| 开发与联调 | 合成阶段完成 | 阶段 A-D 通用合成实现已通过本地全量验证和 PR CI |
 | 测试资源与候选部署 | 待开始 | 独立资源、成本与部署授权 |
 | 真实数据与上线 | 待开始 | 独立迁移、切源、验收和上线门禁 |
 
@@ -74,10 +74,10 @@
 | 2026-08-12 | 日记撤回范围决策 | PO | 本轮暂不做撤回、恢复、删除计划或永久删除；先完成创建、读取、分页和原子修订 |
 | 2026-08-12 | 阶段 C 日记 CRUD 完成本地全量合成验证与 PR #40 CI | Agent | 聚焦 45/45、Life Console 228/228、应用 Python 90/90、工具 333 项通过且 1 项跳过、公开 Registry 审计 0、生产构建通过；实现提交 `2bdc307` 的 `node`、`python`、`privacy` 全部成功 |
 | 2026-08-12 | 阶段 C 复盘 CRUD 完成本地全量合成验证与 PR #40 CI | Agent | 聚焦 46/46、Life Console 242/242、应用 Python 90/90、工具 333 项通过且 1 项跳过、公开 Registry 审计 0、生产构建通过；实现提交 `158a576` 的 `node`、`python`、`privacy` 全部成功 |
-| 2026-08-12 | 阶段 D 合成备份 POC 完成本地验证 | Agent | 保持 `life-console-backup/1`；八类资源 canonical 打包与既有 Agent 原子恢复 round-trip 通过；Life Console 252/252、应用 Python 92/92、工具 329/329、公开 Registry 审计 0；未接真实 iCloud、资源或部署 |
+| 2026-08-12 | 阶段 D 合成备份 POC 完成本地验证与 PR #40 CI | Agent | 保持 `life-console-backup/1`；八类资源 canonical 打包与既有 Agent 原子恢复 round-trip 通过；Life Console 252/252、应用 Python 92/92、工具 329/329、公开 Registry 审计 0；修复提交 `80a478a` 的 `node`、`python`、`privacy` 全部成功；未接真实 iCloud、资源或部署 |
 
 ## 7. 下一步（最多三项）
 
-1. 等待阶段 D 提交的 PR #40 `node`、`python`、`privacy` CI 明确通过。
-2. 由 PO 决定是否授权阶段 E 的独立 Supabase 测试资源、区域/套餐、合成测试邮箱与 Vercel Preview 部署。
+1. 由 PO 决定是否授权阶段 E 的独立 Supabase 测试资源、区域/套餐、合成测试邮箱与 Vercel Preview 部署。
+2. 若暂不授权，保持 Draft PR #40 与当前 worktree，不继续接正式入口或远端配置。
 3. 真实数据、D3 字段加密、真实 iCloud、迁移和切源继续延后并保持独立门禁。
