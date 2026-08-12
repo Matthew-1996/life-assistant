@@ -40,8 +40,8 @@ insert into public.daily_checkins (
   mood,
   life_feeling
 ) values
-  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', date '2030-01-01', 8.2, 7.1, null, 6.8),
-  ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', date '2030-01-01', 6.4, 6.2, 6.0, null);
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', date '2030-01-01', 4, 3, null, 3),
+  ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', date '2030-01-01', 3, 3, 3, null);
 
 insert into public.weekly_reviews (user_id, week_start, content) values
   ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', date '2029-12-31', 'synthetic weekly alpha'),

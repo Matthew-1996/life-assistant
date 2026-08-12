@@ -288,6 +288,244 @@ describe("Life Console production Supabase migration", () => {
     expect(ownerAGoal.rows[0].id).not.toBe(ownerBGoal.rows[0].id);
   });
 
+  it("stores nullable daily ratings as approved 1-5 small integers", async () => {
+    const columns = await db.query<{
+      column_name: string;
+      data_type: string;
+      is_nullable: string;
+    }>(
+      `select column_name, data_type, is_nullable
+       from information_schema.columns
+       where table_schema = 'public'
+         and table_name = 'daily_checkins'
+         and column_name in (
+           'sleep_quality',
+           'energy',
+           'mood',
+           'life_feeling'
+         )
+       order by column_name`,
+    );
+    expect(columns.rows).toEqual([
+      {
+        column_name: "energy",
+        data_type: "smallint",
+        is_nullable: "YES",
+      },
+      {
+        column_name: "life_feeling",
+        data_type: "smallint",
+        is_nullable: "YES",
+      },
+      {
+        column_name: "mood",
+        data_type: "smallint",
+        is_nullable: "YES",
+      },
+      {
+        column_name: "sleep_quality",
+        data_type: "smallint",
+        is_nullable: "YES",
+      },
+    ]);
+
+    for (const invalid of ["0", "6"]) {
+      await expect(
+        queryAs(
+          "authenticated",
+          ownerA,
+          `update public.daily_checkins
+           set mood = ${invalid}
+           where checkin_date = date '2030-01-01'`,
+        ),
+      ).rejects.toThrow();
+    }
+  });
+
+  it("protects daily check-in creation RPC with invoker rights", async () => {
+    const functions = await db.query<{
+      prosecdef: boolean;
+      proretset: boolean;
+      search_path: string[];
+    }>(
+      `select p.prosecdef, p.proretset, p.proconfig[1:] as search_path
+       from pg_proc p
+       join pg_namespace n on n.oid = p.pronamespace
+       where n.nspname = 'public'
+         and p.proname = 'create_daily_checkin'`,
+    );
+    expect(functions.rows).toEqual([
+      {
+        prosecdef: false,
+        proretset: true,
+        search_path: ['search_path=""'],
+      },
+    ]);
+
+    const grants = await db.query<{
+      grantee: string;
+      privilege_type: string;
+    }>(
+      `select grantee, privilege_type
+       from information_schema.routine_privileges
+       where routine_schema = 'public'
+         and routine_name = 'create_daily_checkin'
+         and grantee <> 'postgres'
+       order by grantee, privilege_type`,
+    );
+    expect(grants.rows).toEqual([
+      { grantee: "authenticated", privilege_type: "EXECUTE" },
+    ]);
+
+    await expect(
+      queryAs(
+        "anon",
+        null,
+        `select id from public.create_daily_checkin(
+          'synthetic-checkin-key-0001',
+          date '2030-02-01',
+          4,
+          null,
+          null,
+          null,
+          null,
+          null
+        )`,
+      ),
+    ).rejects.toThrow();
+  });
+
+  it("creates one daily check-in for an idempotent replay with minimal audit", async () => {
+    const create = () =>
+      queryAs<{
+        id: number;
+        revision: number;
+        mood: number | null;
+        anchors: Record<string, string>;
+        notes: string;
+      }>(
+        "authenticated",
+        ownerA,
+        `select id, revision, mood, anchors, notes
+         from public.create_daily_checkin(
+           $1,
+           date '2030-02-01',
+           null,
+           4,
+           3,
+           null,
+           '{"life_action":"minimum"}'::jsonb,
+           'Synthetic status note'
+         )`,
+        ["synthetic-checkin-key-0002"],
+      );
+
+    const first = await create();
+    const replay = await create();
+
+    expect(replay.rows).toEqual(first.rows);
+    expect(first.rows).toEqual([
+      expect.objectContaining({
+        anchors: { life_action: "minimum" },
+        mood: 3,
+        notes: "Synthetic status note",
+        revision: 1,
+      }),
+    ]);
+
+    const audit = await queryAs<{
+      action: string;
+      entity_type: string;
+      result: string;
+    }>(
+      "authenticated",
+      ownerA,
+      `select action, entity_type, result
+       from public.audit_events
+       where entity_type = 'daily_checkin'
+         and entity_id = $1`,
+      [String(first.rows[0].id)],
+    );
+    expect(audit.rows).toEqual([
+      {
+        action: "CREATE",
+        entity_type: "daily_checkin",
+        result: "success",
+      },
+    ]);
+    expect(JSON.stringify(audit.rows)).not.toContain(
+      "Synthetic status note",
+    );
+  });
+
+  it("rejects changed replays, duplicate dates, and invalid anchors", async () => {
+    const create = (
+      key: string,
+      date: string,
+      energy: number,
+      anchors = '{"wake":"complete"}',
+    ) =>
+      queryAs(
+        "authenticated",
+        ownerA,
+        `select id from public.create_daily_checkin(
+          $1,
+          $2::date,
+          null,
+          $3,
+          null,
+          null,
+          $4::jsonb,
+          null
+        )`,
+        [key, date, energy, anchors],
+      );
+
+    await create("synthetic-checkin-key-0003", "2030-02-02", 4);
+    await expect(
+      create("synthetic-checkin-key-0003", "2030-02-02", 5),
+    ).rejects.toThrow(/different request/i);
+    await expect(
+      create("synthetic-checkin-key-0004", "2030-02-02", 4),
+    ).rejects.toThrow();
+    await expect(
+      create(
+        "synthetic-checkin-key-0005",
+        "2030-02-03",
+        4,
+        '{"unapproved":"complete"}',
+      ),
+    ).rejects.toThrow(/anchors/i);
+  });
+
+  it("scopes identical daily idempotency keys by authenticated owner", async () => {
+    const key = "synthetic-daily-shared-0001";
+    const createFor = (userId: string, date: string) =>
+      queryAs<{ id: number; user_id: string }>(
+        "authenticated",
+        userId,
+        `select id, user_id
+         from public.create_daily_checkin(
+           $1,
+           $2::date,
+           3,
+           null,
+           null,
+           null,
+           null,
+           null
+         )`,
+        [key, date],
+      );
+
+    const ownerARow = await createFor(ownerA, "2030-02-04");
+    const ownerBRow = await createFor(ownerB, "2030-02-04");
+
+    expect(ownerARow.rows[0].user_id).toBe(ownerA);
+    expect(ownerBRow.rows[0].user_id).toBe(ownerB);
+    expect(ownerARow.rows[0].id).not.toBe(ownerBRow.rows[0].id);
+  });
+
   it("does not grant physical delete on personal tables", async () => {
     const deleteGrants = await db.query<{ table_name: string }>(
       `select table_name
@@ -360,8 +598,8 @@ describe("Life Console production Supabase migration", () => {
 
   it("preserves nulls and rejects stale revisions", async () => {
     const initial = await queryAs<{
-      mood: string | null;
-      sleep_quality: string;
+      mood: number | null;
+      sleep_quality: number;
     }>(
       "authenticated",
       ownerA,
@@ -369,13 +607,13 @@ describe("Life Console production Supabase migration", () => {
        from public.daily_checkins
        where checkin_date = date '2030-01-01'`,
     );
-    expect(initial.rows).toEqual([{ mood: null, sleep_quality: "8.2" }]);
+    expect(initial.rows).toEqual([{ mood: null, sleep_quality: 4 }]);
 
     const updated = await queryAs<{ revision: number }>(
       "authenticated",
       ownerA,
       `update public.daily_checkins
-       set energy = 7.4, revision = revision + 1, updated_at = now()
+       set energy = 4, revision = revision + 1, updated_at = now()
        where user_id = $1 and checkin_date = date '2030-01-01'
          and revision = 1
        returning revision`,
@@ -387,7 +625,7 @@ describe("Life Console production Supabase migration", () => {
       "authenticated",
       ownerA,
       `update public.daily_checkins
-       set energy = 6.0, revision = revision + 1
+       set energy = 3, revision = revision + 1
        where user_id = $1 and checkin_date = date '2030-01-01'
          and revision = 1
        returning revision`,
@@ -404,13 +642,19 @@ describe("Life Console production Supabase migration", () => {
     );
     const snapshot = result.rows[0].snapshot as {
       journals: Array<{ title: string }>;
-      daily_checkins: Array<{ mood: number | null }>;
+      daily_checkins: Array<{
+        checkin_date: string;
+        mood: number | null;
+      }>;
     };
     expect(snapshot.journals.map((row) => row.title)).toEqual([
       "Synthetic Alpha",
     ]);
-    expect(snapshot.daily_checkins).toHaveLength(1);
-    expect(snapshot.daily_checkins[0].mood).toBeNull();
+    expect(
+      snapshot.daily_checkins.find((row) =>
+        row.checkin_date === "2030-01-01"
+      )?.mood,
+    ).toBeNull();
     expect(JSON.stringify(snapshot)).not.toContain("Synthetic Beta");
   });
 });

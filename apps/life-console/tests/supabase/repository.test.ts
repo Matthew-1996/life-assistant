@@ -115,6 +115,28 @@ describe("Life Console Supabase Repository", () => {
     );
   });
 
+  it("supports approved daily check-in date cursors", async () => {
+    const { repository, requests } = createRepository([
+      { status: 200, body: [] },
+    ]);
+
+    await repository.listPage({
+      table: "daily_checkins",
+      sortColumn: "checkin_date",
+      pageSize: 7,
+      cursor: { sortValue: "2030-02-01", id: 12 },
+    });
+
+    const url = new URL(requests[0].url);
+    expect(url.pathname).toBe("/rest/v1/daily_checkins");
+    expect(url.searchParams.get("order")).toBe(
+      "checkin_date.desc,id.desc",
+    );
+    expect(url.searchParams.get("or")).toBe(
+      "(checkin_date.lt.2030-02-01,and(checkin_date.eq.2030-02-01,id.lt.12))",
+    );
+  });
+
   it("rejects invalid page sizes and cursor values before fetching", async () => {
     const { repository, requests } = createRepository([]);
 

@@ -1286,6 +1286,62 @@ pre {
   white-space: nowrap;
 }
 
+.supabase-checkin-panel {
+  padding: 24px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  box-shadow: var(--shadow-sm);
+}
+
+.supabase-checkin-form {
+  display: grid;
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.supabase-checkin-ratings,
+.supabase-checkin-anchors {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.supabase-checkin-form label {
+  display: grid;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.supabase-checkin-form select {
+  width: 100%;
+  min-height: 40px;
+}
+
+.supabase-checkin-anchors {
+  padding: 16px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+  background: var(--gray-soft);
+}
+
+.supabase-checkin-anchors legend {
+  padding: 0 6px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.supabase-checkin-form textarea {
+  min-height: 82px;
+}
+
+.supabase-checkin-form > button {
+  justify-self: start;
+  min-width: 132px;
+}
+
 .supabase-goals-panel {
   padding: 24px;
   border: 1px solid var(--line-soft);

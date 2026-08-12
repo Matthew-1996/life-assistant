@@ -1,6 +1,6 @@
 # 技术方案 - 生活助手 - Life Console - 2.2.0
 
-> 状态：Gate 2 已确认 / 阶段 A、B 通过 / 阶段 C 目标 CRUD 合成实现完成
+> 状态：Gate 2 已确认 / 阶段 A、B 通过 / 阶段 C 目标与每日状态 CRUD 合成实现完成
 > 范围：允许通用代码、生产 migration 草案和合成测试；不创建 Supabase/Vercel 资源，不连接真实项目
 
 ## 1. 技术结论摘要
@@ -125,7 +125,7 @@ Supabase 可以继续作为 2.2.0 唯一新后端候选，但本地 POC 不能�
 
 - PostgreSQL/RLS：7 项通过，包括复合索引、Owner/非 Owner/anon、UPDATE `WITH CHECK`、原子 upsert 和单事务导出 RPC。
 - 浏览器 SDK：4 项通过，包括 `shouldCreateUser=false`、仅 publishable key、关闭 Data API 自动重试和 CSP 阻塞识别。
-- 当前全量本地回归：Life Console 27 个 Vitest 文件、191 项测试通过；应用 Python 90 项测试通过。
+- 当前全量本地回归：Life Console 29 个 Vitest 文件、211 项测试通过；应用 Python 90 项测试通过。
 - 尚未验证：大陆到真实项目端点的网络、真实 OTP、托管 RLS/GRANT、Vercel Preview CORS/CSP、1k/10k 容量、平台 Advisors/备份和第二个 Auth 用户端到端隔离。
 
 详细可复现方法和远端待测矩阵见 [Supabase 可行性调研与 POC](Supabase可行性调研与POC-生活助手-LifeConsole-2.2.0.md)。
@@ -162,6 +162,19 @@ Gate 2 之外，创建独立 Supabase 候选资源前还需 PO 单独确认区�
 - TypeScript 配置显式限定全局 types，避免 iCloud 生成的重复 `@types/* 2` 目录被自动发现；不改变运行时依赖与产品行为。
 
 目标模块聚焦测试 34/34 通过，其中 migration 13 项、Repository foundation 9 项、Goal Repository 6 项、Goals Panel 6 项；本轮新增 17 项目标相关断言。该证据只覆盖 PGlite、真实 `supabase-js` 查询构造器、合成 fetch 和注入 UI，不替代托管 Postgres/PostgREST、两用户 Auth、CSP 或网络验收。
+
+### 9.7 阶段 C 每日状态 CRUD 合成实现
+
+每日状态模块以已批准的 OpenAPI 和趋势 UI 为真相源，将 migration 中偏离的 `0–10 numeric` 修正为 nullable `1–5 smallint`；合成 seed 与 PGlite POC 同步改为 1–5 整数。当前数据模型只包含四项评分、批准的四个 anchors 与 160 字 notes，不扩展未进入 2.2 技术方案的睡眠时刻字段。
+
+- `create_daily_checkin` 是 authenticated-only、invoker、空 `search_path` RPC；以 `(user_id,key)` 和请求指纹实现幂等创建，以 `(user_id,checkin_date)` 阻止同日重复，并只写去敏审计元数据。
+- `DailyCheckinRepository` 提供单日查询、`(checkin_date,id)` 最近列表、幂等创建和 revision 条件更新；评分小数/越界、非法日期、未知 anchor、超长 notes 和空创建在发请求前拒绝。
+- `LifeConsoleRepository.executeRead` 统一只读瞬时失败的一次受控重试；任何每日状态写入仍只调用一次。
+- `SupabaseDailyCheckinPanel` 只提交 dirty fields；未记录保持 null/未知，创建失败重试复用同一个 idempotency key，冲突和网络失败均保留输入；组件未接 `App.tsx` 或 `main.tsx`。
+
+每日状态模块聚焦测试 49/49 通过，其中 migration 18 项、PGlite POC 7 项、Repository foundation 10 项、DailyCheckin Repository 7 项、Daily Check-in Panel 7 项；本轮新增 20 项状态相关断言。该证据不替代托管 RPC/PostgREST、两用户 Auth/RLS、CSP 或真实网络验证。
+
+包含每日状态模块后的全量本地回归为 29 个 Vitest 文件、211/211，应用 Python 90/90，工具测试 333 项通过且 1 项跳过；公开 Registry 干净安装审计 0，生产构建通过。
 
 ## 10. 近期兼容性检查
 

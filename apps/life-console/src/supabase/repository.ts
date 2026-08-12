@@ -25,6 +25,12 @@ export type ListPageOptions =
     cursor?: Cursor;
   }
   | {
+    table: "daily_checkins";
+    sortColumn: "checkin_date";
+    pageSize?: number;
+    cursor?: Cursor;
+  }
+  | {
     table: "audit_events" | "backup_runs";
     sortColumn: "created_at";
     pageSize?: number;
@@ -142,13 +148,14 @@ function pageSize(value: number | undefined): number {
 }
 
 function validateCursor(
-  sortColumn: "event_date" | "created_at",
+  sortColumn: "event_date" | "checkin_date" | "created_at",
   cursor: Cursor,
 ): void {
   if (!Number.isSafeInteger(cursor.id) || cursor.id < 1) {
     throw validationError("Cursor id must be a positive integer");
   }
   const validSortValue = sortColumn === "event_date"
+    || sortColumn === "checkin_date"
     ? /^\d{4}-\d{2}-\d{2}$/.test(cursor.sortValue)
     : /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(
       cursor.sortValue,
@@ -159,7 +166,7 @@ function validateCursor(
 }
 
 function compositeCursorFilter(
-  sortColumn: "event_date" | "created_at",
+  sortColumn: "event_date" | "checkin_date" | "created_at",
   cursor: Cursor,
 ): string {
   return `${sortColumn}.lt.${cursor.sortValue},and(${sortColumn}.eq.${cursor.sortValue},id.lt.${cursor.id})`;
@@ -167,6 +174,21 @@ function compositeCursorFilter(
 
 export class LifeConsoleRepository {
   constructor(private readonly client: SupabaseClient) {}
+
+  async executeRead<T>(
+    operation: () => Promise<SupabaseResult<T>>,
+  ): Promise<T | null> {
+    let result = await operation();
+    if (result.error) {
+      const firstError = normalizedError(result.error, result.status);
+      if (firstError.kind !== "transient") throw firstError;
+      result = await operation();
+    }
+    if (result.error) {
+      throw normalizedError(result.error, result.status);
+    }
+    return result.data;
+  }
 
   async listPage<T extends { id: number }>(
     options: ListPageOptions,
@@ -197,17 +219,7 @@ export class LifeConsoleRepository {
       return await query as SupabaseResult<T[]>;
     };
 
-    let result = await read();
-    if (result.error) {
-      const firstError = normalizedError(result.error, result.status);
-      if (firstError.kind !== "transient") throw firstError;
-      result = await read();
-    }
-    if (result.error) {
-      throw normalizedError(result.error, result.status);
-    }
-
-    const rows = result.data ?? [];
+    const rows = await this.executeRead(read) ?? [];
     const items = rows.slice(0, limit);
     const lastItem = items.at(-1) as
       | (T & Record<string, unknown>)

@@ -143,7 +143,7 @@ describe("Life Console Supabase RLS feasibility", () => {
       ownerA,
       `insert into public.daily_checkins
          (user_id, checkin_date, sleep_quality)
-       values ($1, '2026-08-12', 8.2)
+       values ($1, '2026-08-12', 4)
        on conflict (user_id, checkin_date)
        do update set
          sleep_quality = excluded.sleep_quality,
@@ -156,7 +156,7 @@ describe("Life Console Supabase RLS feasibility", () => {
       ownerA,
       `insert into public.daily_checkins
          (user_id, checkin_date, sleep_quality)
-       values ($1, '2026-08-12', 8.4)
+       values ($1, '2026-08-12', 5)
        on conflict (user_id, checkin_date)
        do update set
          sleep_quality = excluded.sleep_quality,
@@ -164,14 +164,14 @@ describe("Life Console Supabase RLS feasibility", () => {
          updated_at = now()`,
       [ownerA],
     );
-    const result = await queryAs<{ sleep_quality: string; revision: number }>(
+    const result = await queryAs<{ sleep_quality: number; revision: number }>(
       "authenticated",
       ownerA,
       `select sleep_quality, revision
        from public.daily_checkins
        where checkin_date = '2026-08-12'`,
     );
-    expect(result.rows).toEqual([{ sleep_quality: "8.4", revision: 2 }]);
+    expect(result.rows).toEqual([{ sleep_quality: 5, revision: 2 }]);
   });
 
   it("exports one transaction-consistent owner snapshot through an invoker RPC", async () => {

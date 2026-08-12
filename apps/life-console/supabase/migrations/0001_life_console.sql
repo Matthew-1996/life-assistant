@@ -55,12 +55,65 @@ create table public.daily_checkins (
   id bigint generated always as identity primary key,
   user_id uuid not null references auth.users(id) on delete restrict,
   checkin_date date not null,
-  sleep_quality numeric(3, 1) check (sleep_quality between 0 and 10),
-  energy numeric(3, 1) check (energy between 0 and 10),
-  mood numeric(3, 1) check (mood between 0 and 10),
-  life_feeling numeric(3, 1) check (life_feeling between 0 and 10),
-  anchors jsonb,
-  notes text,
+  sleep_quality smallint check (sleep_quality between 1 and 5),
+  energy smallint check (energy between 1 and 5),
+  mood smallint check (mood between 1 and 5),
+  life_feeling smallint check (life_feeling between 1 and 5),
+  anchors jsonb check (
+    anchors is null
+    or (
+      jsonb_typeof(anchors) = 'object'
+      and (
+        anchors - array[
+          'wake',
+          'body_light',
+          'life_action',
+          'wind_down'
+        ]::text[]
+      ) = '{}'::jsonb
+      and (
+        not anchors ? 'wake'
+        or (
+          jsonb_typeof(anchors -> 'wake') = 'string'
+          and anchors ->> 'wake' in ('complete', 'minimum', 'skipped')
+        )
+      )
+      and (
+        not anchors ? 'body_light'
+        or (
+          jsonb_typeof(anchors -> 'body_light') = 'string'
+          and anchors ->> 'body_light' in (
+            'complete',
+            'minimum',
+            'skipped'
+          )
+        )
+      )
+      and (
+        not anchors ? 'life_action'
+        or (
+          jsonb_typeof(anchors -> 'life_action') = 'string'
+          and anchors ->> 'life_action' in (
+            'complete',
+            'minimum',
+            'skipped'
+          )
+        )
+      )
+      and (
+        not anchors ? 'wind_down'
+        or (
+          jsonb_typeof(anchors -> 'wind_down') = 'string'
+          and anchors ->> 'wind_down' in (
+            'complete',
+            'minimum',
+            'skipped'
+          )
+        )
+      )
+    )
+  ),
+  notes text check (notes is null or char_length(notes) <= 160),
   revision bigint not null default 1 check (revision > 0),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -472,6 +525,219 @@ grant execute on function public.create_goal(
   smallint,
   date,
   date
+) to authenticated;
+
+create function public.create_daily_checkin(
+  p_idempotency_key text,
+  p_checkin_date date,
+  p_sleep_quality integer,
+  p_energy integer,
+  p_mood integer,
+  p_life_feeling integer,
+  p_anchors jsonb,
+  p_notes text
+)
+returns setof public.daily_checkins
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  v_user_id uuid := (select auth.uid());
+  v_notes text := nullif(btrim(p_notes), '');
+  v_fingerprint text;
+  v_existing_operation text;
+  v_existing_result jsonb;
+  v_checkin public.daily_checkins%rowtype;
+begin
+  if v_user_id is null then
+    raise exception using
+      errcode = '42501',
+      message = 'Authentication is required';
+  end if;
+
+  if (p_sleep_quality is not null and p_sleep_quality not between 1 and 5)
+    or (p_energy is not null and p_energy not between 1 and 5)
+    or (p_mood is not null and p_mood not between 1 and 5)
+    or (p_life_feeling is not null and p_life_feeling not between 1 and 5)
+  then
+    raise exception using
+      errcode = '22023',
+      message = 'Daily check-in ratings must be integers from 1 through 5';
+  end if;
+
+  if p_anchors is not null
+    and (
+      jsonb_typeof(p_anchors) <> 'object'
+      or (
+        p_anchors - array[
+          'wake',
+          'body_light',
+          'life_action',
+          'wind_down'
+        ]::text[]
+      ) <> '{}'::jsonb
+      or exists (
+        select 1
+        from jsonb_each_text(p_anchors) as anchor
+        where anchor.value not in ('complete', 'minimum', 'skipped')
+      )
+    )
+  then
+    raise exception using
+      errcode = '22023',
+      message = 'Daily check-in anchors are invalid';
+  end if;
+
+  if p_sleep_quality is null
+    and p_energy is null
+    and p_mood is null
+    and p_life_feeling is null
+    and coalesce(p_anchors, '{}'::jsonb) = '{}'::jsonb
+    and v_notes is null
+  then
+    raise exception using
+      errcode = '22023',
+      message = 'Daily check-in requires at least one explicit field';
+  end if;
+
+  v_fingerprint := md5(jsonb_build_object(
+    'checkin_date', p_checkin_date,
+    'sleep_quality', p_sleep_quality,
+    'energy', p_energy,
+    'mood', p_mood,
+    'life_feeling', p_life_feeling,
+    'anchors', p_anchors,
+    'notes', v_notes
+  )::text);
+
+  select operation, result_ref
+  into v_existing_operation, v_existing_result
+  from public.idempotency_keys
+  where user_id = v_user_id
+    and key = p_idempotency_key;
+
+  if found then
+    if v_existing_operation <> 'daily_checkin.create'
+      or v_existing_result ->> 'request_fingerprint' <> v_fingerprint
+    then
+      raise exception using
+        errcode = '22023',
+        message = 'Idempotency key was reused with a different request';
+    end if;
+
+    return query
+      select row_value.*
+      from public.daily_checkins as row_value
+      where row_value.user_id = v_user_id
+        and row_value.id = (v_existing_result ->> 'id')::bigint;
+    return;
+  end if;
+
+  begin
+    insert into public.daily_checkins (
+      user_id,
+      checkin_date,
+      sleep_quality,
+      energy,
+      mood,
+      life_feeling,
+      anchors,
+      notes
+    ) values (
+      v_user_id,
+      p_checkin_date,
+      p_sleep_quality,
+      p_energy,
+      p_mood,
+      p_life_feeling,
+      p_anchors,
+      v_notes
+    )
+    returning * into v_checkin;
+
+    insert into public.idempotency_keys (
+      user_id,
+      key,
+      operation,
+      result_ref,
+      expires_at
+    ) values (
+      v_user_id,
+      p_idempotency_key,
+      'daily_checkin.create',
+      jsonb_build_object(
+        'entity_type', 'daily_checkin',
+        'id', v_checkin.id,
+        'request_fingerprint', v_fingerprint
+      ),
+      transaction_timestamp() + interval '24 hours'
+    );
+
+    insert into public.audit_events (
+      user_id,
+      action,
+      entity_type,
+      entity_id,
+      result
+    ) values (
+      v_user_id,
+      'CREATE',
+      'daily_checkin',
+      v_checkin.id::text,
+      'success'
+    );
+
+    return next v_checkin;
+    return;
+  exception
+    when unique_violation then
+      select operation, result_ref
+      into v_existing_operation, v_existing_result
+      from public.idempotency_keys
+      where user_id = v_user_id
+        and key = p_idempotency_key;
+
+      if not found then
+        raise;
+      end if;
+      if v_existing_operation <> 'daily_checkin.create'
+        or v_existing_result ->> 'request_fingerprint' <> v_fingerprint
+      then
+        raise exception using
+          errcode = '22023',
+          message = 'Idempotency key was reused with a different request';
+      end if;
+
+      return query
+        select row_value.*
+        from public.daily_checkins as row_value
+        where row_value.user_id = v_user_id
+          and row_value.id = (v_existing_result ->> 'id')::bigint;
+      return;
+  end;
+end
+$$;
+
+revoke all on function public.create_daily_checkin(
+  text,
+  date,
+  integer,
+  integer,
+  integer,
+  integer,
+  jsonb,
+  text
+) from public;
+grant execute on function public.create_daily_checkin(
+  text,
+  date,
+  integer,
+  integer,
+  integer,
+  integer,
+  jsonb,
+  text
 ) to authenticated;
 
 create function public.export_life_console_snapshot()
