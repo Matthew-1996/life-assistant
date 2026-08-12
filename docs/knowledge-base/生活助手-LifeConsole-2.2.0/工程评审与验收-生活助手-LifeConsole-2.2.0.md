@@ -89,6 +89,9 @@ PO 已确认 Gate 1 的 PRD/D1-D8，以及 Gate 2 的 O1-O5、Q1-Q7、本测试�
 | 合成 Auth 兼容层 | 通过 | 仅供 PGlite 模拟 Supabase 已提供的角色和 `auth.uid()` |
 | 纯合成 seed | 通过 | 两名无真实关联用户，覆盖 12 表最小关系数据 |
 | 聚焦权限测试 | 9/9 通过 | Owner A/B、anon、换绑、删除、null/小数、revision 和 RPC 隔离 |
+| Life Console 全量 | 151/151 通过 | 21 个 Vitest 文件；Python 90/90；生产构建通过 |
+| 项目级验证 | 通过 | 工具测试 333 项通过、1 项跳过；治理、隐私、历史扫描与便携性通过 |
+| PR #40 CI | 通过 | `node`、`python`、`privacy` 全部成功；PR 保持 Draft |
 | 远端资源与部署 | 未执行 | 未创建 Supabase/Vercel 资源，未部署 |
 | 私人数据 | 未接触 | 未读取、上传或迁移 iCloud、日记或健康数据 |
 

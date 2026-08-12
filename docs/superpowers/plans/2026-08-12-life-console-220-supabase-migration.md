@@ -67,5 +67,5 @@
 - [x] Record exact focused-test counts and the boundary that no hosted Supabase semantics were claimed.
 - [x] Run `git diff --check`, governance, index/history privacy, root `validate_project.py`, and tool tests.
 - [x] Run `npm ci`, `npm test`, and `npm run build` in `apps/life-console`.
-- [ ] Commit only generic SQL, synthetic tests, and updated documentation; push to existing Draft PR #40.
-- [ ] Wait for PR #40 `node`, `python`, and `privacy` checks and report their actual results.
+- [x] Commit only generic SQL, synthetic tests, and updated documentation; push to existing Draft PR #40.
+- [x] Wait for PR #40 `node`, `python`, and `privacy` checks and report their actual results.
