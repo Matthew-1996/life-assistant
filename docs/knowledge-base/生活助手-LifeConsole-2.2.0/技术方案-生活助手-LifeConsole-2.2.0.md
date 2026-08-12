@@ -1,6 +1,6 @@
 # 技术方案 - 生活助手 - Life Console - 2.2.0
 
-> 状态：预评审完成 / Supabase 本地合成 POC 通过 / 待 Gate 2
+> 状态：Gate 1 已确认 / Supabase 本地合成 POC 通过 / 待 Gate 2
 > 范围：架构与契约，不创建 Supabase/Vercel 资源，不写迁移脚本，不连接真实项目
 
 ## 1. 技术结论摘要
