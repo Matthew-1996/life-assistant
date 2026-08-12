@@ -288,6 +288,305 @@ describe("Life Console production Supabase migration", () => {
     expect(ownerAGoal.rows[0].id).not.toBe(ownerBGoal.rows[0].id);
   });
 
+  it("protects journal creation and append-only revision history", async () => {
+    const functions = await db.query<{
+      proname: string;
+      prosecdef: boolean;
+      proretset: boolean;
+      search_path: string[];
+    }>(
+      `select p.proname, p.prosecdef, p.proretset,
+              p.proconfig[1:] as search_path
+       from pg_proc p
+       join pg_namespace n on n.oid = p.pronamespace
+       where n.nspname = 'public'
+         and p.proname in ('create_journal', 'record_journal_revision')
+       order by p.proname`,
+    );
+    expect(functions.rows).toEqual([
+      {
+        proname: "create_journal",
+        prosecdef: false,
+        proretset: true,
+        search_path: ['search_path=""'],
+      },
+      {
+        proname: "record_journal_revision",
+        prosecdef: true,
+        proretset: false,
+        search_path: ['search_path=""'],
+      },
+    ]);
+
+    const routineGrants = await db.query<{
+      grantee: string;
+      privilege_type: string;
+    }>(
+      `select grantee, privilege_type
+       from information_schema.routine_privileges
+       where routine_schema = 'public'
+         and routine_name = 'create_journal'
+         and grantee <> 'postgres'
+       order by grantee, privilege_type`,
+    );
+    expect(routineGrants.rows).toEqual([
+      { grantee: "authenticated", privilege_type: "EXECUTE" },
+    ]);
+
+    const revisionGrants = await db.query<{
+      privilege_type: string;
+    }>(
+      `select privilege_type
+       from information_schema.role_table_grants
+       where table_schema = 'public'
+         and table_name = 'journal_revisions'
+         and grantee = 'authenticated'
+       order by privilege_type`,
+    );
+    expect(revisionGrants.rows).toEqual([
+      { privilege_type: "SELECT" },
+    ]);
+
+    await expect(
+      queryAs(
+        "anon",
+        null,
+        `select id from public.create_journal(
+          'synthetic-journal-anon-0001',
+          date '2030-03-01',
+          'Anonymous journal',
+          'Anonymous synthetic content',
+          '{}'::text[]
+        )`,
+      ),
+    ).rejects.toThrow();
+  });
+
+  it("creates one journal and resulting revision for an idempotent replay", async () => {
+    const create = () =>
+      queryAs<{
+        id: number;
+        revision: number;
+        title: string;
+      }>(
+        "authenticated",
+        ownerA,
+        `select id, revision, title
+         from public.create_journal(
+           $1,
+           date '2030-03-01',
+           'Synthetic Journal Created',
+           'Synthetic journal content',
+           array['reflection', 'test']
+         )`,
+        ["synthetic-journal-key-0001"],
+      );
+
+    const first = await create();
+    const replay = await create();
+
+    expect(replay.rows).toEqual(first.rows);
+    expect(first.rows).toEqual([
+      expect.objectContaining({
+        revision: 1,
+        title: "Synthetic Journal Created",
+      }),
+    ]);
+
+    const revisions = await queryAs<{
+      revision: number;
+      snapshot: Record<string, unknown>;
+      reason: string;
+    }>(
+      "authenticated",
+      ownerA,
+      `select revision, snapshot, reason
+       from public.journal_revisions
+       where journal_id = $1
+       order by revision`,
+      [first.rows[0].id],
+    );
+    expect(revisions.rows).toEqual([
+      {
+        reason: "create",
+        revision: 1,
+        snapshot: {
+          content: "Synthetic journal content",
+          deleted_at: null,
+          event_date: "2030-03-01",
+          tags: ["reflection", "test"],
+          title: "Synthetic Journal Created",
+        },
+      },
+    ]);
+
+    const audit = await queryAs<{
+      action: string;
+      entity_type: string;
+      result: string;
+    }>(
+      "authenticated",
+      ownerA,
+      `select action, entity_type, result
+       from public.audit_events
+       where entity_type = 'journal'
+         and entity_id = $1`,
+      [String(first.rows[0].id)],
+    );
+    expect(audit.rows).toEqual([
+      {
+        action: "CREATE",
+        entity_type: "journal",
+        result: "success",
+      },
+    ]);
+    expect(JSON.stringify(audit.rows)).not.toContain(
+      "Synthetic journal content",
+    );
+  });
+
+  it("rejects changed journal replays and scopes the same key by owner", async () => {
+    const key = "synthetic-journal-shared-0001";
+    const createFor = (
+      userId: string,
+      date: string,
+      title: string,
+      content: string,
+    ) =>
+      queryAs<{ id: number; user_id: string }>(
+        "authenticated",
+        userId,
+        `select id, user_id
+         from public.create_journal(
+           $1,
+           $2::date,
+           $3,
+           $4,
+           '{}'::text[]
+         )`,
+        [key, date, title, content],
+      );
+
+    const ownerAJournal = await createFor(
+      ownerA,
+      "2030-03-02",
+      "Synthetic Owner A Journal",
+      "Synthetic owner A content",
+    );
+    await expect(
+      createFor(
+        ownerA,
+        "2030-03-02",
+        "Synthetic Owner A Changed",
+        "Synthetic owner A content",
+      ),
+    ).rejects.toThrow(/different request/i);
+
+    const ownerBJournal = await createFor(
+      ownerB,
+      "2030-03-02",
+      "Synthetic Owner B Journal",
+      "Synthetic owner B content",
+    );
+    expect(ownerAJournal.rows[0].user_id).toBe(ownerA);
+    expect(ownerBJournal.rows[0].user_id).toBe(ownerB);
+    expect(ownerAJournal.rows[0].id).not.toBe(ownerBJournal.rows[0].id);
+
+    const crossOwnerRevisions = await queryAs(
+      "authenticated",
+      ownerB,
+      `select id from public.journal_revisions where journal_id = $1`,
+      [ownerAJournal.rows[0].id],
+    );
+    expect(crossOwnerRevisions.rows).toEqual([]);
+  });
+
+  it("updates the current journal and resulting revision atomically", async () => {
+    const created = await queryAs<{ id: number }>(
+      "authenticated",
+      ownerA,
+      `select id
+       from public.create_journal(
+         'synthetic-journal-key-0002',
+         date '2030-03-03',
+         'Synthetic Original',
+         'Synthetic original content',
+         array['original']
+       )`,
+    );
+    const journalId = created.rows[0].id;
+
+    const updated = await queryAs<{
+      revision: number;
+      title: string;
+    }>(
+      "authenticated",
+      ownerA,
+      `update public.journals
+       set title = 'Synthetic Revised',
+           content = 'Synthetic revised content',
+           tags = array['revised'],
+           revision = revision + 1,
+           updated_at = now()
+       where id = $1 and revision = 1
+       returning revision, title`,
+      [journalId],
+    );
+    expect(updated.rows).toEqual([
+      { revision: 2, title: "Synthetic Revised" },
+    ]);
+
+    const revisions = await queryAs<{
+      revision: number;
+      snapshot: Record<string, unknown>;
+      reason: string;
+    }>(
+      "authenticated",
+      ownerA,
+      `select revision, snapshot, reason
+       from public.journal_revisions
+       where journal_id = $1
+       order by revision`,
+      [journalId],
+    );
+    expect(revisions.rows).toEqual([
+      expect.objectContaining({ reason: "create", revision: 1 }),
+      {
+        reason: "update",
+        revision: 2,
+        snapshot: {
+          content: "Synthetic revised content",
+          deleted_at: null,
+          event_date: "2030-03-03",
+          tags: ["revised"],
+          title: "Synthetic Revised",
+        },
+      },
+    ]);
+
+    const stale = await queryAs(
+      "authenticated",
+      ownerA,
+      `update public.journals
+       set title = 'Synthetic Stale',
+           revision = revision + 1
+       where id = $1 and revision = 1
+       returning revision`,
+      [journalId],
+    );
+    expect(stale.rows).toEqual([]);
+
+    const revisionCount = await queryAs<{ count: number }>(
+      "authenticated",
+      ownerA,
+      `select count(*)::int as count
+       from public.journal_revisions
+       where journal_id = $1`,
+      [journalId],
+    );
+    expect(revisionCount.rows).toEqual([{ count: 2 }]);
+  });
+
   it("stores nullable daily ratings as approved 1-5 small integers", async () => {
     const columns = await db.query<{
       column_name: string;
@@ -559,7 +858,10 @@ describe("Life Console production Supabase migration", () => {
     const ownerRows = await queryAs<{ title: string }>(
       "authenticated",
       ownerA,
-      "select title from public.journals order by id",
+      `select title
+       from public.journals
+       where event_date = date '2030-01-01'
+       order by id`,
     );
     expect(ownerRows.rows).toEqual([{ title: "Synthetic Alpha" }]);
 
@@ -641,15 +943,17 @@ describe("Life Console production Supabase migration", () => {
       "select public.export_life_console_snapshot() as snapshot",
     );
     const snapshot = result.rows[0].snapshot as {
-      journals: Array<{ title: string }>;
+      journals: Array<{ event_date: string; title: string }>;
       daily_checkins: Array<{
         checkin_date: string;
         mood: number | null;
       }>;
     };
-    expect(snapshot.journals.map((row) => row.title)).toEqual([
-      "Synthetic Alpha",
-    ]);
+    expect(
+      snapshot.journals
+        .filter((row) => row.event_date === "2030-01-01")
+        .map((row) => row.title),
+    ).toEqual(["Synthetic Alpha"]);
     expect(
       snapshot.daily_checkins.find((row) =>
         row.checkin_date === "2030-01-01"

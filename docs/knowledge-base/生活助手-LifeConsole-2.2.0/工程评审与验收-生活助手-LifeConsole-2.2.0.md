@@ -1,6 +1,6 @@
 # 工程评审与验收 - 生活助手 - Life Console - 2.2.0
 
-> 状态：Gate 2 已确认 / 阶段 A、B 通过 / 阶段 C 目标与每日状态 CRUD 本地全量验证通过
+> 状态：Gate 2 已确认 / 阶段 A、B 通过 / 阶段 C 日记 CRUD 聚焦验证通过
 > 当前证据：官方资料、现有代码基线和本地纯合成 PGlite/supabase-js POC；没有 Supabase 资源、托管迁移、部署或真实数据证据
 
 ## 1. 工程评审结论
@@ -148,3 +148,22 @@ PO 已确认 Gate 1 的 PRD/D1-D8，以及 Gate 2 的 O1-O5、Q1-Q7、本测试�
 | 远端与私人数据 | 未执行 | 未创建资源、部署或读取、生成、上传、迁移真实状态数据 |
 
 每日状态本地证据不证明托管 Supabase 的函数暴露、PostgREST 数值转换、Auth/RLS 或 Preview 网络行为。
+
+## 12. 阶段 C 日记 CRUD 证据
+
+| 项目 | 结果 | 边界 |
+|---|---|---|
+| 日记创建 RPC | 通过 | invoker、空 `search_path`、authenticated-only、同 key 重放、请求漂移拒绝、Owner 隔离与最小审计 |
+| 原子 revision | 通过 | trigger 只接受初始 revision 1 和连续 +1 更新；当前行与写入后完整快照同事务完成 |
+| Revision 权限 | 通过 | authenticated 仅 SELECT；不能直接 INSERT/UPDATE/DELETE 历史 |
+| Journal Repository | 7/7 通过 | 固定 active list、单条读取、revision 历史、输入校验、RPC 映射、revision 更新和写入不重试 |
+| Journals Panel | 6/6 通过 | loading、真实空态、创建、冲突保留、同 key 重试、修订元数据和无撤回入口 |
+| 日记聚焦回归 | 45/45 通过 | migration 22 + foundation 10 + domain 7 + UI 6 |
+| Life Console 全量 | 228/228 通过 | 31 个 Vitest 文件；应用 Python 90/90；公开 Registry 安装审计 0；生产构建通过 |
+| 项目级验证 | 通过 | 根项目校验、治理检查、工具测试 333 项通过且 1 项跳过 |
+| PR #40 CI | 待执行 | 提交和推送后等待 `node`、`python`、`privacy` 实际结果；PR 保持 Draft |
+| 撤回与 D3 | 未实现 | PO 选择本轮不做撤回；字段加密仍需真实数据前独立确认 |
+| 正式入口 | 未接入 | 未修改 `App.tsx`、`main.tsx`、CSP 或托管 URL |
+| 远端与私人数据 | 未执行 | 未创建资源、部署或读取、生成、上传、迁移真实日记 |
+
+日记聚焦证据不证明托管 Supabase trigger/RPC、PostgREST、Auth/RLS、字段加密或 Preview 网络行为。

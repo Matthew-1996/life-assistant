@@ -17,21 +17,6 @@ insert into public.journals (user_id, event_date, title, content) values
   ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', date '2030-01-01', 'Synthetic Alpha', 'alpha payload'),
   ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', date '2030-01-01', 'Synthetic Beta', 'beta payload');
 
-insert into public.journal_revisions (
-  user_id,
-  journal_id,
-  revision,
-  snapshot,
-  reason
-)
-select
-  user_id,
-  id,
-  revision,
-  jsonb_build_object('title', title, 'content', content),
-  'synthetic seed'
-from public.journals;
-
 insert into public.daily_checkins (
   user_id,
   checkin_date,

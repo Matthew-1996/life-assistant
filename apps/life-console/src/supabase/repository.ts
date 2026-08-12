@@ -211,8 +211,11 @@ export class LifeConsoleRepository {
         );
       }
       if (
-        options.table === "goals"
-        && options.excludeDeleted
+        options.table === "journals"
+        || (
+          options.table === "goals"
+          && options.excludeDeleted
+        )
       ) {
         query = query.is("deleted_at", null);
       }

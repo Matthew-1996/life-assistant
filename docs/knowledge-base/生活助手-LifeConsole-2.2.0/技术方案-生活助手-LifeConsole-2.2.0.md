@@ -1,6 +1,6 @@
 # 技术方案 - 生活助手 - Life Console - 2.2.0
 
-> 状态：Gate 2 已确认 / 阶段 A、B 通过 / 阶段 C 目标与每日状态 CRUD 合成实现完成
+> 状态：Gate 2 已确认 / 阶段 A、B 通过 / 阶段 C 目标、每日状态与日记 CRUD 合成实现完成
 > 范围：允许通用代码、生产 migration 草案和合成测试；不创建 Supabase/Vercel 资源，不连接真实项目
 
 ## 1. 技术结论摘要
@@ -175,6 +175,19 @@ Gate 2 之外，创建独立 Supabase 候选资源前还需 PO 单独确认区�
 每日状态模块聚焦测试 49/49 通过，其中 migration 18 项、PGlite POC 7 项、Repository foundation 10 项、DailyCheckin Repository 7 项、Daily Check-in Panel 7 项；本轮新增 20 项状态相关断言。该证据不替代托管 RPC/PostgREST、两用户 Auth/RLS、CSP 或真实网络验证。
 
 包含每日状态模块后的全量本地回归为 29 个 Vitest 文件、211/211，应用 Python 90/90，工具测试 333 项通过且 1 项跳过；公开 Registry 干净安装审计 0，生产构建通过。
+
+### 9.8 阶段 C 日记 CRUD 合成实现
+
+PO 已确认本轮只实现日记创建、读取、分页和修订，不实现撤回、恢复、删除计划或永久删除。D3 敏感字段加密仍是独立真实数据门禁；本模块只使用合成正文，不改变真实日记不得进入当前链路的约束。
+
+- `journals` 保存当前版本；受限 `record_journal_revision` trigger 在每次 INSERT 或 revision +1 UPDATE 后，将写入后的完整版本追加到 `journal_revisions`。trigger 使用固定空 `search_path`，撤销 PUBLIC 执行权；authenticated 只有 revision SELECT 权限，不能直接伪造历史。
+- `create_journal` 是 authenticated-only、invoker、空 `search_path` RPC；同一事务完成当前行创建、revision 1 自动快照、幂等回执与不含正文的最小审计。
+- `JournalRepository` 固定使用 `(event_date,id)` 游标和 `deleted_at is null`，提供单条读取、revision 历史、幂等创建和 revision 条件更新；只读瞬时失败最多额外尝试一次，写入不隐式重试。
+- `SupabaseJournalsPanel` 通过依赖注入展示真实 loading/empty、创建、编辑、冲突保留、同 key 重试和 revision 元数据；不渲染历史正文，不提供撤回/恢复/删除操作，也未接 `App.tsx`、`main.tsx` 或托管配置。
+
+日记模块聚焦回归 45/45 通过，其中 production migration 22 项、Repository foundation 10 项、Journal Repository 7 项、Journals Panel 6 项。该证据不替代 D3、托管 trigger/RPC/PostgREST、两用户 Auth/RLS、CSP 或真实网络验证。
+
+包含日记模块后的全量本地回归为 31 个 Vitest 文件、228/228，应用 Python 90/90，工具测试 333 项通过且 1 项跳过；公开 Registry 干净安装审计 0，生产构建通过。
 
 ## 10. 近期兼容性检查
 

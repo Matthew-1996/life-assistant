@@ -249,7 +249,7 @@ revoke all on all sequences in schema public from anon, authenticated;
 grant select, insert, update on public.profiles to authenticated;
 grant select, insert, update on public.goals to authenticated;
 grant select, insert, update on public.journals to authenticated;
-grant select, insert on public.journal_revisions to authenticated;
+grant select on public.journal_revisions to authenticated;
 grant select, insert, update on public.daily_checkins to authenticated;
 grant select, insert, update on public.weekly_reviews to authenticated;
 grant select, insert, update on public.phase_reviews to authenticated;
@@ -289,16 +289,6 @@ create policy journals_update on public.journals
 
 create policy journal_revisions_select on public.journal_revisions
   for select to authenticated using ((select auth.uid()) = user_id);
-create policy journal_revisions_insert on public.journal_revisions
-  for insert to authenticated with check (
-    (select auth.uid()) = user_id
-    and exists (
-      select 1
-      from public.journals
-      where journals.id = journal_id
-        and journals.user_id = (select auth.uid())
-    )
-  );
 
 create policy daily_checkins_select on public.daily_checkins
   for select to authenticated using ((select auth.uid()) = user_id);
@@ -367,6 +357,203 @@ create policy audit_events_select on public.audit_events
   for select to authenticated using ((select auth.uid()) = user_id);
 create policy audit_events_insert on public.audit_events
   for insert to authenticated with check ((select auth.uid()) = user_id);
+
+create function public.record_journal_revision()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if tg_op = 'INSERT' then
+    if new.revision <> 1 then
+      raise exception using
+        errcode = '22023',
+        message = 'A journal must begin at revision 1';
+    end if;
+  elsif new.revision <> old.revision + 1 then
+    raise exception using
+      errcode = '22023',
+      message = 'A journal update must increment revision by one';
+  end if;
+
+  insert into public.journal_revisions (
+    user_id,
+    journal_id,
+    revision,
+    snapshot,
+    reason
+  ) values (
+    new.user_id,
+    new.id,
+    new.revision,
+    jsonb_build_object(
+      'event_date', new.event_date,
+      'title', new.title,
+      'content', new.content,
+      'tags', new.tags,
+      'deleted_at', new.deleted_at
+    ),
+    case when tg_op = 'INSERT' then 'create' else 'update' end
+  );
+
+  return new;
+end
+$$;
+
+revoke all on function public.record_journal_revision() from public;
+
+create trigger journals_record_revision
+after insert or update on public.journals
+for each row execute function public.record_journal_revision();
+
+create function public.create_journal(
+  p_idempotency_key text,
+  p_event_date date,
+  p_title text,
+  p_content text,
+  p_tags text[]
+)
+returns setof public.journals
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  v_user_id uuid := (select auth.uid());
+  v_tags text[] := coalesce(p_tags, '{}'::text[]);
+  v_fingerprint text;
+  v_existing_operation text;
+  v_existing_result jsonb;
+  v_journal public.journals%rowtype;
+begin
+  if v_user_id is null then
+    raise exception using
+      errcode = '42501',
+      message = 'Authentication is required';
+  end if;
+
+  v_fingerprint := md5(jsonb_build_object(
+    'event_date', p_event_date,
+    'title', p_title,
+    'content', p_content,
+    'tags', v_tags
+  )::text);
+
+  select operation, result_ref
+  into v_existing_operation, v_existing_result
+  from public.idempotency_keys
+  where user_id = v_user_id
+    and key = p_idempotency_key;
+
+  if found then
+    if v_existing_operation <> 'journal.create'
+      or v_existing_result ->> 'request_fingerprint' <> v_fingerprint
+    then
+      raise exception using
+        errcode = '22023',
+        message = 'Idempotency key was reused with a different request';
+    end if;
+
+    return query
+      select row_value.*
+      from public.journals as row_value
+      where row_value.user_id = v_user_id
+        and row_value.id = (v_existing_result ->> 'id')::bigint;
+    return;
+  end if;
+
+  begin
+    insert into public.journals (
+      user_id,
+      event_date,
+      title,
+      content,
+      tags
+    ) values (
+      v_user_id,
+      p_event_date,
+      p_title,
+      p_content,
+      v_tags
+    )
+    returning * into v_journal;
+
+    insert into public.idempotency_keys (
+      user_id,
+      key,
+      operation,
+      result_ref,
+      expires_at
+    ) values (
+      v_user_id,
+      p_idempotency_key,
+      'journal.create',
+      jsonb_build_object(
+        'entity_type', 'journal',
+        'id', v_journal.id,
+        'request_fingerprint', v_fingerprint
+      ),
+      transaction_timestamp() + interval '24 hours'
+    );
+
+    insert into public.audit_events (
+      user_id,
+      action,
+      entity_type,
+      entity_id,
+      result
+    ) values (
+      v_user_id,
+      'CREATE',
+      'journal',
+      v_journal.id::text,
+      'success'
+    );
+
+    return next v_journal;
+    return;
+  exception
+    when unique_violation then
+      select operation, result_ref
+      into v_existing_operation, v_existing_result
+      from public.idempotency_keys
+      where user_id = v_user_id
+        and key = p_idempotency_key;
+
+      if not found
+        or v_existing_operation <> 'journal.create'
+        or v_existing_result ->> 'request_fingerprint' <> v_fingerprint
+      then
+        raise exception using
+          errcode = '22023',
+          message = 'Idempotency key was reused with a different request';
+      end if;
+
+      return query
+        select row_value.*
+        from public.journals as row_value
+        where row_value.user_id = v_user_id
+          and row_value.id = (v_existing_result ->> 'id')::bigint;
+      return;
+  end;
+end
+$$;
+
+revoke all on function public.create_journal(
+  text,
+  date,
+  text,
+  text,
+  text[]
+) from public;
+grant execute on function public.create_journal(
+  text,
+  date,
+  text,
+  text,
+  text[]
+) to authenticated;
 
 create function public.create_goal(
   p_idempotency_key text,
