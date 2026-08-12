@@ -193,7 +193,7 @@ export async function createBackupArchive(
     ),
   };
   files["manifest.json"] = strToU8(canonicalJson(manifest));
-  const bytes = zipSync(files, { level: 6 });
+  const bytes = zipSync(files, { level: 0 });
   return {
     bytes,
     archiveSha256: await sha256Hex(bytes),

@@ -209,7 +209,7 @@ PO 已确认本轮只实现日记创建、读取、分页和修订，不实现�
 
 - `BackupRepository` 只调用现有 authenticated-only `export_life_console_snapshot`，复用只读瞬时错误最多额外尝试一次的边界，并拒绝未知 schema 或缺失资源数组。
 - `createBackupArchive` 对八类固定资源递归排序对象字段，生成 UTF-8、紧凑 JSON、LF 结尾 NDJSON；逐资源计算 SHA-256、计数与 Python Agent 兼容的 canonical content digest。
-- 浏览器 ZIP 使用固定版本 `fflate 0.8.2`；锁文件只指向 npm 官方 Registry，公开 Registry 干净安装和审计 0。
+- 浏览器 ZIP 使用固定版本 `fflate 0.8.2` 和 STORE 模式，避免合法高重复正文被压缩到超过 Agent 的 100:1 防护阈值而误判为 zip bomb；锁文件只指向 npm 官方 Registry，公开 Registry 干净安装和审计 0。
 - 跨语言测试由 TypeScript 生成纯合成 ZIP，再调用既有 Python `BackupStore` 在显式临时目录校验并原子安装；安装后字节与原 ZIP 完全一致，公开 receipt 不含正文或机器路径。
 - 验证覆盖空资源、小规模、2,000 条合成记录、Unicode、嵌套字段、摘要/计数错误、截断、重复成员、路径穿越、符号链接、压缩比、并发锁、幂等和失败保留旧备份。
 

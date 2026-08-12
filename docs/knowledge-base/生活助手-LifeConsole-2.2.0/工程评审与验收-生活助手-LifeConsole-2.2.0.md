@@ -192,7 +192,7 @@ PO 已确认 Gate 1 的 PRD/D1-D8，以及 Gate 2 的 O1-O5、Q1-Q7、本测试�
 | 一致性快照读取 | 通过 | 单次调用现有 invoker RPC；非法 schema/资源 fail closed；只读瞬时失败最多额外尝试一次 |
 | 兼容资源集合 | 通过 | 固定八类业务资源；排除 `profiles`、`backup_runs`、审计、幂等、认证和会话状态 |
 | NDJSON 与 manifest | 通过 | UTF-8、递归键排序、紧凑 JSON、LF 结尾、逐资源 count/SHA-256 和 canonical content digest |
-| ZIP 安全边界 | 通过 | 固定成员路径；既有 Agent 拒绝截断、重复成员、路径穿越、符号链接、摘要/计数错误和超限压缩 |
+| ZIP 安全边界 | 通过 | 固定成员路径与 STORE 模式；合法高重复正文可恢复，既有 Agent 仍拒绝截断、重复成员、路径穿越、符号链接、摘要/计数错误和外部超限压缩包 |
 | 原子恢复 round-trip | 通过 | TypeScript 生成包由既有 Python Agent 在显式临时目录安装，字节一致；失败保留旧备份 |
 | 规模档位 | 通过 | 空资源、小规模与单资源 2,000 条纯合成记录均完成打包与校验 |
 | 聚焦回归 | 通过 | backup + production migration 35/35；Local Agent 9/9 |

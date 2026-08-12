@@ -256,6 +256,10 @@ describe("life-console-backup/1 packaging", () => {
 
   it("round-trips through the existing local Agent without leaking payloads", async () => {
     const snapshot = syntheticSnapshot();
+    snapshot.journals = [{
+      id: 2,
+      content: "x".repeat(100_000),
+    }];
     const result = await createBackupArchive(snapshot, options);
     const root = mkdtempSync(join(tmpdir(), "life-console-synthetic-"));
     const archivePath = join(root, "candidate.zip");
@@ -299,8 +303,8 @@ print(json.dumps(receipt.to_public_dict(), sort_keys=True))
         },
       );
 
-      expect(completed.status).toBe(0);
       expect(completed.stderr).toBe("");
+      expect(completed.status).toBe(0);
       const receipt = JSON.parse(completed.stdout) as {
         archive_sha256: string;
         counts: Record<string, number>;
