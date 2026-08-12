@@ -1,6 +1,6 @@
 # 技术方案 - 生活助手 - Life Console - 2.2.0
 
-> 状态：预评审完成 / 待 Gate 2
+> 状态：预评审完成 / Supabase 本地合成 POC 通过 / 待 Gate 2
 > 范围：架构与契约，不创建 Supabase/Vercel 资源，不写迁移脚本，不连接真实项目
 
 ## 1. 技术结论摘要
@@ -15,9 +15,11 @@ flowchart TB
   V --> A["Supabase Auth"]
   V --> D["Supabase Data API"]
   D --> P["Postgres + RLS"]
+  V --> R["security invoker 备份 RPC"]
+  R --> P
+  R --> X["版本化用户导出"]
   V --> F["受 JWT 保护的 Edge Function"]
   F --> P
-  F --> X["版本化合成/用户导出"]
   X --> L["本机 Agent 原子写入 iCloud 最新备份"]
   L -. "真实迁移前" .-> I["iCloud 私人真相源"]
 ```
@@ -98,7 +100,41 @@ Supabase 平台备份是平台灾难恢复能力，不等于用户可迁移备�
 
 2.2.0 延续版本化 `life-console-backup`：单条调用者权限 RPC 一致性读取 → 规范化 NDJSON/manifest → 计数与摘要 → 浏览器返回 → 本机 Agent 校验并原子替换 iCloud 最新备份。首轮只用合成数据验证，不接触真实 iCloud。
 
-## 9. 近期兼容性检查
+## 9. Supabase 技术调研结论与实施约束
+
+### 9.1 可行性结论
+
+Supabase 可以继续作为 2.2.0 唯一新后端候选，但本地 POC 不能替代托管候选验收。当前没有发现必须放弃该方案的技术卡点；已用纯合成数据证明 PostgreSQL 所有权模型、RLS、调用者权限 View/RPC、同日原子 upsert 和浏览器 SDK 请求契约可行。
+
+| 调研项 | 当前结论 | 实施约束 |
+|---|---|---|
+| 本地运行环境 | 本机没有 Docker、Supabase CLI 或 `psql`，无法运行完整 Auth/PostgREST/Postgres 栈 | 不在即将归还的工作电脑安装 Docker；用独立托管候选补齐验证 |
+| RLS 与权限 | PGlite 合成测试已证明 Owner 隔离、非 Owner 空结果、anon 拒绝、禁止换绑和禁止物理删除 | 正式迁移仍需在 Supabase Postgres 重跑 anon/A/B 三身份矩阵和 Advisors |
+| 一致性备份 | 多次 Data API 请求不共享单一事务；单条 `security invoker` RPC 可形成一致性快照 | RPC 固定空 `search_path`、撤销 PUBLIC 执行权、只授予 `authenticated`，不得改成 `security definer` |
+| Auth 邮件 | 默认 SMTP 仅供演示，只向团队预授权邮箱发送且限流低、无 SLA | 候选可用合成团队邮箱；正式 OTP 前必须配置自有 SMTP 并验证大陆邮箱到达率 |
+| 区域 | Supabase 项目创建后不能原地更换区域 | 创建资源前比较东京、新加坡、首尔等候选的大陆网络、成本和数据驻留 |
+| Data API | 默认最多返回 1,000 行 | 所有列表使用游标分页；备份不得依赖一次普通列表请求 |
+| SDK 重试 | `supabase-js >=2.102` 只自动重试 GET/HEAD 的部分瞬时错误，不自动重试写方法 | 客户端仍显式设置 `db.retry=false`，由 repository 区分只读重试、revision 冲突与幂等写入 |
+| Vercel 集成 | Marketplace 处于 Public Alpha，并会同步数据库密码、secret key、JWT secret 等不必要变量 | 不使用 Marketplace；手工按环境只配置 URL 与 publishable key |
+| CSP | 当前 `connect-src 'none'` 会阻止 Supabase | 接入时只放行候选/正式项目各自精确 HTTPS/WSS Origin，不使用通配符 |
+| Edge Function | 普通 CRUD 和备份首版不需要 Edge Function；托管函数有内存、CPU 和时长限制 | 只用于隐藏第三方 secret 或服务端编排，不在函数内缓冲大型全量备份 |
+
+### 9.2 已验证证据
+
+本地 POC 固定使用 `@supabase/supabase-js 2.112.3` 与仅供测试的 `@electric-sql/pglite 0.5.4`。合成 SQL 不是生产 migration，未包含项目标识、真实邮箱或个人数据。
+
+- PostgreSQL/RLS：7 项通过，包括复合索引、Owner/非 Owner/anon、UPDATE `WITH CHECK`、原子 upsert 和单事务导出 RPC。
+- 浏览器 SDK：4 项通过，包括 `shouldCreateUser=false`、仅 publishable key、关闭 Data API 自动重试和 CSP 阻塞识别。
+- 全量本地回归：Life Console 20 个测试文件、142 项测试通过；Python 工具测试与生产构建通过。
+- 尚未验证：大陆到真实项目端点的网络、真实 OTP、托管 RLS/GRANT、Vercel Preview CORS/CSP、1k/10k 容量、平台 Advisors/备份和第二个 Auth 用户端到端隔离。
+
+详细可复现方法和远端待测矩阵见 [Supabase 可行性调研与 POC](Supabase可行性调研与POC-生活助手-LifeConsole-2.2.0.md)。
+
+### 9.3 进入实现前的阻断条件
+
+Gate 2 之外，创建独立 Supabase 候选资源前还需 PO 单独确认区域候选、套餐成本、测试邮箱和资源生命周期。正式个人数据前必须另行完成字段加密威胁模型、自有 SMTP、备份恢复演练、真实迁移和切源门禁。本节不构成资源创建、部署或真实数据授权。
+
+## 10. 近期兼容性检查
 
 - 当前项目 Node `>=22.13`、TypeScript `5.9`，满足 Supabase JS 近期要求。
 - 新表不假设自动暴露到 Data API；迁移显式配置 exposed schema、GRANT 与 RLS。
@@ -108,13 +144,13 @@ Supabase 平台备份是平台灾难恢复能力，不等于用户可迁移备�
 - 当前 CSP `connect-src 'none'` 会阻止 Supabase；实现时只加入精确项目 Origin。
 - Supabase 项目区域创建后不能原地变更；区域必须在资源创建前通过网络和数据驻留评审。
 
-## 10. 技术评审结论与 Gate 2 决策
+## 11. 技术评审结论与 Gate 2 决策
 
 | 编号 | 建议 |
 |---|---|
 | Q1 | 保留 Vercel React/Vite，Supabase 作为唯一新后端候选 |
 | Q2 | Email OTP + 禁止自动注册；数据按 `user_id` 隔离 |
-| Q3 | 普通 CRUD 使用 Data API + RLS，高权限流程才用 Edge Function |
+| Q3 | 普通 CRUD 使用 Data API + RLS；一致性导出使用调用者权限 RPC；隐藏 secret 或服务端编排才用 Edge Function |
 | Q4 | 显式 GRANT、RLS、索引、revision 和幂等键进入同一版本化迁移 |
 | Q5 | 真实敏感数据前另做字段加密威胁模型，不在本轮默认弱化或沿用旧 KEK |
 | Q6 | 用户可迁移备份与平台备份分层，合成 round-trip 先行 |
@@ -122,13 +158,17 @@ Supabase 平台备份是平台灾难恢复能力，不等于用户可迁移备�
 
 PO 未确认 Q1-Q7 前，不进入实现。
 
-## 11. 官方依据
+## 12. 官方依据
 
 - Supabase RLS：<https://supabase.com/docs/guides/database/postgres/row-level-security>
 - Supabase Data API 安全：<https://supabase.com/docs/guides/api/securing-your-api>
 - Supabase 无密码邮件登录：<https://supabase.com/docs/guides/auth/auth-email-passwordless>
 - Supabase Edge Function 鉴权：<https://supabase.com/docs/guides/functions/auth>
 - Supabase 数据库备份：<https://supabase.com/docs/guides/platform/backups>
+- Supabase 自定义 SMTP：<https://supabase.com/docs/guides/auth/auth-smtp>
+- Supabase Edge Function 限制：<https://supabase.com/docs/guides/functions/limits>
+- Supabase Vercel Marketplace：<https://supabase.com/docs/guides/integrations/vercel-marketplace>
+- Supabase 项目区域变更：<https://supabase.com/docs/guides/troubleshooting/change-project-region-eWJo5Z>
 - Vercel 环境变量：<https://vercel.com/docs/environment-variables>
 - Vercel Vite：<https://vercel.com/docs/frameworks/frontend/vite>
 - [本版本 Supabase 可行性调研与 POC](Supabase可行性调研与POC-生活助手-LifeConsole-2.2.0.md)
