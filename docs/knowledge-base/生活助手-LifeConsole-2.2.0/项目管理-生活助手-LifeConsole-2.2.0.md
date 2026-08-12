@@ -65,9 +65,10 @@
 | 2026-08-12 | 2.2.0 先完成 Vercel + Supabase 的 PRD、需求、设计、技术和测试方案评审 | PO | 预评审已完成，待双 Gate |
 | 2026-08-12 | 本轮不包含 Supabase 资源、真实数据、部署、切源或资源删除 | PO | 持续生效 |
 | 2026-08-12 | 先执行必要的 Supabase 调研和本地纯合成 POC，避免开发后期才暴露平台卡点 | PO | 已完成；11 项测试通过 |
+| 2026-08-12 | 将调研结论纳入唯一技术方案；清除 lockfile 的字节内网下载地址，统一使用 npm 官方 Registry | PO / Agent | 已完成；PR #40 Node/Python/privacy CI 全通过 |
 
 ## 7. 下一步（最多三项）
 
-1. 提交本地 Supabase POC 与去敏调研证据，保持 PR #40 为 Draft。
-2. 请求 PO 确认 Gate 1：PRD draft.1、D1-D8 与需求评审结论。
-3. Gate 1 后确认 Gate 2；独立 Supabase 资源、候选部署与真实数据仍分别授权。
+1. 请求 PO 确认 Gate 1：PRD draft.1、D1-D8 与需求评审结论。
+2. Gate 1 后确认 Gate 2：O1-O5、Q1-Q7 与测试/阶段计划。
+3. Gate 2 后先推进不含资源的通用实现；独立 Supabase 资源、候选部署与真实数据仍分别授权。
