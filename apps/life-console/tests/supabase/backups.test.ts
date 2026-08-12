@@ -1,5 +1,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import {
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { strFromU8, unzipSync } from "fflate";
 import { describe, expect, it, vi } from "vitest";
 
@@ -213,6 +222,25 @@ describe("life-console-backup/1 packaging", () => {
     expect(result.manifest).toEqual(manifest);
   });
 
+  it("packages a synthetic 2000-record resource within Agent limits", async () => {
+    const snapshot = emptySnapshot();
+    snapshot.daily_checkins = Array.from({ length: 2_000 }, (_, index) => ({
+      id: index + 1,
+      checkin_date: `2030-01-${String((index % 28) + 1).padStart(2, "0")}`,
+      mood: (index % 5) + 1,
+      note: `Synthetic check-in ${index + 1}`,
+    }));
+
+    const result = await createBackupArchive(snapshot, options);
+    const files = unzipSync(result.bytes);
+
+    expect(result.manifest.resources.daily_checkins.count).toBe(2_000);
+    expect(
+      strFromU8(files["data/daily_checkins.ndjson"]).split("\n"),
+    ).toHaveLength(2_001);
+    expect(result.bytes.byteLength).toBeLessThan(64 * 1024 * 1024);
+  });
+
   it("rejects unsupported snapshot rows before creating an archive", async () => {
     const snapshot = emptySnapshot();
     snapshot.goals = [null as unknown as Record<string, unknown>];
@@ -224,5 +252,77 @@ describe("life-console-backup/1 packaging", () => {
       status: 400,
       code: "backup_snapshot_invalid",
     });
+  });
+
+  it("round-trips through the existing local Agent without leaking payloads", async () => {
+    const snapshot = syntheticSnapshot();
+    const result = await createBackupArchive(snapshot, options);
+    const root = mkdtempSync(join(tmpdir(), "life-console-synthetic-"));
+    const archivePath = join(root, "candidate.zip");
+    const targetPath = join(root, "backup", "latest.zip");
+    const receiptPath = join(root, "state", "receipts.json");
+    writeFileSync(archivePath, result.bytes);
+    const script = `
+import json
+import sys
+from pathlib import Path
+from local_agent.backup_store import BackupStore
+
+archive_path, target_path, receipt_path, digest = sys.argv[1:]
+store = BackupStore(
+    target_path=Path(target_path),
+    receipt_path=Path(receipt_path),
+)
+with open(archive_path, "rb") as source:
+    receipt = store.install(
+        source,
+        run_id="run_synthetic_220",
+        expected_archive_sha256=digest,
+    )
+print(json.dumps(receipt.to_public_dict(), sort_keys=True))
+`;
+
+    try {
+      const completed = spawnSync(
+        "python3",
+        [
+          "-c",
+          script,
+          archivePath,
+          targetPath,
+          receiptPath,
+          result.archiveSha256,
+        ],
+        {
+          cwd: join(process.cwd()),
+          encoding: "utf-8",
+        },
+      );
+
+      expect(completed.status).toBe(0);
+      expect(completed.stderr).toBe("");
+      const receipt = JSON.parse(completed.stdout) as {
+        archive_sha256: string;
+        counts: Record<string, number>;
+        format_version: string;
+      };
+      expect(receipt).toMatchObject({
+        archive_sha256: result.archiveSha256,
+        format_version: BACKUP_FORMAT_VERSION,
+      });
+      expect(receipt.counts).toEqual(
+        Object.fromEntries(
+          BACKUP_RESOURCE_NAMES.map((name) => [
+            name,
+            result.manifest.resources[name].count,
+          ]),
+        ),
+      );
+      expect(readFileSync(targetPath)).toEqual(Buffer.from(result.bytes));
+      expect(completed.stdout).not.toContain("Synthetic journal");
+      expect(completed.stdout).not.toContain(root);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });

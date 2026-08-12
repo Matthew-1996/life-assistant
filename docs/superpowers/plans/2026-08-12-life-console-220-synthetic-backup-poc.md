@@ -18,11 +18,11 @@
 - Create: `apps/life-console/src/supabase/backups.ts`
 - Create: `apps/life-console/tests/supabase/backups.test.ts`
 
-- [ ] **Step 1: Add failing tests for snapshot reads and contract validation**
+- [x] **Step 1: Add failing tests for snapshot reads and contract validation**
 
 Create tests that call the desired `BackupRepository.snapshot()` API with a Supabase mock. Assert that it calls `export_life_console_snapshot`, retries one transient read failure, returns the owner snapshot, and rejects a missing resource array or unsupported schema version with a `RepositoryError` using code `backup_snapshot_invalid`.
 
-- [ ] **Step 2: Run the focused test and verify RED**
+- [x] **Step 2: Run the focused test and verify RED**
 
 Run:
 
@@ -32,7 +32,7 @@ npx vitest run tests/supabase/backups.test.ts
 
 Expected: FAIL because `src/supabase/backups.ts` does not exist.
 
-- [ ] **Step 3: Implement the minimum snapshot repository**
+- [x] **Step 3: Implement the minimum snapshot repository**
 
 Define the fixed resource tuple:
 
@@ -57,7 +57,7 @@ client.rpc("export_life_console_snapshot")
 
 Do not include `profiles` or `backup_runs` in the package resource set.
 
-- [ ] **Step 4: Run focused tests and verify GREEN**
+- [x] **Step 4: Run focused tests and verify GREEN**
 
 Run:
 
@@ -67,7 +67,7 @@ npx vitest run tests/supabase/backups.test.ts
 
 Expected: snapshot repository tests PASS.
 
-- [ ] **Step 5: Commit the contract slice**
+- [x] **Step 5: Commit the contract slice**
 
 Stage only the new backup module and focused tests, then commit:
 
@@ -83,7 +83,7 @@ feat(life-console): define synthetic backup snapshot contract
 - Modify: `apps/life-console/src/supabase/backups.ts`
 - Modify: `apps/life-console/tests/supabase/backups.test.ts`
 
-- [ ] **Step 1: Add `fflate` as a pinned runtime dependency**
+- [x] **Step 1: Add `fflate` as a pinned runtime dependency**
 
 Run:
 
@@ -93,7 +93,7 @@ npm install --save-exact fflate@0.8.2
 
 Expected: `package.json` and `package-lock.json` contain only the public npm package metadata.
 
-- [ ] **Step 2: Add failing package-format tests**
+- [x] **Step 2: Add failing package-format tests**
 
 Test `createBackupArchive(snapshot, options)` for:
 
@@ -115,7 +115,7 @@ Assert:
 - `profiles` and `backup_runs` are absent.
 - Unsupported values such as arrays or primitives inside a resource are rejected.
 
-- [ ] **Step 3: Run focused tests and verify RED**
+- [x] **Step 3: Run focused tests and verify RED**
 
 Run:
 
@@ -125,7 +125,7 @@ npx vitest run tests/supabase/backups.test.ts
 
 Expected: FAIL because archive creation is not implemented.
 
-- [ ] **Step 4: Implement canonical package generation**
+- [x] **Step 4: Implement canonical package generation**
 
 Add:
 
@@ -139,7 +139,7 @@ export interface BackupArchiveResult {
 
 Implement recursive key ordering, compact JSON serialization, LF-delimited NDJSON, Web Crypto SHA-256, Python-compatible canonical resource metadata digest, and `fflate.zipSync`. Keep all ZIP member paths fixed by the resource tuple; no caller-provided archive path is accepted.
 
-- [ ] **Step 5: Run focused tests and type checking**
+- [x] **Step 5: Run focused tests and type checking**
 
 Run:
 
@@ -150,7 +150,7 @@ npx tsc -b
 
 Expected: all focused tests PASS and TypeScript exits 0.
 
-- [ ] **Step 6: Commit package generation**
+- [x] **Step 6: Commit package generation**
 
 Commit:
 
@@ -164,7 +164,7 @@ feat(life-console): package synthetic owner backups
 - Modify: `apps/life-console/tests/supabase/backups.test.ts`
 - Modify: `apps/life-console/tests/local_agent/test_backup_store.py`
 
-- [ ] **Step 1: Add a failing cross-language round-trip test**
+- [x] **Step 1: Add a cross-language round-trip compatibility test**
 
 From Vitest, generate a synthetic archive with all eight resource types, write it under a temporary directory, and invoke Python with an explicit temporary target and receipt path. The Python snippet imports `BackupStore`, installs the archive using the supplied run ID and ZIP SHA-256, and prints only the public receipt JSON.
 
@@ -176,7 +176,7 @@ Assert:
 - Installed bytes exactly match the TypeScript ZIP.
 - Receipt and error output do not contain synthetic journal content or temporary machine paths.
 
-- [ ] **Step 2: Run the round-trip test and verify RED**
+- [x] **Step 2: Run the round-trip compatibility test**
 
 Run:
 
@@ -184,13 +184,13 @@ Run:
 npx vitest run tests/supabase/backups.test.ts -t "round-trips"
 ```
 
-Expected: FAIL until the subprocess harness and compatible archive are complete.
+Expected: PASS when the new TypeScript package is accepted unchanged by the existing Python Agent. This characterization passed on first execution, proving format compatibility without a Python production change.
 
-- [ ] **Step 3: Complete the minimum round-trip harness**
+- [x] **Step 3: Complete the minimum round-trip harness**
 
 Use `process.execPath` only for Node-side work and `python3 -c` for the existing local Agent. Pass file paths as process arguments rather than interpolating them into Python source. Keep all records synthetic.
 
-- [ ] **Step 4: Extend local Agent malformed-package coverage**
+- [x] **Step 4: Extend local Agent malformed-package coverage**
 
 Add focused Python tests for:
 
@@ -199,7 +199,7 @@ Add focused Python tests for:
 - duplicate member and path traversal remain rejected;
 - empty resource files are accepted with count zero.
 
-- [ ] **Step 5: Run TypeScript and Python backup tests**
+- [x] **Step 5: Run TypeScript and Python backup tests**
 
 Run:
 
@@ -210,7 +210,7 @@ python3 -m unittest discover -v -s tests/local_agent -p 'test_*.py'
 
 Expected: all backup tests PASS with no warnings or leaked paths/content.
 
-- [ ] **Step 6: Commit round-trip evidence**
+- [x] **Step 6: Commit round-trip evidence**
 
 Commit:
 
