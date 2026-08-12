@@ -1,7 +1,7 @@
 # 工程评审与验收 - 生活助手 - Life Console - 2.2.0
 
 > 状态：测试方案预评审完成 / 待 Gate 2
-> 当前证据：仅文档、官方资料和现有代码基线审查；没有 Supabase 资源、迁移、部署或真实数据证据
+> 当前证据：官方资料、现有代码基线和本地纯合成 PGlite/supabase-js POC；没有 Supabase 资源、托管迁移、部署或真实数据证据
 
 ## 1. 工程评审结论
 
@@ -73,6 +73,10 @@
 | PRD/需求/设计/技术/测试草案 | 通过 | 已形成 2.2.0 唯一版本知识库 |
 | 官方兼容性核对 | 通过 | 已核对 Supabase changelog、RLS、Data API、Auth、Edge Function、备份及 Vercel Vite/环境文档 |
 | Supabase 资源 | 未执行 | 不在授权范围 |
-| 数据库迁移与测试 | 未执行 | Gate 2 后才允许 |
+| 托管数据库正式迁移与测试 | 未执行 | Gate 2 与独立资源授权后才允许 |
 | Vercel/Supabase 部署 | 未执行 | 不在授权范围 |
 | 真实数据、切源、删除 | 未执行 | 明确禁止 |
+| 本地 PostgreSQL/RLS 合成 POC | 通过 | 7 项；Owner/非 Owner/anon、upsert、调用者权限 RPC |
+| supabase-js 浏览器契约 POC | 通过 | 4 项；OTP、publishable key、重试关闭、CSP 阻塞识别 |
+| 完整本地 Supabase 栈 | 阻塞 | 本机无 Docker；未安装机器级依赖 |
+| 托管候选与大陆网络 | 延期 | 需要独立资源与部署授权，不能由 PGlite 替代 |

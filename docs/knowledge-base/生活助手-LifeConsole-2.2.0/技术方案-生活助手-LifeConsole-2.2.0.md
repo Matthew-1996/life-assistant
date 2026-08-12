@@ -5,7 +5,7 @@
 
 ## 1. 技术结论摘要
 
-推荐保留 React 19 + Vite 7 + TypeScript 5 的 Vercel 前端，以 `@supabase/supabase-js` 接入 Supabase Auth 与 Data API。普通用户 CRUD 直接在 RLS 下运行；只有需要一致性快照或高权限的备份/批处理才进入受用户 JWT 保护的 Edge Function。浏览器只持有项目 URL 与 publishable key，任何 secret/service-role key 都不得进入 Vite 构建。
+推荐保留 React 19 + Vite 7 + TypeScript 5 的 Vercel 前端，以 `@supabase/supabase-js` 接入 Supabase Auth 与 Data API。普通 CRUD 直接在 RLS 下运行，一致性快照使用 `security invoker` 数据库 RPC；只有隐藏第三方 secret 或服务端编排才进入受用户 JWT 保护的 Edge Function。浏览器只持有项目 URL 与 publishable key，任何 secret/service-role key 都不得进入 Vite 构建。
 
 ## 2. 总体架构
 
@@ -77,11 +77,12 @@ Vercel Preview、Production 与本地开发使用独立环境变量。`VITE_` �
 - 创建：客户端生成幂等键，服务端以唯一约束 + `on conflict` 原子处理。
 - 更新：携带期望 `revision`，条件更新成功后 revision +1；0 行更新映射为冲突。
 - 删除：首版只创建 `deleted_at`/删除计划，不开放物理 DELETE。
-- 列表：使用 `(event_date,id)` 或 `(created_at,id)` 游标分页。
+- 列表：Data API 默认最多返回 1,000 行，使用 `(event_date,id)` 或 `(created_at,id)` 游标分页。
+- SDK：客户端显式设置 `db.retry=false`，由 repository 决定只读查询是否重试；写入依赖幂等键和 revision，不做不可见重试。
 
 ### 6.2 Edge Function
 
-仅用于跨表一致性快照、备份清单生成或未来受控批处理。函数保持 JWT 验证，使用调用者 JWT 创建受 RLS 限制的客户端；如需 admin 客户端，必须先验证用户身份和精确操作范围。公开 `auth:none` 不用于任何个人数据路由。
+仅用于隐藏第三方 secret、服务端编排或未来受控批处理。函数保持 JWT 验证，使用调用者 JWT 创建受 RLS 限制的客户端；如需 admin 客户端，必须先验证用户身份和精确操作范围。公开 `auth:none` 不用于任何个人数据路由。跨表快照首选单条 `security invoker` 数据库 RPC，避免多次 Data API 请求产生非一致读。
 
 ## 7. Auth 方案
 
@@ -89,12 +90,13 @@ Vercel Preview、Production 与本地开发使用独立环境变量。`VITE_` �
 - Supabase Site URL 和允许的 redirect URL 分环境配置；Preview 不复用 Production 白名单。
 - 前端订阅会话变化并在过期时清理内存态；不要把 access/refresh token 写入日志或知识库。
 - 合成验收至少准备 Owner 与非 Owner 两个测试用户：Owner 行可见；非 Owner SELECT 返回空结果、越权写入返回拒绝。未登录 401 不能替代已登录非 Owner 的行隔离证据，也不把 Data API 的空结果冒充为 403。
+- 默认 SMTP 仅供演示且只发送到项目团队预授权邮箱；正式 OTP 必须配置自有 SMTP 并验证大陆邮箱到达率。
 
 ## 8. 备份与恢复
 
 Supabase 平台备份是平台灾难恢复能力，不等于用户可迁移备份：免费项目需要主动逻辑导出；物理备份/PITR 可能不可下载，Storage 对象也不随数据库备份恢复。
 
-2.2.0 延续版本化 `life-console-backup`：一致性读取 → 规范化 NDJSON/manifest → 计数与摘要 → 浏览器或受控函数返回 → 本机 Agent 校验并原子替换 iCloud 最新备份。首轮只用合成数据验证，不接触真实 iCloud。
+2.2.0 延续版本化 `life-console-backup`：单条调用者权限 RPC 一致性读取 → 规范化 NDJSON/manifest → 计数与摘要 → 浏览器返回 → 本机 Agent 校验并原子替换 iCloud 最新备份。首轮只用合成数据验证，不接触真实 iCloud。
 
 ## 9. 近期兼容性检查
 
@@ -102,6 +104,9 @@ Supabase 平台备份是平台灾难恢复能力，不等于用户可迁移备�
 - 新表不假设自动暴露到 Data API；迁移显式配置 exposed schema、GRANT 与 RLS。
 - 不依赖 GraphQL、Realtime schema 修改或扩展版本固定，规避 2026 年相关破坏性变更。
 - Vercel 的 Vite 客户端变量会进入构建，禁止把 secret key 放入 `VITE_*`。
+- 不使用 Public Alpha 的 Vercel Marketplace 自动集成；它会同步数据库密码和 secret 等本项目不需要的服务端变量。手工只配置 URL 与 publishable key。
+- 当前 CSP `connect-src 'none'` 会阻止 Supabase；实现时只加入精确项目 Origin。
+- Supabase 项目区域创建后不能原地变更；区域必须在资源创建前通过网络和数据驻留评审。
 
 ## 10. 技术评审结论与 Gate 2 决策
 
@@ -126,3 +131,4 @@ PO 未确认 Q1-Q7 前，不进入实现。
 - Supabase 数据库备份：<https://supabase.com/docs/guides/platform/backups>
 - Vercel 环境变量：<https://vercel.com/docs/environment-variables>
 - Vercel Vite：<https://vercel.com/docs/frameworks/frontend/vite>
+- [本版本 Supabase 可行性调研与 POC](Supabase可行性调研与POC-生活助手-LifeConsole-2.2.0.md)

@@ -2,7 +2,7 @@
 
 > PMO：Agent
 > 主阶段：待需求评审
-> 子状态：预评审完成 / 待 PO Gate 1 与 Gate 2
+> 子状态：预评审完成 / 本地 Supabase 可行性 POC 通过 / 待 PO Gate 1 与 Gate 2
 > 当前分支：`agent/life-console-220-supabase`
 > 当前 worktree：`.worktrees/life-console-220-supabase`
 > 当前 Draft PR：[#40](https://github.com/Matthew-1996/life-assistant/pull/40)
@@ -43,6 +43,9 @@
 | Supabase 区域/套餐未知 | 资源创建前由 PO 结合成本、网络和数据驻留选择；本轮不需要决定 |
 | 敏感字段加密边界未定 | 真实数据前完成威胁模型与 D3 决策 |
 | 非 Owner 权限证据 | 后续测试资源中创建第二个纯合成账号 |
+| 本机缺完整 Supabase 运行时 | 不安装 Docker；以后续独立候选项目验证托管 Auth/PostgREST/Postgres |
+| 当前 Vercel CSP 阻止外连 | Gate 2 实现时精确放行候选 Supabase Origin，并保留安全头测试 |
+| 默认 SMTP 不可用于正式 OTP | 资源创建前确认测试邮箱；真实使用前评审自有 SMTP |
 
 ## 5. 风险与依赖
 
@@ -61,9 +64,10 @@
 | 2026-08-12 | 从最新 main 创建唯一 2.2.0 分支与 Draft PR #40 | PO / Agent | 已完成 |
 | 2026-08-12 | 2.2.0 先完成 Vercel + Supabase 的 PRD、需求、设计、技术和测试方案评审 | PO | 预评审已完成，待双 Gate |
 | 2026-08-12 | 本轮不包含 Supabase 资源、真实数据、部署、切源或资源删除 | PO | 持续生效 |
+| 2026-08-12 | 先执行必要的 Supabase 调研和本地纯合成 POC，避免开发后期才暴露平台卡点 | PO | 已完成；11 项测试通过 |
 
 ## 7. 下一步（最多三项）
 
-1. 创建并推送 2.2.0 Draft PR，等待 CI。
+1. 提交本地 Supabase POC 与去敏调研证据，保持 PR #40 为 Draft。
 2. 请求 PO 确认 Gate 1：PRD draft.1、D1-D8 与需求评审结论。
-3. Gate 1 后请求 PO 确认 Gate 2：O1-O5、Q1-Q7 和测试/阶段计划；未确认不实现。
+3. Gate 1 后确认 Gate 2；独立 Supabase 资源、候选部署与真实数据仍分别授权。
