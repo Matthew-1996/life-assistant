@@ -1,6 +1,6 @@
 # 工程评审与验收 - 生活助手 - Life Console - 2.2.0
 
-> 状态：Gate 2 已确认 / 阶段 A 首个开发块进行中
+> 状态：Gate 2 已确认 / 阶段 A 与阶段 B 本地合成开发块通过
 > 当前证据：官方资料、现有代码基线和本地纯合成 PGlite/supabase-js POC；没有 Supabase 资源、托管迁移、部署或真实数据证据
 
 ## 1. 工程评审结论
@@ -96,3 +96,19 @@ PO 已确认 Gate 1 的 PRD/D1-D8，以及 Gate 2 的 O1-O5、Q1-Q7、本测试�
 | 私人数据 | 未接触 | 未读取、上传或迁移 iCloud、日记或健康数据 |
 
 本地 PGlite 证据不替代托管 Supabase 的 Auth、PostgREST、Advisors、网络、OTP 和 Vercel Preview 验收。
+
+## 9. 阶段 B Auth 与 Repository 证据
+
+| 项目 | 结果 | 边界 |
+|---|---|---|
+| Browser client | 4/4 通过 | 只接受 URL + publishable key，拒绝 secret，`db.retry=false`；未配置真实 Origin |
+| Token-safe Auth | 5/5 通过 | `shouldCreateUser=false`、6 位 OTP、会话去 Token、登出与订阅清理 |
+| OTP Auth Gate | 6/6 通过 | loading、未登录、遮罩反馈、验证码、认证 children、过期、登出与初始化竞态；未接正式入口 |
+| Repository | 8/8 通过 | 复合游标、页长校验、HTTP/网络只读瞬时重试、写入不重试、错误归一化、revision 冲突与幂等边界 |
+| 聚焦测试 | 23/23 通过 | 真实 `supabase-js` 查询构造器 + 合成 fetch/Auth port，不含远端调用 |
+| Life Console 全量 | 174/174 通过 | 25 个 Vitest 文件；应用 Python 90/90；生产构建通过 |
+| Supabase/Vercel 资源 | 未执行 | 未创建、绑定或修改任何远端资源 |
+| 托管 Auth/PostgREST/SMTP/CSP | 未验证 | 必须在后续独立测试资源与候选部署门禁中验证 |
+| 私人数据 | 未接触 | 未读取、上传、生成或迁移真实日记、健康和 iCloud 数据 |
+
+阶段 B 目前只证明通用代码和合成契约可用。远端资源、候选部署、正式入口接线、精确 CSP 放行、真实 OTP、两用户托管 RLS 和大陆网络仍不得标记通过。

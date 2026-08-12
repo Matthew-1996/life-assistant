@@ -1,6 +1,6 @@
 # 技术方案 - 生活助手 - Life Console - 2.2.0
 
-> 状态：Gate 2 已确认 / Supabase 本地合成 POC 通过
+> 状态：Gate 2 已确认 / 阶段 A 与阶段 B 本地合成实现通过
 > 范围：允许通用代码、生产 migration 草案和合成测试；不创建 Supabase/Vercel 资源，不连接真实项目
 
 ## 1. 技术结论摘要
@@ -125,7 +125,7 @@ Supabase 可以继续作为 2.2.0 唯一新后端候选，但本地 POC 不能�
 
 - PostgreSQL/RLS：7 项通过，包括复合索引、Owner/非 Owner/anon、UPDATE `WITH CHECK`、原子 upsert 和单事务导出 RPC。
 - 浏览器 SDK：4 项通过，包括 `shouldCreateUser=false`、仅 publishable key、关闭 Data API 自动重试和 CSP 阻塞识别。
-- 全量本地回归：Life Console 20 个测试文件、142 项测试通过；Python 工具测试与生产构建通过。
+- 当前全量本地回归：Life Console 25 个 Vitest 文件、174 项测试通过；应用 Python 90 项测试通过。
 - 尚未验证：大陆到真实项目端点的网络、真实 OTP、托管 RLS/GRANT、Vercel Preview CORS/CSP、1k/10k 容量、平台 Advisors/备份和第二个 Auth 用户端到端隔离。
 
 详细可复现方法和远端待测矩阵见 [Supabase 可行性调研与 POC](Supabase可行性调研与POC-生活助手-LifeConsole-2.2.0.md)。
@@ -139,6 +139,17 @@ Gate 2 之外，创建独立 Supabase 候选资源前还需 PO 单独确认区�
 首个 Gate 2 开发块新增 `supabase/migrations/0001_life_console.sql`，生产 SQL 不包含测试角色、合成用户或平台资源标识。独立 `auth-shim.sql` 只为 PGlite 提供 Supabase 托管环境原本具有的 `auth.users`、`auth.uid()`、`anon` 和 `authenticated`；`seed.synthetic.sql` 只含两名无真实关联的测试用户和合成记录。
 
 聚焦测试 9 项通过，覆盖 12 张表、RLS、所有权/外键索引、最小 GRANT、UPDATE `USING` + `WITH CHECK`、无物理 DELETE、Owner A/B 隔离、anon 拒绝、换绑拒绝、null 与小数保真、revision 冲突和 `security invoker` 导出 RPC。该证据只证明 PostgreSQL/PGlite 语义，不替代托管 Supabase 的 Auth、PostgREST、Advisors 或真实网络验证。
+
+### 9.5 阶段 B Auth 与 Repository 合成实现
+
+阶段 B 在未配置 Supabase URL、publishable key、SMTP 或远端资源的前提下新增以下通用边界：
+
+- `supabase/client.ts`：浏览器配置只接受精确项目 Origin 与 publishable key；缺项、secret/service-role 变量或 `sb_secret_` key 均 fail closed；`db.retry=false`。
+- `supabase/auth.ts`：使用窄 Auth port 请求 Email OTP，固定 `shouldCreateUser=false`；只向应用暴露 `userId`、`email` 与 `expiresAt`，不返回 access/refresh token。
+- `SupabaseAuthGate.tsx`：可注入的 loading、OTP、6 位验证码、会话过期和登出状态机；发送反馈为中性文案和局部遮罩邮箱；未接入 `main.tsx`。
+- `supabase/repository.ts`：只允许已批准表名/排序列，列表使用 `(event_date,id)` 或 `(created_at,id)` 降序游标；页长限制为 1-100；瞬时只读失败最多额外尝试一次；更新固定使用 `id + revision` 条件，零行映射 409；写入不做隐式重试。
+
+聚焦合成测试 23/23 通过，其中 browser client 4 项、Auth 5 项、OTP Gate 6 项、Repository 8 项。Repository 测试使用真实 `supabase-js` 查询构造器与合成 fetch transport，证明本地请求契约、错误归一化和重试边界；它不证明托管 Auth、PostgREST、SMTP、CORS/CSP、RLS 或真实网络行为。正式启动入口、精确 CSP Origin、远端资源和部署仍需后续独立授权。
 
 ## 10. 近期兼容性检查
 
