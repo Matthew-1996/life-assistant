@@ -5,7 +5,7 @@
 > 子状态：预评审完成 / 待 PO Gate 1 与 Gate 2
 > 当前分支：`agent/life-console-220-supabase`
 > 当前 worktree：`.worktrees/life-console-220-supabase`
-> 当前 Draft PR：创建后回填
+> 当前 Draft PR：[#40](https://github.com/Matthew-1996/life-assistant/pull/40)
 > 最后更新：2026-08-12
 
 ## 1. 唯一主项
@@ -20,7 +20,7 @@
 | PR #35 / 1.1.0 Sites 草案 | 已关闭 | 已被 2.x 主线取代；活动分支/worktree 已清理，关闭记录保留 |
 | `main` | 2.1.0 最新基线 | 2.2.0 从合并提交创建 |
 | `agent/life-console-220-supabase` | 唯一 2.2.0 活动分支 | 只承载本版本评审与后续获批实现 |
-| 2.2.0 Draft PR | 待创建 | 不转 Ready、不合并，等待 Gate 确认 |
+| PR #40 / 2.2.0 Draft PR | Draft | 不转 Ready、不合并，等待 Gate 确认 |
 
 ## 3. 当前进度
 
@@ -58,7 +58,7 @@
 |---|---|---|---|
 | 2026-08-12 | PR #39 转可评审并 squash 合并；随后清理对应分支/worktree | PO / Agent | 已完成 |
 | 2026-08-12 | 历史 PR #35 已被 2.x 主线取代，为恢复单一活动分支关闭并清理；未删除线上资源 | PMO / Agent | 已完成 |
-| 2026-08-12 | 从最新 main 创建唯一 2.2.0 分支与 Draft PR | PO | 分支已完成 / PR 待创建 |
+| 2026-08-12 | 从最新 main 创建唯一 2.2.0 分支与 Draft PR #40 | PO / Agent | 已完成 |
 | 2026-08-12 | 2.2.0 先完成 Vercel + Supabase 的 PRD、需求、设计、技术和测试方案评审 | PO | 预评审已完成，待双 Gate |
 | 2026-08-12 | 本轮不包含 Supabase 资源、真实数据、部署、切源或资源删除 | PO | 持续生效 |
 
