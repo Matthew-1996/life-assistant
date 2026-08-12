@@ -22,6 +22,9 @@ describe("Life Console 2.0.0 Sites worker shell", () => {
     expect(response.headers.get("Content-Security-Policy")).toContain(
       "frame-ancestors 'none'",
     );
+    expect(response.headers.get("Content-Security-Policy")).toContain(
+      "connect-src 'self' http://127.0.0.1:47323",
+    );
     expect(response.headers.get("Strict-Transport-Security")).toContain(
       "max-age=31536000",
     );

@@ -61,7 +61,7 @@ function write32(view, offset, value) {
   new DataView(view.buffer).setUint32(offset, value, true);
 }
 
-function createZip(entries) {
+export function createZip(entries) {
   const localChunks = [];
   const centralChunks = [];
   let localOffset = 0;

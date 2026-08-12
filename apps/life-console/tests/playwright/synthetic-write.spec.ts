@@ -13,7 +13,7 @@ test.beforeEach(async ({ page }) => {
 
 test("creates a goal through the synthetic Sites Worker", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByText("D1 唯一真相源")).toBeVisible();
+  await expect(page.getByText("阶段 C 基础设施状态", { exact: false })).toBeVisible();
 
   await page.getByRole("button", { name: "进展" }).click();
   await page.getByLabel("目标名称").fill("Playwright synthetic goal");

@@ -179,48 +179,40 @@ a:focus-visible {
   background: rgb(88 86 214 / 8%);
 }
 
-.migration-hero {
-  margin-top: 28px;
-}
-
-.day-row.migration-check-row {
-  align-items: start;
-  grid-template-columns: minmax(0, 1fr) auto;
-  row-gap: 6px;
-}
-
-.day-row.migration-check-row > strong {
-  min-width: 0;
-  white-space: normal;
-  line-height: 1.45;
-}
-
-.day-row.migration-check-row > span:not(.status) {
-  grid-column: 1 / -1;
-  grid-row: 2;
-  min-width: 0;
-  overflow-wrap: anywhere;
-  line-height: 1.45;
-}
-
-.day-row.migration-check-row > .status {
-  grid-column: 2;
-  grid-row: 1;
-  justify-self: end;
-  white-space: nowrap;
-}
-
-.migration-steps {
-  display: grid;
-  gap: 12px;
-  margin: 18px 0 24px;
-  padding-left: 24px;
-  color: var(--muted-foreground);
-  line-height: 1.55;
-}
-
 .system-status-grid .card h2 {
   margin: 14px 0 8px;
+}
+
+.backup-card {
+  display: grid;
+  gap: 16px;
+}
+
+.backup-card .section-head,
+.backup-card p {
+  margin: 0;
+}
+
+.backup-scope {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid rgb(0 0 0 / 6%);
+  border-radius: 14px;
+  background: rgb(242 242 247 / 58%);
+}
+
+.backup-scope span,
+.backup-last-success {
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.backup-safety-note {
+  color: #26633c;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .nav-item {
@@ -1075,27 +1067,6 @@ input,
 select {
   height: 44px;
   padding: 0 14px;
-}
-
-.checkbox-row {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 1.4;
-  white-space: nowrap;
-}
-
-.checkbox-row input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  flex: 0 0 16px;
-  margin: 0;
-  padding: 0;
-  border-radius: 4px;
-  accent-color: var(--primary);
 }
 
 textarea:focus,

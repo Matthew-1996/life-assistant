@@ -9,7 +9,7 @@ const SECURITY_HEADERS = {
   "Content-Security-Policy": [
     "default-src 'self'",
     "base-uri 'none'",
-    "connect-src 'self'",
+    "connect-src 'self' http://127.0.0.1:47323",
     "font-src 'self'",
     "form-action 'self'",
     "frame-ancestors 'none'",
@@ -49,7 +49,11 @@ function jsonResponse(payload, status, requestId = null) {
 async function serveApi(request, env) {
   const requestId = crypto.randomUUID();
   try {
-    return jsonResponse(await handleApi(request, env), 200, requestId);
+    const result = await handleApi(request, env);
+    if (result instanceof Response) {
+      return withSecurityHeaders(result);
+    }
+    return jsonResponse(result, 200, requestId);
   } catch (error) {
     const status = Number.isInteger(error?.status) ? error.status : 500;
     if (status >= 400 && status !== 401) {
@@ -76,6 +80,7 @@ async function serveApi(request, env) {
         method: request.method,
         path: new URL(request.url).pathname,
         status,
+        code: error?.code ?? "internal_error",
       });
     }
     return jsonResponse(errorPayload(error, requestId), status, requestId);

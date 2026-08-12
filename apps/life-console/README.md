@@ -23,6 +23,12 @@ Implemented in phase one:
 - rebuildable LaunchAgent and local launcher generation;
 - a dedicated, ad-hoc-signed Mac app launcher so launchd-owned Python work can
   inherit the product's user-approved protected-file access.
+- a credential-free local backup core that validates `life-console-backup/1`,
+  writes a private temporary file, performs ZIP safety and digest checks, and
+  atomically replaces one caller-configured latest backup;
+- the Life Console 2.1.0 five-section System page and synthetic-only iCloud
+  backup state model. Worker export and browser-loopback integration remain
+  intentionally blocked until their separate POC gate passes.
 
 Not enabled or included in phase one:
 
@@ -99,6 +105,25 @@ machine. Logs stay inside the permission-restricted runtime directory. These
 files are not installed or loaded automatically; they are runtime artifacts,
 not portable source files, and must not be committed.
 
+## Vercel synthetic preview
+
+`npm run build:vercel-preview` creates a static, read-only candidate in
+`dist/vercel-preview`. It contains only committed synthetic fixtures and does
+not include the Stage A Worker POC, Sites authentication, D1, R2, KEK, iCloud,
+or any personal record. `vercel.json` configures this build and fail-closed
+browser security headers.
+
+Use a pinned Vercel CLI and link the directory to the intended project before
+deployment. `.vercel/` and `.env*` are local runtime state and must never be
+committed. Verify a deployment with an unauthenticated HTTP request and a
+browser walk through Workbench, Records, Progress, and System before handing
+out its stable alias.
+
+This preview has no backend. If a future version needs authentication,
+database storage, or APIs, the PO-selected backend is Supabase. That change
+requires a separate Auth, RLS, data model, migration, privacy, and test review;
+do not silently move the existing Sites/D1 data path.
+
 ## Structure
 
 ```text
@@ -109,11 +134,14 @@ hub/
   read_model/               whitelisted iCloud projection
   command_runner/           fixed atomic-tool adapters
   security/                 loopback/session/origin policy
+local_agent/
+  backup_store.py           ZIP validation, atomic replacement, receipts
 src/
   contracts/                shared TypeScript types
 tests/
   contract/                 OpenAPI and fixture checks
   hub/                      read/write/security integration checks
+  local_agent/              synthetic atomic-backup and failure tests
   e2e/                      synthetic full workflow
 ```
 

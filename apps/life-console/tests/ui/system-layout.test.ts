@@ -13,31 +13,14 @@ function rule(selector: string): string {
 }
 
 describe("system page layout contracts", () => {
-  it("keeps the recovery acknowledgement checkbox compact and inline", () => {
-    const checkboxRow = rule(".checkbox-row");
-    const checkbox = rule('.checkbox-row input[type="checkbox"]');
+  it("keeps the single backup card readable and safety copy visible", () => {
+    const card = rule(".backup-card");
+    const scope = rule(".backup-scope");
+    const safety = rule(".backup-safety-note");
 
-    expect(checkboxRow).toContain("display: flex");
-    expect(checkboxRow).toContain("width: 100%");
-    expect(checkboxRow).toContain("align-items: center");
-    expect(checkboxRow).toContain("white-space: nowrap");
-    expect(checkbox).toContain("width: 16px");
-    expect(checkbox).toContain("height: 16px");
-    expect(checkbox).toContain("padding: 0");
-  });
-
-  it("gives migration checks dedicated wrapping columns", () => {
-    const row = rule(".day-row.migration-check-row");
-    const title = rule(".day-row.migration-check-row > strong");
-    const description = rule(
-      ".day-row.migration-check-row > span:not(.status)",
-    );
-
-    expect(row).toContain(
-      "grid-template-columns: minmax(0, 1fr) auto",
-    );
-    expect(title).toContain("white-space: normal");
-    expect(description).toContain("grid-column: 1 / -1");
-    expect(description).toContain("overflow-wrap: anywhere");
+    expect(card).toContain("display: grid");
+    expect(card).toContain("gap: 16px");
+    expect(scope).toContain("border-radius: 14px");
+    expect(safety).toContain("font-weight: 600");
   });
 });

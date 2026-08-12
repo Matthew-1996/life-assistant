@@ -30,6 +30,8 @@ export async function authenticateOwner(request, env) {
   let identity = null;
   if (env.SITES_AUTH?.verify) {
     identity = await env.SITES_AUTH.verify(request);
+  } else if (request.headers.get("oai-authenticated-user-id")) {
+    identity = { id: request.headers.get("oai-authenticated-user-id") };
   } else if (
     env.ALLOW_SYNTHETIC_AUTH === "true"
     && env.SYNTHETIC_OWNER_ID
