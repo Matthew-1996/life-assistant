@@ -3,6 +3,7 @@
 import {
   act,
   cleanup,
+  fireEvent,
   render,
   screen,
   waitFor,
@@ -18,6 +19,7 @@ import type {
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
 });
 
 const syntheticSession: AuthSession = {
@@ -27,24 +29,40 @@ const syntheticSession: AuthSession = {
 };
 
 function createAuthService(
-  session: AuthSession | null = null,
+  initialSession: AuthSession | null = null,
 ): LifeConsoleAuthService & {
   emit(nextSession: AuthSession | null): void;
 } {
   let listener: ((nextSession: AuthSession | null) => void) | undefined;
-  return {
-    session: vi.fn(async () => session),
-    requestOtp: vi.fn(async () => undefined),
-    verifyOtp: vi.fn(async () => syntheticSession),
+  const auth: LifeConsoleAuthService & {
+    emit(nextSession: AuthSession | null): void;
+  } = {
+    session: vi.fn(async () => initialSession),
+    signIn: vi.fn(async () => syntheticSession),
+    requestPasswordReset: vi.fn(async () => undefined),
+    updatePassword: vi.fn(async () => {
+      if (initialSession && listener) {
+        listener(initialSession);
+      }
+    }),
     signOut: vi.fn(async () => undefined),
     subscribe: vi.fn((nextListener) => {
       listener = nextListener;
+      void auth.session().then(
+        (currentSession) => {
+          nextListener(currentSession);
+        },
+        () => {
+          // If session() rejects, rely on subsequent auth state events
+        },
+      );
       return vi.fn();
     }),
     emit(nextSession) {
       listener?.(nextSession);
     },
   };
+  return auth;
 }
 
 describe("Supabase Auth gate", () => {
@@ -76,7 +94,7 @@ describe("Supabase Auth gate", () => {
     expect(screen.queryByText("私有工作区")).toBeNull();
   });
 
-  it("requests an OTP and shows neutral feedback with a masked email", async () => {
+  it("signs in with email and password with trimmed email", async () => {
     const user = userEvent.setup();
     const auth = createAuthService();
     render(
@@ -88,104 +106,193 @@ describe("Supabase Auth gate", () => {
 
     await user.type(
       screen.getByRole("textbox", { name: "邮箱" }),
+      "  owner@example.invalid  ",
+    );
+    await user.type(screen.getByLabelText("密码"), "synthetic-password");
+    await user.click(screen.getByRole("button", { name: "登录" }));
+
+    expect(auth.signIn).toHaveBeenCalledWith(
+      "owner@example.invalid",
+      "synthetic-password",
+    );
+    expect(await screen.findByText("私有工作区")).toBeTruthy();
+  });
+
+  it("shows a neutral error for invalid credentials without disclosing email existence", async () => {
+    const user = userEvent.setup();
+    const auth = createAuthService();
+    auth.signIn = vi.fn(async () => {
+      throw new Error("Invalid login credentials");
+    });
+    render(
+      <SupabaseAuthGate auth={auth}>
+        <div>私有工作区</div>
+      </SupabaseAuthGate>,
+    );
+    await screen.findByRole("heading", { name: "登录 Life Console" });
+
+    await user.type(
+      screen.getByRole("textbox", { name: "邮箱" }),
+      "unknown@example.invalid",
+    );
+    await user.type(screen.getByLabelText("密码"), "wrong-password");
+    await user.click(screen.getByRole("button", { name: "登录" }));
+
+    expect(auth.signIn).toHaveBeenCalledWith(
+      "unknown@example.invalid",
+      "wrong-password",
+    );
+    expect(screen.getByRole("alert").textContent).toContain(
+      "邮箱或密码不正确，请重试",
+    );
+    expect(screen.getByRole("alert").textContent).not.toContain("unknown");
+    expect(screen.queryByText("私有工作区")).toBeNull();
+  });
+
+  it("disables inputs and button while sign-in is pending to prevent duplicate submission", async () => {
+    const user = userEvent.setup();
+    let resolveSignIn: ((session: AuthSession) => void) | undefined;
+    const auth = createAuthService();
+    auth.signIn = vi.fn(
+      () =>
+        new Promise<AuthSession>((resolve) => {
+          resolveSignIn = resolve;
+        }),
+    );
+    render(
+      <SupabaseAuthGate auth={auth}>
+        <div>私有工作区</div>
+      </SupabaseAuthGate>,
+    );
+    await screen.findByRole("heading", { name: "登录 Life Console" });
+
+    await user.type(
+      screen.getByRole("textbox", { name: "邮箱" }),
       "owner@example.invalid",
     );
-    await user.click(screen.getByRole("button", { name: "发送验证码" }));
+    await user.type(screen.getByLabelText("密码"), "synthetic-password");
+    fireEvent.click(screen.getByRole("button", { name: "登录" }));
 
-    expect(auth.requestOtp).toHaveBeenCalledWith("owner@example.invalid");
-    expect(screen.getByRole("status").textContent).toContain(
-      "若该邮箱已获授权，验证码已发送至 o***r@example.invalid",
+    const emailInput = screen.getByRole("textbox", { name: "邮箱" });
+    const passwordInput = screen.getByLabelText("密码");
+    const loginButton = screen.getByRole("button", { name: "正在登录…" });
+    expect(emailInput.hasAttribute("disabled")).toBe(true);
+    expect(passwordInput.hasAttribute("disabled")).toBe(true);
+    expect(loginButton.hasAttribute("disabled")).toBe(true);
+
+    resolveSignIn?.(syntheticSession);
+    expect(await screen.findByText("私有工作区")).toBeTruthy();
+  });
+
+  it("requests password reset and shows neutral acknowledgement", async () => {
+    const user = userEvent.setup();
+    const originalLocation = window.location;
+    const originSpy = vi
+      .spyOn(window, "location", "get")
+      .mockReturnValue({
+        ...originalLocation,
+        origin: "https://preview.example.invalid",
+      } as Location);
+
+    const auth = createAuthService();
+    render(
+      <SupabaseAuthGate auth={auth}>
+        <div>私有工作区</div>
+      </SupabaseAuthGate>,
     );
+    await screen.findByRole("heading", { name: "登录 Life Console" });
+
+    await user.click(screen.getByRole("button", { name: "忘记密码？" }));
     expect(
-      screen.getByRole("textbox", { name: "6 位验证码" }),
+      screen.getByRole("heading", { name: "重置密码" }),
+    ).toBeTruthy();
+    await user.type(
+      screen.getByRole("textbox", { name: "邮箱" }),
+      "owner@example.invalid",
+    );
+    await user.click(screen.getByRole("button", { name: "发送重置邮件" }));
+
+    expect(auth.requestPasswordReset).toHaveBeenCalledWith(
+      "owner@example.invalid",
+      "https://preview.example.invalid/auth/recovery",
+    );
+    expect(screen.getByRole("status").textContent).toContain(
+      "若该邮箱已获授权",
+    );
+    expect(screen.getByRole("status").textContent).toContain("重置邮件已发送");
+
+    originSpy.mockRestore();
+  });
+
+  it("returns to login after password reset request", async () => {
+    const user = userEvent.setup();
+    const auth = createAuthService();
+    render(
+      <SupabaseAuthGate auth={auth}>
+        <div>私有工作区</div>
+      </SupabaseAuthGate>,
+    );
+    await screen.findByRole("heading", { name: "登录 Life Console" });
+
+    await user.click(screen.getByRole("button", { name: "忘记密码？" }));
+    expect(
+      screen.getByRole("heading", { name: "重置密码" }),
+    ).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "返回登录" }));
+
+    expect(
+      screen.getByRole("heading", { name: "登录 Life Console" }),
     ).toBeTruthy();
   });
 
-  it("uses a Magic Link handoff for the remote candidate without showing an OTP field", async () => {
+  it("shows password recovery set-password form and updates password", async () => {
     const user = userEvent.setup();
-    const auth = createAuthService();
-    render(
-      <SupabaseAuthGate auth={auth} deliveryMode="magic-link">
-        <div>私有工作区</div>
-      </SupabaseAuthGate>,
-    );
-    await screen.findByRole("heading", { name: "登录 Life Console" });
-
-    await user.type(
-      screen.getByRole("textbox", { name: "邮箱" }),
-      "owner@example.invalid",
-    );
-    await user.click(screen.getByRole("button", { name: "发送登录链接" }));
-
-    expect(auth.requestOtp).toHaveBeenCalledWith("owner@example.invalid");
-    expect(screen.getByRole("status").textContent).toContain(
-      "最新登录链接已发送至 o***r@example.invalid",
-    );
-    expect(screen.getByRole("status").textContent).toContain(
-      "打开最新邮件并点击一次",
-    );
-    expect(screen.queryByRole("textbox", { name: "6 位验证码" })).toBeNull();
-  });
-
-  it("explains the hosted email limit instead of showing a generic send failure", async () => {
-    const user = userEvent.setup();
-    const auth = createAuthService();
-    auth.requestOtp = vi.fn(async () => {
-      throw Object.assign(new Error("synthetic rate limit"), {
-        code: "over_email_send_rate_limit",
-        status: 429,
-      });
+    const auth = createAuthService(syntheticSession);
+    auth.session = vi.fn(async () => {
+      throw new Error("recovery flow uses auth state change");
     });
     render(
-      <SupabaseAuthGate auth={auth} deliveryMode="magic-link">
+      <SupabaseAuthGate auth={auth} mode="recovery">
         <div>私有工作区</div>
       </SupabaseAuthGate>,
     );
-    await screen.findByRole("heading", { name: "登录 Life Console" });
 
+    expect(
+      await screen.findByRole("heading", { name: "设置新密码" }),
+    ).toBeTruthy();
+    await user.type(screen.getByLabelText("新密码"), "new-synthetic-password");
     await user.type(
-      screen.getByRole("textbox", { name: "邮箱" }),
-      "owner@example.invalid",
+      screen.getByLabelText("确认新密码"),
+      "different-password",
     );
-    await user.click(screen.getByRole("button", { name: "发送登录链接" }));
+    const submitButton = screen.getByRole("button", { name: "设置密码并登录" });
+    expect(submitButton.hasAttribute("disabled")).toBe(true);
 
-    expect(screen.getByRole("alert").textContent).toContain(
-      "邮件发送额度暂时用完",
-    );
-    expect(screen.getByRole("alert").textContent).toContain("不要重复点击");
+    const confirmInput = screen.getByLabelText("确认新密码");
+    await user.clear(confirmInput);
+    await user.type(confirmInput, "new-synthetic-password");
+    expect(submitButton.hasAttribute("disabled")).toBe(false);
+    await user.click(submitButton);
+
+    expect(auth.updatePassword).toHaveBeenCalledWith("new-synthetic-password");
+    expect(await screen.findByText("私有工作区")).toBeTruthy();
   });
 
-  it("requires six digits before verifying and preserves ReactNode children", async () => {
-    const user = userEvent.setup();
+  it("rejects password recovery when no recovery session exists", async () => {
     const auth = createAuthService();
+    auth.session = vi.fn(async () => null);
     render(
-      <SupabaseAuthGate auth={auth}>
+      <SupabaseAuthGate auth={auth} mode="recovery">
         <div>私有工作区</div>
       </SupabaseAuthGate>,
     );
-    await screen.findByRole("heading", { name: "登录 Life Console" });
 
-    await user.type(
-      screen.getByRole("textbox", { name: "邮箱" }),
-      "owner@example.invalid",
-    );
-    await user.click(screen.getByRole("button", { name: "发送验证码" }));
-    const otp = screen.getByRole("textbox", { name: "6 位验证码" });
-    const verify = screen.getByRole("button", { name: "验证并登录" });
-
-    await user.type(otp, "12345");
-    expect(verify.hasAttribute("disabled")).toBe(true);
-    await user.type(otp, "6");
-    expect(verify.hasAttribute("disabled")).toBe(false);
-    await user.click(verify);
-
-    expect(auth.verifyOtp).toHaveBeenCalledWith(
-      "owner@example.invalid",
-      "123456",
-    );
-    expect(await screen.findByText("私有工作区")).toBeTruthy();
-    expect(screen.queryByText("Owner 会话已验证")).toBeNull();
-    expect(screen.queryByRole("button", { name: "退出登录" })).toBeNull();
+    await waitFor(() => {
+      expect(screen.getByRole("alert").textContent).toContain(
+        "恢复链接无效或已过期",
+      );
+    });
+    expect(screen.queryByLabelText("新密码")).toBeNull();
   });
 
   it("passes the Owner session and sign-out capability to a render-prop child", async () => {
@@ -205,7 +312,6 @@ describe("Supabase Auth gate", () => {
     );
 
     expect(await screen.findByText("Owner synthetic-owner")).toBeTruthy();
-    expect(screen.queryByText("Owner 会话已验证")).toBeNull();
     await user.click(screen.getByRole("button", { name: "从系统页退出" }));
     expect(auth.signOut).toHaveBeenCalledOnce();
     expect(
