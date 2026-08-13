@@ -31,6 +31,15 @@ describe("Supabase candidate Vercel configuration", () => {
     expect(JSON.stringify(config)).not.toContain("sb_secret_");
   });
 
+  it("accepts legacy JWT anon keys (eyJ-prefixed)", () => {
+    const legacyEnv = {
+      ...syntheticEnvironment,
+      VITE_SUPABASE_PUBLISHABLE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.synthetic.payload",
+    };
+    const config = createSupabaseCandidateVercelConfig(legacyEnv);
+    expect(config.buildCommand).toBe("npm run build:supabase-candidate");
+  });
+
   it("fails closed for missing, malformed, secret, or Production input", () => {
     expect(() => createSupabaseCandidateVercelConfig({})).toThrow();
     expect(() => createSupabaseCandidateVercelConfig({
@@ -48,7 +57,11 @@ describe("Supabase candidate Vercel configuration", () => {
     expect(() => createSupabaseCandidateVercelConfig({
       ...syntheticEnvironment,
       VITE_SUPABASE_PUBLISHABLE_KEY: "sb_secret_forbidden",
-    })).toThrow(/publishable key/);
+    })).toThrow(/secret key/);
+    expect(() => createSupabaseCandidateVercelConfig({
+      ...syntheticEnvironment,
+      VITE_SUPABASE_PUBLISHABLE_KEY: "invalid_format_key",
+    })).toThrow(/publishable key or legacy anon JWT/);
     expect(() => createSupabaseCandidateVercelConfig({
       ...syntheticEnvironment,
       VERCEL_ENV: "production",

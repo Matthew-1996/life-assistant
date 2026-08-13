@@ -56,12 +56,16 @@ export function createSupabaseCandidateVercelConfig(environment) {
     environment,
     "VITE_SUPABASE_PUBLISHABLE_KEY",
   );
-  if (
-    publishableKey.startsWith("sb_secret_")
-    || !publishableKey.startsWith("sb_publishable_")
-  ) {
+  if (publishableKey.startsWith("sb_secret_")) {
     throw new Error(
-      "VITE_SUPABASE_PUBLISHABLE_KEY must contain a modern publishable key",
+      "VITE_SUPABASE_PUBLISHABLE_KEY must not contain a secret key",
+    );
+  }
+  const isValidPublishableKey = publishableKey.startsWith("sb_publishable_")
+    || publishableKey.startsWith("eyJ");
+  if (!isValidPublishableKey) {
+    throw new Error(
+      "VITE_SUPABASE_PUBLISHABLE_KEY must contain a publishable key or legacy anon JWT",
     );
   }
   if (environment.VERCEL_ENV && environment.VERCEL_ENV !== "preview") {
