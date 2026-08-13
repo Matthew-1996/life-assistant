@@ -17,6 +17,7 @@
 - [技术方案](技术方案-职业规划师-CareerPlanner-1.0.0.md)
 - [工程评审与验收](工程评审与验收-职业规划师-CareerPlanner-1.0.0.md)
 - [项目管理](项目管理-职业规划师-CareerPlanner-1.0.0.md)
+- [实施计划](实施计划-职业规划师-CareerPlanner-1.0.0.md)
 
 ## 真相源边界
 
