@@ -1,4 +1,10 @@
-import { type SyntheticEvent, useState } from "react";
+import {
+  type ReactNode,
+  type SyntheticEvent,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 import {
   ApiError,
@@ -7,15 +13,104 @@ import {
 } from "../../api/client";
 import type { components } from "../../contracts/life-console";
 import type { Dashboard } from "../../data/dashboard";
+import { useSessionDraft } from "../../hooks/useSessionDraft";
+import { SESSION_DRAFT_STORAGE_PREFIX } from "../../lib/draft-storage";
+import type { DailyCheckinRepositoryPort } from "../../supabase/daily-checkins";
 
 type FormMode = "journal" | "checkin";
 type RecentJournal = Dashboard["records"]["recent_journals"][number];
+type JournalInput = Parameters<LifeConsoleClient["journal"]>[0];
+
+interface JournalRequestDraft {
+  fingerprint: string | null;
+  idempotencyKey: string | null;
+}
+
+interface ConversationDraft extends JournalRequestDraft {
+  text: string;
+}
+
+interface SimpleFormsDraft {
+  checkin: {
+    date: string;
+    energy: string;
+    life_feeling: string;
+    mood: string;
+    sleep_quality: string;
+  };
+  journal: JournalRequestDraft & {
+    date: string;
+    event: string;
+    feeling: string;
+  };
+}
+
+function emptySimpleFormsDraft(date: string): SimpleFormsDraft {
+  return {
+    checkin: {
+      date,
+      energy: "",
+      life_feeling: "",
+      mood: "",
+      sleep_quality: "",
+    },
+    journal: {
+      date,
+      event: "",
+      feeling: "",
+      fingerprint: null,
+      idempotencyKey: null,
+    },
+  };
+}
+
+function simpleFormsDraftIsEmpty(draft: SimpleFormsDraft): boolean {
+  return draft.journal.event === ""
+    && draft.journal.feeling === ""
+    && draft.journal.fingerprint === null
+    && draft.journal.idempotencyKey === null
+    && draft.checkin.energy === ""
+    && draft.checkin.life_feeling === ""
+    && draft.checkin.mood === ""
+    && draft.checkin.sleep_quality === "";
+}
+
+const EMPTY_CONVERSATION_DRAFT: ConversationDraft = {
+  fingerprint: null,
+  idempotencyKey: null,
+  text: "",
+};
+
+function journalFingerprint(input: JournalInput): string {
+  return JSON.stringify(input);
+}
+
+function recordsJournalKey(): string {
+  return `records_${crypto.randomUUID().replaceAll("-", "")}`;
+}
+
+interface CandidateJournalClient extends LifeConsoleClient {
+  journalWithIdempotency(
+    input: JournalInput,
+    idempotencyKey: string,
+  ): ReturnType<LifeConsoleClient["journal"]>;
+}
+
+function supportsExplicitJournalKey(
+  client: LifeConsoleClient,
+): client is CandidateJournalClient {
+  return "journalWithIdempotency" in client
+    && typeof client.journalWithIdempotency === "function";
+}
 
 interface RecordsPageProps {
   dashboard: Dashboard;
   client?: LifeConsoleClient;
-  mode?: "local" | "sites" | "candidate-preview";
+  mode?: "local" | "sites" | "candidate-preview" | "supabase-candidate";
   onSaved?: () => boolean | Promise<boolean>;
+  dailyCheckins?: DailyCheckinRepositoryPort;
+  supabasePanels?: ReactNode;
+  draftScope?: string;
 }
 
 const ratingFields = [
@@ -86,7 +181,7 @@ function JournalCard({
 }: {
   journal: RecentJournal;
   client?: LifeConsoleClient;
-  mode: "local" | "sites" | "candidate-preview";
+  mode: "local" | "sites" | "candidate-preview" | "supabase-candidate";
   onChanged?: () => boolean | Promise<boolean>;
 }) {
   // 本地覆盖状态：卡片内触发整理/删除后立即反映，不必等下一次看板刷新。
@@ -191,14 +286,16 @@ function JournalCard({
             {state === "failed" ? "重新整理" : "整理"}
           </button>
         )}
-        <button
-          className="secondary-button danger"
-          type="button"
-          disabled={busy}
-          onClick={() => setConfirming(true)}
-        >
-          删除
-        </button>
+        {mode !== "supabase-candidate" && (
+          <button
+            className="secondary-button danger"
+            type="button"
+            disabled={busy}
+            onClick={() => setConfirming(true)}
+          >
+            删除
+          </button>
+        )}
       </div>
       {note && <p className="save-receipt" role="status">{note}</p>}
       {confirming && (
@@ -237,17 +334,89 @@ export function RecordsPage({
   client,
   mode = "local",
   onSaved,
+  dailyCheckins,
+  supabasePanels,
+  draftScope = "anonymous",
 }: RecordsPageProps) {
+  const supabaseCandidate = mode === "supabase-candidate";
   const saveTarget = mode === "candidate-preview"
     ? "候选预览"
-    : mode === "sites" ? "云端真相源" : "iCloud";
+    : supabaseCandidate
+      ? "Supabase 候选环境"
+      : mode === "sites" ? "云端真相源" : "iCloud";
   const [formMode, setFormMode] = useState<FormMode>("journal");
-  const [captureText, setCaptureText] = useState("");
+  const {
+    persist: persistCaptureDraft,
+    ready: captureReady,
+    setValue: setCaptureDraft,
+    value: captureDraft,
+  } = useSessionDraft(
+    `${SESSION_DRAFT_STORAGE_PREFIX}${draftScope}:records-conversation-v2`,
+    EMPTY_CONVERSATION_DRAFT,
+    (value) => !supabaseCandidate || (
+      value.text === ""
+      && value.fingerprint === null
+      && value.idempotencyKey === null
+    ),
+  );
+  const {
+    persist: persistSimpleFormsDraft,
+    ready: simpleFormsReady,
+    setValue: setSimpleFormsDraft,
+    value: simpleFormsDraft,
+  } = useSessionDraft(
+    `${SESSION_DRAFT_STORAGE_PREFIX}${draftScope}:records-simple-forms-v2`,
+    emptySimpleFormsDraft(dashboard.date),
+    (value) => !supabaseCandidate || simpleFormsDraftIsEmpty(value),
+  );
+  const captureText = captureDraft.text;
+
+  useEffect(() => {
+    if (!simpleFormsReady) return;
+    setSimpleFormsDraft((current) => {
+      const journalUntouched = current.journal.event === ""
+        && current.journal.feeling === ""
+        && current.journal.fingerprint === null
+        && current.journal.idempotencyKey === null;
+      const checkinUntouched = current.checkin.energy === ""
+        && current.checkin.life_feeling === ""
+        && current.checkin.mood === ""
+        && current.checkin.sleep_quality === "";
+      if (
+        (!journalUntouched || current.journal.date === dashboard.date)
+        && (!checkinUntouched || current.checkin.date === dashboard.date)
+      ) return current;
+      return {
+        ...current,
+        journal: journalUntouched
+          ? { ...current.journal, date: dashboard.date }
+          : current.journal,
+        checkin: checkinUntouched
+          ? { ...current.checkin, date: dashboard.date }
+          : current.checkin,
+      };
+    });
+  }, [dashboard.date, setSimpleFormsDraft, simpleFormsReady]);
+
+  function setCaptureText(text: string): void {
+    setCaptureDraft((current) => ({ ...current, text }));
+  }
   const [captureSaving, setCaptureSaving] = useState(false);
   const [capturePreviewing, setCapturePreviewing] = useState(false);
   const [capturePreview, setCapturePreview] = useState<CapturePreview | null>(null);
   const [receipt, setReceipt] = useState<string | null>(null);
   const [conflict, setConflict] = useState<components["schemas"]["CheckinConflict"] | null>(null);
+  const [formSaving, setFormSaving] = useState(false);
+  const [quickAnchorSaving, setQuickAnchorSaving] = useState(false);
+  const formSavingRef = useRef(false);
+
+  async function expectedCheckinRevision(date: string): Promise<number | null> {
+    if (!supabaseCandidate) return dashboard.today.daily_revision;
+    if (!dailyCheckins) {
+      throw new Error("Supabase daily check-in repository is unavailable");
+    }
+    return (await dailyCheckins.get(date))?.revision ?? null;
+  }
 
   async function previewConversation() {
     const eventText = captureText.trim();
@@ -283,37 +452,58 @@ export function RecordsPage({
 
   async function saveConversation(event: SyntheticEvent<HTMLFormElement, SubmitEvent>) {
     event.preventDefault();
+    if (conflict) {
+      setReceipt("请先处理当前状态冲突，再保存新记录。");
+      return;
+    }
     const eventText = captureText.trim();
     if (!eventText) return;
     setReceipt(null);
     if (!client) {
       setReceipt(`合成演示已完成；未写入真实${saveTarget}`);
-      setCaptureText("");
+      await persistCaptureDraft(EMPTY_CONVERSATION_DRAFT);
       return;
     }
     const fact = firstSentence(eventText, 180);
     const title = firstSentence(eventText, 120);
+    const journalInput: JournalInput = {
+      schema_version: 1,
+      event_date: dashboard.date,
+      event_time: null,
+      time_precision: "unknown",
+      text: eventText,
+      title,
+      summary: compactLine(fact, 240),
+      facts: [fact],
+      feelings: [],
+      people: [],
+      places: [],
+      themes: [],
+      tags: [],
+    };
     setCaptureSaving(true);
     try {
-      await client.journal({
-        schema_version: 1,
-        event_date: dashboard.date,
-        event_time: null,
-        time_precision: "unknown",
-        text: eventText,
-        title,
-        summary: compactLine(fact, 240),
-        facts: [fact],
-        feelings: [],
-        people: [],
-        places: [],
-        themes: [],
-        tags: [],
-      });
-      setCaptureText("");
+      if (supabaseCandidate && supportsExplicitJournalKey(client)) {
+        const fingerprint = journalFingerprint(journalInput);
+        const idempotencyKey = captureDraft.idempotencyKey
+          && captureDraft.fingerprint === fingerprint
+          ? captureDraft.idempotencyKey
+          : recordsJournalKey();
+        await persistCaptureDraft({
+          fingerprint,
+          idempotencyKey,
+          text: captureText,
+        });
+        await client.journalWithIdempotency(journalInput, idempotencyKey);
+      } else {
+        await client.journal(journalInput);
+      }
+      await persistCaptureDraft(EMPTY_CONVERSATION_DRAFT);
       let autoEnriched = false;
       try {
-        if (mode === "sites") throw new Error("Sites mode keeps enrichment optional");
+        if (mode === "sites" || supabaseCandidate) {
+          throw new Error("Remote mode keeps enrichment disabled");
+        }
         const latest = await client.dashboard();
         const newest = latest.records.recent_journals.find(
           (item) => item.date === dashboard.date && item.title === title,
@@ -328,6 +518,8 @@ export function RecordsPage({
       setReceipt(
         mode === "sites"
           ? "已保存到云端真相源；iCloud 冷备已进入队列"
+          : supabaseCandidate
+            ? "已保存到 Supabase 候选环境"
           : autoEnriched
             ? "已保存到 iCloud，正在用 DeepSeek 整理…"
             : "已保存到 iCloud（云端整理未启动，可在卡片上手动整理）",
@@ -355,13 +547,30 @@ export function RecordsPage({
     event: SyntheticEvent<HTMLFormElement, SubmitEvent>,
   ) {
     event.preventDefault();
+    if (conflict) {
+      setReceipt("请先处理当前状态冲突，再保存新记录。");
+      return;
+    }
+    if (formSavingRef.current) return;
     if (!client) {
       setReceipt(`合成演示已完成；未写入真实${saveTarget}`);
+      await persistSimpleFormsDraft((current) => formMode === "journal"
+        ? {
+          ...current,
+          journal: emptySimpleFormsDraft(dashboard.date).journal,
+        }
+        : {
+          ...current,
+          checkin: emptySimpleFormsDraft(dashboard.date).checkin,
+        });
       event.currentTarget.reset();
       return;
     }
     const form = event.currentTarget;
     const values = new FormData(form);
+    formSavingRef.current = true;
+    setFormSaving(true);
+    setReceipt(null);
     try {
       if (formMode === "journal") {
         const time = String(values.get("time") ?? "");
@@ -374,7 +583,7 @@ export function RecordsPage({
           240,
         );
         const raw = feeling ? `${eventText}\n\n感受：${feeling}` : eventText;
-        const result = await client.journal({
+        const journalInput: JournalInput = {
           schema_version: 1,
           event_date: String(values.get("date")),
           event_time: time || null,
@@ -388,7 +597,29 @@ export function RecordsPage({
           places: splitJournalList(values.get("places")),
           themes: splitJournalList(values.get("themes")),
           tags: splitJournalList(values.get("tags")),
-        });
+        };
+        let result;
+        if (supabaseCandidate && supportsExplicitJournalKey(client)) {
+          const fingerprint = journalFingerprint(journalInput);
+          const idempotencyKey = simpleFormsDraft.journal.idempotencyKey
+            && simpleFormsDraft.journal.fingerprint === fingerprint
+            ? simpleFormsDraft.journal.idempotencyKey
+            : recordsJournalKey();
+          await persistSimpleFormsDraft((current) => ({
+            ...current,
+            journal: {
+              ...current.journal,
+              fingerprint,
+              idempotencyKey,
+            },
+          }));
+          result = await client.journalWithIdempotency(
+            journalInput,
+            idempotencyKey,
+          );
+        } else {
+          result = await client.journal(journalInput);
+        }
         setReceipt(result.message);
       } else {
         const fields: Record<string, string | number> = {};
@@ -412,15 +643,25 @@ export function RecordsPage({
           setReceipt("请至少提供一个状态字段");
           return;
         }
-        const result = await client.checkin(String(values.get("date")), {
+        const targetDate = String(values.get("date"));
+        const result = await client.checkin(targetDate, {
           schema_version: 1,
-          expect_revision: dashboard.today.daily_revision,
+          expect_revision: await expectedCheckinRevision(targetDate),
           fields,
         });
         setReceipt(result.message);
       }
       setConflict(null);
-      form.reset();
+      await persistSimpleFormsDraft((current) => formMode === "journal"
+        ? {
+          ...current,
+          journal: emptySimpleFormsDraft(dashboard.date).journal,
+        }
+        : {
+          ...current,
+          checkin: emptySimpleFormsDraft(dashboard.date).checkin,
+        });
+      if (!supabaseCandidate) form.reset();
       await onSaved?.();
     } catch (error) {
       if (error instanceof ApiError && error.response.conflict) {
@@ -428,6 +669,9 @@ export function RecordsPage({
       } else {
         setReceipt("保存失败，请保留当前内容并重试");
       }
+    } finally {
+      formSavingRef.current = false;
+      setFormSaving(false);
     }
   }
 
@@ -435,6 +679,12 @@ export function RecordsPage({
     event: SyntheticEvent<HTMLFormElement, SubmitEvent>,
   ) {
     event.preventDefault();
+    if (conflict || quickAnchorSaving) {
+      if (conflict) {
+        setReceipt("请先处理当前状态冲突，再保存新锚点。");
+      }
+      return;
+    }
     if (!client) {
       setReceipt(`合成演示已完成；未写入真实${saveTarget}`);
       event.currentTarget.reset();
@@ -451,10 +701,12 @@ export function RecordsPage({
       setReceipt("请至少提供一个今日锚点");
       return;
     }
+    setQuickAnchorSaving(true);
     try {
-      const result = await client.checkin(String(values.get("date")), {
+      const targetDate = String(values.get("date"));
+      const result = await client.checkin(targetDate, {
         schema_version: 1,
-        expect_revision: dashboard.today.daily_revision,
+        expect_revision: await expectedCheckinRevision(targetDate),
         fields,
       });
       setConflict(null);
@@ -466,6 +718,8 @@ export function RecordsPage({
       } else {
         setReceipt("保存失败，请保留当前内容并重试");
       }
+    } finally {
+      setQuickAnchorSaving(false);
     }
   }
 
@@ -481,16 +735,22 @@ export function RecordsPage({
       <header className="hero capture-hero">
         <div>
           <p className="eyebrow">记录，不打断生活</p>
-          <h1 id="records-title">先预览，再写入。</h1>
+          <h1 id="records-title">
+            {supabaseCandidate ? "轻量记录，明确保存。" : "先预览，再写入。"}
+          </h1>
           <p className="lead">
-            记录页以大对话输入为主，同时提供运动恢复、今日锚点与简洁表单兜底。点击保存前，内容只停留在当前草稿与预览。
+            {supabaseCandidate
+              ? "记录页沿用原有的大输入与清晰层级；当前候选只开放已评审的日记、每日状态、周复盘和阶段复盘能力。"
+              : "记录页以大对话输入为主，同时提供运动恢复、今日锚点与简洁表单兜底。点击保存前，内容只停留在当前草稿与预览。"}
           </p>
         </div>
         <aside className="card hero-card">
           <span className="status blue">写入语义</span>
           <h2>草稿不会自动生效</h2>
           <p className="quiet">
-            {mode === "candidate-preview"
+            {supabaseCandidate
+              ? "只有明确点击保存才写入独立测试库；冲突或失败时输入继续保留。"
+              : mode === "candidate-preview"
               ? "当前只展示合成数据；所有写动作都会被候选只读边界拦截。"
               : client
               ? "系统可以生成结构化预览；只有确认保存后，才调用本机白名单工具写入。"
@@ -499,7 +759,9 @@ export function RecordsPage({
           <div className="pill-row">
             <span className="pill">预览</span>
             <span className="pill">确认</span>
-            <span className="pill">本地保存</span>
+            <span className="pill">
+              {supabaseCandidate ? "Owner-only" : "本地保存"}
+            </span>
           </div>
         </aside>
       </header>
@@ -518,6 +780,9 @@ export function RecordsPage({
             <div className="input-wrap">
               <textarea
                 className="capture-textarea"
+                  disabled={captureSaving
+                    || conflict !== null
+                    || (supabaseCandidate && !captureReady)}
                 id="capture-text"
                   onChange={(event) => {
                     setCaptureText(event.target.value);
@@ -535,7 +800,12 @@ export function RecordsPage({
               <div className="button-row">
                 <button
                     className="button ghost"
-                    disabled={capturePreviewing || !captureText.trim()}
+                    disabled={
+                      capturePreviewing
+                      || conflict !== null
+                      || !captureText.trim()
+                      || (supabaseCandidate && !captureReady)
+                    }
                     onClick={() => void previewConversation()}
                     type="button"
                   >
@@ -545,7 +815,12 @@ export function RecordsPage({
                     className="button primary"
                     data-readonly={mode === "candidate-preview"}
                   type="submit"
-                  disabled={captureSaving || !captureText.trim()}
+                  disabled={
+                    captureSaving
+                    || conflict !== null
+                    || !captureText.trim()
+                    || (supabaseCandidate && !captureReady)
+                  }
                 >
                     {captureSaving ? "保存中…" : `保存到 ${saveTarget}`}
                 </button>
@@ -591,6 +866,7 @@ export function RecordsPage({
           <div className="subtabs" role="tablist" aria-label="表单类型">
             <button
               aria-selected={formMode === "journal"}
+              disabled={conflict !== null || formSaving}
               onClick={() => setFormMode("journal")}
               role="tab"
               type="button"
@@ -599,6 +875,7 @@ export function RecordsPage({
             </button>
             <button
               aria-selected={formMode === "checkin"}
+              disabled={conflict !== null || formSaving}
               onClick={() => setFormMode("checkin")}
               role="tab"
               type="button"
@@ -611,28 +888,54 @@ export function RecordsPage({
             <form className="stacked-form" onSubmit={(event) => void saveForm(event)}>
               <label htmlFor="journal-event">发生了什么</label>
               <textarea
+                disabled={conflict !== null || formSaving}
                 id="journal-event"
                 name="event"
+                onChange={(event) => setSimpleFormsDraft((current) => ({
+                  ...current,
+                  journal: {
+                    ...current.journal,
+                    event: event.target.value,
+                  },
+                }))}
                 placeholder="例如：和朋友去看了展，回来路上聊得很开心。"
                 required
+                value={simpleFormsDraft.journal.event}
               />
               <label htmlFor="journal-feeling">当时的感受（可选）</label>
               <input
+                disabled={conflict !== null || formSaving}
                 id="journal-feeling"
                 maxLength={180}
                 name="feeling"
+                onChange={(event) => setSimpleFormsDraft((current) => ({
+                  ...current,
+                  journal: {
+                    ...current.journal,
+                    feeling: event.target.value,
+                  },
+                }))}
                 placeholder="例如：轻松、开心、疲惫"
                 type="text"
+                value={simpleFormsDraft.journal.feeling}
               />
               <p className="form-hint">会立刻生成标题、摘要、事实和感受；不会调用外部 AI。</p>
               <label htmlFor="journal-date">事件日期</label>
               <input
-                defaultValue={dashboard.date}
+                disabled={conflict !== null || formSaving}
                 id="journal-date"
                 name="date"
+                onChange={(event) => setSimpleFormsDraft((current) => ({
+                  ...current,
+                  journal: {
+                    ...current.journal,
+                    date: event.target.value,
+                  },
+                }))}
                 type="date"
+                value={simpleFormsDraft.journal.date}
               />
-              <details>
+              {!supabaseCandidate && <details>
                 <summary>补充时间、人物或场景</summary>
                 <div className="advanced-fields">
                   <label htmlFor="journal-time">事件时间</label>
@@ -656,25 +959,49 @@ export function RecordsPage({
                   <label htmlFor="journal-tags">标签（可选，逗号分隔）</label>
                   <input id="journal-tags" maxLength={360} name="tags" type="text" />
                 </div>
-              </details>
-              <button className="primary-button" type="submit">
-                保存日记
+              </details>}
+              <button
+                className="primary-button"
+                disabled={
+                  formSaving
+                  || conflict !== null
+                  || (supabaseCandidate && !simpleFormsReady)
+                }
+                type="submit"
+              >
+                {formSaving ? "正在保存…" : "保存日记"}
               </button>
             </form>
           ) : (
             <form className="stacked-form" onSubmit={(event) => void saveForm(event)}>
               <label htmlFor="checkin-date">日期</label>
               <input
-                defaultValue={dashboard.date}
+                disabled={conflict !== null || formSaving}
                 id="checkin-date"
                 name="date"
+                onChange={(event) => setSimpleFormsDraft((current) => ({
+                  ...current,
+                  checkin: { ...current.checkin, date: event.target.value },
+                }))}
                 type="date"
+                value={simpleFormsDraft.checkin.date}
               />
               <div className="rating-grid">
                 {ratingFields.map(([key, label]) => (
                   <label key={key}>
                     {label}
-                    <select defaultValue="" name={key}>
+                    <select
+                      disabled={conflict !== null || formSaving}
+                      name={key}
+                      onChange={(event) => setSimpleFormsDraft((current) => ({
+                        ...current,
+                        checkin: {
+                          ...current.checkin,
+                          [key]: event.target.value,
+                        },
+                      }))}
+                      value={simpleFormsDraft.checkin[key]}
+                    >
                       <option value="">未提供</option>
                       <option value="1">1 很差</option>
                       <option value="2">2</option>
@@ -685,7 +1012,7 @@ export function RecordsPage({
                   </label>
                 ))}
               </div>
-              <details>
+              {!supabaseCandidate && <details>
                 <summary>补充睡眠与锚点</summary>
                 <div className="advanced-fields">
                   {advancedCheckinFields.map(([key, label, type]) => (
@@ -721,15 +1048,24 @@ export function RecordsPage({
                     入睡、最终醒来和离床保持独立；未填写字段不会提交。
                   </p>
                 </div>
-              </details>
-              <button className="primary-button" type="submit">
-                更新这些状态
+              </details>}
+              <button
+                className="primary-button"
+                disabled={
+                  formSaving
+                  || conflict !== null
+                  || (supabaseCandidate && !simpleFormsReady)
+                }
+                type="submit"
+              >
+                {formSaving ? "正在保存…" : "更新这些状态"}
               </button>
             </form>
           )}
         </aside>
       </section>
 
+      {!supabaseCandidate && (
         <section className="quick-record-grid section" aria-label="双轨快速记录">
           <article className="card pad quick-record-card">
             <div className="section-head">
@@ -787,6 +1123,7 @@ export function RecordsPage({
                     <span>{label}</span>
                     <select
                       aria-label={`快速记录${label}状态`}
+                      disabled={conflict !== null || quickAnchorSaving}
                       name={key}
                       defaultValue={dashboard.today.anchors[key] ?? ""}
                     >
@@ -798,16 +1135,43 @@ export function RecordsPage({
                   </label>
                 ))}
               </div>
-              <button className="button primary" type="submit">保存今日锚点</button>
+              <button
+                className="button primary"
+                disabled={conflict !== null || quickAnchorSaving}
+                type="submit"
+              >
+                {quickAnchorSaving ? "正在保存…" : "保存今日锚点"}
+              </button>
             </form>
           </article>
         </section>
+      )}
+
+      {supabaseCandidate && supabasePanels && (
+        <section className="section supabase-records-workspace" aria-label="候选记录工作区">
+          <div className="section-head">
+            <div>
+              <p className="eyebrow">OWNER WORKSPACE</p>
+              <h2>已开放的候选记录</h2>
+              <p className="quiet">日记、每日状态与复盘各自保留真实空态、修订和失败反馈。</p>
+            </div>
+            <span className="status blue">纯合成数据</span>
+          </div>
+          {supabasePanels}
+        </section>
+      )}
 
       <section className="feedback-bar" aria-label="保存反馈">
         <div>
-          <strong>本地成功先算完成，派生展示只在需要时更新</strong>
+          <strong>
+            {supabaseCandidate
+              ? "保存结果明确可见，失败时不丢草稿"
+              : "本地成功先算完成，派生展示只在需要时更新"}
+          </strong>
           <span>
-            {mode === "candidate-preview"
+            {supabaseCandidate
+              ? "候选写入只进入独立 Supabase 测试项目；iCloud 仍是私人真相源，当前没有切换或同步。"
+              : mode === "candidate-preview"
               ? "候选环境只展示合成投影，不连接或写入任何真相源。"
               : mode === "sites"
               ? "记录先写入 D1 唯一真相源；成功后进入 iCloud 单向冷备队列。"
@@ -862,6 +1226,9 @@ export function RecordsPage({
                   onChanged={onSaved}
                 />
               ))}
+              {dashboard.records.recent_journals.length === 0 && (
+                <p className="empty-state">还没有日记；这里不会展示示例记录。</p>
+              )}
             </div>
           </section>
 

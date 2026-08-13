@@ -5,13 +5,143 @@ import type {
   SitesSystemStatus,
 } from "../../api/sites-client";
 import type { Dashboard } from "../../data/dashboard";
+import { useHasActiveSessionDrafts } from "../../hooks/useSessionDraft";
+import { clearAllSessionDrafts } from "../../lib/draft-storage";
+import type { AuthSession } from "../../supabase/auth";
 import { ICloudBackupCard } from "./ICloudBackupCard";
 
 interface SystemPageProps {
   client?: SitesLifeConsoleClient;
   dashboard: Dashboard;
-  mode?: "local" | "sites" | "candidate-preview";
+  mode?: "local" | "sites" | "candidate-preview" | "supabase-candidate";
+  onSignOut?: () => Promise<void>;
+  ownerSession?: AuthSession;
   sitesStatus?: SitesSystemStatus | null;
+}
+
+function SupabaseSystemPage({
+  onSignOut,
+  session,
+}: {
+  onSignOut?: () => Promise<void>;
+  session?: AuthSession;
+}) {
+  const [showConnectionHelp, setShowConnectionHelp] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+  const [confirmingSignOut, setConfirmingSignOut] = useState(false);
+  const hasUnsavedDrafts = useHasActiveSessionDrafts(session?.userId);
+
+  async function signOut(discardDrafts = false) {
+    if (!onSignOut) return;
+    if (hasUnsavedDrafts && !discardDrafts) {
+      setConfirmingSignOut(true);
+      return;
+    }
+    setSigningOut(true);
+    try {
+      if (discardDrafts) clearAllSessionDrafts(session?.userId);
+      await onSignOut();
+    } finally {
+      setSigningOut(false);
+    }
+  }
+
+  return (
+    <section aria-labelledby="system-title">
+      <section className="hero">
+        <div>
+          <p className="eyebrow">OWNER-ONLY · PRIVATE PREVIEW</p>
+          <h1 id="system-title">私有候选已连接，边界保持清晰。</h1>
+          <p className="lead">
+            系统页只保留登录、候选同步边界与 iCloud 最新备份。底层资源和工程配置不会暴露在产品界面。
+          </p>
+        </div>
+        <aside className="card hero-card">
+          <span className={`status ${session ? "green" : "gray"}`}>
+            {session ? "Owner 会话已验证" : "会话未确认"}
+          </span>
+          <h2>Life Console 2.2.0</h2>
+          <p className="quiet">当前只使用纯合成候选数据，私人真相源仍保留在 iCloud。</p>
+        </aside>
+      </section>
+
+      <section className="section grid two system-status-grid">
+        <article className="card pad">
+          <span className="status green">登录</span>
+          <h2>{session ? "本人会话有效" : "需要重新登录"}</h2>
+          <p className="quiet">会话过期后返回登录页，不从缓存回落到演示工作台。</p>
+        </article>
+        <article className="card pad">
+          <span className="status blue">同步边界</span>
+          <h2>候选库与 iCloud 相互隔离</h2>
+          <p className="quiet">本轮不读取、不上传真实生活数据，也不切换 ICLOUD_PRIMARY。</p>
+        </article>
+      </section>
+
+      <section className="section">
+        <ICloudBackupCard
+          onPrimaryAction={() => setShowConnectionHelp(true)}
+          state="AGENT_UNAVAILABLE"
+        />
+        {showConnectionHelp && (
+          <p className="service-banner" role="status">
+            当前候选没有连接本机备份助手，也没有生成或替换任何 iCloud 备份。
+          </p>
+        )}
+      </section>
+
+      <section className="section card pad">
+        <div className="section-head">
+          <div>
+            <h2>账号与访问</h2>
+            <p className="quiet">退出后将清除当前 Supabase 浏览器会话并返回登录页。</p>
+          </div>
+          <span className="status gray">仅本人</span>
+        </div>
+        <button
+          className="button ghost"
+          disabled={signingOut || !onSignOut}
+          onClick={() => void signOut()}
+          type="button"
+        >
+          {signingOut ? "正在退出…" : "退出登录"}
+        </button>
+        {confirmingSignOut && (
+          <div
+            aria-label="确认清除未保存草稿"
+            className="confirm-dialog"
+            role="alertdialog"
+          >
+            <p>
+              当前浏览器会话还有未保存草稿。退出会清除这些草稿，是否继续？
+            </p>
+            <div className="button-row">
+              <button
+                className="secondary-button"
+                disabled={signingOut}
+                onClick={() => setConfirmingSignOut(false)}
+                type="button"
+              >
+                取消
+              </button>
+              <button
+                className="primary-button danger"
+                disabled={signingOut}
+                onClick={() => void signOut(true)}
+                type="button"
+              >
+                清除草稿并退出
+              </button>
+            </div>
+          </div>
+        )}
+      </section>
+
+      <p className="footer-note">
+        当前状态：SUPABASE_CANDIDATE · 纯合成测试数据 · ICLOUD_PRIMARY 未切换。
+      </p>
+    </section>
+  );
 }
 
 function SitesSystemPage({
@@ -118,8 +248,18 @@ function SitesSystemPage({
 export function SystemPage({
   dashboard,
   mode = "local",
+  onSignOut,
+  ownerSession,
   sitesStatus = null,
 }: SystemPageProps) {
+  if (mode === "supabase-candidate") {
+    return (
+      <SupabaseSystemPage
+        onSignOut={onSignOut}
+        session={ownerSession}
+      />
+    );
+  }
   if (mode === "sites" || mode === "candidate-preview") {
     return (
       <SitesSystemPage

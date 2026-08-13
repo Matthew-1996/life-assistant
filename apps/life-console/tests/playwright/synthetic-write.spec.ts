@@ -11,6 +11,26 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
+test("keeps the four-page workbench inside a phone viewport", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+
+  await expect(page.getByRole("navigation", { name: "全局导航" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+
+  for (const pageName of ["记录", "进展", "系统"] as const) {
+    await page.getByRole("button", { name: pageName, exact: true }).click();
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    const viewport = await page.evaluate(() => ({
+      body: document.body.scrollWidth,
+      document: document.documentElement.scrollWidth,
+      width: window.innerWidth,
+    }));
+    expect(viewport.body).toBeLessThanOrEqual(viewport.width);
+    expect(viewport.document).toBeLessThanOrEqual(viewport.width);
+  }
+});
+
 test("creates a goal through the synthetic Sites Worker", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByText("阶段 C 基础设施状态", { exact: false })).toBeVisible();

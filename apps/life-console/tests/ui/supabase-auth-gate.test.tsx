@@ -155,7 +155,7 @@ describe("Supabase Auth gate", () => {
     expect(screen.getByRole("alert").textContent).toContain("不要重复点击");
   });
 
-  it("requires six digits before verifying and reveals authenticated children", async () => {
+  it("requires six digits before verifying and preserves ReactNode children", async () => {
     const user = userEvent.setup();
     const auth = createAuthService();
     render(
@@ -184,29 +184,44 @@ describe("Supabase Auth gate", () => {
       "123456",
     );
     expect(await screen.findByText("私有工作区")).toBeTruthy();
-    expect(
-      screen.getByRole("button", { name: "退出登录" }),
-    ).toBeTruthy();
+    expect(screen.queryByText("Owner 会话已验证")).toBeNull();
+    expect(screen.queryByRole("button", { name: "退出登录" })).toBeNull();
   });
 
-  it("returns to login after sign-out or session expiry", async () => {
+  it("passes the Owner session and sign-out capability to a render-prop child", async () => {
     const user = userEvent.setup();
     const auth = createAuthService(syntheticSession);
     render(
       <SupabaseAuthGate auth={auth}>
-        <div>私有工作区</div>
+        {({ session, signOut }) => (
+          <section>
+            <p>Owner {session.userId}</p>
+            <button onClick={() => void signOut()} type="button">
+              从系统页退出
+            </button>
+          </section>
+        )}
       </SupabaseAuthGate>,
     );
 
-    expect(await screen.findByText("私有工作区")).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "退出登录" }));
+    expect(await screen.findByText("Owner synthetic-owner")).toBeTruthy();
+    expect(screen.queryByText("Owner 会话已验证")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "从系统页退出" }));
     expect(auth.signOut).toHaveBeenCalledOnce();
     expect(
       await screen.findByRole("heading", { name: "登录 Life Console" }),
     ).toBeTruthy();
+  });
 
-    auth.emit(syntheticSession);
-    expect(await screen.findByText("私有工作区")).toBeTruthy();
+  it("returns to login when the authenticated session expires", async () => {
+    const auth = createAuthService(syntheticSession);
+    render(
+      <SupabaseAuthGate auth={auth}>
+        {({ session }) => <div>Owner {session.userId}</div>}
+      </SupabaseAuthGate>,
+    );
+
+    expect(await screen.findByText("Owner synthetic-owner")).toBeTruthy();
     auth.emit(null);
     await waitFor(() => {
       expect(

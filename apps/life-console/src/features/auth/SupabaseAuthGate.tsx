@@ -14,8 +14,15 @@ import type {
 
 export interface SupabaseAuthGateProps {
   auth: LifeConsoleAuthService;
-  children: ReactNode;
+  children:
+    | ReactNode
+    | ((context: SupabaseAuthenticatedContext) => ReactNode);
   deliveryMode?: "magic-link" | "otp";
+}
+
+export interface SupabaseAuthenticatedContext {
+  session: AuthSession;
+  signOut(): Promise<void>;
 }
 
 function isEmailRateLimit(error: unknown): boolean {
@@ -152,21 +159,13 @@ export function SupabaseAuthGate({
   }
 
   if (session) {
+    const authenticatedChildren = typeof children === "function"
+      ? children({ session, signOut })
+      : children;
     return (
       <div className="auth-gate-authenticated">
-        <div className="auth-gate-session-bar">
-          <span>Owner 会话已验证</span>
-          <button
-            className="secondary-button"
-            disabled={pending}
-            onClick={() => void signOut()}
-            type="button"
-          >
-            退出登录
-          </button>
-        </div>
         {error ? <div role="alert">{error}</div> : null}
-        {children}
+        {authenticatedChildren}
       </div>
     );
   }

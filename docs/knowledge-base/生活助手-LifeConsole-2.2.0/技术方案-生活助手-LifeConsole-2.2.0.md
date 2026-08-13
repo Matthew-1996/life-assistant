@@ -1,6 +1,6 @@
 # 技术方案 - 生活助手 - Life Console - 2.2.0
 
-> 状态：Gate 2 已确认 / 阶段 A-D 完成 / 阶段 E 远端候选条件通过，OTP/UI 待 PO 补验
+> 状态：Gate 2 已确认 / 阶段 A-D 完成 / 阶段 E Owner 会话通过，单界面修复待新版 Preview 复验
 > 范围：允许在独立东京测试项目执行纯合成 migration/seed、托管权限验证和 Vercel Preview；禁止真实数据、Production、切源和 PR 合并
 
 ## 1. 技术结论摘要
@@ -172,7 +172,7 @@ Gate 2 之外，创建独立 Supabase 候选资源前还需 PO 单独确认区�
 - `create_daily_checkin` 是 authenticated-only、invoker、空 `search_path` RPC；以 `(user_id,key)` 和请求指纹实现幂等创建，以 `(user_id,checkin_date)` 阻止同日重复，并只写去敏审计元数据。
 - `DailyCheckinRepository` 提供单日查询、`(checkin_date,id)` 最近列表、幂等创建和 revision 条件更新；评分小数/越界、非法日期、未知 anchor、超长 notes 和空创建在发请求前拒绝。
 - `LifeConsoleRepository.executeRead` 统一只读瞬时失败的一次受控重试；任何每日状态写入仍只调用一次。
-- `SupabaseDailyCheckinPanel` 只提交 dirty fields；未记录保持 null/未知，创建失败重试复用同一个 idempotency key，冲突和网络失败均保留输入；组件未接 `App.tsx` 或 `main.tsx`。
+- 每日状态由唯一 `RecordsPage` 表单接入 `DailyCheckinRepository`：只提交 dirty fields，未记录保持 null/未知，创建失败重试复用同一个 idempotency key，冲突和网络失败均保留输入；原独立 CRUD 面板已随第二套产品壳删除。
 
 每日状态模块聚焦测试 49/49 通过，其中 migration 18 项、PGlite POC 7 项、Repository foundation 10 项、DailyCheckin Repository 7 项、Daily Check-in Panel 7 项；本轮新增 20 项状态相关断言。该证据不替代托管 RPC/PostgREST、两用户 Auth/RLS、CSP 或真实网络验证。
 
@@ -219,7 +219,7 @@ PO 已确认本轮只实现日记创建、读取、分页和修订，不实现�
 
 PO 已于 2026-08-12 单独授权创建独立 Supabase 测试资源、执行纯合成 migration/seed，并部署 Vercel Preview。去敏实现与验证事实如下：
 
-- 独立 Supabase 测试项目已在东京 `ap-northeast-1` 创建，项目显示名为 `life-console-220-synthetic-test`。
+- 独立纯合成 Supabase 测试项目已在东京 `ap-northeast-1` 创建。当前文件树不记录资源显示名、项目 ID 或连接标识；但活动分支的一个早期已推送提交曾包含非秘密测试资源显示名，普通追加去敏提交不能从 Git 历史移除它。该历史处置须经 PO 单独确认，未处置前不声称分支历史已满足“无服务标识”。
 - Data API 保持开启，“自动暴露新表”关闭；自动 RLS 事件触发器处于启用状态。数据库密码、项目 ID、publishable key、测试邮箱和连接串均未写入 Git 或知识库。
 - 误建的空白悉尼测试项目已在 PO 当次明确授权后删除；既有暂停项目未修改。
 - 已按顺序应用 `0001_life_console.sql`、自动 RLS helper 收权迁移和健康片段外键索引迁移；后两项分别消除 helper 可直接执行与外键缺索引问题。
@@ -227,10 +227,29 @@ PO 已于 2026-08-12 单独授权创建独立 Supabase 测试资源、执行纯�
 - Security Advisor 当前无 error，保留 1 条“泄露密码保护未开启”warning；候选只使用无密码邮件登录且不开放密码登录，因此阶段 E 记录为已知非阻断项。Performance Advisor 只有新建项目的 `unused_index` info，不删除契约要求的索引。
 - 新增独立 `supabase-candidate` 入口和 `vercel.mjs` 动态配置；只接受精确 Supabase HTTPS Origin 与现代 publishable key，拒绝 secret key 和非 Preview 环境。CSP 只放行对应 HTTPS/WSS Origin，不使用通配符。
 - Vercel 仅在 Preview 环境保存 URL 与 publishable key；候选部署已 READY，首页返回 200，并读回 CSP、`no-referrer`、`nosniff`、`DENY` 与 `noindex`。现有 Production 部署记录与 URL 未改变。
-- 浏览器未登录态已显示 Auth Gate。默认 SMTP 实际发送 `magic_link`，且托管控制台要求先配置自有 SMTP 才允许将模板改为 `{{ .Token }}` 六位 OTP；因此本轮把候选 Site URL 修正为当前 Preview，用 Magic Link 只验证候选会话与 CRUD。`SupabaseAuthGate` 默认仍保持 OTP；只有 `supabase-candidate` 注入 `magic-link` 展示模式，发送后只提示打开最新邮件，429 `over_email_send_rate_limit` 映射为明确限额提示。六位 OTP 仍按原设计保留，并明确延期到自有 SMTP 评审，不得用 Magic Link 冒充 OTP 通过。邮箱、链接与验证码均不进入聊天或文档。
+- 浏览器未登录态已显示 Auth Gate，PO 使用最新 Magic Link 后确认 Owner 会话建立成功。默认 SMTP 实际发送 `magic_link`，且托管控制台要求先配置自有 SMTP 才允许将模板改为 `{{ .Token }}` 六位 OTP；`SupabaseAuthGate` 默认仍保留 OTP 能力，只有 `supabase-candidate` 注入 `magic-link` 展示模式，发送后只提示打开最新邮件，429 `over_email_send_rate_limit` 映射为明确限额提示。六位 OTP 明确延期到自有 SMTP 评审，不得用 Magic Link 冒充 OTP 通过。邮箱、链接与验证码均不进入聊天或文档。
 - 候选 Origin 校验收紧为单层 `*.supabase.co` 托管项目 hostname，并拒绝显式端口、嵌套子域、凭据、路径、查询和片段；`supabase-candidate` 不再初始化未使用的本地 API client。
 
 本轮没有读取 iCloud、创建真实日记或健康记录、修改 Production、切换真相源或合并 PR。任何后续 Agent 都不得把浏览器、日志或平台输出中的凭据复制到聊天、文件、Git、PR 或长期记忆。
+
+### 9.12 登录后单界面架构纠偏
+
+Owner 首次成功登录后，PO 发现页面与 2.1.0 已验收设计稿及本地产品差异明显。代码审计确认 `supabase-candidate` 曾在入口处绕过 `App`，改为渲染独立 `SupabaseCandidateApp`，只把四类 CRUD 技术面板装进壳层。这与 PRD 的“复用既有四页界面”及设计方案的“不建立第二套产品”直接冲突，因此原 Preview 只能证明 Auth/Repository 技术链路，登录后产品 UI 验收记为失败，不能因处于测试阶段而忽略。
+
+纠偏后的实现保持单一产品界面：
+
+- `main.tsx` 在 Owner 会话建立后仍渲染同一个 `App`；Supabase 只作为数据适配器和认证上下文注入，独立 CRUD 产品壳已删除。
+- 工作台、记录、进展、系统四页沿用 2.1.0 信息架构和视觉基线；技术 URL、publishable key 等实现细节不再出现在用户系统页。
+- Dashboard adapter 只投影来源可证的数据；缺失评分保持空值，不伪造睡眠、目标进度、复盘或备份成功状态。
+- 记录页按目标日期读取对应 revision；相同日记失败重试复用幂等键，并发重复提交合并；目标和日记写入成功后刷新四页共享 Dashboard。
+- 上海日期改为动态获取，并在分钟定时器、窗口聚焦和页面重新可见时刷新，避免长开页面跨午夜仍写入前一天。
+- 未保存表单草稿用当前会话用户隔离的浏览器端 AES-GCM 临时存储保护；切页/刷新可恢复，退出前明确确认，确认退出后清理。密钥只存当前 tab 的 `sessionStorage`，不进入 Git、日志或平台。
+- 列表按游标分页，按 ID 去重，对重复游标失败关闭；首页重载使用 request generation 阻止旧的加载更多响应覆盖新数据。Today 判定目标真实空态前会遍历全部目标游标。
+- 冲突前草稿与服务器最新内容同时纳入分用户加密会话草稿；载入最新后刷新仍可比较和恢复，不静默覆盖。所有会在成功后清草稿的写入表单，都在 pending 期间锁定输入控件。
+- Today 锚点失败草稿携带原目标日期与期望 revision；跨夜重试不写入新日期，同日冲突载入最新后使用最新 revision 重试。
+- `<=720px` 使用单列卡片、底部导航和安全区留白；静态四页基线已通过 390×844 浏览器检查，Supabase 单界面候选仍以新版 HTTPS Preview 实机复验为最终证据。
+
+首次单界面纠偏基线的本地证据为 39 个 Vitest 文件 279/279、应用 Python 92/92、静态四页基线 390×844 Playwright 1/1、`supabase-candidate` 构建和 `git diff --check` 通过；该 Playwright 用例不冒充 Supabase 候选页实机证据。随后多轮代码审查关闭历史日期 revision、跨视图刷新、幂等重试、跨午夜、分用户加密草稿、冲突比较、分页竞态、乱序刷新、退出确认、失败空态和 pending 写入锁定等一致性缺口，并删除不再接入生产树的旧每日状态面板。最新全量门禁为 Vitest 38 文件 307/307、应用 Python 92/92、候选专项 20 文件 175/175、常规与候选构建和差异检查通过；自动凭据/私人数据扫描也通过，但它不识别人类可读的服务显示名，因此不能代替上述活动分支历史处置。候选包仅保留约 565 kB 的非阻断分包警告。上述证据证明合成数据下的单界面代码，不替代新版 HTTPS Preview 的 Owner 与移动端复验。新版 Preview 文件树上传被部署连接器的自动安全审查中止，未产生部署、未修改 Production；需在 PO 获知原因后重新明确授权才可重试。
 
 ## 10. 近期兼容性检查
 

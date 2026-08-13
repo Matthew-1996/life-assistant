@@ -1,12 +1,12 @@
 # Supabase 可行性调研与 POC - 生活助手 - Life Console - 2.2.0
 
-> 状态：本地合成 POC 与东京托管权限验证通过 / Vercel Preview READY / OTP/UI 待 PO 补验
+> 状态：本地合成 POC、东京托管权限与 Owner Magic Link 会话通过 / 单界面新版 Preview 待复验
 > 日期：2026-08-12
 > 边界：独立东京 Supabase 项目只含 migration 与纯合成数据；未读取 iCloud、未上传真实生活记录、未部署 Production、未切源
 
 ## 1. 结论
 
-Supabase 作为 Life Console 2.2.0 后端候选 **可继续推进，但仍不能直接进入真实迁移**。本地与托管证据已证明数据模型、RLS、调用者权限 View/RPC、同日原子 upsert、浏览器 SDK 契约、托管 Data API 权限和 Vercel 精确 CSP 可行；可收件 OTP、登录后浏览器 CRUD、大陆分时网络、1k/10k 托管容量与真实敏感字段加密仍需独立门禁。
+Supabase 作为 Life Console 2.2.0 后端候选 **可继续推进，但仍不能直接进入真实迁移**。本地与托管证据已证明数据模型、RLS、调用者权限 View/RPC、同日原子 upsert、浏览器 SDK 契约、托管 Data API 权限、Vercel 精确 CSP 与 Owner Magic Link 会话可行；修复后的四页产品 UI 仍待新版 Preview 复验，可登录非 Owner、六位 OTP、大陆分时网络、1k/10k 托管容量与真实敏感字段加密仍需独立门禁。
 
 没有发现必须放弃 Supabase 的技术卡点，已发现六项必须提前处理的工程约束：
 

@@ -1,11 +1,11 @@
 # 工程评审与验收 - 生活助手 - Life Console - 2.2.0
 
-> 状态：Gate 2 已确认 / 阶段 A-D 通过 / 阶段 E 远端候选条件通过，OTP/UI 待 PO 补验
+> 状态：Gate 2 已确认 / 阶段 A-D 通过 / 阶段 E Owner 会话通过，单界面修复待新版 Preview 复验
 > 当前证据：本地纯合成 PGlite/supabase-js、东京托管 migration/seed/权限矩阵/Advisors，以及 READY 的 Vercel Preview；无真实数据、Production 或切源证据
 
 ## 1. 工程评审结论
 
-PO 已确认 Gate 1 的 PRD/D1-D8，以及 Gate 2 的 O1-O5、Q1-Q7、本测试矩阵和 A-G 阶段计划，并于 2026-08-12 单独授权阶段 E 的独立 Supabase 测试资源、纯合成 migration/seed 与 Vercel Preview。托管数据库与 Vercel Preview 技术链路已验证；可收件 OTP 与登录后 UI 行为仍必须按实际结果补验，不得用 SQL 身份矩阵冒充浏览器双账号证据。
+PO 已确认 Gate 1 的 PRD/D1-D8，以及 Gate 2 的 O1-O5、Q1-Q7、本测试矩阵和 A-G 阶段计划，并于 2026-08-12 单独授权阶段 E 的独立 Supabase 测试资源、纯合成 migration/seed 与 Vercel Preview。托管数据库、Vercel Preview 技术链路和 Owner Magic Link 会话已验证；原登录后页面因错误使用第二套 CRUD 测试壳而不符合既定设计，产品 UI 验收记为失败。本地纠偏已完成，新版 Preview 仍须按实际结果复验；不得用 SQL 身份矩阵冒充浏览器双账号证据，也不得把 Magic Link 冒充六位 OTP。
 
 ## 2. 测试分层
 
@@ -74,7 +74,7 @@ PO 已确认 Gate 1 的 PRD/D1-D8，以及 Gate 2 的 O1-O5、Q1-Q7、本测试�
 | 官方兼容性核对 | 通过 | 已核对 Supabase changelog、RLS、Data API、Auth、Edge Function、备份及 Vercel Vite/环境文档 |
 | Supabase 资源 | 通过 | 独立东京测试项目已创建并保持纯合成；未记录项目 ID 或凭据 |
 | 托管数据库 migration、seed 与测试 | 通过 | 三个 migration、两名不可登录占位身份、幂等 seed 与 13/13 权限矩阵完成 |
-| Vercel Preview | 条件通过 | 隔离 Preview READY、安全头通过；候选会话与登录后 UI 待 PO 补验，Production 保持不变 |
+| Vercel Preview | 条件通过 | 隔离 Preview READY、安全头与 Owner 会话通过；原产品 UI 失败，单界面修复待新版 Preview 复验，Production 保持不变 |
 | 真实数据、切源、删除 | 未执行 | 明确禁止 |
 | 本地 PostgreSQL/RLS 合成 POC | 通过 | 7 项；Owner/非 Owner/anon、upsert、调用者权限 RPC |
 | supabase-js 浏览器契约 POC | 通过 | 4 项；OTP、publishable key、重试关闭、CSP 阻塞识别 |
@@ -208,16 +208,21 @@ PO 已确认 Gate 1 的 PRD/D1-D8，以及 Gate 2 的 O1-O5、Q1-Q7、本测试�
 
 | 项目 | 当前状态 | 验收证据或剩余条件 |
 |---|---|---|
-| 独立 Supabase 测试项目 | 通过 | 项目名、东京 `ap-northeast-1`、健康状态、Data API 开启、自动暴露新表关闭与自动 RLS 启用均已复核 |
+| 独立 Supabase 测试项目 | 条件通过 | 东京 `ap-northeast-1`、健康状态、Data API 开启、自动暴露新表关闭与自动 RLS 启用已复核；当前树已去敏，但早期活动分支提交中的非秘密资源显示名仍待 PO 确认历史处置 |
 | Production migration | 通过 | 三个版本化 migration 已应用；12 表、14 个契约索引、GRANT、RLS、trigger 与 authenticated-only RPC 和本地契约一致 |
 | 纯合成身份与 seed | 通过 | 两个无密码且不可登录的 A/B 占位身份；每个 Owner 的合成资源幂等写入，未使用真实生活数据 |
 | 托管权限矩阵 | 通过 | 13/13：anon、Owner、非 Owner、换绑、物理删除、revision、幂等、trigger 与导出 RPC；事务回滚后计数不变 |
 | Supabase Advisors | 条件通过 | 无 security error；保留 1 条无密码邮件登录场景非阻断 password warning；Performance 只有新项目 `unused_index` info |
-| Supabase Candidate 构建 | 通过 | 独立模式接入候选 Magic Link Gate 与四类 Repository；串行全量 260/260 Vitest、应用 Python 92/92，生产、静态 Candidate 与 Supabase Candidate 构建均通过 |
+| Supabase Candidate 构建 | 通过 | Magic Link Gate、四类 Repository 与既有四页产品界面已合并；最新全量 Vitest 38 文件 307/307、应用 Python 92/92、候选专项 20 文件 175/175，Supabase Candidate 构建通过 |
 | CSP/CORS | 通过 | Preview 响应头只放行精确 Supabase HTTPS/WSS Origin，无通配符；`no-referrer`、`nosniff`、`DENY` 与 `noindex` 读回通过 |
-| Vercel Preview | 条件通过 | 修复版 Preview READY、首页 200、只配置 URL 与 publishable key；未登录 Gate 现按实际环境显示“发送登录链接”，429 显示限额专用提示；默认 SMTP 内置发信配额为 2 封/小时，候选会话与 UI 待配额恢复后补验，六位 OTP 延期 |
+| Owner 浏览器认证 | 通过 | 未登录 Gate 可见；PO 点击最新 Magic Link 后确认 Owner 会话建立成功；邮箱、链接、Token 均未进入证据文档 |
+| 原 Preview 产品 UI | 失败 | 登录后错误渲染独立 CRUD 技术壳，未复用 2.1.0 四页产品；只认可 Auth/Repository 技术链路，不认可产品 UI |
+| 单界面本地纠偏 | 通过 | 删除独立产品壳与死代码面板，四页复用既有 App；覆盖真实空态、写后刷新、历史日期 revision、幂等重试、跨午夜、会话草稿与退出确认；390×844 只证明静态四页基线，Supabase 候选移动端仍待新版 Preview 实机复验 |
+| 新版 Vercel Preview | 待复验 | 首次重发因部署连接器无法在长上下文中完成自动风险复核而被拒绝，未产生部署且 Production 未变化；PO 获知原因后需重新明确授权再试 |
 | Production、真实数据与切源 | 通过（保持禁止） | Production 部署记录未替换；未读取 iCloud、未上传真实记录、未切源、PR #40 保持 Draft |
 
 首次候选发布因部署白名单漏含纯合成 fixture 且干净环境暴露 Vite/Vitest 配置类型问题而失败；补齐 fixture 并将 `defineConfig` 改从 `vitest/config` 导入后发布成功。修复 Auth 文案时第一次直接文件树仍漏带该 fixture，读取去敏构建日志后在第二次发布补齐。最终修复版 Preview READY，Supabase Site URL 已同步，Production 创建记录保持不变。失败部署只保留平台历史记录，本轮未获授权删除资源。
 
 并行全量 Vitest 首轮有 Miniflare smoke 与跨语言备份回环各一项超过默认 5 秒；两项隔离复测均通过，随后单工作线程全量 36 个文件、260/260 通过，证明是本机并行资源争用而非断言失败。应用 Python 75+7+9+1=92 项通过，三类构建均通过；额外回归确认纯合成 seed 重放不会重复写入。
+
+首次单界面纠偏基线的全量回归为 39 个 Vitest 文件、279/279，应用 Python 75+7+9+1=92 项，静态四页基线 Playwright 1/1。最终多轮审查关闭数据一致性、草稿耐久性、冲突比较、分页竞态、跨夜目标日期、乱序刷新和 pending 输入丢失等 P1，并删除不再接入生产树的旧每日状态面板后，最新全量门禁为 38 个 Vitest 文件 307/307、应用 Python 92/92、候选专项 20 文件 175/175、常规与 Supabase Candidate 构建及 `git diff --check` 通过。自动凭据/私人数据扫描通过，但扫描器不覆盖人类可读的服务显示名；当前文件树已去敏，活动分支历史仍须单独处置。静态 Playwright 不冒充 Supabase 候选页或 HTTPS Preview 的移动端证据；这两项仍须在新版 Preview 复验。根工具测试在当前沙箱运行 333 项，其中 328 通过、1 跳过，4 项仅因禁止 `listen 127.0.0.1` 的 `EPERM` 未启动业务断言；较早同代码路径的受控本机独立 POC 4/4 通过。项目便携性校验按本轮明确命令在含私人真相源的根工作区运行并通过；同一脚本在刻意不复制私人文件的独立 Git worktree 中会报缺文件，这不作为第二次便携性验收，也没有为消除提示而复制、上传或伪造私人数据。Draft PR CI 仍须重跑标准门禁。候选构建有一个约 565 kB 的分包 warning，不影响本轮正确性验收，后续可按性能专项拆包。

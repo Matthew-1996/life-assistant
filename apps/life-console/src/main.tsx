@@ -6,7 +6,6 @@ import { createApiClient } from "./api/client";
 import { createSitesApiClient } from "./api/sites-client";
 import { syntheticDashboard } from "./data/dashboard";
 import { SupabaseAuthGate } from "./features/auth/SupabaseAuthGate";
-import { SupabaseCandidateApp } from "./features/candidate/SupabaseCandidateApp";
 import { createSupabaseAuthService } from "./supabase/auth";
 import {
   createLifeConsoleSupabaseClient,
@@ -16,6 +15,7 @@ import { DailyCheckinRepository } from "./supabase/daily-checkins";
 import { GoalRepository } from "./supabase/goals";
 import { JournalRepository } from "./supabase/journals";
 import { ReviewRepository } from "./supabase/reviews";
+import { createSupabaseDashboardClient } from "./supabase/dashboard";
 import "./styles.css";
 
 const root = document.getElementById("root");
@@ -51,19 +51,38 @@ if (supabaseCandidateMode) {
     throw new Error("Supabase candidate configuration is missing");
   }
   const supabase = createLifeConsoleSupabaseClient(config);
+  const dailyCheckins = new DailyCheckinRepository(supabase);
+  const goals = new GoalRepository(supabase);
+  const journals = new JournalRepository(supabase);
+  const reviews = new ReviewRepository(supabase);
+  const auth = createSupabaseAuthService(supabase.auth);
+  const dashboardClient = createSupabaseDashboardClient({
+    dateProvider: shanghaiDate,
+    dailyCheckins,
+    goals,
+    journals,
+  });
   createRoot(root).render(
     <StrictMode>
       <SupabaseAuthGate
-        auth={createSupabaseAuthService(supabase.auth)}
+        auth={auth}
         deliveryMode="magic-link"
       >
-        <SupabaseCandidateApp
-          dailyCheckins={new DailyCheckinRepository(supabase)}
-          date={shanghaiDate()}
-          goals={new GoalRepository(supabase)}
-          journals={new JournalRepository(supabase)}
-          reviews={new ReviewRepository(supabase)}
-        />
+        {({ session, signOut }) => (
+          <App
+            client={dashboardClient}
+            key={session.userId}
+            mode="supabase-candidate"
+            supabase={{
+              dailyCheckins,
+              goals,
+              journals,
+              reviews,
+              session,
+              signOut,
+            }}
+          />
+        )}
       </SupabaseAuthGate>
     </StrictMode>,
   );
