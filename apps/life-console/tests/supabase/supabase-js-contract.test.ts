@@ -16,14 +16,33 @@ function createSyntheticClient(
 ) {
   let responseIndex = 0;
   const syntheticFetch: typeof fetch = async (input, init = {}) => {
-    requests.push({ url: new URL(input.toString()), init });
-    const isAuth = input.toString().includes("/auth/v1/");
+    const url = new URL(input.toString());
+    requests.push({ url, init });
     const status = options.responses?.[responseIndex++] ?? 200;
+    let responseBody = "{}";
+    if (url.pathname === "/auth/v1/token" && url.searchParams.get("grant_type") === "password") {
+      responseBody = JSON.stringify({
+        access_token: "synthetic-access-token",
+        refresh_token: "synthetic-refresh-token",
+        token_type: "bearer",
+        expires_in: 3600,
+        user: { id: "synthetic-owner-id", email: "owner@example.invalid" },
+      });
+    } else if (url.pathname === "/auth/v1/user" && init.method === "PUT") {
+      responseBody = JSON.stringify({
+        id: "synthetic-owner-id",
+        email: "owner@example.invalid",
+      });
+    } else if (url.pathname.startsWith("/auth/v1/")) {
+      responseBody = "{}";
+    } else {
+      responseBody = "[]";
+    }
     return new Response(
-      status === 200 ? (isAuth ? "{}" : "[]") : '{"message":"synthetic"}',
+      status === 200 ? responseBody : '{"message":"synthetic"}',
       {
-      status,
-      headers: { "content-type": "application/json" },
+        status,
+        headers: { "content-type": "application/json" },
       },
     );
   };
@@ -43,25 +62,59 @@ function createSyntheticClient(
 }
 
 describe("supabase-js browser contract feasibility", () => {
-  it("disables unknown-user creation in the OTP request", async () => {
+  it("signs in with email and password without creating new users", async () => {
     const requests: CapturedRequest[] = [];
     const client = createSyntheticClient(requests);
-    await client.auth.signInWithOtp({
+    await client.auth.signInWithPassword({
       email: "owner@example.invalid",
-      options: {
-        shouldCreateUser: false,
-        emailRedirectTo: "https://preview.example.invalid/auth/callback",
-      },
+      password: "synthetic-password",
     });
 
     expect(requests).toHaveLength(1);
-    expect(requests[0].url.pathname).toBe("/auth/v1/otp");
-    expect(requests[0].url.searchParams.get("redirect_to")).toBe(
-      "https://preview.example.invalid/auth/callback",
-    );
+    expect(requests[0].url.pathname).toBe("/auth/v1/token");
+    expect(requests[0].url.searchParams.get("grant_type")).toBe("password");
     expect(JSON.parse(requests[0].init.body as string)).toMatchObject({
       email: "owner@example.invalid",
-      create_user: false,
+      password: "synthetic-password",
+      gotrue_meta_security: {},
+    });
+  });
+
+  it("sends password reset emails with exact recovery redirect and PKCE flow", async () => {
+    const requests: CapturedRequest[] = [];
+    const client = createSyntheticClient(requests);
+    await client.auth.resetPasswordForEmail("owner@example.invalid", {
+      redirectTo: "https://preview.example.invalid/auth/recovery",
+    });
+
+    expect(requests).toHaveLength(1);
+    expect(requests[0].url.pathname).toBe("/auth/v1/recover");
+    expect(requests[0].url.searchParams.get("redirect_to")).toBe(
+      "https://preview.example.invalid/auth/recovery",
+    );
+    const body = JSON.parse(requests[0].init.body as string);
+    expect(body.email).toBe("owner@example.invalid");
+    expect(body).toHaveProperty("code_challenge");
+    expect(body).toHaveProperty("code_challenge_method");
+  });
+
+  it("updates the password for an authenticated recovery session", async () => {
+    const requests: CapturedRequest[] = [];
+    const client = createSyntheticClient(requests);
+    // Sign in first to establish a valid session (simulates recovery flow auth state)
+    const signInResult = await client.auth.signInWithPassword({
+      email: "owner@example.invalid",
+      password: "temporary-password",
+    });
+    expect(signInResult.error).toBeNull();
+    requests.length = 0;
+    await client.auth.updateUser({ password: "new-synthetic-password" });
+
+    expect(requests).toHaveLength(1);
+    expect(requests[0].url.pathname).toBe("/auth/v1/user");
+    expect(requests[0].init.method).toBe("PUT");
+    expect(JSON.parse(requests[0].init.body as string)).toMatchObject({
+      password: "new-synthetic-password",
     });
   });
 
