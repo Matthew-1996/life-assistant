@@ -469,11 +469,11 @@ describe("Supabase Reviews panel", () => {
     );
     expect(await screen.findByDisplayValue("Weekly retry after navigation")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "新建周复盘" }));
-    expect(repo.createWeekly).toHaveBeenNthCalledWith(
+    await waitFor(() => expect(repo.createWeekly).toHaveBeenNthCalledWith(
       2,
       "synthetic-weekly-key-remount",
       expect.any(Object),
-    );
+    ));
     expect(key).toHaveBeenCalledOnce();
   });
 
@@ -516,11 +516,11 @@ describe("Supabase Reviews panel", () => {
       "Phase retry after navigation",
     )).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "新建阶段复盘" }));
-    expect(repo.createPhase).toHaveBeenNthCalledWith(
+    await waitFor(() => expect(repo.createPhase).toHaveBeenNthCalledWith(
       2,
       "synthetic-phase-key-remount",
       expect.any(Object),
-    );
+    ));
     expect(key).toHaveBeenCalledOnce();
   });
 });
