@@ -62,11 +62,12 @@ if (supabaseCandidateMode) {
     goals,
     journals,
   });
+  const isRecoveryPath = window.location.pathname === "/auth/recovery";
   createRoot(root).render(
     <StrictMode>
       <SupabaseAuthGate
         auth={auth}
-        deliveryMode="magic-link"
+        mode={isRecoveryPath ? "recovery" : "sign-in"}
       >
         {({ session, signOut }) => (
           <App

@@ -73,6 +73,12 @@ export function createSupabaseCandidateVercelConfig(environment) {
     framework: "vite",
     installCommand: "npm ci",
     outputDirectory: "dist/supabase-candidate",
+    rewrites: [
+      {
+        source: "/auth/recovery",
+        destination: "/index.html",
+      },
+    ],
     headers: [
       {
         source: "/(.*)",
