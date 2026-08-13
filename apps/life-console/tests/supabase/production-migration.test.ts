@@ -1236,3 +1236,22 @@ describe("Life Console production Supabase migration", () => {
     expect(JSON.stringify(snapshot)).not.toContain("Synthetic Beta");
   });
 });
+
+describe("Life Console password auth setup migration", () => {
+  it("requires a Dashboard-created user without mutating auth internals", async () => {
+    const migration = await readFile(
+      new URL(
+        "../../supabase/migrations/0004_password_auth_setup.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    expect(migration).not.toMatch(
+      /\b(?:insert\s+into|update|delete\s+from)\s+auth\.users\b/i,
+    );
+    expect(migration).not.toMatch(/\bencrypted_password\b|\bcrypt\s*\(/i);
+    expect(migration).toMatch(/from\s+auth\.users/i);
+    expect(migration).toMatch(/insert\s+into\s+public\.profiles/i);
+  });
+});
