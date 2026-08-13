@@ -1,16 +1,16 @@
 # 项目管理 - 生活助手 - Life Console - 2.2.0
 
 > PMO：Agent
-> 主阶段：待验收
-> 子状态：Gate 1 / Gate 2 已确认 / 阶段 A-D 通过 / 阶段 E Owner 会话通过，单界面修复待新版 Preview 复验
+> 主阶段：待上线
+> 子状态：Gate 1 / Gate 2 已确认 / 阶段 A-D 通过 / 阶段 E 密码认证与新版 Preview 验收通过 / PR #40 转 Ready，真实迁移与上线待独立门禁
 > 当前分支：`agent/life-console-220-supabase`
 > 当前 worktree：`.worktrees/life-console-220-supabase`
-> 当前 Draft PR：[#40](https://github.com/Matthew-1996/life-assistant/pull/40)
+> 当前 PR：[#40](https://github.com/Matthew-1996/life-assistant/pull/40)（Ready，未合并）
 > 最后更新：2026-08-13
 
 ## 1. 唯一主项
 
-完成阶段 E 的单界面纠偏与最后验收：在 PO 重新明确授权后发布新版 Vercel Preview，由 PO 复验登录后的四页产品界面，再完成纯合成 CRUD、冲突/失败、会话恢复与退出证据；Agent 补齐最终治理检查、提交、推送与 Draft PR CI。不接真实 iCloud，不读取或生成真实生活数据，不修改 Production，不切源、不永久删除资源、不把 PR #40 转 Ready 或合并。
+阶段 E 候选已由 PO 验收通过。当前唯一主项转为保持候选环境稳定并等待真实迁移与上线的独立门禁：不接真实 iCloud，不读取或生成真实生活数据，不修改 Production，不切源、不永久删除资源。PR #40 已获准转 Ready，但不自动合并。
 
 ## 2. 版本收口与分支关系
 
@@ -20,7 +20,7 @@
 | PR #35 / 1.1.0 Sites 草案 | 已关闭 | 已被 2.x 主线取代；活动分支/worktree 已清理，关闭记录保留 |
 | `main` | 2.1.0 最新基线 | 2.2.0 从合并提交创建 |
 | `agent/life-console-220-supabase` | 唯一 2.2.0 活动分支 | 只承载本版本评审与后续获批实现 |
-| PR #40 / 2.2.0 Draft PR | Draft | 不转 Ready、不合并，等待阶段 E 补验与后续 PO 门禁 |
+| PR #40 / 2.2.0 PR | Ready / CI 全通过 | PO 已确认候选验收通过；等待后续合并门禁，不自动合并 |
 
 ## 3. 当前进度
 
@@ -31,7 +31,7 @@
 | 设计方案评审 | 已完成 | PO 已确认 O1-O5 |
 | 技术/测试评审 | 已完成 | PO 已确认 Q1-Q7、测试矩阵和阶段计划 |
 | 开发与联调 | 合成阶段完成 | 阶段 A-D 通用合成实现已通过本地全量验证和 PR CI |
-| 测试资源与候选部署 | 条件通过 | migration、纯合成 seed、托管权限矩阵、Advisor、精确 CSP 与 Owner 会话已完成；原 Preview 产品 UI 失败，单界面修复已在本地通过，新版 Preview 待复验 |
+| 测试资源与候选部署 | 条件通过 | migration、纯合成 seed、托管权限矩阵、Advisor、精确 CSP、邮箱密码 Owner 会话、新版 Preview 四页产品与恢复路由均通过；双账号浏览器证据和恢复邮件 E2E 按决策延期 |
 | 真实数据与上线 | 待开始 | 独立迁移、切源、验收和上线门禁 |
 
 ## 4. 当前卡点与恢复条件
@@ -40,9 +40,8 @@
 |---|---|
 | 敏感字段加密边界未定 | 真实数据前完成威胁模型与 D3 决策 |
 | 双浏览器 Auth 非 Owner 证据 | 托管 SQL A/B 隔离 13/13 已通过；两个可登录账号 E2E 仍延期，不得冒充完成 |
-| 登录后产品 UI | Owner Magic Link 会话已成功；原 Preview 错误渲染第二套 CRUD 技术壳，产品 UI 不通过。单界面本地修复已通过，待 PO 明确授权后重发 Preview 并复验 |
-| 新版 Preview 发布 | 部署连接器因当前长上下文无法完成自动风险复核而拒绝完整源码文件树上传；该次没有产生部署。恢复条件是 PO 在获知原因后重新明确授权 |
-| 六位 OTP 模板 | 未配置自有 SMTP时控制台锁定模板编辑；Magic Link 只验证候选会话，不冒充六位 OTP；真实使用前评审自有 SMTP |
+| 恢复邮件 E2E | `/auth/recovery` SPA 路由已通过；PO 选择本轮暂不发送恢复邮件，不冒充邮件链路已验收 |
+| 真实迁移与上线 | 候选验收不包含真实数据、Production、切源或资源删除；必须分别获得独立 PO 授权 |
 
 ## 5. 风险与依赖
 
@@ -50,7 +49,7 @@
 - 高：真实日记/健康数据上云；以合成先行、字段加密决策和独立真实迁移门禁缓解。
 - 中：Vercel/Supabase 双平台配置漂移；以环境分离、可重复检查和无凭据 Git 基线缓解。
 - 中：平台备份与 iCloud 用户备份语义混淆；产品和技术文档均明确分层。
-- 依赖：Owner Magic Link 已通过；剩余依赖为 PO 对新版 Preview 重发的重新明确授权、登录后四页 UI/合成写入复验和 PR CI；六位 OTP 与双账号浏览器证据单独延期。
+- 依赖：邮箱密码 Owner 登录、新版 Preview 四页只读 E2E、恢复路由、PR CI 和 PO 候选验收均已通过。恢复邮件、双账号浏览器证据、真实数据、Production 与切源继续走独立门禁。
 
 ## 6. 决策日志
 
@@ -89,9 +88,13 @@
 | 2026-08-13 | 登录后产品 UI 缺陷确认与纠偏 | PO / Agent | PO 指出 Preview 与既有设计明显不符；审计确认独立 CRUD 壳绕过主 App，产品 UI 判失败。现已本地合并为唯一四页界面；静态四页基线 390×844 Playwright 1/1，不冒充 Supabase 候选页实机证据，新版 Preview 待重新授权发布 |
 | 2026-08-13 | 单界面实现最终代码审查 | Agent | 历史日期、写后刷新、幂等、跨午夜、分用户加密草稿、冲突比较、分页竞态、乱序刷新、退出确认、失败空态与 pending 输入锁定均已补齐；旧每日状态面板与 7 份重复临时计划已删除。最新全量 Vitest 38 文件 307/307、应用 Python 92/92、候选专项 20 文件 175/175、常规/候选构建、隐私与差异检查通过。根工具 4 项回环仅受沙箱 `EPERM` 限制；远端标准门禁仍等待 Draft PR CI |
 | 2026-08-13 | 隐私历史与独立 worktree 校验边界 | Agent | 当前文件树已删除测试资源显示名，但一个早期已推送活动分支提交仍保留该非秘密显示名，历史处置须 PO 单独确认；自动隐私扫描不覆盖此类人类可读标识。按本轮明确命令，`validate_project.py` 已在含私人真相源的根工作区通过；独立 worktree 不复制这些文件，所以同一脚本在其中的缺文件报告不冒充为分支校验失败，也不通过复制私人数据绕过 |
+| 2026-08-13 | 候选认证改为邮箱密码 | PO / Agent | 关闭公开注册，仅允许预创建 Owner；Magic Link 仅保留忘记密码恢复用途。应用、恢复路由、SDK 契约与 Vercel SPA rewrite 已完成 |
+| 2026-08-13 | 新版 Preview 与 Owner 密码登录验收 | PO / Agent | 完整 publishable key 已仅配置到 Preview；Owner 由 Supabase Dashboard 官方路径创建并自动确认。密码 API、浏览器登录、工作台/记录/进展/系统四页、只读 REST 请求和 `/auth/recovery` 路由通过；未发送恢复邮件，Production 未修改 |
+| 2026-08-13 | Auth migration 完整性修复 | Agent | 删除直接写 `auth.users` 和密码哈希的做法，改为要求 Dashboard 预创建用户后仅补建 profile；回归测试完成 RED/GREEN，提交 `4914800`。最新本地 Vitest 39 文件 328/328、应用 Python 92/92、常规构建、隐私与差异检查通过；PR #40 的 `privacy`、`node`、`python` 全部成功 |
+| 2026-08-13 | 2.2.0 候选最终验收与 PR 状态 | PO | PO 明确确认当前候选验收通过，并授权 PR #40 从 Draft 转 Ready；未授权合并、Production、真实迁移、切源或资源删除 |
 
 ## 7. 下一步（最多三项）
 
-1. PO 确认活动分支中非秘密测试资源显示名的历史处置；未确认前不提交、推送。
-2. PO 重新明确授权一次纯合成 Preview 发布；Agent 只发布当前单界面构建，不修改 Production。PO 在新版 Preview 复验四页视觉后，Agent 再补齐纯合成 CRUD、冲突/失败、会话恢复与退出证据，更新 Draft PR #40 并等待 CI。
-3. 真实数据、D3、托管容量、双浏览器 Auth、六位 OTP、切源、Production、资源删除、PR Ready/合并继续延后，分别走独立门禁。
+1. 等待 PR #40 的独立合并门禁；当前只转 Ready，不自动合并。
+2. 真实迁移、切源、Production 部署与回滚窗口需另行制定并由 PO 确认。
+3. D3、托管容量、双浏览器 Auth、恢复邮件和资源删除继续延后，可不与上线合并处理。
