@@ -15,20 +15,17 @@ interface AuthResult<T> {
 
 export interface SupabaseAuthPort {
   getSession(): Promise<AuthResult<{ session: SupabaseSessionLike | null }>>;
-  signInWithOtp(options: {
+  signInWithPassword(options: {
     email: string;
-    options: { shouldCreateUser: false };
-  }): Promise<AuthResult<unknown>>;
-  verifyOtp(options: {
-    email: string;
-    token: string;
-    type: "email";
-  }): Promise<
-    AuthResult<{
-      user: SupabaseUserLike | null;
-      session: SupabaseSessionLike | null;
-    }>
-  >;
+    password: string;
+  }): Promise<AuthResult<{ session: SupabaseSessionLike | null }>>;
+  resetPasswordForEmail(
+    email: string,
+    options: { redirectTo: string },
+  ): Promise<AuthResult<unknown>>;
+  updateUser(attributes: {
+    password: string;
+  }): Promise<AuthResult<{ user: SupabaseUserLike | null }>>;
   signOut(): Promise<{ error: Error | null }>;
   onAuthStateChange(
     listener: (
@@ -52,8 +49,9 @@ export interface AuthSession {
 
 export interface LifeConsoleAuthService {
   session(): Promise<AuthSession | null>;
-  requestOtp(email: string): Promise<void>;
-  verifyOtp(email: string, token: string): Promise<AuthSession>;
+  signIn(email: string, password: string): Promise<AuthSession>;
+  requestPasswordReset(email: string, redirectTo: string): Promise<void>;
+  updatePassword(password: string): Promise<void>;
   signOut(): Promise<void>;
   subscribe(listener: (session: AuthSession | null) => void): () => void;
 }
@@ -85,29 +83,30 @@ export function createSupabaseAuthService(
       return mapSession(data.session);
     },
 
-    async requestOtp(email) {
-      const { error } = await auth.signInWithOtp({
+    async signIn(email, password) {
+      const { data, error } = await auth.signInWithPassword({
         email: normalizedEmail(email),
-        options: { shouldCreateUser: false },
-      });
-      if (error) throw error;
-    },
-
-    async verifyOtp(email, token) {
-      if (!/^\d{6}$/.test(token)) {
-        throw new Error("OTP must contain exactly 6 digits");
-      }
-      const { data, error } = await auth.verifyOtp({
-        email: normalizedEmail(email),
-        token,
-        type: "email",
+        password,
       });
       if (error) throw error;
       const session = mapSession(data.session);
       if (!session) {
-        throw new Error("OTP verification did not create a session");
+        throw new Error("Password sign-in did not create a session");
       }
       return session;
+    },
+
+    async requestPasswordReset(email, redirectTo) {
+      const { error } = await auth.resetPasswordForEmail(
+        normalizedEmail(email),
+        { redirectTo },
+      );
+      if (error) throw error;
+    },
+
+    async updatePassword(password) {
+      const { error } = await auth.updateUser({ password });
+      if (error) throw error;
     },
 
     async signOut() {

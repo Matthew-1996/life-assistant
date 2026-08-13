@@ -25,12 +25,16 @@ function createAuthPort(
       data: { session: syntheticSession },
       error: null,
     })),
-    signInWithOtp: vi.fn(async () => ({
-      data: { user: null, session: null },
+    signInWithPassword: vi.fn(async () => ({
+      data: { session: syntheticSession },
       error: null,
     })),
-    verifyOtp: vi.fn(async () => ({
-      data: { user: syntheticSession.user, session: syntheticSession },
+    resetPasswordForEmail: vi.fn(async () => ({
+      data: {},
+      error: null,
+    })),
+    updateUser: vi.fn(async () => ({
+      data: { user: syntheticSession.user },
       error: null,
     })),
     signOut: vi.fn(async () => ({ error: null })),
@@ -60,69 +64,105 @@ describe("Supabase Auth service", () => {
     expect(JSON.stringify(session)).not.toContain("synthetic-refresh-token");
   });
 
-  it("requests an email OTP without allowing user creation", async () => {
-    const port = createAuthPort();
-    const auth = createSupabaseAuthService(port);
-
-    await auth.requestOtp(" owner@example.invalid ");
-
-    expect(port.signInWithOtp).toHaveBeenCalledWith({
-      email: "owner@example.invalid",
-      options: { shouldCreateUser: false },
-    });
-  });
-
-  it("verifies exactly six numeric OTP digits and returns a safe session", async () => {
+  it("signs in with a trimmed email and provider password flow", async () => {
     const port = createAuthPort();
     const auth = createSupabaseAuthService(port);
 
     await expect(
-      auth.verifyOtp("owner@example.invalid", "12345"),
-    ).rejects.toThrow("OTP must contain exactly 6 digits");
-    expect(port.verifyOtp).not.toHaveBeenCalled();
-
-    const session = await auth.verifyOtp(
-      " owner@example.invalid ",
-      "123456",
-    );
-
-    expect(port.verifyOtp).toHaveBeenCalledWith({
-      email: "owner@example.invalid",
-      token: "123456",
-      type: "email",
-    });
-    expect(session).toEqual({
+      auth.signIn(" owner@example.invalid ", "synthetic-password"),
+    ).resolves.toEqual({
       userId: "synthetic-owner",
       email: "owner@example.invalid",
       expiresAt: "2027-01-15T08:00:00.000Z",
     });
+
+    expect(port.signInWithPassword).toHaveBeenCalledWith({
+      email: "owner@example.invalid",
+      password: "synthetic-password",
+    });
   });
 
-  it("propagates Auth failures and rejects verification without a session", async () => {
-    const authError = new Error("synthetic auth failure");
-    const requestAuth = createSupabaseAuthService(
+  it("sends a password reset to the supplied redirect", async () => {
+    const port = createAuthPort();
+    const auth = createSupabaseAuthService(port);
+
+    await auth.requestPasswordReset(
+      " owner@example.invalid ",
+      "https://preview.example.invalid/auth/recovery",
+    );
+
+    expect(port.resetPasswordForEmail).toHaveBeenCalledWith(
+      "owner@example.invalid",
+      { redirectTo: "https://preview.example.invalid/auth/recovery" },
+    );
+  });
+
+  it("updates a password through the provider", async () => {
+    const port = createAuthPort();
+    const auth = createSupabaseAuthService(port);
+
+    await auth.updatePassword("synthetic-password");
+
+    expect(port.updateUser).toHaveBeenCalledWith({
+      password: "synthetic-password",
+    });
+  });
+
+  it("rejects a successful sign-in response without a session", async () => {
+    const auth = createSupabaseAuthService(
       createAuthPort({
-        signInWithOtp: vi.fn(async () => ({
-          data: { user: null, session: null },
+        signInWithPassword: vi.fn(async () => ({
+          data: { session: null },
+          error: null,
+        })),
+      }),
+    );
+
+    await expect(
+      auth.signIn("owner@example.invalid", "synthetic-password"),
+    ).rejects.toThrow("Password sign-in did not create a session");
+  });
+
+  it("propagates provider failures for password operations", async () => {
+    const authError = new Error("synthetic provider failure");
+    const signInAuth = createSupabaseAuthService(
+      createAuthPort({
+        signInWithPassword: vi.fn(async () => ({
+          data: { session: null },
           error: authError,
         })),
       }),
     );
     await expect(
-      requestAuth.requestOtp("owner@example.invalid"),
+      signInAuth.signIn("owner@example.invalid", "synthetic-password"),
     ).rejects.toBe(authError);
 
-    const verifyAuth = createSupabaseAuthService(
+    const resetAuth = createSupabaseAuthService(
       createAuthPort({
-        verifyOtp: vi.fn(async () => ({
-          data: { user: null, session: null },
-          error: null,
+        resetPasswordForEmail: vi.fn(async () => ({
+          data: {},
+          error: authError,
         })),
       }),
     );
     await expect(
-      verifyAuth.verifyOtp("owner@example.invalid", "123456"),
-    ).rejects.toThrow("OTP verification did not create a session");
+      resetAuth.requestPasswordReset(
+        "owner@example.invalid",
+        "https://preview.example.invalid/auth/recovery",
+      ),
+    ).rejects.toBe(authError);
+
+    const updateAuth = createSupabaseAuthService(
+      createAuthPort({
+        updateUser: vi.fn(async () => ({
+          data: { user: null },
+          error: authError,
+        })),
+      }),
+    );
+    await expect(
+      updateAuth.updatePassword("synthetic-password"),
+    ).rejects.toBe(authError);
   });
 
   it("signs out and releases the Supabase subscription", async () => {
