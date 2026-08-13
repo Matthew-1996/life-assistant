@@ -2,7 +2,9 @@ import type { FormEvent } from "react";
 
 import type { SitesLifeConsoleClient } from "../../api/sites-client";
 import type { Dashboard } from "../../data/dashboard";
+import { SupabaseGoalsPanel } from "../goals/SupabaseGoalsPanel";
 import { useWritableForm } from "../../hooks/useWritableForm";
+import type { GoalRepositoryPort } from "../../supabase/goals";
 
 type RatingKey = "sleep_quality" | "energy" | "mood" | "life_feeling";
 
@@ -56,7 +58,10 @@ function lineSegments(
 interface ProgressPageProps {
   client?: SitesLifeConsoleClient;
   dashboard: Dashboard;
-  mode?: "local" | "sites" | "candidate-preview";
+  goals?: GoalRepositoryPort;
+  mode?: "local" | "sites" | "candidate-preview" | "supabase-candidate";
+  onSaved?: () => boolean | void | Promise<boolean | void>;
+  draftScope?: string;
 }
 
 function WriteState({
@@ -269,10 +274,13 @@ function SitesWritePanel({
 export function ProgressPage({
   client,
   dashboard,
+  goals,
   mode = "local",
+  onSaved,
+  draftScope,
 }: ProgressPageProps) {
-  const dates = dashboard.progress.ratings.map((sample) => sample.date);
   const week = naturalWeek(dashboard.date);
+  const supabaseCandidate = mode === "supabase-candidate";
 
   return (
     <section aria-labelledby="progress-title">
@@ -281,25 +289,46 @@ export function ProgressPage({
           <p className="eyebrow">趋势，只是辅助判断</p>
           <h1 id="progress-title">自然周路径，不惩罚空白。</h1>
           <p className="lead">
-            进展页展示本周双轨、主观信号与降级规则。未知不是跳过，最低版不是失败，跳过也不需要补作业。
+            {supabaseCandidate
+              ? "这里只展示已保存的目标和主观评分。没有记录就保持空白，不用示例数据补齐趋势。"
+              : "进展页展示本周双轨、主观信号与降级规则。未知不是跳过，最低版不是失败，跳过也不需要补作业。"}
           </p>
         </div>
-        <aside className="card hero-card">
-          <span className="status blue">本周最低成功</span>
-          <div className="grid two metric-grid">
-            <div className="metric">
-              <strong>2+</strong>
-              <span>运动或最低版</span>
+        {supabaseCandidate ? (
+          <aside className="card hero-card">
+            <span className="status blue">真实样本</span>
+            <div className="grid two metric-grid">
+              <div className="metric">
+                <strong>{dashboard.progress.sample_counts.daily}</strong>
+                <span>已载入样本</span>
+              </div>
+              <div className="metric">
+                <strong>{dashboard.progress.sample_counts.missing}</strong>
+                <span>缺失标记</span>
+              </div>
             </div>
-            <div className="metric">
-              <strong>2+</strong>
-              <span>Agent 实操或最低版</span>
+            <p className="quiet">
+              数量直接来自当前 Dashboard；缺失值不会被推断成完成、跳过或低分。
+            </p>
+          </aside>
+        ) : (
+          <aside className="card hero-card">
+            <span className="status blue">本周最低成功</span>
+            <div className="grid two metric-grid">
+              <div className="metric">
+                <strong>2+</strong>
+                <span>运动或最低版</span>
+              </div>
+              <div className="metric">
+                <strong>2+</strong>
+                <span>Agent 实操或最低版</span>
+              </div>
             </div>
-          </div>
-          <p className="quiet">
-            前提是睡眠、精力或情绪没有明显恶化。界面不使用完成百分比制造压力。
-          </p>
-        </aside>
+            <p className="quiet">
+              前提是睡眠、精力或情绪没有明显恶化。界面不使用完成百分比制造压力。
+            </p>
+          </aside>
+        )}
       </section>
 
       <section className="section" aria-labelledby="week-title">
@@ -314,7 +343,18 @@ export function ProgressPage({
           {week.map((item) => (
             <li data-current={item.date === dashboard.date} key={item.date}>
               <strong>{item.date.slice(5)} {item.label}</strong>
-              <span>{item.date === dashboard.date ? "今天只选一个最低版" : "保持可回退"}</span>
+              <span>
+                {supabaseCandidate
+                  ? dashboard.progress.ratings.some((sample) =>
+                    sample.date === item.date
+                    && signals.some((signal) => sample[signal.key] !== null)
+                  )
+                    ? "已有主观评分"
+                    : "未记录"
+                  : item.date === dashboard.date
+                    ? "今天只选一个最低版"
+                    : "保持可回退"}
+              </span>
               <small>{item.state}</small>
             </li>
           ))}
@@ -322,28 +362,49 @@ export function ProgressPage({
       </section>
 
       <section className="section grid two">
-        <article className="card pad">
-          <div className="section-head">
-            <div>
-              <h2>双轨进展</h2>
-              <p className="quiet">只显示观察，不把空白换算成扣分。</p>
-            </div>
-            <span className="status blue">只读项目</span>
-          </div>
-          <div className="signal-list">
-            {dashboard.today.active_projects.map((project, index) => (
-              <div className="signal" key={project.plan_path}>
-                <strong>{project.title}</strong>
-                <div className="bar" aria-label={`${project.title}观察状态`}>
-                  <span style={{ "--value": `${index === 0 ? 28 : 22}%` } as React.CSSProperties} />
+        {supabaseCandidate ? (
+          goals ? (
+            <SupabaseGoalsPanel
+              draftScope={draftScope}
+              onSaved={onSaved}
+              repository={goals}
+            />
+          ) : (
+            <article className="card pad">
+              <div className="section-head">
+                <div>
+                  <h2>目标</h2>
+                  <p className="quiet">目标 Repository 尚未接入。</p>
                 </div>
-                <span className={`status ${index === 0 ? "green" : "blue"}`}>
-                  {index === 0 ? "最低版可用" : "定义中"}
-                </span>
+                <span className="status gray">未接入</span>
               </div>
-            ))}
-          </div>
-        </article>
+              <p className="empty-state">当前不使用 Dashboard 示例目标填充。</p>
+            </article>
+          )
+        ) : (
+          <article className="card pad">
+            <div className="section-head">
+              <div>
+                <h2>双轨进展</h2>
+                <p className="quiet">只显示观察，不把空白换算成扣分。</p>
+              </div>
+              <span className="status blue">只读项目</span>
+            </div>
+            <div className="signal-list">
+              {dashboard.today.active_projects.map((project, index) => (
+                <div className="signal" key={project.plan_path}>
+                  <strong>{project.title}</strong>
+                  <div className="bar" aria-label={`${project.title}观察状态`}>
+                    <span style={{ "--value": `${index === 0 ? 28 : 22}%` } as React.CSSProperties} />
+                  </div>
+                  <span className={`status ${index === 0 ? "green" : "blue"}`}>
+                    {index === 0 ? "最低版可用" : "定义中"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </article>
+        )}
 
         <article className="card pad">
           <div className="section-head">
@@ -393,48 +454,81 @@ export function ProgressPage({
         </article>
       </section>
 
-      <section className="section grid three" aria-label="进展解释">
-        <article className="card pad">
-          <span className="status gray">未知</span>
-          <h3>缺失值不惩罚</h3>
-          <p className="quiet">没有记录就显示未知，不自动等同于跳过，也不补填推测值。</p>
-        </article>
-        <article className="card pad">
-          <span className="status green">最低版</span>
-          <h3>最低版是有效样本</h3>
-          <p className="quiet">短时运动与一句定义也能验证负担边界，仍计入观察。</p>
-        </article>
-        <article className="card pad">
-          <span className="status gray">跳过</span>
-          <h3>跳过不失败</h3>
-          <p className="quiet">状态不合适可以跳过，不补作业，不把周路径改成追赶任务。</p>
-        </article>
-      </section>
+      {supabaseCandidate ? (
+        <section className="section grid three" aria-label="进展解释">
+          <article className="card pad">
+            <span className="status gray">未知</span>
+            <h3>缺失值保持未知</h3>
+            <p className="quiet">没有记录就明确显示未记录，不补填推测值。</p>
+          </article>
+          <article className="card pad">
+            <span className="status blue">来源</span>
+            <h3>只呈现已保存记录</h3>
+            <p className="quiet">目标来自 Repository，评分来自当前 Dashboard。</p>
+          </article>
+          <article className="card pad">
+            <span className="status gray">边界</span>
+            <h3>趋势只辅助回顾</h3>
+            <p className="quiet">页面不生成完成率，也不据此推断健康或长期能力。</p>
+          </article>
+        </section>
+      ) : (
+        <section className="section grid three" aria-label="进展解释">
+          <article className="card pad">
+            <span className="status gray">未知</span>
+            <h3>缺失值不惩罚</h3>
+            <p className="quiet">没有记录就显示未知，不自动等同于跳过，也不补填推测值。</p>
+          </article>
+          <article className="card pad">
+            <span className="status green">最低版</span>
+            <h3>最低版是有效样本</h3>
+            <p className="quiet">短时运动与一句定义也能验证负担边界，仍计入观察。</p>
+          </article>
+          <article className="card pad">
+            <span className="status gray">跳过</span>
+            <h3>跳过不失败</h3>
+            <p className="quiet">状态不合适可以跳过，不补作业，不把周路径改成追赶任务。</p>
+          </article>
+        </section>
+      )}
 
-      <section className="section card pad" aria-labelledby="review-title">
-        <div className="section-head">
-          <div>
-            <h2 id="review-title">周末只看四件事</h2>
-            <p className="quiet">让复盘回到可行动的低负担判断。</p>
+      {supabaseCandidate ? (
+        <section className="section card pad" aria-labelledby="review-title">
+          <div className="section-head">
+            <div>
+              <h2 id="review-title">复盘边界</h2>
+              <p className="quiet">周复盘与阶段复盘在记录页维护，不从趋势自动生成结论。</p>
+            </div>
+            <span className="status gray">不自动推断</span>
           </div>
-          <span className="status blue">收束问题</span>
-        </div>
-        <table className="table">
-          <tbody>
-            {[
-              "哪次运动后身体或情绪最舒服？",
-              "运动是否影响了当晚睡眠或第二天精力？",
-              "Agent 实操中，定义、执行和验证哪一步最卡？",
-              "下一周只保留、调整或停止哪一件事？",
-            ].map((question, index) => (
-              <tr key={question}>
-                <th>{index + 1}</th>
-                <td>{question}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
+          <p className="empty-state">本页只展示目标与主观评分进展。</p>
+        </section>
+      ) : (
+        <section className="section card pad" aria-labelledby="review-title">
+          <div className="section-head">
+            <div>
+              <h2 id="review-title">周末只看四件事</h2>
+              <p className="quiet">让复盘回到可行动的低负担判断。</p>
+            </div>
+            <span className="status blue">收束问题</span>
+          </div>
+          <table className="table">
+            <tbody>
+              {[
+                "哪次运动后身体或情绪最舒服？",
+                "运动是否影响了当晚睡眠或第二天精力？",
+                "Agent 实操中，定义、执行和验证哪一步最卡？",
+                "下一周只保留、调整或停止哪一件事？",
+              ].map((question, index) => (
+                <tr key={question}>
+                  <th>{index + 1}</th>
+                  <td>{question}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
 
       <section className="section" aria-labelledby="sleep-title">
         <div className="section-head">
@@ -443,22 +537,28 @@ export function ProgressPage({
             <p className="quiet">设备值不替代主观评分。</p>
           </div>
         </div>
-        <div className="sleep-table" role="table" aria-label="近期睡眠时刻">
-          <div className="sleep-row sleep-head" role="row">
-            <span role="columnheader">日期</span>
-            <span role="columnheader">入睡</span>
-            <span role="columnheader">最终醒来</span>
-            <span role="columnheader">离床</span>
-          </div>
-          {dashboard.progress.sleep.map((sample) => (
-            <div className="sleep-row" role="row" key={sample.date}>
-              <span role="cell">{sample.date}</span>
-              <span role="cell">{sample.sleep_time ?? "缺失"}</span>
-              <span role="cell">{sample.wake_time ?? "缺失"}</span>
-              <span role="cell">{sample.out_of_bed_time ?? "未提供"}</span>
+        {supabaseCandidate && dashboard.progress.sleep.length === 0 ? (
+          <p className="empty-state">
+            当前候选尚未接入睡眠时刻来源；不会根据睡眠质量评分推算入睡、醒来或离床时间。
+          </p>
+        ) : (
+          <div className="sleep-table" role="table" aria-label="近期睡眠时刻">
+            <div className="sleep-row sleep-head" role="row">
+              <span role="columnheader">日期</span>
+              <span role="columnheader">入睡</span>
+              <span role="columnheader">最终醒来</span>
+              <span role="columnheader">离床</span>
             </div>
-          ))}
-        </div>
+            {dashboard.progress.sleep.map((sample) => (
+              <div className="sleep-row" role="row" key={sample.date}>
+                <span role="cell">{sample.date}</span>
+                <span role="cell">{sample.sleep_time ?? "缺失"}</span>
+                <span role="cell">{sample.wake_time ?? "缺失"}</span>
+                <span role="cell">{sample.out_of_bed_time ?? "未提供"}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {mode === "sites" && client && (

@@ -325,6 +325,43 @@ describe("Life Console synthetic UI", () => {
     expect(unknown.getAttribute("aria-pressed")).toBe("true");
     expect(complete.getAttribute("aria-pressed")).toBe("false");
     expect(screen.getByRole("status").textContent).toContain("保存失败");
+    const draft = screen.getByRole("region", { name: "今日锚点未保存草稿" });
+    expect(draft.textContent).toContain("生活动作");
+    expect(draft.textContent).toContain("完成");
+    await user.click(within(draft).getByRole("button", { name: "重试保存" }));
+    await waitFor(() => expect(client.checkin).toHaveBeenCalledTimes(2));
+  });
+
+  it("shows an explicit saving state while an anchor write is pending", async () => {
+    const user = userEvent.setup();
+    let release: ((value: Awaited<ReturnType<LifeConsoleClient["checkin"]>>) => void)
+      | undefined;
+    const checkin = vi.fn(() =>
+      new Promise<Awaited<ReturnType<LifeConsoleClient["checkin"]>>>((resolve) => {
+        release = resolve;
+      }));
+    const client = {
+      dashboard: vi.fn().mockResolvedValue(syntheticDashboard),
+      journal: vi.fn(),
+      checkin,
+      preview: vi.fn(),
+      ...enrichmentStubs(),
+    } satisfies LifeConsoleClient;
+    render(<App client={client} initialDashboard={syntheticDashboard} />);
+
+    const group = screen.getByRole("group", { name: "生活动作状态" });
+    await user.click(within(group).getByRole("button", { name: "完成" }));
+    expect(screen.getByRole("status").textContent).toContain("正在保存");
+    expect(within(group).getByRole("button", { name: "完成" }).hasAttribute("disabled")).toBe(true);
+    release?.({
+      request_id: "synthetic-request",
+      command_id: "synthetic-command",
+      action: "updated",
+      source: { state: "saved", revision: 2 },
+      read_model: "current",
+      message: "已保存到 iCloud",
+    });
+    expect(await screen.findByText("已保存到 iCloud")).toBeTruthy();
   });
 
   it("shows a source-confirmed anchor only after the dashboard refresh", async () => {
@@ -355,6 +392,7 @@ describe("Life Console synthetic UI", () => {
     await waitFor(() => expect(complete.getAttribute("aria-pressed")).toBe("true"));
     expect(client.dashboard).toHaveBeenCalled();
     expect(screen.getByRole("status").textContent).toBe("已保存到 iCloud");
+    expect(screen.queryByRole("region", { name: "今日锚点未保存草稿" })).toBeNull();
   });
 
   it("submits the journal form through the Hub client", async () => {
@@ -407,10 +445,20 @@ describe("Life Console synthetic UI", () => {
         submitted: { life_action: "minimum" as const },
       },
     };
+    const checkin = vi.fn()
+      .mockRejectedValueOnce(new ApiError(response, 409))
+      .mockResolvedValueOnce({
+        request_id: "req_resolved",
+        command_id: "cmd_resolved",
+        action: "updated" as const,
+        source: { state: "saved" as const, revision: 3 },
+        read_model: "current" as const,
+        message: "已使用最新版本保存",
+      });
     const client = {
       dashboard: vi.fn().mockResolvedValue(syntheticDashboard),
       journal: vi.fn(),
-      checkin: vi.fn().mockRejectedValue(new ApiError(response, 409)),
+      checkin,
       preview: vi.fn(),
       ...enrichmentStubs(),
     } satisfies LifeConsoleClient;
@@ -422,11 +470,27 @@ describe("Life Console synthetic UI", () => {
     expect(screen.getByText("当前值")).toBeTruthy();
     expect(screen.getByText("本次提交")).toBeTruthy();
     expect(within(group).getByRole("button", { name: "未记录" }).getAttribute("aria-pressed")).toBe("true");
+    expect((within(group).getByRole("button", {
+      name: "完成",
+    }) as HTMLButtonElement).disabled).toBe(true);
 
     await user.click(screen.getByRole("button", { name: "使用最新记录" }));
     await waitFor(() => {
       expect(screen.queryByRole("region", { name: "状态冲突" })).toBeNull();
     });
+    const draft = screen.getByRole("region", {
+      name: "今日锚点未保存草稿",
+    });
+    await user.click(within(draft).getByRole("button", { name: "重试保存" }));
+    await waitFor(() => expect(checkin).toHaveBeenNthCalledWith(
+      2,
+      syntheticDashboard.date,
+      {
+        schema_version: 1,
+        expect_revision: 2,
+        fields: { life_action: "minimum" },
+      },
+    ));
   });
 
   it("submits only explicitly filled checkin fields", async () => {

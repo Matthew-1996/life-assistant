@@ -2,21 +2,21 @@
 
 > PMO 负责人：Agent
 >
-> 产品阶段：开发与联调
+> 产品阶段：已收口
 >
-> 子状态：Gate 2C 已获 PO 验收 / 等待版本收口门禁
+> 子状态：PR #39 已 squash 合并 / 活动分支与 worktree 已清理
 >
 > 最后更新：2026-08-12
 >
-> 当前分支：`agent/life-console-210-requirements`
+> 当前分支：无（历史分支已删除）
 >
-> 当前 worktree：`.worktrees/life-console-210-requirements`
+> 当前 worktree：无（历史 worktree 已删除）
 >
-> 当前 Draft PR：[#39](https://github.com/Matthew-1996/life-assistant/pull/39)
+> 收口 PR：[#39](https://github.com/Matthew-1996/life-assistant/pull/39)（已 squash 合并）
 
 ## 1. 当前唯一主项
 
-完成 Gate 2C 前端减法及既有 Vercel 合成预览的 PO 验收，并保持 PR #39 为唯一活动分支。下一主项建议是先通过 2.1.0 收口门禁，再建立 2.2.0 的 Vercel + Supabase 独立需求与技术评审；在 PR #39 合并/关闭前不得并行创建 2.2.0 活动分支。
+2.1.0 已完成 Gate 2C Vercel 验收和版本收口，不再保留活动主项。后续开发进入 2.2.0 的 Vercel + Supabase 独立知识库、分支和 Draft PR。
 
 ## 2. 当前范围
 
@@ -73,10 +73,10 @@
 
 | 对象 | 当前状态 | 2.1.0 处置 |
 |---|---|---|
-| `main` | 已包含阶段 B 候选基线 | 需求评审分支从最新 `origin/main` 创建 |
-| PR #39 / `agent/life-console-210-requirements` | Draft，Gate 1/2 已确认 | 2.1.0 唯一活动实现与评审载体；只推进阶段 A-E 通用代码与合成测试 |
-| PR #38 / `agent/life-console-200-stage-c` | 待关闭，含正式 Sites/D1/R2/Secret 与恢复包代码 | 有效非恢复包能力按文件迁入 #39 并验证后关闭；删除其活动分支/worktree，不删除任何云资源或数据 |
-| PR #35 / `agent/life-console-sites` | 历史 Draft | 继续仅作历史底稿，不进入本轮活动实现 |
+| `main` | 已包含 PR #39 squash 提交 | 作为 2.2.0 分支基线 |
+| PR #39 / `agent/life-console-210-requirements` | 已合并 / 分支已删除 | 2.1.0 收口完成 |
+| PR #38 / `agent/life-console-200-stage-c` | 已关闭 | 历史恢复包方案未原样合并；未删除任何云资源或数据 |
+| PR #35 / `agent/life-console-sites` | 已关闭 / 分支已删除 | 已被 2.x 主线取代，关闭记录仅作历史审计 |
 | PO 原始 PRD | iCloud 私有输入 | 原文不改写、不上传；Git 只保存结构化去敏产品方案 |
 
 ## 4. 阶段与门禁
@@ -172,6 +172,6 @@
 
 ## 9. 下一步
 
-1. 申请 2.1.0 收口门禁：将 PR #39 转为可评审、squash 合并，并清理其活动分支/worktree；未经确认不执行。
-2. 收口后建立唯一 2.2.0 分支，优先评审 Vercel + Supabase 的产品范围、Auth/RLS、数据模型、API、iCloud 最新备份与迁移方案；首轮只用合成数据。
-3. 旧 Sites/D1 回环 POC 暂不继续投入；是否废弃或仅保留历史证据，在 2.2.0 Gate 1 明确。创建 Supabase、真实数据、发布、切源与资源清理仍分别设门禁。
+1. 2.1.0 无后续开发事项；历史平台 POC 仅在专项调研时参考。
+2. 后续统一进入 2.2.0 Vercel + Supabase 版本知识库与唯一活动分支。
+3. Supabase 资源、真实数据、发布、切源与资源清理仍分别设 PO 门禁。

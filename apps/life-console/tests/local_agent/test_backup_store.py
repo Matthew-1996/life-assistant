@@ -25,11 +25,12 @@ from local_agent.backup_store import (
 def archive_bytes(
     *,
     record_text: str = "synthetic",
+    empty_resources: bool = False,
     mutate_manifest=None,
     extra_writer=None,
 ) -> bytes:
     payloads = {
-        name: (
+        name: b"" if empty_resources else (
             json.dumps({"id": f"{name}_synthetic", "value": record_text}, sort_keys=True)
             + "\n"
         ).encode("utf-8")
@@ -38,7 +39,7 @@ def archive_bytes(
     resources = {
         name: {
             "path": f"data/{name}.ndjson",
-            "count": 1,
+            "count": 0 if empty_resources else 1,
             "sha256": hashlib.sha256(payload).hexdigest(),
         }
         for name, payload in payloads.items()
@@ -135,6 +136,39 @@ class BackupStoreTest(unittest.TestCase):
             )
         self.assertEqual(self.target.read_bytes(), previous)
         self.assertEqual(list(self.target.parent.glob(".life-console-backup-*.tmp")), [])
+
+    def test_truncated_and_malformed_archives_preserve_previous_archive(self) -> None:
+        previous = archive_bytes(record_text="previous")
+        self.store.install(BytesIO(previous), run_id="run_previous")
+
+        invalid_payloads = [
+            archive_bytes(record_text="truncated")[:-20],
+            archive_bytes(
+                mutate_manifest=lambda manifest: manifest["resources"]["journals"].update(
+                    {"count": 2}
+                )
+            ),
+            archive_bytes(
+                mutate_manifest=lambda manifest: manifest["resources"]["journals"].update(
+                    {"sha256": "0" * 64}
+                )
+            ),
+        ]
+        for index, payload in enumerate(invalid_payloads):
+            with self.subTest(index=index), self.assertRaises(BackupAgentError):
+                self.store.install(
+                    BytesIO(payload),
+                    run_id=f"run_malformed_{index}",
+                )
+            self.assertEqual(self.target.read_bytes(), previous)
+
+    def test_accepts_empty_resource_files_with_zero_counts(self) -> None:
+        payload = archive_bytes(empty_resources=True)
+
+        receipt = self.store.install(BytesIO(payload), run_id="run_empty")
+
+        self.assertEqual(receipt.counts, {name: 0 for name in EXPECTED_RESOURCES})
+        self.assertEqual(self.target.read_bytes(), payload)
 
     def test_rejects_path_traversal_duplicate_and_symlink_members(self) -> None:
         invalid_writers = [
