@@ -827,8 +827,13 @@ class LifeAssistantStatusTest(unittest.TestCase):
         registry_path = self.root / "automations/registry.json"
         registry = json.loads(registry_path.read_text(encoding="utf-8"))
         additional = dict(registry["automations"][0])
-        additional["key"] = "career-planner-week-one"
-        additional["name"] = "职业规划首周咨询"
+        additional.update(
+            key="career-planner-week-one",
+            name="工作日14:30（上海）｜职业规划首周咨询",
+            local_time="14:30",
+            start="2026-08-17",
+            end="2026-08-21",
+        )
         registry["automations"].append(additional)
         self._write("automations/registry.json", json.dumps(registry, ensure_ascii=False))
 

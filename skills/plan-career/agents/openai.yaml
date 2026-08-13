@@ -1,0 +1,4 @@
+interface:
+  display_name: "职业规划师"
+  short_description: "Career evidence, planning, resume, and handover guidance"
+  default_prompt: "Use $plan-career to run a structured career consultation and update my private career knowledge base."
