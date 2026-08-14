@@ -1,10 +1,43 @@
--- Hosted-only, synthetic-only permission matrix for Stage E.
+-- Hosted-only, synthetic-only permission matrix for Production validation.
 -- Preconditions:
---   * 0001-0003 migrations are applied.
---   * seed.synthetic.sql completed for exactly two Auth users tagged A and B.
--- The transaction always rolls back test writes and returns booleans only.
+--   * 0001-0004 migrations are applied.
+--   * The Dashboard-created Production Owner is the only persistent Auth user.
+-- The transaction creates non-login synthetic placeholders, always rolls back
+-- all test writes, and returns booleans only.
 
 begin;
+
+do $$
+declare
+  v_owner_a uuid := gen_random_uuid();
+  v_owner_b uuid := gen_random_uuid();
+begin
+  insert into auth.users (id, email, raw_user_meta_data)
+  values
+    (
+      v_owner_a,
+      'life-console-a-' || replace(v_owner_a::text, '-', '')
+        || '@example.invalid',
+      '{"life_console_synthetic_owner":"A"}'::jsonb
+    ),
+    (
+      v_owner_b,
+      'life-console-b-' || replace(v_owner_b::text, '-', '')
+        || '@example.invalid',
+      '{"life_console_synthetic_owner":"B"}'::jsonb
+    );
+
+  insert into public.profiles (user_id, display_name)
+  values
+    (v_owner_a, 'Synthetic Owner A'),
+    (v_owner_b, 'Synthetic Owner B');
+
+  insert into public.goals (user_id, title, domain, status, priority)
+  values
+    (v_owner_a, 'Synthetic Goal Alpha', 'test', 'active', 1),
+    (v_owner_b, 'Synthetic Goal Beta', 'test', 'active', 1);
+end
+$$;
 
 select set_config(
   'life_console.owner_a',

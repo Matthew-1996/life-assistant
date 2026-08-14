@@ -1,10 +1,25 @@
 // @vitest-environment node
 
+import { execFileSync, spawnSync } from "node:child_process";
+import {
+  copyFileSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import {
   candidateContentSecurityPolicy,
+  createLifeConsoleVercelConfig,
   createSupabaseCandidateVercelConfig,
+  createSupabaseProductionVercelConfig,
 } from "../../scripts/supabase-candidate-config.mjs";
 
 const syntheticEnvironment = {
@@ -12,6 +27,39 @@ const syntheticEnvironment = {
   VITE_SUPABASE_URL: "https://synthetic-project.supabase.co",
   VITE_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_synthetic_only",
 };
+
+const syntheticProductionEnvironment = {
+  ...syntheticEnvironment,
+  VERCEL_ENV: "production",
+  VERCEL_PROJECT_NAME: "life-console-production",
+  VERCEL_PROJECT_PRODUCTION_URL: "project-wpabq.vercel.app",
+};
+
+function createGeneratorFixture() {
+  const root = mkdtempSync(join(tmpdir(), "life-console-vercel-config-"));
+  mkdirSync(resolve(root, "scripts"));
+  copyFileSync(
+    resolve(process.cwd(), "vercel.mjs"),
+    resolve(root, "vercel.mjs"),
+  );
+  copyFileSync(
+    resolve(process.cwd(), "scripts/supabase-candidate-config.mjs"),
+    resolve(root, "scripts/supabase-candidate-config.mjs"),
+  );
+  return root;
+}
+
+function runGenerator(root: string, outputPath: string) {
+  return spawnSync(
+    process.execPath,
+    ["vercel.mjs", "--write", outputPath],
+    {
+      cwd: root,
+      encoding: "utf8",
+      env: syntheticProductionEnvironment,
+    },
+  );
+}
 
 describe("Supabase candidate Vercel configuration", () => {
   it("allows only the exact synthetic HTTPS and WSS origins", () => {
@@ -66,5 +114,223 @@ describe("Supabase candidate Vercel configuration", () => {
       ...syntheticEnvironment,
       VERCEL_ENV: "production",
     })).toThrow(/Preview/);
+  });
+});
+
+describe("Supabase Production Vercel configuration", () => {
+  it("builds the isolated Production project with the candidate security policy", () => {
+    const config = createSupabaseProductionVercelConfig(
+      syntheticProductionEnvironment,
+    );
+
+    expect(config.buildCommand).toBe("npm run build:supabase-candidate");
+    expect(config.outputDirectory).toBe("dist/supabase-candidate");
+    expect(config.rewrites).toEqual([
+      { source: "/auth/recovery", destination: "/index.html" },
+    ]);
+    expect(config.headers).toEqual(
+      createSupabaseCandidateVercelConfig(syntheticEnvironment).headers,
+    );
+  });
+
+  it("fails closed outside the exact independent Production project", () => {
+    expect(() => createSupabaseProductionVercelConfig({
+      ...syntheticProductionEnvironment,
+      VERCEL_ENV: "preview",
+    })).toThrow(/Production/);
+    expect(() => createSupabaseProductionVercelConfig({
+      ...syntheticProductionEnvironment,
+      VERCEL_PROJECT_PRODUCTION_URL: "other-project.vercel.app",
+    })).toThrow(/life-console-production/);
+    expect(() => createSupabaseProductionVercelConfig({
+      ...syntheticProductionEnvironment,
+      SUPABASE_SERVICE_ROLE_KEY: "sb_secret_forbidden",
+    })).toThrow(/only VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY/);
+    expect(() => createSupabaseProductionVercelConfig({
+      ...syntheticProductionEnvironment,
+      SUPABASE_SERVICE_ROLE_KEY: "",
+    })).toThrow(/only VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY/);
+    expect(() => createSupabaseProductionVercelConfig({
+      ...syntheticProductionEnvironment,
+      VITE_SUPABASE_PUBLISHABLE_KEY: "sb_secret_forbidden",
+    })).toThrow(/secret key/);
+  });
+
+  it("rejects missing Production project-name metadata", () => {
+    const {
+      VERCEL_PROJECT_NAME: _projectName,
+      ...environmentWithoutProjectName
+    } = syntheticProductionEnvironment;
+
+    expect(() => createSupabaseProductionVercelConfig(
+      environmentWithoutProjectName,
+    )).toThrow(/life-console-production/);
+  });
+
+  it("rejects the wrong Production project-name metadata", () => {
+    expect(() => createSupabaseProductionVercelConfig({
+      ...syntheticProductionEnvironment,
+      VERCEL_PROJECT_NAME: "other-project",
+    })).toThrow(/life-console-production/);
+  });
+
+  it("routes Preview and Production through separate config entries", () => {
+    expect(createLifeConsoleVercelConfig(syntheticEnvironment)).toEqual(
+      createSupabaseCandidateVercelConfig(syntheticEnvironment),
+    );
+    expect(createLifeConsoleVercelConfig(syntheticProductionEnvironment)).toEqual(
+      createSupabaseProductionVercelConfig(syntheticProductionEnvironment),
+    );
+  });
+});
+
+describe("Vercel deployment artifact generation", () => {
+  it("keeps vercel.mjs imports side-effect-free", () => {
+    const result = spawnSync(
+      process.execPath,
+      ["--input-type=module", "--eval", "await import('./vercel.mjs')"],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+        env: {},
+      },
+    );
+
+    expect(result.status, result.stderr).toBe(0);
+  });
+
+  it("writes valid JSON without embedding the publishable key or a secret", () => {
+    const root = createGeneratorFixture();
+    const outputPath = resolve(root, ".vercel/life-console.production.json");
+    const environmentPath = resolve(root, ".synthetic-production.env");
+    const publishableKey = "sb_publishable_must_not_be_serialized";
+
+    try {
+      writeFileSync(
+        environmentPath,
+        [
+          "# Created by Vercel CLI",
+          'VERCEL_ENV="production"',
+          'VERCEL_PROJECT_NAME="life-console-production"',
+          'VERCEL_PROJECT_PRODUCTION_URL="project-wpabq.vercel.app"',
+          'VITE_SUPABASE_URL="https://synthetic-project.supabase.co"',
+          `VITE_SUPABASE_PUBLISHABLE_KEY="${publishableKey}"`,
+          "",
+        ].join("\n"),
+        { encoding: "utf8", mode: 0o600 },
+      );
+      execFileSync(
+        process.execPath,
+        [
+          `--env-file=${environmentPath}`,
+          "vercel.mjs",
+          "--write",
+          ".vercel/life-console.production.json",
+        ],
+        {
+          cwd: root,
+          env: {},
+        },
+      );
+
+      const artifact = readFileSync(outputPath, "utf8");
+      const parsed = JSON.parse(artifact);
+      expect(parsed.buildCommand).toBe("npm run build:supabase-candidate");
+      expect(parsed.outputDirectory).toBe("dist/supabase-candidate");
+      expect(parsed.rewrites).toEqual([
+        { source: "/auth/recovery", destination: "/index.html" },
+      ]);
+      expect(parsed.headers).toEqual(
+        createSupabaseProductionVercelConfig({
+          ...syntheticProductionEnvironment,
+          VITE_SUPABASE_PUBLISHABLE_KEY: publishableKey,
+        }).headers,
+      );
+      expect(artifact).not.toContain(publishableKey);
+      expect(artifact).not.toContain("sb_secret_");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects every alternate output filename or path", () => {
+    const root = createGeneratorFixture();
+    try {
+      for (const outputPath of [
+        ".vercel/production.json",
+        ".vercel/nested/life-console.production.json",
+        "life-console.production.json",
+      ]) {
+        const result = runGenerator(root, outputPath);
+        expect(result.status, outputPath).not.toBe(0);
+        expect(result.stderr).toContain(
+          "Output path must be .vercel/life-console.production.json",
+        );
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports CLI usage with the one allowed output path", () => {
+    const root = createGeneratorFixture();
+    try {
+      const result = spawnSync(process.execPath, ["vercel.mjs", "--write"], {
+        cwd: root,
+        encoding: "utf8",
+        env: syntheticProductionEnvironment,
+      });
+
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain(
+        "Usage: node vercel.mjs --write .vercel/life-console.production.json",
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a symlinked .vercel parent without writing through it", () => {
+    const root = createGeneratorFixture();
+    const redirectedDirectory = resolve(root, "redirected");
+    mkdirSync(redirectedDirectory);
+    symlinkSync(redirectedDirectory, resolve(root, ".vercel"), "dir");
+
+    try {
+      const result = runGenerator(
+        root,
+        ".vercel/life-console.production.json",
+      );
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain(".vercel must not be a symbolic link");
+      expect(() => readFileSync(
+        resolve(redirectedDirectory, "life-console.production.json"),
+      )).toThrow();
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a symlinked output without modifying its target", () => {
+    const root = createGeneratorFixture();
+    const outputPath = resolve(root, ".vercel/life-console.production.json");
+    const redirectedPath = resolve(root, "redirected.json");
+    mkdirSync(dirname(outputPath));
+    writeFileSync(redirectedPath, "unchanged\n");
+    symlinkSync(redirectedPath, outputPath);
+
+    try {
+      const result = runGenerator(
+        root,
+        ".vercel/life-console.production.json",
+      );
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain(
+        "life-console.production.json must not be a symbolic link",
+      );
+      expect(readFileSync(redirectedPath, "utf8")).toBe("unchanged\n");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });

@@ -1,16 +1,16 @@
 # 项目管理 - 生活助手 - Life Console - 2.2.0
 
 > PMO：Agent
-> 主阶段：待上线
-> 子状态：Gate 1 / Gate 2 已确认 / 阶段 A-D 通过 / 阶段 E 密码认证与新版 Preview 验收通过 / PR #40 转 Ready，真实迁移与上线待独立门禁
-> 当前分支：`agent/life-console-220-supabase`
-> 当前 worktree：`.worktrees/life-console-220-supabase`
-> 当前 PR：[#40](https://github.com/Matthew-1996/life-assistant/pull/40)（Ready，未合并）
-> 最后更新：2026-08-13
+> 主阶段：待真实数据迁移
+> 子状态：Gate 1 / Gate 2 已确认 / 阶段 A-E 候选验收通过 / PR #40 已合并 / 阶段 G Production 部署与登录后 E2E 通过 / 真实数据迁移门禁待执行
+> 当前分支：`agent/life-console-220-production`
+> 当前 worktree：`.worktrees/life-console-220-production`
+> 当前 PR：阶段 G 提交后创建 Draft PR；[#40](https://github.com/Matthew-1996/life-assistant/pull/40) 已 squash 合并
+> 最后更新：2026-08-14
 
 ## 1. 唯一主项
 
-阶段 E 候选已由 PO 验收通过。当前唯一主项转为保持候选环境稳定并等待真实迁移与上线的独立门禁：不接真实 iCloud，不读取或生成真实生活数据，不修改 Production，不切源、不永久删除资源。PR #40 已获准转 Ready，但不自动合并。
+阶段 G 正式上线。按已确认的“新建东京 Free `US$0` Production Supabase、D3 仅依赖 RLS、完整迁移切源”推进 Production 空库验证、迁移工具、私有 dry-run、备份与回滚演练、真实完整迁移和最终切源。精确私有来源清单、真实读取/上传、最终切源和资源删除仍逐项门禁；最终切源前 iCloud 保持唯一真相源。
 
 ## 2. 版本收口与分支关系
 
@@ -18,9 +18,10 @@
 |---|---|---|
 | PR #39 / 2.1.0 | 已 squash 合并 | 远端与本地分支、worktree 已清理 |
 | PR #35 / 1.1.0 Sites 草案 | 已关闭 | 已被 2.x 主线取代；活动分支/worktree 已清理，关闭记录保留 |
-| `main` | 2.1.0 最新基线 | 2.2.0 从合并提交创建 |
-| `agent/life-console-220-supabase` | 唯一 2.2.0 活动分支 | 只承载本版本评审与后续获批实现 |
-| PR #40 / 2.2.0 PR | Ready / CI 全通过 | PO 已确认候选验收通过；等待后续合并门禁，不自动合并 |
+| `main` | 包含 2.2.0 合并提交 `bdfbf79` | 阶段 G 从最新 `origin/main` 创建 |
+| `agent/life-console-220-supabase` | 远端已删除，本地旧 worktree 待安全处置 | 仍有未跟踪 `docs/superpowers/` 草稿，未强制删除 |
+| `agent/life-console-220-production` | 阶段 G 唯一活动分支 | 只承载上线计划、迁移工具、去敏证据与知识库更新 |
+| PR #40 / 2.2.0 PR | 已 squash 合并 | merge commit `bdfbf79e5d37aae65d7513ba9ef162a07bfb5f3e` |
 
 ## 3. 当前进度
 
@@ -32,24 +33,27 @@
 | 技术/测试评审 | 已完成 | PO 已确认 Q1-Q7、测试矩阵和阶段计划 |
 | 开发与联调 | 合成阶段完成 | 阶段 A-D 通用合成实现已通过本地全量验证和 PR CI |
 | 测试资源与候选部署 | 条件通过 | migration、纯合成 seed、托管权限矩阵、Advisor、精确 CSP、邮箱密码 Owner 会话、新版 Preview 四页产品与恢复路由均通过；双账号浏览器证据和恢复邮件 E2E 按决策延期 |
-| 真实数据与上线 | 待开始 | 独立迁移、切源、验收和上线门禁 |
+| Production 与上线 | Production 部署与登录后 E2E 通过 | 独立东京 Supabase 空库与 Vercel Production 部署已完成；Owner 密码重置→新密码登录→四页访问→目标 CRUD 全链路→logout→窄屏响应式均已通过；剩余：迁移工具开发、私有 dry-run、备份验证、回滚演练、真实完整迁移和最终切源门禁 |
 
 ## 4. 当前卡点与恢复条件
 
 | 卡点 | 恢复条件 |
 |---|---|
-| 敏感字段加密边界未定 | 真实数据前完成威胁模型与 D3 决策 |
+| D3 仅依赖 RLS 的剩余风险 | PO 已接受高权限数据库管理员可读取明文；必须保持默认拒绝、最小 GRANT、凭据隔离和权限矩阵 |
 | 双浏览器 Auth 非 Owner 证据 | 托管 SQL A/B 隔离 13/13 已通过；两个可登录账号 E2E 仍延期，不得冒充完成 |
 | 恢复邮件 E2E | `/auth/recovery` SPA 路由已通过；PO 选择本轮暂不发送恢复邮件，不冒充邮件链路已验收 |
-| 真实迁移与上线 | 候选验收不包含真实数据、Production、切源或资源删除；必须分别获得独立 PO 授权 |
+| Production Free 运行限制 | PO 已确认 Free `US$0`；闲置 1 周暂停且无平台自动备份，必须验证独立用户备份并接受恢复后再运行 |
+| Production 登录后 E2E | 已通过：Owner 密码重置→新密码登录→四页访问→目标 CRUD 全链路（create→read-after-refresh→update→archive→持久化）→logout→窄屏响应式（<720px overflow-x:clip 无横向滚动）均验证通过；390×844 精确尺寸因 Electron 浏览器限制无法完美模拟，但 720px 断点响应式 CSS 已就位，633px 实际宽度验证无溢出 |
+| 真实迁移与最终切源 | 精确私有来源清单、真实读取/上传和最终切源仍需分步授权；备份、dry-run、核对和回滚演练失败即停止 |
 
 ## 5. 风险与依赖
 
 - 高：RLS 或高权限凭据配置错误；以默认拒绝、自动权限测试和服务端隔离缓解。
-- 高：真实日记/健康数据上云；以合成先行、字段加密决策和独立真实迁移门禁缓解。
+- 高：真实日记/健康数据以明文进入数据库；以 RLS、最小 GRANT、高权限凭据隔离、合成先行和独立真实迁移门禁缓解。
 - 中：Vercel/Supabase 双平台配置漂移；以环境分离、可重复检查和无凭据 Git 基线缓解。
 - 中：平台备份与 iCloud 用户备份语义混淆；产品和技术文档均明确分层。
-- 依赖：邮箱密码 Owner 登录、新版 Preview 四页只读 E2E、恢复路由、PR CI 和 PO 候选验收均已通过。恢复邮件、双账号浏览器证据、真实数据、Production 与切源继续走独立门禁。
+- 高：真实迁移不完整、重复或切源后无法回滚；以显式 manifest、canonical digest、幂等 run、回读核对、单写冻结窗口和回滚演练缓解。
+- 依赖：邮箱密码 Owner 登录、新版 Preview 四页只读 E2E、恢复路由、PR CI、PO 候选验收、Production 空库安全验证、Vercel Production 部署和 Production 登录后 E2E（四页/CRUD/logout/窄屏）均已通过。恢复邮件全链路重测、双账号浏览器证据、真实数据迁移工具、私有 dry-run、备份验证、回滚演练与最终切源继续走独立门禁。
 
 ## 6. 决策日志
 
@@ -92,9 +96,17 @@
 | 2026-08-13 | 新版 Preview 与 Owner 密码登录验收 | PO / Agent | 完整 publishable key 已仅配置到 Preview；Owner 由 Supabase Dashboard 官方路径创建并自动确认。密码 API、浏览器登录、工作台/记录/进展/系统四页、只读 REST 请求和 `/auth/recovery` 路由通过；未发送恢复邮件，Production 未修改 |
 | 2026-08-13 | Auth migration 完整性修复 | Agent | 删除直接写 `auth.users` 和密码哈希的做法，改为要求 Dashboard 预创建用户后仅补建 profile；回归测试完成 RED/GREEN，提交 `4914800`。最新本地 Vitest 39 文件 328/328、应用 Python 92/92、常规构建、隐私与差异检查通过；PR #40 的 `privacy`、`node`、`python` 全部成功 |
 | 2026-08-13 | 2.2.0 候选最终验收与 PR 状态 | PO | PO 明确确认当前候选验收通过，并授权 PR #40 从 Draft 转 Ready；未授权合并、Production、真实迁移、切源或资源删除 |
+| 2026-08-13 | PR #40 合并 | PO / Agent | PO 授权 squash 合并；PR 已合并为 `bdfbf79e5d37aae65d7513ba9ef162a07bfb5f3e`，远端实现分支已删除 |
+| 2026-08-13 | Production 资源策略 | PO | 新建独立东京 `ap-northeast-1` Production Supabase，不提升或复用合成测试项目；创建时按已确认 Free `US$0` 复核页面未出现新增费用 |
+| 2026-08-13 | Production 套餐与费用 | PO | 当前组织 1 个活跃、1 个暂停项目，仍有 1 个 Free 活跃名额；PO 选择 Free `US$0`，接受闲置暂停与无平台自动备份限制 |
+| 2026-08-13 | D3 敏感字段保护 | PO | 仅依赖 RLS，不做应用层字段加密；接受高权限数据库管理员可读取明文的剩余风险 |
+| 2026-08-13 | 阶段 G 上线目标 | PO | 完整迁移并切源；精确私有来源清单、真实读取/上传、最终切源和资源删除仍分步门禁，最终切源需在证据齐全后再次确认 |
+| 2026-08-14 | Production Supabase 空库验证 | Agent | `0001`-`0004` 已应用；唯一已确认 Owner/profile、12/12 表 RLS、最小 GRANT、回滚型托管权限矩阵 13/13、正式 Site URL 与精确 recovery redirect 均通过去敏复核；业务数据保持 0 |
+| 2026-08-14 | Vercel Production 基础部署 | PO / Agent | 仅配置 Production 范围的公开 Supabase URL 与 Sensitive publishable key；受测配置完成 Production prebuild 与部署并 READY。稳定入口、首页/recovery 200、rewrite、精确 CSP、安全头和未登录密码 Gate 通过；登录后四页、写路径、退出与 390×844 尚待验收 |
+| 2026-08-14 | Production 登录后 E2E 完成 | PO / Agent | Owner 密码重置→新密码登录→四页访问→目标 CRUD（create→read-after-refresh→update→archive→持久化）→logout 全链路验证通过；窄屏（<720px）响应式布局验证无横向滚动；372 个 JS/TS Vitest + Python 测试全部通过，隐私扫描与 git diff --check 通过 |
 
 ## 7. 下一步（最多三项）
 
-1. 等待 PR #40 的独立合并门禁；当前只转 Ready，不自动合并。
-2. 真实迁移、切源、Production 部署与回滚窗口需另行制定并由 PO 确认。
-3. D3、托管容量、双浏览器 Auth、恢复邮件和资源删除继续延后，可不与上线合并处理。
+1. ~~完成 Production Owner 登录后四页、一个获批合成写路径、退出和 390×844 专项验收~~ —— 已通过。
+2. 以合成数据补齐并验证显式 manifest、dry-run、幂等导入、回读校验、备份和回滚演练工具。
+3. 在读取任何真实来源前展示精确私有来源清单并取得独立 PO 确认；真实上传与最终切源继续分别确认。

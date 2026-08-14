@@ -2,6 +2,8 @@ const requiredEnvironmentKeys = [
   "VITE_SUPABASE_URL",
   "VITE_SUPABASE_PUBLISHABLE_KEY",
 ];
+const productionProjectName = "life-console-production";
+const productionProjectUrl = "project-wpabq.vercel.app";
 
 function requiredValue(environment, key) {
   const value = environment[key];
@@ -98,4 +100,45 @@ export function createSupabaseCandidateVercelConfig(environment) {
       },
     ],
   };
+}
+
+export function createSupabaseProductionVercelConfig(environment) {
+  if (environment.VERCEL_ENV !== "production") {
+    throw new Error(
+      `The ${productionProjectName} config may only deploy to Vercel Production`,
+    );
+  }
+  if (environment.VERCEL_PROJECT_NAME !== productionProjectName) {
+    throw new Error(
+      `Production deployment must use the ${productionProjectName} Vercel project`,
+    );
+  }
+  if (environment.VERCEL_PROJECT_PRODUCTION_URL !== productionProjectUrl) {
+    throw new Error(
+      `Production deployment must target ${productionProjectName} at ${productionProjectUrl}`,
+    );
+  }
+
+  const unexpectedSupabaseKey = Object.keys(environment).find(
+    (key) =>
+      key.includes("SUPABASE")
+      && !requiredEnvironmentKeys.includes(key),
+  );
+  if (unexpectedSupabaseKey) {
+    throw new Error(
+      "Production may define only VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY",
+    );
+  }
+
+  return createSupabaseCandidateVercelConfig({
+    ...environment,
+    VERCEL_ENV: "preview",
+  });
+}
+
+export function createLifeConsoleVercelConfig(environment) {
+  if (environment.VERCEL_ENV === "production") {
+    return createSupabaseProductionVercelConfig(environment);
+  }
+  return createSupabaseCandidateVercelConfig(environment);
 }
