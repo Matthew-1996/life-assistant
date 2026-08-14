@@ -23,6 +23,12 @@ STATUS_SPEC = importlib.util.spec_from_file_location("life_assistant_status", SC
 assert STATUS_SPEC and STATUS_SPEC.loader
 STATUS_MODULE = importlib.util.module_from_spec(STATUS_SPEC)
 STATUS_SPEC.loader.exec_module(STATUS_MODULE)
+VALIDATE_SCRIPT = Path(__file__).with_name("validate_project.py")
+VALIDATE_SPEC = importlib.util.spec_from_file_location("validate_project", VALIDATE_SCRIPT)
+assert VALIDATE_SPEC and VALIDATE_SPEC.loader
+VALIDATE_MODULE = importlib.util.module_from_spec(VALIDATE_SPEC)
+sys.path.insert(0, str(SCRIPT.parent))
+VALIDATE_SPEC.loader.exec_module(VALIDATE_MODULE)
 TODAY = "2026-08-01"
 PROJECT_ID_SENTINEL = "project-id-must-never-appear"
 RAW_SENTINEL = "PRIVATE-JOURNAL-RAW-MUST-NEVER-APPEAR"
@@ -697,6 +703,108 @@ class LifeAssistantStatusTest(unittest.TestCase):
         self.assertEqual(automation["status"], "PASS")
         self.assertEqual(automation["metrics"]["runtime_state"], "aligned")
 
+    def test_weekly_monday_contract_aligns_runtime_and_scheduler(self) -> None:
+        prompt_hash = self._digest(
+            (self.root / "automations/生活状态回访.prompt.txt").read_bytes()
+        )
+        self._write_registry(
+            name="每周生活回顾",
+            start="2026-08-17",
+            end="2099-12-31",
+            frequency="weekly",
+            weekday="MO",
+            prompt_sha256=prompt_hash,
+        )
+        self._create_runtime_automation(
+            name="每周生活回顾",
+            rrule="RRULE:FREQ=WEEKLY;BYDAY=MO;BYHOUR=3;BYMINUTE=15",
+        )
+        self._create_runtime_database(next_utc="2026-08-17T03:15:00+00:00")
+
+        result = self._run("--json", today="2026-08-14")
+
+        automation = json.loads(result.stdout)["sections"]["automation"]
+        self.assertEqual(automation["status"], "PASS")
+        self.assertEqual(automation["metrics"]["runtime_state"], "aligned")
+        self.assertTrue(automation["metrics"]["runtime_database_verified"])
+
+    def test_weekly_contract_rejects_wrong_runtime_weekday(self) -> None:
+        prompt_hash = self._digest(
+            (self.root / "automations/生活状态回访.prompt.txt").read_bytes()
+        )
+        self._write_registry(
+            name="每周生活回顾",
+            start="2026-08-17",
+            end="2099-12-31",
+            frequency="weekly",
+            weekday="MO",
+            prompt_sha256=prompt_hash,
+        )
+        self._create_runtime_automation(
+            name="每周生活回顾",
+            rrule="RRULE:FREQ=WEEKLY;BYDAY=TU;BYHOUR=3;BYMINUTE=15",
+        )
+
+        result = self._run("--json", today="2026-08-14")
+
+        automation = json.loads(result.stdout)["sections"]["automation"]
+        self.assertEqual(automation["status"], "ATTENTION")
+        self.assertEqual(automation["metrics"]["runtime_state"], "misaligned")
+
+    def test_project_validator_accepts_weekly_prompt_profile(self) -> None:
+        prompt = "\n".join(
+            [
+                "上一完整自然周固定为周一至周日。",
+                "运行 journal_manager.py review-plan --type weekly 并原样使用 source_set_etag。",
+                "运行 daily_checkin.py week-summary 和 tools/weekly_review.py upsert。",
+                "周复盘不得写入每日状态或 --note-summary。",
+                "Google 表格和 XLSX 不自动同步。",
+            ]
+        )
+        prompt_path = self._write("automations/生活状态回访.prompt.txt", prompt)
+        self._write_registry(
+            start="2026-08-17",
+            end="2099-12-31",
+            frequency="weekly",
+            weekday="MO",
+            prompt_sha256=self._digest(prompt_path.read_bytes()),
+        )
+        previous_root = VALIDATE_MODULE.ROOT
+        VALIDATE_MODULE.ROOT = self.root
+        try:
+            errors: list[str] = []
+            VALIDATE_MODULE.validate_automation_registry(errors)
+        finally:
+            VALIDATE_MODULE.ROOT = previous_root
+
+        self.assertEqual(errors, [])
+
+    def test_weekly_policy_accepts_first_matching_weekday_after_effective_date(self) -> None:
+        prompt_hash = self._digest(
+            (self.root / "automations/生活状态回访.prompt.txt").read_bytes()
+        )
+        self._write_registry(
+            start="2026-08-17",
+            end="2099-12-31",
+            frequency="weekly",
+            weekday="MO",
+            prompt_sha256=prompt_hash,
+        )
+        self._write_review_policy(
+            long_term_cadence="weekly",
+            long_term_effective_from="2026-08-15",
+            decided_on="2026-08-14",
+        )
+        previous_root = VALIDATE_MODULE.ROOT
+        VALIDATE_MODULE.ROOT = self.root
+        try:
+            errors: list[str] = []
+            VALIDATE_MODULE.validate_journal_review_policy(errors)
+        finally:
+            VALIDATE_MODULE.ROOT = previous_root
+
+        self.assertEqual(errors, [])
+
     def test_tampered_canonical_prompt_fails_hash_without_leak(self) -> None:
         self._write(
             "automations/生活状态回访.prompt.txt",
@@ -729,6 +837,21 @@ class LifeAssistantStatusTest(unittest.TestCase):
         result = self._run("--json", expected_code=2)
         automation = json.loads(result.stdout)["sections"]["automation"]
         self.assertEqual(automation["status"], "FAIL")
+
+    def test_registry_allows_additional_unique_automation_contracts(self) -> None:
+        registry_path = self.root / "automations/registry.json"
+        registry = json.loads(registry_path.read_text(encoding="utf-8"))
+        additional = dict(registry["automations"][0])
+        additional["key"] = "career-planner-week-one"
+        additional["name"] = "职业规划首周咨询"
+        registry["automations"].append(additional)
+        self._write("automations/registry.json", json.dumps(registry, ensure_ascii=False))
+
+        result = self._run("--json")
+
+        automation = json.loads(result.stdout)["sections"]["automation"]
+        self.assertEqual(automation["status"], "PASS")
+        self.assertEqual(automation["metrics"]["runtime_state"], "aligned")
 
     def test_registry_rejects_prompt_path_escape_without_reading_it(self) -> None:
         outside = self.root.parent / "outside-prompt.txt"

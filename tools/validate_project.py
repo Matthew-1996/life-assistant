@@ -206,6 +206,8 @@ AUTOMATION_FIELDS = {
     "prompt_file",
     "prompt_sha256",
 }
+AUTOMATION_SCHEDULE_FIELDS = {"frequency", "weekday"}
+AUTOMATION_WEEKDAYS = {"MO", "TU", "WE", "TH", "FR", "SA", "SU"}
 JOURNAL_REVIEW_POLICY = "journal/review-policy.json"
 JOURNAL_REVIEW_POLICY_FIELDS = {
     "schema_version",
@@ -338,12 +340,35 @@ def validate_journal_review_policy(errors: list[str]) -> None:
         )
     except (OSError, UnicodeError, json.JSONDecodeError, ValueError, TypeError, StopIteration):
         return
-    if (
-        contract.get("start") != policy.get("trial_weekly_start")
-        or contract.get("end") != policy.get("trial_weekly_end")
-        or contract.get("timezone") != policy.get("timezone")
-    ):
-        errors.append("日记试运行节奏与主动回访契约不一致")
+    if cadence == "pending_user_choice":
+        if (
+            contract.get("start") != policy.get("trial_weekly_start")
+            or contract.get("end") != policy.get("trial_weekly_end")
+            or contract.get("timezone") != policy.get("timezone")
+        ):
+            errors.append("日记试运行节奏与主动回访契约不一致")
+    elif cadence == "weekly":
+        contract_start = _canonical_date(contract.get("start"))
+        weekday_index = {
+            "MO": 0,
+            "TU": 1,
+            "WE": 2,
+            "TH": 3,
+            "FR": 4,
+            "SA": 5,
+            "SU": 6,
+        }.get(contract.get("weekday"))
+        if (
+            effective is None
+            or contract_start is None
+            or contract.get("timezone") != policy.get("timezone")
+            or contract.get("frequency") != "weekly"
+            or weekday_index is None
+            or contract_start < effective
+            or (contract_start - effective).days >= 7
+            or contract_start.weekday() != weekday_index
+        ):
+            errors.append("日记长期节奏与主动回访契约不一致")
 
 
 def validate_journal_source_graph(errors: list[str]) -> None:
@@ -616,14 +641,17 @@ def validate_automation_registry(errors: list[str]) -> None:
         or set(payload) != {"schema_version", "automations"}
         or payload.get("schema_version") != 1
         or not isinstance(payload.get("automations"), list)
-        or len(payload["automations"]) != 1
+        or not payload["automations"]
     ):
         errors.append("自动化注册表结构或版本无效")
         return
 
     contracts: dict[str, dict[str, object]] = {}
     for item in payload["automations"]:
-        if not isinstance(item, dict) or set(item) != AUTOMATION_FIELDS:
+        if not isinstance(item, dict) or set(item) not in {
+            frozenset(AUTOMATION_FIELDS),
+            frozenset(AUTOMATION_FIELDS | AUTOMATION_SCHEDULE_FIELDS),
+        }:
             errors.append("自动化注册表中的契约结构无效")
             return
         key = item.get("key")
@@ -645,6 +673,8 @@ def validate_automation_registry(errors: list[str]) -> None:
     local_time = contract.get("local_time")
     max_jitter = contract.get("max_scheduler_jitter_seconds")
     prompt_hash = contract.get("prompt_sha256")
+    frequency = contract.get("frequency", "daily")
+    weekday = contract.get("weekday")
     if (
         not isinstance(name, str)
         or not name.strip()
@@ -663,6 +693,9 @@ def validate_automation_registry(errors: list[str]) -> None:
         or not 0 <= max_jitter <= 3600
         or not isinstance(prompt_hash, str)
         or not re.fullmatch(r"[0-9a-f]{64}", prompt_hash)
+        or frequency not in {"daily", "weekly"}
+        or (frequency == "daily" and weekday is not None)
+        or (frequency == "weekly" and weekday not in AUTOMATION_WEEKDAYS)
     ):
         errors.append("生活状态回访契约的字段值无效")
         return
@@ -721,6 +754,20 @@ def validate_automation_registry(errors: list[str]) -> None:
         return
     if hashlib.sha256(prompt_bytes).hexdigest() != prompt_hash:
         errors.append("生活状态回访的规范提示词 SHA-256 不匹配")
+    if frequency == "weekly":
+        for snippet, label in {
+            "review-plan --type weekly": "日记周回顾补漏计划",
+            "source_set_etag": "日记回顾完整来源集合指纹",
+            "daily_checkin.py week-summary": "周复盘结构化摘要字段",
+            "tools/weekly_review.py upsert": "周复盘按自然周 upsert",
+            "周一至周日": "周回顾的自然周边界",
+            "不得写入每日状态": "周复盘回答不是每日状态",
+            "--note-summary": "周复盘禁止写入每日 note_summary",
+            "不自动同步": "派生展示保持按需刷新",
+        }.items():
+            if snippet not in prompt_text:
+                errors.append(f"生活状态回访规范提示词缺少流程：{label}")
+        return
     for snippet, label in {
         "tools/daily_checkin.py upsert": "用户回答后的同日状态 upsert",
         "tools/daily_checkin.py purge-plan": "每日状态删除前只读预览",

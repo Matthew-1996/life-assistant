@@ -222,6 +222,8 @@ AUTOMATION_CONTRACT_FIELDS = {
     "prompt_file",
     "prompt_sha256",
 }
+AUTOMATION_SCHEDULE_FIELDS = {"frequency", "weekday"}
+WEEKDAY_CODES = {"MO": 0, "TU": 1, "WE": 2, "TH": 3, "FR": 4, "SA": 5, "SU": 6}
 
 CORE_FILES = (
     "AGENTS.md",
@@ -1611,13 +1613,16 @@ def _load_automation_contract(root: Path) -> tuple[dict[str, Any] | None, str | 
         or set(payload) != {"schema_version", "automations"}
         or payload.get("schema_version") != 1
         or not isinstance(payload.get("automations"), list)
-        or len(payload["automations"]) != 1
+        or not payload["automations"]
     ):
         return None, "自动化注册表结构或版本无效。"
 
     contracts: dict[str, dict[str, Any]] = {}
     for item in payload["automations"]:
-        if not isinstance(item, dict) or set(item) != AUTOMATION_CONTRACT_FIELDS:
+        if not isinstance(item, dict) or set(item) not in {
+            frozenset(AUTOMATION_CONTRACT_FIELDS),
+            frozenset(AUTOMATION_CONTRACT_FIELDS | AUTOMATION_SCHEDULE_FIELDS),
+        }:
             return None, "自动化注册表中的契约结构无效。"
         key = item.get("key")
         if (
@@ -1639,6 +1644,8 @@ def _load_automation_contract(root: Path) -> tuple[dict[str, Any] | None, str | 
     runtime_time_basis = item.get("runtime_time_basis")
     max_jitter = item.get("max_scheduler_jitter_seconds")
     prompt_hash = item.get("prompt_sha256")
+    frequency = item.get("frequency", "daily")
+    weekday = item.get("weekday")
     if (
         not isinstance(name, str)
         or not name.strip()
@@ -1657,6 +1664,9 @@ def _load_automation_contract(root: Path) -> tuple[dict[str, Any] | None, str | 
         or not 0 <= max_jitter <= 3600
         or not isinstance(prompt_hash, str)
         or not re.fullmatch(r"[0-9a-f]{64}", prompt_hash)
+        or frequency not in {"daily", "weekly"}
+        or (frequency == "daily" and weekday is not None)
+        or (frequency == "weekly" and weekday not in WEEKDAY_CODES)
     ):
         return None, "生活状态回访契约的字段值无效。"
     try:
@@ -1705,6 +1715,8 @@ def _load_automation_contract(root: Path) -> tuple[dict[str, Any] | None, str | 
         "hour": hour,
         "minute": minute,
         "runtime_time_basis": runtime_time_basis,
+        "frequency": frequency,
+        "weekday": weekday,
         "max_scheduler_jitter_seconds": max_jitter,
         "canonical_prompt": canonical_prompt,
     }, None
@@ -1766,6 +1778,8 @@ def _rrule_matches(
     minute: int,
     timezone_name: str,
     runtime_time_basis: str,
+    frequency: str,
+    weekday: str | None,
 ) -> bool:
     if (
         not isinstance(value, str)
@@ -1790,12 +1804,23 @@ def _rrule_matches(
         expected_until = expected_occurrence.strftime("%Y%m%dT%H%M%SZ")
     except (ValueError, ZoneInfoNotFoundError):
         return False
-    return (
-        set(parts) == {"FREQ", "BYHOUR", "BYMINUTE", "UNTIL"}
-        and parts.get("FREQ") == "DAILY"
-        and parts.get("BYHOUR") == str(expected_occurrence.hour)
+    common_matches = (
+        parts.get("BYHOUR") == str(expected_occurrence.hour)
         and parts.get("BYMINUTE") == str(expected_occurrence.minute)
-        and parts.get("UNTIL") == expected_until
+    )
+    if frequency == "daily":
+        return (
+            set(parts) == {"FREQ", "BYHOUR", "BYMINUTE", "UNTIL"}
+            and parts.get("FREQ") == "DAILY"
+            and common_matches
+            and parts.get("UNTIL") == expected_until
+        )
+    return (
+        frequency == "weekly"
+        and set(parts) == {"FREQ", "BYDAY", "BYHOUR", "BYMINUTE"}
+        and parts.get("FREQ") == "WEEKLY"
+        and parts.get("BYDAY") == weekday
+        and common_matches
     )
 
 
@@ -1810,6 +1835,8 @@ def _runtime_database_state(
     timezone_name: str,
     desired_status: str,
     max_scheduler_jitter_seconds: int,
+    frequency: str,
+    weekday: str | None,
 ) -> tuple[str, str | None]:
     if not database_path.is_file():
         return "database_missing", None
@@ -1849,6 +1876,10 @@ def _runtime_database_state(
         database_status != desired_status
         or not start <= local_next.date() <= end
         or scheduler_jitter_seconds > max_scheduler_jitter_seconds
+        or (
+            frequency == "weekly"
+            and (weekday not in WEEKDAY_CODES or local_next.weekday() != WEEKDAY_CODES[weekday])
+        )
     ):
         return "scheduler_misaligned", local_iso
     return "aligned", local_iso
@@ -1914,6 +1945,8 @@ def _check_automation(
             minute=minute,
             timezone_name=timezone_name,
             runtime_time_basis=contract["runtime_time_basis"],
+            frequency=contract["frequency"],
+            weekday=contract["weekday"],
         )
         and isinstance(config.get("prompt"), str)
         and _normalize_prompt(config["prompt"])
@@ -1933,6 +1966,8 @@ def _check_automation(
             timezone_name=timezone_name,
             desired_status=contract["desired_status"],
             max_scheduler_jitter_seconds=contract["max_scheduler_jitter_seconds"],
+            frequency=contract["frequency"],
+            weekday=contract["weekday"],
         )
     local_runtime_verified = config_aligned and database_state == "aligned"
     if local_runtime_verified:
