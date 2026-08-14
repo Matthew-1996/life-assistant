@@ -253,7 +253,7 @@ export function App({
           className="service-banner service-banner--candidate"
           role="status"
         >
-          私有候选 · 仅纯合成测试数据 · 不读取 iCloud
+          Life Console · 数据已迁移 · 生产环境
         </div>
       )}
       <div

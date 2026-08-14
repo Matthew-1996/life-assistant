@@ -204,14 +204,14 @@ export function TodayPage({
       <section className="hero" aria-labelledby="today-title">
         <div>
           <p className="eyebrow">
-            {dashboard.date} · {supabaseCandidate ? "私有候选" : "本周试行"}
+            {dashboard.date} · {supabaseCandidate ? "生产环境" : "本周试行"}
           </p>
           <h1 id="today-title">
-            {supabaseCandidate ? "今天，从真实状态开始。" : "一周试行控制台。"}
+            {supabaseCandidate ? "今天，从真实数据开始。" : "一周试行控制台。"}
           </h1>
           <p className="lead">
             {supabaseCandidate
-              ? "这里仅呈现当前账号在候选环境中明确保存的数据。没有记录就保持未知，不使用示例内容填满页面。"
+              ? "这里仅呈现当前账号在 Supabase 中明确保存的数据。没有记录就保持未知，不使用示例内容填满页面。"
               : "本周只验证两条轨道：运动恢复与 Agent 实操。今天不追求完整完成，只选择一个最低可执行版本，让生活系统继续保持轻。"}
           </p>
           <div className="pill-row hero-actions" aria-label="主要操作">
@@ -518,14 +518,14 @@ export function TodayPage({
             <span className="step-index">01</span>
             <div>
               <h3>{supabaseCandidate ? "Owner 会话" : mode === "candidate-preview" ? "合成投影" : mode === "sites" ? "Owner-only 读取" : "本机读取"}</h3>
-              <p>{supabaseCandidate ? "页面只读取当前登录账号可见的候选数据。" : mode === "candidate-preview" ? "页面只加载随构建发布的非个人合成数据。" : mode === "sites" ? "页面通过受控 Sites 会话读取最小必要投影。" : "页面优先展示本机可见的项目状态，减少跨工具来回确认。"}</p>
+              <p>{supabaseCandidate ? "页面只读取当前登录账号在 Supabase 中可见的数据。" : mode === "candidate-preview" ? "页面只加载随构建发布的非个人合成数据。" : mode === "sites" ? "页面通过受控 Sites 会话读取最小必要投影。" : "页面优先展示本机可见的项目状态，减少跨工具来回确认。"}</p>
             </div>
           </article>
           <article className="chain-step">
             <span className="step-index">02</span>
             <div>
-              <h3>{supabaseCandidate ? "测试数据隔离" : mode === "candidate-preview" ? "不绑定真相源" : mode === "sites" ? sitesPrimary ? "D1 唯一真相源" : "iCloud 真相源" : "iCloud 真相源"}</h3>
-              <p>{supabaseCandidate ? "候选库只承载纯合成验收数据，不读取 iCloud。" : mode === "candidate-preview" ? "候选环境不连接 D1、R2 或 iCloud。" : mode === "sites" ? sitesPrimary ? "所有写入使用 revision、幂等、审计与字段级加密。" : "空白 D1 只用于阶段 C 基础设施验收；尚未读取或上传真实 iCloud 数据。" : "日记、目标、台账与阶段决定以 iCloud 项目文件为准。"}</p>
+              <h3>{supabaseCandidate ? "数据真相源" : mode === "candidate-preview" ? "不绑定真相源" : mode === "sites" ? sitesPrimary ? "D1 唯一真相源" : "iCloud 真相源" : "iCloud 真相源"}</h3>
+              <p>{supabaseCandidate ? "真实数据已迁移至 Supabase，iCloud 仍保留完整真相源。" : mode === "candidate-preview" ? "候选环境不连接 D1、R2 或 iCloud。" : mode === "sites" ? sitesPrimary ? "所有写入使用 revision、幂等、审计与字段级加密。" : "空白 D1 只用于阶段 C 基础设施验收；尚未读取或上传真实 iCloud 数据。" : "日记、目标、台账与阶段决定以 iCloud 项目文件为准。"}</p>
             </div>
           </article>
           <article className="chain-step">
