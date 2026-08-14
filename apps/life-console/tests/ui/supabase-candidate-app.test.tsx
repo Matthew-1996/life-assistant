@@ -594,10 +594,10 @@ describe("Supabase candidate product application", () => {
 
     expect(screen.getByText("Life Console · Supabase Candidate")).toBeTruthy();
     expect(
-      screen.getByRole("heading", { level: 1, name: "今天，从真实状态开始。" }),
+      screen.getByRole("heading", { level: 1, name: "今天，从真实数据开始。" }),
     ).toBeTruthy();
     expect(screen.getByLabelText("私有候选边界").textContent).toContain(
-      "不读取 iCloud",
+      "生产环境",
     );
     expect(screen.getByRole("region", { name: "目标空态" })).toBeTruthy();
     const currentPath = document.querySelector(".timeline .day-row.today");
@@ -630,7 +630,7 @@ describe("Supabase candidate product application", () => {
 
     await user.click(within(nav).getByRole("button", { name: "系统" }));
     expect(
-      screen.getByRole("heading", { level: 1, name: "私有候选已连接，边界保持清晰。" }),
+      screen.getByRole("heading", { level: 1, name: "Life Console 已上线，数据已迁移。" }),
     ).toBeTruthy();
     expect(screen.getByRole("heading", { name: "iCloud 最新备份" })).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "退出登录" }));

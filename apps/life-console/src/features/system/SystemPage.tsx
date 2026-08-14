@@ -51,9 +51,9 @@ function SupabaseSystemPage({
       <section className="hero">
         <div>
           <p className="eyebrow">OWNER-ONLY · PRIVATE PREVIEW</p>
-          <h1 id="system-title">私有候选已连接，边界保持清晰。</h1>
+          <h1 id="system-title">Life Console 已上线，数据已迁移。</h1>
           <p className="lead">
-            系统页只保留登录、候选同步边界与 iCloud 最新备份。底层资源和工程配置不会暴露在产品界面。
+            系统页只保留登录、数据同步状态与 iCloud 最新备份。底层资源和工程配置不会暴露在产品界面。
           </p>
         </div>
         <aside className="card hero-card">
@@ -61,7 +61,7 @@ function SupabaseSystemPage({
             {session ? "Owner 会话已验证" : "会话未确认"}
           </span>
           <h2>Life Console 2.2.0</h2>
-          <p className="quiet">当前只使用纯合成候选数据，私人真相源仍保留在 iCloud。</p>
+          <p className="quiet">私人数据已安全迁移至 Supabase，iCloud 仍保留完整的真相源。</p>
         </aside>
       </section>
 
@@ -73,8 +73,8 @@ function SupabaseSystemPage({
         </article>
         <article className="card pad">
           <span className="status blue">同步边界</span>
-          <h2>候选库与 iCloud 相互隔离</h2>
-          <p className="quiet">本轮不读取、不上传真实生活数据，也不切换 ICLOUD_PRIMARY。</p>
+          <h2>Supabase 与 iCloud 双真相源</h2>
+          <p className="quiet">数据已迁移至 Supabase，iCloud 仍保留完整真相源。</p>
         </article>
       </section>
 

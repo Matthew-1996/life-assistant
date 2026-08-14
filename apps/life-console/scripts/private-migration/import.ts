@@ -89,7 +89,12 @@ async function checkError(
   message: string,
 ): Promise<void> {
   if (result.error) {
-    throw new Error(message);
+    const errDetail = result.error instanceof Error
+      ? result.error.message
+      : typeof result.error === "object" && result.error !== null
+        ? JSON.stringify(result.error).slice(0, 200)
+        : String(result.error);
+    throw new Error(`${message}: ${errDetail}`);
   }
 }
 
@@ -207,7 +212,12 @@ export async function importMigration(options: {
           .insert(records)
           .select("id");
         if (insertError) {
-          throw new Error(`Failed to import ${resourceType}`);
+          const errDetail = insertError instanceof Error
+            ? insertError.message
+            : typeof insertError === "object" && insertError !== null
+              ? JSON.stringify(insertError).slice(0, 300)
+              : String(insertError);
+          throw new Error(`Failed to import ${resourceType}: ${errDetail}`);
         }
 
         const importRecords = (inserted ?? []).map((row, index) => ({
@@ -221,7 +231,12 @@ export async function importMigration(options: {
           .from("migration_imports")
           .insert(importRecords);
         if (trackError) {
-          throw new Error(`Failed to track imports for ${resourceType}`);
+          const errDetail = trackError instanceof Error
+            ? trackError.message
+            : typeof trackError === "object" && trackError !== null
+              ? JSON.stringify(trackError).slice(0, 300)
+              : String(trackError);
+          throw new Error(`Failed to track imports for ${resourceType}: ${errDetail}`);
         }
 
         for (let j = 0; j < importRecords.length; j += 1) {
