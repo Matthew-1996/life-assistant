@@ -336,9 +336,9 @@ describe("Supabase Reviews panel", () => {
     expect((input as HTMLTextAreaElement).value).toBe(
       "Conflicting phase draft",
     );
-    expect(screen.getByRole("alert").textContent).toContain(
-      "记录已在其他页面更新",
-    );
+    expect(
+      screen.getByRole("region", { name: "复盘已在其他页面更新" }),
+    ).toBeTruthy();
   });
 
   it("loads the latest conflicted review and can restore the retained draft", async () => {
