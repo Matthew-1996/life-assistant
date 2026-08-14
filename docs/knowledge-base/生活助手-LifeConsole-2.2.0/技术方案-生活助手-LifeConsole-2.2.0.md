@@ -1,7 +1,7 @@
 # 技术方案 - 生活助手 - Life Console - 2.2.0
 
-> 状态：Gate 2 已确认 / 阶段 A-D 完成 / 阶段 E Owner 会话通过，单界面修复待新版 Preview 复验
-> 范围：允许在独立东京测试项目执行纯合成 migration/seed、托管权限验证和 Vercel Preview；禁止真实数据、Production、切源和 PR 合并
+> 状态：Gate 2 已确认 / 阶段 A-D 完成 / 阶段 E Owner 密码登录与新版 Preview 四页只读 E2E 通过 / 阶段 G 进行中
+> 范围：阶段 A-E 合成候选和 PR #40 合并已完成；阶段 G 按独立东京 Production、私有 dry-run、完整迁移、Production 验证和最终切源门禁推进
 
 ## 1. 技术结论摘要
 
@@ -47,7 +47,7 @@ Vercel Preview、Production 与本地开发使用独立环境变量。`VITE_` �
 |---|---|---|
 | `profiles` | `user_id`, `display_name`, `status` | 每个 Auth 用户一行；不以邮箱作为业务主键 |
 | `goals` | `title`, `domain`, `status`, `priority`, `start_date`, `target_date` | 长期/阶段目标；目标正文与状态分离 |
-| `journals` | `event_date`, `title`, `content`, `tags`, `deleted_at` | 日记当前版本；敏感字段加密方案待 D3 |
+| `journals` | `event_date`, `title`, `content`, `tags`, `deleted_at` | 日记当前版本；D3 已选择仅依赖 RLS，字段以明文存储 |
 | `journal_revisions` | `journal_id`, `revision`, `snapshot`, `reason` | 更正/撤回证据；append-only |
 | `daily_checkins` | `date`, 四项主观分数, `anchors`, `notes` | `unique(user_id,date)`，未知字段为 null |
 | `weekly_reviews` | `week_start`, `content`, `revision` | `unique(user_id,week_start)` |
@@ -70,6 +70,7 @@ Vercel Preview、Production 与本地开发使用独立环境变量。`VITE_` �
 6. 如确需 `security definer`，只能位于非暴露 schema、固定 `search_path`、函数内再次校验 `auth.uid()`，并撤销公开执行权限。
 7. Owner 判定不使用可由用户修改的 `user_metadata`；首版以行所有权为主，需要角色时才评审 `app_metadata`。
 8. service-role/secret key 仅可在受控服务端使用，并视为可绕过 RLS 的高风险凭据。
+9. PO 已确认真实敏感字段不做应用层加密，仅依赖 RLS、最小 GRANT 和高权限凭据隔离；该选择不能防止获得数据库管理员或 service-role 权限的主体读取明文。
 
 ## 6. API 与写入语义
 
@@ -88,11 +89,12 @@ Vercel Preview、Production 与本地开发使用独立环境变量。`VITE_` �
 
 ## 7. Auth 方案
 
-- 首选 Email OTP：`signInWithOtp` + `shouldCreateUser=false`。
+- 2026-08-13 的后续 PO 决策覆盖 Gate 2 的 Email OTP 基线：正式登录使用 `signInWithPassword`，公开注册关闭，仅允许管理员预创建并自动确认 Owner。
+- 忘记密码使用 `resetPasswordForEmail`，恢复页使用 `updateUser({ password })`；Magic Link 不再作为登录入口。
 - Supabase Site URL 和允许的 redirect URL 分环境配置；Preview 不复用 Production 白名单。
 - 前端订阅会话变化并在过期时清理内存态；不要把 access/refresh token 写入日志或知识库。
 - 合成验收至少准备 Owner 与非 Owner 两个测试用户：Owner 行可见；非 Owner SELECT 返回空结果、越权写入返回拒绝。未登录 401 不能替代已登录非 Owner 的行隔离证据，也不把 Data API 的空结果冒充为 403。
-- 默认 SMTP 仅供演示且只发送到项目团队预授权邮箱；正式 OTP 必须配置自有 SMTP 并验证大陆邮箱到达率。
+- 默认 SMTP 只用于获批的密码恢复邮件；恢复邮件 E2E 在发送前仍需独立确认。
 
 ## 8. 备份与恢复
 
@@ -147,7 +149,7 @@ Gate 2 之外，创建独立 Supabase 候选资源前还需 PO 单独确认区�
 阶段 B 在未配置 Supabase URL、publishable key、SMTP 或远端资源的前提下新增以下通用边界：
 
 - `supabase/client.ts`：浏览器配置只接受精确项目 Origin 与 publishable key；缺项、secret/service-role 变量或 `sb_secret_` key 均 fail closed；`db.retry=false`。
-- `supabase/auth.ts`：使用窄 Auth port 请求 Email OTP，固定 `shouldCreateUser=false`；只向应用暴露 `userId`、`email` 与 `expiresAt`，不返回 access/refresh token。
+- `supabase/auth.ts`：使用窄 Auth port 执行密码登录、密码恢复请求和新密码更新；只向应用暴露 `userId`、`email` 与 `expiresAt`，不返回 access/refresh token。
 - `SupabaseAuthGate.tsx`：可注入的 loading、OTP、6 位验证码、会话过期和登出状态机；发送反馈为中性文案和局部遮罩邮箱；未接入 `main.tsx`。
 - `supabase/repository.ts`：只允许已批准表名/排序列，列表使用 `(event_date,id)` 或 `(created_at,id)` 降序游标；页长限制为 1-100；瞬时只读失败最多额外尝试一次；更新固定使用 `id + revision` 条件，零行映射 409；写入不做隐式重试。
 
@@ -227,7 +229,7 @@ PO 已于 2026-08-12 单独授权创建独立 Supabase 测试资源、执行纯�
 - Security Advisor 当前无 error，保留 1 条“泄露密码保护未开启”warning；候选只使用无密码邮件登录且不开放密码登录，因此阶段 E 记录为已知非阻断项。Performance Advisor 只有新建项目的 `unused_index` info，不删除契约要求的索引。
 - 新增独立 `supabase-candidate` 入口和 `vercel.mjs` 动态配置；只接受精确 Supabase HTTPS Origin 与现代 publishable key，拒绝 secret key 和非 Preview 环境。CSP 只放行对应 HTTPS/WSS Origin，不使用通配符。
 - Vercel 仅在 Preview 环境保存 URL 与 publishable key；候选部署已 READY，首页返回 200，并读回 CSP、`no-referrer`、`nosniff`、`DENY` 与 `noindex`。现有 Production 部署记录与 URL 未改变。
-- 浏览器未登录态已显示 Auth Gate，PO 使用最新 Magic Link 后确认 Owner 会话建立成功。默认 SMTP 实际发送 `magic_link`，且托管控制台要求先配置自有 SMTP 才允许将模板改为 `{{ .Token }}` 六位 OTP；`SupabaseAuthGate` 默认仍保留 OTP 能力，只有 `supabase-candidate` 注入 `magic-link` 展示模式，发送后只提示打开最新邮件，429 `over_email_send_rate_limit` 映射为明确限额提示。六位 OTP 明确延期到自有 SMTP 评审，不得用 Magic Link 冒充 OTP 通过。邮箱、链接与验证码均不进入聊天或文档。
+- 历史邮件登录 POC 中，PO 曾使用最新 Magic Link 确认 Owner 会话建立；默认 SMTP 实际发送 `magic_link`，且托管控制台要求先配置自有 SMTP 才允许将模板改为 `{{ .Token }}` 六位 OTP。该登录路径已由 2026-08-13 邮箱密码决策覆盖，Magic Link 仅保留忘记密码恢复用途；邮箱、链接、密码与验证码均不进入聊天或文档。
 - 候选 Origin 校验收紧为单层 `*.supabase.co` 托管项目 hostname，并拒绝显式端口、嵌套子域、凭据、路径、查询和片段；`supabase-candidate` 不再初始化未使用的本地 API client。
 
 本轮没有读取 iCloud、创建真实日记或健康记录、修改 Production、切换真相源或合并 PR。任何后续 Agent 都不得把浏览器、日志或平台输出中的凭据复制到聊天、文件、Git、PR 或长期记忆。
@@ -249,7 +251,7 @@ Owner 首次成功登录后，PO 发现页面与 2.1.0 已验收设计稿及本�
 - Today 锚点失败草稿携带原目标日期与期望 revision；跨夜重试不写入新日期，同日冲突载入最新后使用最新 revision 重试。
 - `<=720px` 使用单列卡片、底部导航和安全区留白；静态四页基线已通过 390×844 浏览器检查，Supabase 单界面候选仍以新版 HTTPS Preview 实机复验为最终证据。
 
-首次单界面纠偏基线的本地证据为 39 个 Vitest 文件 279/279、应用 Python 92/92、静态四页基线 390×844 Playwright 1/1、`supabase-candidate` 构建和 `git diff --check` 通过；该 Playwright 用例不冒充 Supabase 候选页实机证据。随后多轮代码审查关闭历史日期 revision、跨视图刷新、幂等重试、跨午夜、分用户加密草稿、冲突比较、分页竞态、乱序刷新、退出确认、失败空态和 pending 写入锁定等一致性缺口，并删除不再接入生产树的旧每日状态面板。最新全量门禁为 Vitest 38 文件 307/307、应用 Python 92/92、候选专项 20 文件 175/175、常规与候选构建和差异检查通过；自动凭据/私人数据扫描也通过，但它不识别人类可读的服务显示名，因此不能代替上述活动分支历史处置。候选包仅保留约 565 kB 的非阻断分包警告。上述证据证明合成数据下的单界面代码，不替代新版 HTTPS Preview 的 Owner 与移动端复验。新版 Preview 文件树上传被部署连接器的自动安全审查中止，未产生部署、未修改 Production；需在 PO 获知原因后重新明确授权才可重试。
+首次单界面纠偏基线的本地证据为 39 个 Vitest 文件 279/279、应用 Python 92/92、静态四页基线 390×844 Playwright 1/1、`supabase-candidate` 构建和 `git diff --check` 通过；该 Playwright 用例不冒充 Supabase 候选页实机证据。随后多轮代码审查关闭历史日期 revision、跨视图刷新、幂等重试、跨午夜、分用户加密草稿、冲突比较、分页竞态、乱序刷新、退出确认、失败空态和 pending 写入锁定等一致性缺口，并删除不再接入生产树的旧每日状态面板。最新全量门禁为 Vitest 39 文件 328/328、应用 Python 92/92、常规构建和差异检查通过；自动凭据/私人数据扫描也通过，但它不识别人类可读的服务显示名，因此不能代替上述活动分支历史处置。候选包仅保留约 565 kB 的非阻断分包警告。后续已通过手动 Vercel CLI 部署新版 HTTPS Preview，Owner 邮箱密码登录、四页只读 Supabase REST 请求和 `/auth/recovery` 路由均通过；Production 当时未修改，双账号浏览器、恢复邮件与移动端专项仍延期。
 
 ## 10. 近期兼容性检查
 
@@ -266,16 +268,27 @@ Owner 首次成功登录后，PO 发现页面与 2.1.0 已验收设计稿及本�
 | 编号 | 建议 |
 |---|---|
 | Q1 | 保留 Vercel React/Vite，Supabase 作为唯一新后端候选 |
-| Q2 | Email OTP + 禁止自动注册；数据按 `user_id` 隔离 |
+| Q2 | 历史 Gate 2 基线为 Email OTP；2026-08-13 已由邮箱密码登录、禁止公开注册、管理员预创建 Owner 覆盖；数据仍按 `user_id` 隔离 |
 | Q3 | 普通 CRUD 使用 Data API + RLS；一致性导出使用调用者权限 RPC；隐藏 secret 或服务端编排才用 Edge Function |
 | Q4 | 显式 GRANT、RLS、索引、revision 和幂等键进入同一版本化迁移 |
-| Q5 | 真实敏感数据前另做字段加密威胁模型，不在本轮默认弱化或沿用旧 KEK |
+| Q5 | PO 已选择真实敏感字段仅依赖 RLS，不做应用层字段加密；高权限数据库访问者可读取明文的剩余风险已接受 |
 | Q6 | 用户可迁移备份与平台备份分层，合成 round-trip 先行 |
 | Q7 | 先本地/合成实现，再申请独立 Supabase 测试资源和 Vercel Preview；每步单独门禁 |
 
-PO 已于 2026-08-12 确认 Q1-Q7，允许从生产 migration 草案与合成 RLS/权限测试开始通用实现。Supabase/Vercel 资源、部署、真实数据、切源、资源删除和 PR 合并仍需分别取得当次授权。
+PO 已于 2026-08-12 确认 Q1-Q7，允许从生产 migration 草案与合成 RLS/权限测试开始通用实现。PO 于 2026-08-13 进一步确认 Q2 改为邮箱密码、Q5 采用仅 RLS、Production 新建东京 Free `US$0` 项目，并以完整迁移切源为目标；精确私有来源清单、真实读取与上传、最终切源和资源删除仍分别取得当次授权。
 
-## 12. 官方依据
+## 12. 阶段 G Production 与迁移架构
+
+1. 合成测试项目不提升、不复用为 Production；新建东京 `ap-northeast-1` 项目并独立配置 Auth、redirect allowlist、RLS、Advisors 和 Vercel Production 环境变量。
+2. 现有 migration `0001` 至 `0004` 只负责 schema、权限和 Dashboard 预创建 Owner 后的 profile；合成 seed 与测试占位用户不得进入 Production 真实数据集。
+3. 现有 `life-console-backup/1` 和 `export_life_console_snapshot()` 只证明 Supabase 导出与本地恢复格式，不是 iCloud 到 Supabase 的真实导入器。
+4. 新增迁移器必须只接受 PO 批准的显式来源清单，不扫描私人目录；先用合成 fixture 完成 TDD，再在独立门禁下读取真实来源。
+5. dry-run 只输出资源类型、条数、稳定 ID/revision 和 canonical SHA-256 摘要，不在日志、报告、Git、PR 或知识库复制正文。
+6. 真实导入必须幂等、单写、可回读核对；迁移窗口内冻结 iCloud 写入，禁止同时向 iCloud 和 Supabase 写入。
+7. 最终切源前必须具备：已验证的 iCloud 私有备份、来源 manifest 摘要、dry-run、完整导入核对、Supabase 专用回滚演练、Production E2E 与 PO 再确认。
+8. 切源前失败只清理本次 migration run 产生的远端行并保持 iCloud 为唯一真相源；切源后的回滚窗口内 iCloud 保持只读回滚锚点，任何反向补写需另行设计和授权。
+
+## 13. 官方依据
 
 - Supabase RLS：<https://supabase.com/docs/guides/database/postgres/row-level-security>
 - Supabase Data API 安全：<https://supabase.com/docs/guides/api/securing-your-api>

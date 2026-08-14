@@ -1,12 +1,12 @@
 # Supabase 可行性调研与 POC - 生活助手 - Life Console - 2.2.0
 
-> 状态：本地合成 POC、东京托管权限与 Owner Magic Link 会话通过 / 单界面新版 Preview 待复验
+> 状态：本地合成 POC、东京测试项目托管权限、Owner 邮箱密码登录和单界面新版 Preview 四页只读 E2E 通过
 > 日期：2026-08-12
 > 边界：独立东京 Supabase 项目只含 migration 与纯合成数据；未读取 iCloud、未上传真实生活记录、未部署 Production、未切源
 
 ## 1. 结论
 
-Supabase 作为 Life Console 2.2.0 后端候选 **可继续推进，但仍不能直接进入真实迁移**。本地与托管证据已证明数据模型、RLS、调用者权限 View/RPC、同日原子 upsert、浏览器 SDK 契约、托管 Data API 权限、Vercel 精确 CSP 与 Owner Magic Link 会话可行；修复后的四页产品 UI 仍待新版 Preview 复验，可登录非 Owner、六位 OTP、大陆分时网络、1k/10k 托管容量与真实敏感字段加密仍需独立门禁。
+Supabase 作为 Life Console 2.2.0 后端候选 **可继续推进，但仍不能直接进入真实迁移**。本地与托管证据已证明数据模型、RLS、调用者权限 View/RPC、同日原子 upsert、浏览器 SDK 契约、托管 Data API 权限与 Vercel 精确 CSP；后续邮箱密码决策已覆盖早期 Magic Link/六位 OTP 登录基线，Owner 邮箱密码登录、修复后的四页产品 UI 和恢复路由已在新版 Preview 通过。可登录非 Owner、大陆分时网络、1k/10k 托管容量、恢复邮件和真实迁移仍需独立证据或门禁。
 
 没有发现必须放弃 Supabase 的技术卡点，已发现六项必须提前处理的工程约束：
 
@@ -87,18 +87,18 @@ Supabase 作为 Life Console 2.2.0 后端候选 **可继续推进，但仍不能
 |---|---|---|
 | 中国大陆到 Supabase 的延迟和稳定性 | 当前网络可加载 Vercel Preview 与 Auth Gate；尚无登录后分时样本 | 上海网络分时测 Auth、Data API 与 RPC |
 | 区域选择 | 东京 `ap-northeast-1` 已创建并复核健康；区域不可原地变更 | 真实迁移前再确认数据驻留与网络 |
-| OTP 实际到达 | Auth 日志确认默认 SMTP 已发送 Magic Link；控制台在未配置自有 SMTP 时锁定模板编辑，无法改成 `{{ .Token }}` 六位 OTP；内置 SMTP 固定为每小时 2 封，邀请与首次登录链接已触发 429 限流；候选 UI 已改为 Magic Link 和 429 专用提示 | 配额窗口恢复后只发送一次最新 Magic Link 验证会话；六位 OTP 延期到自有 SMTP 评审 |
+| 历史邮件登录 POC | Auth 日志确认默认 SMTP 曾发送 Magic Link；该登录方案已由 2026-08-13 邮箱密码决策覆盖 | Magic Link 仅保留密码恢复用途；恢复邮件 E2E 发送前另行确认 |
 | 托管 Postgres RLS/GRANT | 三个版本化迁移已应用；托管 anon/A/B 权限矩阵 13/13 通过 | 真实迁移前在最终项目重复执行 |
-| Vercel Preview CORS/CSP | Preview READY、HTTP 200；只放行精确 Supabase HTTPS/WSS Origin，安全头读回通过 | 登录后验证 CRUD、冲突、失败与退出 |
+| Vercel Preview CORS/CSP | 新版 Preview READY、HTTP 200；只放行精确 Supabase HTTPS/WSS Origin，安全头与 Owner 密码登录、四页只读和恢复路由通过 | 业务写入、冲突、失败、退出和移动端专项按上线验收补充 |
 | 1,000 行以上分页与备份容量 | 本地 2,000 条跨语言备份通过；托管 1k/10k 尚未执行 | 确定目标容量后测 RPC 大小、耗时和内存 |
 | 平台 Advisors/备份/暂停恢复 | Security 无 error，1 条无密码邮件登录场景非阻断 password warning；Performance 仅新项目未使用索引 info | 真实上线前复核 Advisor；平台恢复演练另立门禁 |
 | 非 Owner 隔离 | 托管 SQL 权限矩阵已验证 A/B 隔离；两个可登录 Auth 账号的浏览器 E2E 未执行 | 不得把 SQL 矩阵冒充双浏览器身份验证 |
 
 ## 6. 进入实现前建议门禁
 
-阶段 E 专项资源与 Preview 授权已经使用；当前只等待 PO 完成网页内 Magic Link/UI 验收以及 Agent 补齐治理检查，六位 OTP 单独延期。任何真实数据、Production、切源、资源删除、PR Ready 或合并仍需新的明确授权。
+阶段 E 专项资源与 Preview 验收、治理检查和 PR #40 合并均已完成。阶段 G 已确认新建东京 Free `US$0` Production、D3 仅依赖 RLS 和完整迁移切源目标；精确私有来源清单、真实读取/上传、最终切源和资源删除仍需新的明确授权。
 
-候选资源继续只放合成数据并输出去敏证据；未经新授权不读取 iCloud、不接入真实日记/健康数据、不切换真相源，也不提升 Preview 到 Production。
+测试资源继续只放合成数据并输出去敏证据；未经对应门禁不读取 iCloud、不接入真实日记/健康数据、不切换真相源，也不把测试项目或 Preview 提升为 Production。
 
 ## 7. 官方依据
 

@@ -1253,5 +1253,38 @@ describe("Life Console password auth setup migration", () => {
     expect(migration).not.toMatch(/\bencrypted_password\b|\bcrypt\s*\(/i);
     expect(migration).toMatch(/from\s+auth\.users/i);
     expect(migration).toMatch(/insert\s+into\s+public\.profiles/i);
+    expect(migration).not.toMatch(
+      /owner@life-console\.test|Synthetic Owner/i,
+    );
+    expect(migration).toMatch(/email_confirmed_at\s+is\s+not\s+null/i);
+    expect(migration).toMatch(/select\s+count\(\*\)/i);
+    expect(migration).toMatch(
+      /if\s+v_owner_count\s*<>\s*1\s+or\s+v_confirmed_owner_count\s*<>\s*1\s+then/i,
+    );
+  });
+});
+
+describe("Life Console hosted Production permission matrix", () => {
+  it("creates rollback-only, non-login synthetic owners inside the matrix transaction", async () => {
+    const matrixUrl = new URL(
+      "../../supabase/tests/hosted_permission_matrix.sql",
+      import.meta.url,
+    );
+    const matrix = await readFile(matrixUrl, "utf8");
+
+    const transactionStart = matrix.search(/\bbegin\s*;/i);
+    expect(transactionStart).toBeGreaterThan(-1);
+    expect(matrix).toMatch(/insert\s+into\s+auth\.users/i);
+    expect(matrix).toMatch(/@example\.invalid/i);
+    expect(matrix).toMatch(/life_console_synthetic_owner/i);
+    expect(matrix).not.toMatch(/\bcommit\s*;/i);
+    expect(matrix).toMatch(/\brollback\s*;\s*$/i);
+
+    const firstTaggedOwnerLookup = matrix.search(
+      /raw_user_meta_data\s*->>\s*'life_console_synthetic_owner'/i,
+    );
+    const syntheticOwnerInsert = matrix.search(/insert\s+into\s+auth\.users/i);
+    expect(syntheticOwnerInsert).toBeGreaterThan(transactionStart);
+    expect(firstTaggedOwnerLookup).toBeGreaterThan(syntheticOwnerInsert);
   });
 });
