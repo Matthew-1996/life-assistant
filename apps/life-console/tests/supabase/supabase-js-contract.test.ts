@@ -67,7 +67,7 @@ describe("supabase-js browser contract feasibility", () => {
     const client = createSyntheticClient(requests);
     await client.auth.signInWithPassword({
       email: "owner@example.invalid",
-      password: "synthetic-password",
+      password: "test-pw",
     });
 
     expect(requests).toHaveLength(1);
@@ -75,7 +75,7 @@ describe("supabase-js browser contract feasibility", () => {
     expect(requests[0].url.searchParams.get("grant_type")).toBe("password");
     expect(JSON.parse(requests[0].init.body as string)).toMatchObject({
       email: "owner@example.invalid",
-      password: "synthetic-password",
+      password: "test-pw",
       gotrue_meta_security: {},
     });
   });
@@ -104,17 +104,17 @@ describe("supabase-js browser contract feasibility", () => {
     // Sign in first to establish a valid session (simulates recovery flow auth state)
     const signInResult = await client.auth.signInWithPassword({
       email: "owner@example.invalid",
-      password: "temporary-password",
+      password: "temp-pw",
     });
     expect(signInResult.error).toBeNull();
     requests.length = 0;
-    await client.auth.updateUser({ password: "new-synthetic-password" });
+    await client.auth.updateUser({ password: "new-pw" });
 
     expect(requests).toHaveLength(1);
     expect(requests[0].url.pathname).toBe("/auth/v1/user");
     expect(requests[0].init.method).toBe("PUT");
     expect(JSON.parse(requests[0].init.body as string)).toMatchObject({
-      password: "new-synthetic-password",
+      password: "new-pw",
     });
   });
 

@@ -69,7 +69,7 @@ describe("Supabase Auth service", () => {
     const auth = createSupabaseAuthService(port);
 
     await expect(
-      auth.signIn(" owner@example.invalid ", "synthetic-password"),
+      auth.signIn(" owner@example.invalid ", "test-pw"),
     ).resolves.toEqual({
       userId: "synthetic-owner",
       email: "owner@example.invalid",
@@ -78,7 +78,7 @@ describe("Supabase Auth service", () => {
 
     expect(port.signInWithPassword).toHaveBeenCalledWith({
       email: "owner@example.invalid",
-      password: "synthetic-password",
+      password: "test-pw",
     });
   });
 
@@ -101,10 +101,10 @@ describe("Supabase Auth service", () => {
     const port = createAuthPort();
     const auth = createSupabaseAuthService(port);
 
-    await auth.updatePassword("synthetic-password");
+    await auth.updatePassword("test-pw");
 
     expect(port.updateUser).toHaveBeenCalledWith({
-      password: "synthetic-password",
+      password: "test-pw",
     });
   });
 
@@ -119,7 +119,7 @@ describe("Supabase Auth service", () => {
     );
 
     await expect(
-      auth.signIn("owner@example.invalid", "synthetic-password"),
+      auth.signIn("owner@example.invalid", "test-pw"),
     ).rejects.toThrow("Password sign-in did not create a session");
   });
 
@@ -134,7 +134,7 @@ describe("Supabase Auth service", () => {
       }),
     );
     await expect(
-      signInAuth.signIn("owner@example.invalid", "synthetic-password"),
+      signInAuth.signIn("owner@example.invalid", "test-pw"),
     ).rejects.toBe(authError);
 
     const resetAuth = createSupabaseAuthService(
@@ -161,7 +161,7 @@ describe("Supabase Auth service", () => {
       }),
     );
     await expect(
-      updateAuth.updatePassword("synthetic-password"),
+      updateAuth.updatePassword("test-pw"),
     ).rejects.toBe(authError);
   });
 
