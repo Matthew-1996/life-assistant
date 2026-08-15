@@ -1,16 +1,16 @@
 # 项目管理 - 生活助手 - Life Console - 2.2.0
 
 > PMO：Agent
-> 主阶段：待真实数据迁移
-> 子状态：Gate 1 / Gate 2 已确认 / 阶段 A-E 候选验收通过 / PR #40 已合并 / 阶段 G Production 部署与登录后 E2E 通过 / 真实数据迁移门禁待执行
-> 当前分支：`agent/life-console-220-production`
-> 当前 worktree：`.worktrees/life-console-220-production`
-> 当前 PR：阶段 G 提交后创建 Draft PR；[#40](https://github.com/Matthew-1996/life-assistant/pull/40) 已 squash 合并
-> 最后更新：2026-08-14
+> 主阶段：已上线
+> 子状态：阶段 A-G 已完成 / Production、真实数据迁移与登录后核心流程验收通过 / 阶段性收口
+> 当前分支：`main`
+> 当前 worktree：主工作区
+> 当前 PR：无开放 PR；[#46](https://github.com/Matthew-1996/life-assistant/pull/46) 为本版本最后一个功能合并
+> 最后更新：2026-08-15
 
 ## 1. 唯一主项
 
-阶段 G 正式上线。按已确认的“新建东京 Free `US$0` Production Supabase、D3 仅依赖 RLS、完整迁移切源”推进 Production 空库验证、迁移工具、私有 dry-run、备份与回滚演练、真实完整迁移和最终切源。精确私有来源清单、真实读取/上传、最终切源和资源删除仍逐项门禁；最终切源前 iCloud 保持唯一真相源。
+Life Console 2.2.0 已完成 Production 上线、获批真实数据迁移和核心功能验收。本阶段唯一主项为收口分支、PR、worktree 与知识库状态；后续只进入常规维护，不在本版本继续扩展功能。
 
 ## 2. 版本收口与分支关系
 
@@ -18,10 +18,10 @@
 |---|---|---|
 | PR #39 / 2.1.0 | 已 squash 合并 | 远端与本地分支、worktree 已清理 |
 | PR #35 / 1.1.0 Sites 草案 | 已关闭 | 已被 2.x 主线取代；活动分支/worktree 已清理，关闭记录保留 |
-| `main` | 包含 2.2.0 合并提交 `bdfbf79` | 阶段 G 从最新 `origin/main` 创建 |
-| `agent/life-console-220-supabase` | 远端已删除，本地旧 worktree 待安全处置 | 仍有未跟踪 `docs/superpowers/` 草稿，未强制删除 |
-| `agent/life-console-220-production` | 阶段 G 唯一活动分支 | 只承载上线计划、迁移工具、去敏证据与知识库更新 |
-| PR #40 / 2.2.0 PR | 已 squash 合并 | merge commit `bdfbf79e5d37aae65d7513ba9ef162a07bfb5f3e` |
+| `main` | 包含 PR #40、#42、#44、#45、#46 | 当前线上与代码基线 |
+| `agent/life-console-220-supabase` | 已清理 | PR #40 已合并；旧 worktree 与本地分支已移除 |
+| `agent/life-console-220-production` | 已清理 | PR #42 已合并；活动分支已移除 |
+| 迁移相关分支 | 已清理 | PR #44、#45、#46 已合并；远端分支已删除，本地残留已移除 |
 
 ## 3. 当前进度
 
@@ -33,7 +33,8 @@
 | 技术/测试评审 | 已完成 | PO 已确认 Q1-Q7、测试矩阵和阶段计划 |
 | 开发与联调 | 合成阶段完成 | 阶段 A-D 通用合成实现已通过本地全量验证和 PR CI |
 | 测试资源与候选部署 | 条件通过 | migration、纯合成 seed、托管权限矩阵、Advisor、精确 CSP、邮箱密码 Owner 会话、新版 Preview 四页产品与恢复路由均通过；双账号浏览器证据和恢复邮件 E2E 按决策延期 |
-| Production 与上线 | Production 部署与登录后 E2E 通过 | 独立东京 Supabase 空库与 Vercel Production 部署已完成；Owner 密码重置→新密码登录→四页访问→目标 CRUD 全链路→logout→窄屏响应式均已通过；剩余：迁移工具开发、私有 dry-run、备份验证、回滚演练、真实完整迁移和最终切源门禁 |
+| Production 与上线 | 已完成 | 独立东京 Supabase、Vercel Production、Owner 密码恢复与登录、四页访问、目标 CRUD、logout、窄屏响应式均通过 |
+| 真实数据迁移 | 已完成 | 迁移工具、dry-run、幂等导入和回读验证通过；38 条获批记录迁移完成，0 mismatch、0 error |
 
 ## 4. 当前卡点与恢复条件
 
@@ -44,7 +45,7 @@
 | 恢复邮件 E2E | `/auth/recovery` SPA 路由已通过；PO 选择本轮暂不发送恢复邮件，不冒充邮件链路已验收 |
 | Production Free 运行限制 | PO 已确认 Free `US$0`；闲置 1 周暂停且无平台自动备份，必须验证独立用户备份并接受恢复后再运行 |
 | Production 登录后 E2E | 已通过：Owner 密码重置→新密码登录→四页访问→目标 CRUD 全链路（create→read-after-refresh→update→archive→持久化）→logout→窄屏响应式（<720px overflow-x:clip 无横向滚动）均验证通过；390×844 精确尺寸因 Electron 浏览器限制无法完美模拟，但 720px 断点响应式 CSS 已就位，633px 实际宽度验证无溢出 |
-| 真实迁移与最终切源 | 精确私有来源清单、真实读取/上传和最终切源仍需分步授权；备份、dry-run、核对和回滚演练失败即停止 |
+| 后续维护 | 新需求、资源删除和高影响数据操作继续按独立门禁执行；本版本不再保留活动开发分支 |
 
 ## 5. 风险与依赖
 
@@ -104,9 +105,12 @@
 | 2026-08-14 | Production Supabase 空库验证 | Agent | `0001`-`0004` 已应用；唯一已确认 Owner/profile、12/12 表 RLS、最小 GRANT、回滚型托管权限矩阵 13/13、正式 Site URL 与精确 recovery redirect 均通过去敏复核；业务数据保持 0 |
 | 2026-08-14 | Vercel Production 基础部署 | PO / Agent | 仅配置 Production 范围的公开 Supabase URL 与 Sensitive publishable key；受测配置完成 Production prebuild 与部署并 READY。稳定入口、首页/recovery 200、rewrite、精确 CSP、安全头和未登录密码 Gate 通过；登录后四页、写路径、退出与 390×844 尚待验收 |
 | 2026-08-14 | Production 登录后 E2E 完成 | PO / Agent | Owner 密码重置→新密码登录→四页访问→目标 CRUD（create→read-after-refresh→update→archive→持久化）→logout 全链路验证通过；窄屏（<720px）响应式布局验证无横向滚动；372 个 JS/TS Vitest + Python 测试全部通过，隐私扫描与 git diff --check 通过 |
+| 2026-08-14 | 迁移工具与真实数据迁移完成 | PO / Agent | PR #44、#45、#46 已合并；38 条获批记录完成 dry-run、幂等导入和回读验证，0 mismatch、0 error |
+| 2026-08-14 | Production 环境变量注入修复 | Agent | 改由 Vercel 服务端构建并注入 Production 环境变量；稳定入口返回 200，Supabase Auth 端点与浏览器配置验证通过 |
+| 2026-08-15 | 2.2.0 阶段性收口 | PO / Agent | 开放 PR 为 0；Life Console 已合并分支与旧 worktree 完成清理，进入常规维护 |
 
 ## 7. 下一步（最多三项）
 
-1. ~~完成 Production Owner 登录后四页、一个获批合成写路径、退出和 390×844 专项验收~~ —— 已通过。
-2. 以合成数据补齐并验证显式 manifest、dry-run、幂等导入、回读校验、备份和回滚演练工具。
-3. 在读取任何真实来源前展示精确私有来源清单并取得独立 PO 确认；真实上传与最终切源继续分别确认。
+1. 观察 Production 稳定性并按需处理缺陷。
+2. 新需求另立版本或走快速维护通道。
+3. 资源删除、真实数据再迁移或外部发布继续逐项取得 PO 明确确认。

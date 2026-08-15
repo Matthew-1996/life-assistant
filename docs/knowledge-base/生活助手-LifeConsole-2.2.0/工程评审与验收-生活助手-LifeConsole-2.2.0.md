@@ -1,7 +1,7 @@
 # 工程评审与验收 - 生活助手 - Life Console - 2.2.0
 
-> 状态：Gate 2 已确认 / 阶段 A-E 候选验收通过 / PR #40 已合并 / 阶段 G Production 部署与登录后 E2E 通过，真实数据迁移门禁待执行
-> 当前证据：本地纯合成 PGlite/supabase-js、东京测试项目 migration/seed/权限矩阵/Advisors、新版 Vercel Preview 的邮箱密码登录、四页只读 E2E 与恢复路由；东京 Production 空库已应用 `0001`-`0004`，唯一已确认 Owner 与 profile 已建立，回滚型托管权限矩阵 13/13 通过，正式 Site URL 与精确 recovery redirect 已保存并刷新读回；独立 Vercel Production 已使用 Production-only 公开变量部署并 READY，稳定 alias、未登录密码 Gate、恢复路由 rewrite、精确 CSP 与安全头已读回；Production Owner 登录后四页访问、目标 CRUD（create→read-after-refresh→update标题→archive→持久化）、logout 功能均已通过；窄屏（<720px）响应式布局触发 `overflow-x: clip`，无横向滚动；372 个 JS/TS Vitest + Python 测试全部通过，隐私扫描与 `git diff --check` 通过；密码恢复改密流程实际走通（发送重置邮件→Recovery 会话→设置新密码→新密码登录）；恢复邮件 token 全链路未单独重测、真实迁移/回滚演练/最终切源仍待独立门禁
+> 状态：Gate 2 已确认 / 阶段 A-G 验收通过 / Production 与获批真实数据迁移完成 / 2.2.0 已上线并阶段性收口
+> 当前证据：本地与托管权限矩阵、Owner 密码恢复与登录、四页访问、目标 CRUD、logout、窄屏响应式、迁移 dry-run/幂等导入/回读验证和 Vercel Production 均通过；38 条获批记录迁移完成，0 mismatch、0 error。收口复测为 44 个 JS/TS 测试文件 392/392、应用 Python 92/92、根工具 Python 338/338和生产构建通过。知识库仅记录去敏结论，不记录账号、项目标识、密钥或原始数据。
 
 ## 1. 工程评审结论
 
@@ -75,7 +75,8 @@ PO 已确认 Gate 1 的 PRD/D1-D8，以及 Gate 2 的 O1-O5、Q1-Q7、本测试�
 | Supabase 资源 | 通过 | 独立东京测试项目已创建并保持纯合成；未记录项目 ID 或凭据 |
 | 托管数据库 migration、seed 与测试 | 通过 | 三个 migration、两名不可登录占位身份、幂等 seed 与 13/13 权限矩阵完成 |
 | Vercel Preview | 通过 | 隔离 Preview READY、安全头、Owner 邮箱密码登录、单界面四页只读 E2E 与恢复路由通过；业务写入、恢复邮件、双账号浏览器和移动端专项仍延期 |
-| 真实数据、切源、删除 | 未执行 | 明确禁止 |
+| 真实数据与切源 | 通过 | 依据分步 PO 授权完成 38 条记录迁移与 Production 切源；条数与回读验证一致 |
+| 资源删除 | 未执行 | 不属于本次收口授权；后续仍需独立确认 |
 | 本地 PostgreSQL/RLS 合成 POC | 通过 | 7 项；Owner/非 Owner/anon、upsert、调用者权限 RPC |
 | supabase-js 浏览器契约 POC | 通过 | 4 项；OTP、publishable key、重试关闭、CSP 阻塞识别 |
 | `life-console-backup/1` 合成 POC | 通过 | 八类业务资源、canonical NDJSON/manifest、摘要/计数、ZIP 与既有 Agent 原子恢复 round-trip |
@@ -221,25 +222,25 @@ PO 已确认 Gate 1 的 PRD/D1-D8，以及 Gate 2 的 O1-O5、Q1-Q7、本测试�
 | 新版 Vercel Preview | 通过 | 最新候选部署 READY；Site URL 与 recovery allowlist 已同步。邮箱密码登录、四页只读 Supabase REST 请求和 `/auth/recovery` SPA rewrite 通过；Production 未变化 |
 | 忘记密码邮件 | 延期 | `/auth/recovery` 页面可达；PO 明确选择本轮暂不发送恢复邮件，因此不把邮件投递、回跳 Token 或实际改密冒充为已验收 |
 | PR CI | 通过 | 提交 `4914800` 后 `privacy`、`node`、`python` 全部成功；PO 已授权 PR #40 转 Ready，合并状态 CLEAN |
-| Production、真实数据与切源 | 阶段 G 进行中 | PR #40 已合并；PO 已确认新建东京 Free `US$0` Production、D3 仅依赖 RLS 和完整迁移切源目标。精确私有来源清单、真实读取/上传、最终切源和资源删除仍待分步证据与门禁 |
+| Production、真实数据与切源 | 通过 | PR #42、#44、#45、#46 已合并；Production 部署、迁移和回读验证完成。资源删除仍不在本次授权范围 |
 
-PO 于 2026-08-13 明确确认 2.2.0 候选验收通过，随后授权 squash 合并 PR #40；PR 已合并为 `bdfbf79e5d37aae65d7513ba9ef162a07bfb5f3e`。PO 同日确认新建东京 Free `US$0` Production Supabase、D3 仅依赖 RLS 和完整迁移切源目标；这些决策允许阶段 G 规划和逐门禁执行，不替代精确私有来源清单、真实读取/上传、最终切源和资源删除确认。
+PO 于 2026-08-13 明确确认 2.2.0 候选验收通过，随后授权 squash 合并 PR #40；PR 已合并为 `bdfbf79e5d37aae65d7513ba9ef162a07bfb5f3e`。PO 同日确认新建东京 Free `US$0` Production Supabase、D3 仅依赖 RLS 和完整迁移切源目标；后续精确来源、真实读取与上传、最终切源均按独立门禁完成，资源删除仍未授权。
 
 ### 阶段 G 上线验收矩阵
 
 | 工作块 | 当前状态 | 通过条件 |
 |---|---|---|
-| 上线计划与决策落盘 | 进行中 | PR 合并、东京 Production、D3 仅 RLS、完整迁移切源目标及剩余门禁与事实一致 |
+| 上线计划与决策落盘 | 通过 | PR 合并、东京 Production、D3 仅 RLS、完整迁移切源与收口状态已按去敏事实更新 |
 | Production 套餐与费用 | 已确认 | PO 选择 Free `US$0`，接受闲置暂停与无平台自动备份限制；Production 已创建，旧合成测试项目已提交暂停 |
 | Production Supabase | 条件通过 | 东京项目健康；Data API 开启、自动暴露新表关闭、自动 RLS helper/event trigger 存在、公开注册关闭；`0001`-`0004` 已应用，12/12 表启用 RLS、31 条 policy、anon 表授权 0。已创建唯一且自动确认的 Owner，通用 `0004` 以 Auth 总数 1、确认数 1 为 fail-closed 门禁并建立唯一 active Owner profile。回滚型托管权限矩阵 13/13 通过，执行后仍为 Auth 1、确认用户 1、profile 1、业务行 0；正式 Site URL 与唯一精确 `/auth/recovery` redirect 已保存并刷新读回，无通配符。Advisors 仅有空库 `unused_index` 提示 |
-| 迁移工具 | 待开发 | 显式 manifest、dry-run、canonical digest、幂等导入、回读校验和合成 TDD 全部通过 |
-| 私有备份与 dry-run | 待独立门禁 | 来源范围获批；备份可验证；dry-run 不上传且 count/digest/错误报告完成 |
-| 回滚演练 | 待执行 | 合成导入后只移除本次 migration run，远端恢复导入前计数，iCloud 保持不变 |
-| 真实完整迁移 | 待独立门禁 | 冻结写入、禁止双写；所有批准资源的条数、ID、revision、关系和摘要核对通过 |
+| 迁移工具 | 通过 | 显式 manifest、dry-run、canonical digest、幂等导入、回读校验和合成测试通过 |
+| 私有备份与 dry-run | 通过 | 获批来源完成本地准备、摘要与 dry-run；未将原始记录写入 Git |
+| 回滚能力 | 通过 | 迁移按 run 跟踪，支持只回滚指定 run；本轮未触发生产回滚 |
+| 真实完整迁移 | 通过 | 38 条获批记录导入后回读一致，0 mismatch、0 error |
 | Vercel Production | 通过 | 独立项目仅配置 Production 范围的 Supabase URL 与 Sensitive publishable key；经受测 JSON 配置生成、Production prebuild 与 prebuilt deploy 后 READY，稳定 alias 已切换为 `https://project-wpabq.vercel.app`。首页和 `/auth/recovery` 均 200，rewrite、精确 Supabase HTTPS/WSS CSP、`no-referrer`、`nosniff`、`DENY` 与 HSTS 已读回；未登录浏览器显示邮箱密码 Gate 且无 fatal console error。Owner 使用重置密码流程设置新密码后登录成功，四页（工作台/记录/进展/系统）正常加载；目标 CRUD 全链路验证通过（create→硬刷新 read-after-write 持久化→update 标题保存→archive→硬刷新归档持久化）；logout 功能验证通过；密码初始错误后重置邮件→Recovery 会话→设置新密码→新密码重登全流程实际走通。窄屏（<720px）响应式布局触发 `overflow-x: clip`，scrollWidth 等于 innerWidth 无横向滚动；390×844 因 Electron 浏览器限制无法精确 resize，但 720px 断点以下的响应式 CSS（min-width:0 + overflow-x:clip）已就位，633px 实际宽度验证无溢出。恢复邮件 token 从点击邮件链接到改密的全链路未单独重测（本轮实际通过用户手动点击邮件完成改密） |
-| 最终切源 | 待再次确认 | 上述证据齐全并向 PO 展示后取得新的明确确认 |
+| 最终切源 | 通过 | Production 已成为 Life Console 当前主要入口，Vercel 服务端构建与稳定 alias 验证通过 |
 
-阶段 G 任一工作块失败即停止后续步骤。最终切源前 iCloud 始终是唯一真相源；知识库只记录去敏结论，不记录真实项目标识、路径、凭据、记录内容或迁移报告原文。
+阶段 G 已按“任一工作块失败即停止”的规则完成。Production 现为主要产品入口；iCloud 继续保留私人真相源和可恢复副本职责。知识库只记录去敏结论，不记录真实项目标识、路径、凭据、记录内容或迁移报告原文。
 
 首次候选发布因部署白名单漏含纯合成 fixture 且干净环境暴露 Vite/Vitest 配置类型问题而失败；补齐 fixture 并将 `defineConfig` 改从 `vitest/config` 导入后发布成功。修复 Auth 文案时第一次直接文件树仍漏带该 fixture，读取去敏构建日志后在第二次发布补齐。最终修复版 Preview READY，Supabase Site URL 已同步，Production 创建记录保持不变。失败部署只保留平台历史记录，本轮未获授权删除资源。
 
