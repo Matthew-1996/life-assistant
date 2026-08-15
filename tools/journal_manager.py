@@ -26,6 +26,7 @@ from typing import Any, Iterable
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_ROOT = PROJECT_ROOT / "journal"
+ONLINE_PRIMARY_MARKER = ".life-console-online-primary"
 DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 TIME_PATTERN = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
 ALLOWED_SOURCES = {"explicit", "implicit"}
@@ -2593,6 +2594,10 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         root = args.root.resolve()
+        if args.command == "add" and (root.parent / ONLINE_PRIMARY_MARKER).is_file():
+            raise JournalError(
+                "本地活跃写入已停用；请使用 tools/life_console_cloud.py 写入线上唯一真相源"
+            )
         with _journal_lock(root):
             if args.command == "add":
                 result: Any = add_entry(root, _read_payload(args.input))

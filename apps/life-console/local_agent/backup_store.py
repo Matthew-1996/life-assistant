@@ -17,13 +17,14 @@ import json
 import os
 from pathlib import Path, PurePosixPath
 import re
+import shutil
 import stat
 import tempfile
 from typing import BinaryIO, Mapping
 from zipfile import BadZipFile, ZipFile
 
 
-BACKUP_FORMAT_VERSION = "life-console-backup/1"
+BACKUP_FORMAT_VERSION = "life-console-backup/2"
 RECEIPT_FORMAT_VERSION = "life-console-local-receipts/1"
 EXPECTED_RESOURCES = (
     "goals",
@@ -104,12 +105,21 @@ class BackupStore:
         *,
         target_path: Path,
         receipt_path: Path,
+        previous_path: Path | None = None,
         limits: BackupStoreLimits | None = None,
     ) -> None:
         self.target_path = Path(target_path)
+        self.previous_path = Path(previous_path) if previous_path else self._default_previous_path()
         self.receipt_path = Path(receipt_path)
         self.limits = limits or BackupStoreLimits()
         self.lock_path = self.receipt_path.with_suffix(self.receipt_path.suffix + ".lock")
+
+    def _default_previous_path(self) -> Path:
+        if "latest" in self.target_path.name:
+            return self.target_path.with_name(
+                self.target_path.name.replace("latest", "previous", 1)
+            )
+        return self.target_path.with_name(self.target_path.name + ".previous")
 
     def install(
         self,
@@ -182,6 +192,26 @@ class BackupStore:
             if reread_digest != archive_sha256:
                 raise BackupAgentError("archive_readback_mismatch")
             self._validate_archive(temporary_path)
+
+            if self.target_path.exists():
+                self._validate_archive(self.target_path)
+                previous_fd, previous_name = tempfile.mkstemp(
+                    dir=self.previous_path.parent,
+                    prefix=".life-console-previous-",
+                    suffix=".tmp",
+                )
+                previous_temp = Path(previous_name)
+                try:
+                    with os.fdopen(previous_fd, "wb", closefd=True) as destination:
+                        with self.target_path.open("rb") as source:
+                            shutil.copyfileobj(source, destination, 64 * 1024)
+                        destination.flush()
+                        os.fsync(destination.fileno())
+                    self._validate_archive(previous_temp)
+                    os.replace(previous_temp, self.previous_path)
+                    os.chmod(self.previous_path, 0o600)
+                finally:
+                    previous_temp.unlink(missing_ok=True)
 
             os.replace(temporary_path, self.target_path)
             temporary_path = None

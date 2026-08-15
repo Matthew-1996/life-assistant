@@ -238,6 +238,8 @@ let migrationImports = new Map<
 let callLog: CallEntry[] = [];
 let shouldFailOn: { table?: string; method?: string } | null = null;
 let failOnce = false;
+let migrationImportsInsertCount = 0;
+let failMigrationImportsOnCall: number | null = null;
 
 function resetMockState(): void {
   nextInsertedId = 1;
@@ -246,6 +248,8 @@ function resetMockState(): void {
   callLog = [];
   shouldFailOn = null;
   failOnce = false;
+  migrationImportsInsertCount = 0;
+  failMigrationImportsOnCall = null;
 }
 
 function createMockClient() {
@@ -307,6 +311,17 @@ function createMockClient() {
     }> {
       callLog.push({ table, method, filters: { ...filters }, data: insertData });
 
+      if (table === "migration_imports" && method === "insert") {
+        migrationImportsInsertCount += 1;
+        if (migrationImportsInsertCount === failMigrationImportsOnCall) {
+          return {
+            data: null,
+            error: { message: "Synthetic failure", code: "SYNTHETIC_ERROR" },
+            status: 500,
+          };
+        }
+      }
+
       if (
         shouldFailOn
         && (!shouldFailOn.table || shouldFailOn.table === table)
@@ -340,7 +355,9 @@ function createMockClient() {
         if (table === "migration_imports") {
           const runId = filters.migration_run_id as string | undefined;
           const tableName = filters.table_name as string | undefined;
-          let imps = runId ? (migrationImports.get(runId) ?? []) : [];
+          let imps = runId
+            ? (migrationImports.get(runId) ?? [])
+            : [...migrationImports.values()].flat();
           if (tableName) {
             imps = imps.filter((i) => i.tableName === tableName);
           }
@@ -600,7 +617,7 @@ describe("private migration import", () => {
     expect(uniqueTablesInOrder).toEqual(DEPENDENCY_ORDER);
   });
 
-  it("skips already imported records (idempotent across runs)", async () => {
+  it("skips already imported records across different migration runs", async () => {
     const approvedRoot = temporaryDirectory();
     const { manifest, dryRunReport } = manifestFor(approvedRoot);
     const client = createMockClient() as unknown as SupabaseClient;
@@ -616,18 +633,42 @@ describe("private migration import", () => {
     });
     expect(firstStats.inserted).toBe(8);
 
-    resetMockState();
     const secondRunId = randomUUID();
-    const client2 = createMockClient() as unknown as SupabaseClient;
     const secondStats = await importMigration({
       manifest,
       dryRunReport,
       migrationRunId: secondRunId,
-      client: client2,
+      client,
       ownerUserId,
     });
-    expect(secondStats.inserted).toBe(8);
-    expect(secondStats.skipped).toBe(0);
+    expect(secondStats.inserted).toBe(0);
+    expect(secondStats.skipped).toBe(8);
+  });
+
+  it("removes a journal batch when import tracking fails", async () => {
+    const approvedRoot = temporaryDirectory();
+    const { manifest, dryRunReport } = manifestFor(approvedRoot);
+    const client = createMockClient() as unknown as SupabaseClient;
+
+    failMigrationImportsOnCall = 2;
+
+    await expect(importMigration({
+      manifest,
+      dryRunReport,
+      migrationRunId: randomUUID(),
+      client,
+      ownerUserId: randomUUID(),
+    })).rejects.toThrow(/track imports/i);
+
+    expect(insertedRows.get("journals")?.size ?? 0).toBe(0);
+    const journalRevisionDelete = callLog.findIndex(
+      (call) => call.table === "journal_revisions" && call.method === "delete",
+    );
+    const journalDelete = callLog.findIndex(
+      (call) => call.table === "journals" && call.method === "delete",
+    );
+    expect(journalRevisionDelete).toBeGreaterThanOrEqual(0);
+    expect(journalDelete).toBeGreaterThan(journalRevisionDelete);
   });
 
   it("rejects import when dry-run report contains errors", async () => {

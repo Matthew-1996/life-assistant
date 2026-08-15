@@ -23,7 +23,7 @@ import {
 
 function syntheticSnapshot(): LifeConsoleSnapshot {
   return {
-    schema_version: 1,
+    schema_version: 2,
     exported_at: "2030-01-02T03:04:05Z",
     profiles: [{ user_id: "synthetic-owner" }],
     goals: [{ id: 1, title: "Synthetic goal" }],
@@ -46,7 +46,7 @@ function clientWithRpc(
 
 function emptySnapshot(): LifeConsoleSnapshot {
   return Object.fromEntries([
-    ["schema_version", 1],
+    ["schema_version", 2],
     ["exported_at", "2030-01-02T03:04:05Z"],
     ...BACKUP_RESOURCE_NAMES.map((name) => [name, []]),
   ]) as LifeConsoleSnapshot;
@@ -57,6 +57,52 @@ function sha256(value: Uint8Array | string): string {
 }
 
 describe("synthetic backup snapshots", () => {
+  it("creates a pending manual backup request and reads only redacted status", async () => {
+    const insertLimit = vi.fn(async () => ({
+      data: [{
+        id: 12,
+        status: "pending",
+        created_at: "2030-01-02T03:04:05Z",
+        completed_at: null,
+        record_counts: {},
+      }],
+      error: null,
+      status: 201,
+    }));
+    const limit = vi.fn(async () => ({
+      data: [{
+        id: 11,
+        status: "success",
+        created_at: "2030-01-01T03:04:05Z",
+        completed_at: "2030-01-01T03:05:05Z",
+        record_counts: { journals: 4 },
+      }],
+      error: null,
+      status: 200,
+    }));
+    const client = {
+      from: vi.fn(() => ({
+        insert: vi.fn(() => ({
+          select: vi.fn(() => ({ limit: insertLimit })),
+        })),
+        select: vi.fn(() => ({
+          order: vi.fn(() => ({ limit })),
+        })),
+      })),
+    } as unknown as SupabaseClient;
+    const repository = new BackupRepository(client);
+
+    await expect(repository.start()).resolves.toMatchObject({
+      status: "pending",
+    });
+    await expect(repository.latest()).resolves.toEqual({
+      status: "success",
+      requestedAt: "2030-01-01T03:04:05Z",
+      completedAt: "2030-01-01T03:05:05Z",
+      counts: { journals: 4 },
+    });
+  });
+
   it("reads the owner snapshot through the single invoker RPC", async () => {
     const snapshot = syntheticSnapshot();
     const rpc = vi.fn(async () => ({
@@ -103,7 +149,7 @@ describe("synthetic backup snapshots", () => {
   it.each([
     {
       name: "unsupported schema",
-      snapshot: { ...syntheticSnapshot(), schema_version: 2 },
+      snapshot: { ...syntheticSnapshot(), schema_version: 1 },
     },
     {
       name: "missing resource",
@@ -136,11 +182,11 @@ describe("synthetic backup snapshots", () => {
   });
 });
 
-describe("life-console-backup/1 packaging", () => {
+describe("life-console-backup/2 packaging", () => {
   const options = {
     exportId: "synthetic-export-0001",
-    sourceProductVersion: "2.2.0",
-    sourceSchemaVersion: "supabase/1",
+    sourceProductVersion: "2.3.0",
+    sourceSchemaVersion: "supabase/2",
   };
 
   it("packages exactly eight empty NDJSON resources and one manifest", async () => {
@@ -162,8 +208,8 @@ describe("life-console-backup/1 packaging", () => {
     }
     expect(result.manifest).toMatchObject({
       format_version: BACKUP_FORMAT_VERSION,
-      source_product_version: "2.2.0",
-      source_schema_version: "supabase/1",
+      source_product_version: "2.3.0",
+      source_schema_version: "supabase/2",
       export_id: "synthetic-export-0001",
       exported_at: "2030-01-02T03:04:05Z",
     });

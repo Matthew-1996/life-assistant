@@ -29,10 +29,10 @@
 
 ## 真相源与展示层
 
-- `USER.md`、`MEMORY.md`、`GOALS.md`、`journal/`、`records/` 和个人计划是 iCloud 私人真相源，各自职责不合并。
+- `USER.md`、`MEMORY.md`、职业知识库和个人计划继续以 iCloud 为私人真相源。Life Console 管理的日记、每日状态、目标、复盘与 Apple Health 汇总以 Supabase Owner-scoped 数据库为唯一真相源；`journal/`、`records/` 只保留切源快照和恢复用途，不再接收活跃写入。
 - `STATUS.md` 是可重建状态快照，不是目标、记忆或日记真相源。
 - 展示层生命周期以 [`docs/operations/product-surfaces.json`](docs/operations/product-surfaces.json) 为准：Life Console 是主要入口；Google 表格和唯一长期 XLSX 都只按需单向派生；Life Dashboard 已归档，不再维护或部署。
-- 派生展示失败不得回滚本地写入，也不得从 Google、XLSX、浏览器缓存或归档网页反向补写 iCloud。
+- 云端写入失败必须明确未保存，只保留当前对话或浏览器临时草稿，不得降级写入 iCloud。Google、XLSX、浏览器缓存、归档网页和 iCloud 备份均不得自动反向补写 Supabase。
 - 未经针对具体范围的当次明确同意，不把日记原文、健康数据或敏感摘要发布到外部服务。
 
 ## 数据与长期认识
