@@ -1,7 +1,7 @@
 # 技术方案 - 生活助手 - Life Console - 2.2.0
 
-> 状态：Gate 2 已确认 / 阶段 A-D 完成 / 阶段 E Owner 密码登录与新版 Preview 四页只读 E2E 通过 / 阶段 G 进行中
-> 范围：阶段 A-E 合成候选和 PR #40 合并已完成；阶段 G 按独立东京 Production、私有 dry-run、完整迁移、Production 验证和最终切源门禁推进
+> 状态：Gate 2 已确认 / 阶段 A-G 已完成 / Production 与获批真实数据迁移通过 / 已上线并阶段性收口
+> 范围：阶段 A-E 合成候选、独立东京 Production、私有 dry-run、完整迁移、Production 验证和最终切源均已完成；后续变更进入新版本或快速维护通道
 
 ## 1. 技术结论摘要
 
