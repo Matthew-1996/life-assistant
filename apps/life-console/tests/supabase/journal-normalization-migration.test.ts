@@ -36,7 +36,7 @@ beforeAll(async () => {
     "../../supabase/migrations/20260815165912_life_console_230_online_primary.sql",
     "../../supabase/migrations/20260816170000_unified_journal_normalization.sql",
     "../../supabase/migrations/20260816171759_retry_failed_journal_normalization.sql",
-    "../../supabase/migrations/20260817043000_preserve_completed_journal_normalization.sql",
+    "../../supabase/migrations/20260816213029_preserve_completed_journal_normalization.sql",
   ];
   for (const migration of migrations) {
     if (migration.endsWith("0005_migration_tracking.sql")) {
