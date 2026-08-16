@@ -80,6 +80,20 @@ describe("Supabase candidate Vercel configuration", () => {
     expect(JSON.stringify(config)).not.toContain("sb_secret_");
   });
 
+  it("keeps the optional DeepSeek key server-only and out of generated config", () => {
+    const serverKey = "synthetic-deepseek-server-key";
+    const config = createSupabaseCandidateVercelConfig({
+      ...syntheticEnvironment,
+      DEEPSEEK_API_KEY: serverKey,
+    });
+    expect(JSON.stringify(config)).not.toContain(serverKey);
+    expect(JSON.stringify(config)).not.toContain("api.deepseek.com");
+    expect(() => createSupabaseCandidateVercelConfig({
+      ...syntheticEnvironment,
+      VITE_DEEPSEEK_API_KEY: serverKey,
+    })).toThrow(/must remain server-only/);
+  });
+
   it("accepts legacy JWT anon keys (eyJ-prefixed)", () => {
     const legacyEnv = {
       ...syntheticEnvironment,
@@ -132,6 +146,19 @@ describe("Supabase Production Vercel configuration", () => {
     expect(config.headers).toEqual(
       createSupabaseCandidateVercelConfig(syntheticEnvironment).headers,
     );
+  });
+
+  it("allows only the named server DeepSeek key without serializing it", () => {
+    const serverKey = "synthetic-deepseek-server-key";
+    const config = createSupabaseProductionVercelConfig({
+      ...syntheticProductionEnvironment,
+      DEEPSEEK_API_KEY: serverKey,
+    });
+    expect(JSON.stringify(config)).not.toContain(serverKey);
+    expect(() => createSupabaseProductionVercelConfig({
+      ...syntheticProductionEnvironment,
+      DEEPSEEK_ENDPOINT: "https://example.invalid",
+    })).toThrow(/only DEEPSEEK_API_KEY/);
   });
 
   it("fails closed outside the exact independent Production project", () => {
