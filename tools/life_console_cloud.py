@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 import argparse
 import getpass
+import hashlib
 import json
 from pathlib import Path
 import subprocess
@@ -19,6 +20,12 @@ import sys
 import time
 from typing import Any, Callable, Protocol
 from urllib import error, parse, request
+
+from journal_normalization_contract import (
+    JournalNormalizationError,
+    load_contract,
+    validate_normalization,
+)
 
 
 class CloudWriteError(RuntimeError):
@@ -136,16 +143,125 @@ class CloudClient:
             raise ValueError("record_key is required")
         row = _first_row(self._request(
             "POST",
-            "/rest/v1/rpc/create_journal",
+            "/rest/v1/rpc/create_journal_v2",
             body={
                 "p_idempotency_key": record_key,
+                "p_record_key": record_key,
                 "p_event_date": record.get("event_date"),
-                "p_title": record.get("title"),
+                "p_event_time": record.get("event_time"),
+                "p_time_precision": record.get("time_precision", "unknown"),
+                "p_source": record.get("source", "agent"),
+                "p_privacy": record.get("privacy", "owner-only"),
                 "p_content": record.get("content"),
-                "p_tags": record.get("tags", []),
             },
         ))
-        return self._receipt("journal", row)
+        revision = row.get("revision")
+        raw_revision = row.get("raw_revision")
+        journal_id = row.get("id")
+        if not isinstance(revision, int):
+            raise CloudWriteError("unavailable")
+
+        normalization = record.get("normalization")
+        if normalization is None:
+            return {
+                "status": "saved",
+                "normalization_status": "pending",
+                "revision": revision,
+            }
+        context_revisions = record.get("context_revisions", {})
+        if not isinstance(context_revisions, dict):
+            context_revisions = {}
+        try:
+            normalized = validate_normalization(
+                normalization,
+                record.get("content"),
+                context_revisions,
+            )
+        except (JournalNormalizationError, TypeError):
+            return {
+                "status": "saved",
+                "normalization_status": "pending",
+                "revision": revision,
+            }
+        if not isinstance(journal_id, int) or not isinstance(raw_revision, int):
+            return {
+                "status": "saved",
+                "normalization_status": "pending",
+                "revision": revision,
+            }
+
+        contract = load_contract()
+        task_key = "journal-normalize:agent:" + hashlib.sha256(
+            f"{record_key}:{raw_revision}".encode("utf-8")
+        ).hexdigest()
+        try:
+            job = _first_row(self._request(
+                "POST",
+                "/rest/v1/rpc/begin_journal_normalization",
+                body={
+                    "p_journal_id": journal_id,
+                    "p_source_revision": raw_revision,
+                    "p_contract_version": contract["contract_version"],
+                    "p_prompt_version": contract["prompt_version"],
+                    "p_processor": "agent",
+                    "p_task_key": task_key,
+                },
+            ))
+        except CloudWriteError:
+            return {
+                "status": "saved",
+                "normalization_status": "pending",
+                "revision": revision,
+            }
+        job_id = job.get("id")
+        if not isinstance(job_id, str) or not job_id:
+            return {
+                "status": "saved",
+                "normalization_status": "pending",
+                "revision": revision,
+            }
+        try:
+            completed = _first_row(self._request(
+                "POST",
+                "/rest/v1/rpc/complete_journal_normalization",
+                body={
+                    "p_job_id": job_id,
+                    "p_expected_source_revision": raw_revision,
+                    "p_metadata": normalized,
+                    "p_title": normalized["title"],
+                    "p_tags": normalized["tags"],
+                },
+            ))
+        except CloudWriteError:
+            try:
+                self._request(
+                    "POST",
+                    "/rest/v1/rpc/fail_journal_normalization",
+                    body={
+                        "p_job_id": job_id,
+                        "p_expected_source_revision": raw_revision,
+                        "p_failure_code": "agent_completion_failed",
+                    },
+                )
+            except CloudWriteError:
+                return {
+                    "status": "saved",
+                    "normalization_status": "pending",
+                    "revision": revision,
+                }
+            return {
+                "status": "saved",
+                "normalization_status": "failed",
+                "revision": revision,
+            }
+        completed_revision = completed.get("revision")
+        if not isinstance(completed_revision, int):
+            raise CloudWriteError("unavailable")
+        return {
+            "status": "saved",
+            "normalization_status": "completed",
+            "revision": completed_revision,
+        }
 
     def upsert_daily_checkin(self, record: dict[str, Any]) -> dict[str, Any]:
         record_key = record.get("record_key")
