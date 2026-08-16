@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildJournalNormalizationMessages,
   journalContractVersion,
+  journalNormalizationFields,
   type JournalNormalization,
   validateJournalNormalization,
 } from "../../src/journal/normalization-contract";
@@ -53,6 +54,19 @@ describe("journal normalization contract", () => {
       {},
     )).toEqual(validNormalization());
     expect(journalContractVersion).toBe("journal-normalization/1.0.0");
+    expect(journalNormalizationFields.map(({ key, label }) => [key, label]))
+      .toEqual([
+        ["title", "标题"],
+        ["summary", "摘要"],
+        ["facts", "明确事实"],
+        ["feelings", "明确感受"],
+        ["people", "人物"],
+        ["places", "地点或场景"],
+        ["themes", "生活主题"],
+        ["planning_clues", "可能的规划线索"],
+        ["inferences", "待用户确认的推测"],
+        ["tags", "标签"],
+      ]);
   });
 
   it("rejects evidence that is absent from the raw journal", () => {

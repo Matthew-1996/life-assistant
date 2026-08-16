@@ -18,10 +18,12 @@ Life Console ─保存原文─┘          │
 
 当前只维护一个机器可读工件：
 
-- `apps/life-console/contracts/journal-normalization-v1.json`：同时保存 contract version、prompt version、唯一 system Prompt、字段 Schema 与长度限制，不含真实人物或日记。
+- `apps/life-console/contracts/journal-normalization-v1.json`：同时保存 contract version、prompt version、唯一 system Prompt、字段 Schema、字段展示顺序/中文标签与长度限制，不含真实人物或日记。
 - TypeScript `normalization-contract.ts` 与 Python `journal_normalization_contract.py` 都读取这一工件；不得复制第二份 Prompt 或字段定义。
 
 `journal/QUICK_CAPTURE.md`、Agent Skill、Life Console 和自动化只引用契约版本，不复制规则正文。项目校验器检查重复 Prompt、版本漂移和未引用 Schema。
+
+Life Console 保存前只展示“原文保存预览”，不得把原文截断当作摘要或称为结构化整理。原文保存成功后，Agent 与 DeepSeek 才分别消费同一契约；最终页面也从契约字段清单读取顺序与标签。
 
 ## 3. 数据模型草案
 
@@ -76,7 +78,7 @@ Agent 不直接拼 Markdown 保存；Markdown/页面均从结构化 JSON 渲染�
 - 单轮请求、非流式、低随机性、限制输出 token
 - 返回后执行严格本地 Schema、数组长度、文本长度、枚举和禁止新增事实校验
 
-官方资料表明，旧 `deepseek-chat` / `deepseek-reasoner` 已于 2026-07-24 退役；不得使用旧别名。JSON Output 偶尔可能返回空内容，因此空内容、截断、非 stop、Schema 错误只重试一次，仍失败即标记 `failed`，不自动切换 `v4-pro`。
+官方资料表明，旧 `deepseek-chat` / `deepseek-reasoner` 已于 2026-07-24 退役；不得使用旧别名。JSON Output 偶尔可能返回空内容，因此空内容、截断、非 stop、Schema 错误只重试一次；网络超时、限流与 5xx 也只允许一次进程内重试。仍失败即标记 `failed`，不自动切换 `v4-pro`。服务端只保存去敏错误类别，如超时或 HTTP 状态，不记录响应体。
 
 官方资料：
 
@@ -97,6 +99,8 @@ Agent 不直接拼 Markdown 保存；Markdown/页面均从结构化 JSON 渲染�
 
 - Agent 来源：创建后由当前 Agent立即处理。
 - Web 来源：`create_journal_v2` 成功后才调用 Vercel Function；Function 完成或失败都不改变“原文已保存”的事实。页面重新打开时可恢复 pending/failed 状态并由用户重试。
+- 同一失败任务只允许再开启一次：复用原 job 与 task key、`attempts` 从 1 增至 2，不新建整理结果；completed 任务继续幂等返回，第二次失败后 fail closed。
+- `/api/journal-normalize-health` 只允许已认证用户触发，只发送代码内置合成日记，用于验证 Vercel → DeepSeek → 统一 Schema 全链路；不读写日记表，不返回模型正文。
 - 本阶段不使用数据库触发器直接发外网请求，不使用无限 cron，也不因模型失败回写本地文件。
 - POC 通过后再评审是否增加有限后台队列；当前简单方案避免引入 service-role 和无人值守私人数据外发。
 

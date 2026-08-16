@@ -6,6 +6,10 @@ import {
   type ErrorResponse,
   type LifeConsoleClient,
 } from "../api/client";
+import {
+  journalContractVersion,
+  journalNormalizationFields,
+} from "../journal/normalization-contract";
 import type { components } from "../contracts/life-console";
 import type {
   DailyAnchors,
@@ -685,8 +689,7 @@ export function createSupabaseDashboardClient({
     text: string,
     _contextEtag: string,
   ): Promise<CapturePreview> {
-    const summary = compactLine(text, 120);
-    if (!summary) {
+    if (!compactLine(text, 120)) {
       throw apiError(
         "INVALID_REQUEST",
         400,
@@ -698,9 +701,15 @@ export function createSupabaseDashboardClient({
     return {
       schema_version: 1,
       state: "available",
-      message: "已生成结构化预览；此步骤尚未保存。",
+      message: "已生成原文保存预览；完整整理将在原文保存后按统一契约进行。",
       intent: "journal",
-      preview: { date: resolveDate(), source: "对话式记录", summary },
+      preview: {
+        date: resolveDate(),
+        source: "对话式记录",
+        normalization_contract_version: journalContractVersion,
+        normalization_state: "pending_after_save",
+        normalization_fields: journalNormalizationFields.map(({ label }) => label),
+      },
     };
   }
 

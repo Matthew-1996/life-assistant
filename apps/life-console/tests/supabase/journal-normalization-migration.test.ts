@@ -35,6 +35,7 @@ beforeAll(async () => {
     "../../supabase/migrations/0005_migration_tracking.sql",
     "../../supabase/migrations/20260815165912_life_console_230_online_primary.sql",
     "../../supabase/migrations/20260816170000_unified_journal_normalization.sql",
+    "../../supabase/migrations/20260816171759_retry_failed_journal_normalization.sql",
   ];
   for (const migration of migrations) {
     if (migration.endsWith("0005_migration_tracking.sql")) {
@@ -191,6 +192,58 @@ describe("Life Console 2.4.0 journal normalization migration", () => {
       raw_revision: 2,
       normalization_status: "pending",
     }]);
+  });
+
+  it("reopens one failed job exactly once and keeps completed jobs idempotent", async () => {
+    const created = await queryAs<{ id: number; raw_revision: number }>(`
+      select id, raw_revision from public.create_journal_v2(
+        'journal:synthetic-normalization-retry',
+        'idem:synthetic-normalization-retry',
+        date '2030-02-03', null, 'unknown', 'life_console', 'owner-only',
+        'Synthetic retry raw'
+      )
+    `);
+    const row = created.rows[0];
+    const taskKey = 'task:synthetic-normalization-retry';
+    const first = await queryAs<{ id: string; attempts: number }>(`
+      select id, attempts from public.begin_journal_normalization(
+        ${row.id}, ${row.raw_revision},
+        'journal-normalization/1.0.0',
+        'journal-normalization-prompt/1.0.0',
+        'deepseek', '${taskKey}'
+      )
+    `);
+    await queryAs(`select * from public.fail_journal_normalization(
+      '${first.rows[0].id}'::uuid, ${row.raw_revision}, 'provider_http_503'
+    )`);
+    const retried = await queryAs<{ id: string; status: string; attempts: number; failure_code: string | null }>(`
+      select id, status, attempts, failure_code from public.begin_journal_normalization(
+        ${row.id}, ${row.raw_revision},
+        'journal-normalization/1.0.0',
+        'journal-normalization-prompt/1.0.0',
+        'deepseek', '${taskKey}'
+      )
+    `);
+    expect(retried.rows).toEqual([{
+      id: first.rows[0].id,
+      status: "processing",
+      attempts: 2,
+      failure_code: null,
+    }]);
+    await queryAs(`select * from public.complete_journal_normalization(
+      '${first.rows[0].id}'::uuid, ${row.raw_revision},
+      '{"title":"Retry title","summary":"","facts":[],"feelings":[],"people":[],"places":[],"themes":[],"planning_clues":[],"inferences":[],"tags":[]}'::jsonb,
+      'Retry title', array[]::text[]
+    )`);
+    const completed = await queryAs<{ status: string; attempts: number }>(`
+      select status, attempts from public.begin_journal_normalization(
+        ${row.id}, ${row.raw_revision},
+        'journal-normalization/1.0.0',
+        'journal-normalization-prompt/1.0.0',
+        'deepseek', '${taskKey}'
+      )
+    `);
+    expect(completed.rows).toEqual([{ status: "completed", attempts: 2 }]);
   });
 
   it("enables RLS on jobs and the approved person context projection", async () => {

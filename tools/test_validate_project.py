@@ -10,6 +10,13 @@ CONTRACT = {
     "contract_version": "journal-normalization/1.0.0",
     "prompt_version": "journal-normalization-prompt/1.0.0",
     "system_prompt": "Synthetic canonical prompt",
+    "display_fields": [
+        {"key": key, "label": f"Synthetic {key}"}
+        for key in (
+            "title", "summary", "facts", "feelings", "people", "places",
+            "themes", "planning_clues", "inferences", "tags",
+        )
+    ],
     "schema": {"type": "object"},
 }
 
@@ -25,6 +32,8 @@ class JournalNormalizationProjectValidationTests(unittest.TestCase):
             "journal/README.md": "journal-normalization-v1.json",
             "tools/life_console_cloud.py": "load_contract()\nvalidate_normalization\ncreate_journal_v2",
             "apps/life-console/src/journal/normalization-contract.ts": "journal-normalization-v1.json",
+            "apps/life-console/src/features/journals/JournalStructuredView.tsx": "journalNormalizationFields",
+            "apps/life-console/src/features/records/RecordsPage.tsx": "journalNormalizationFields",
             "apps/life-console/src/server/deepseek-normalizer.ts": "buildJournalNormalizationMessages",
             "apps/life-console/src/server/journal-normalization-service.ts": "journalContractVersion journalPromptVersion",
             "apps/life-console/src/supabase/dashboard.ts": "createRaw",
@@ -50,6 +59,14 @@ class JournalNormalizationProjectValidationTests(unittest.TestCase):
         root = self.fixture()
         (root / "apps/life-console/contracts/journal-normalization-v1.json").unlink()
         self.assertIn("缺少统一日记整理契约", "\n".join(self.errors(root)))
+
+    def test_rejects_a_display_field_list_that_does_not_match_the_schema(self):
+        root = self.fixture()
+        path = root / "apps/life-console/contracts/journal-normalization-v1.json"
+        contract = json.loads(path.read_text())
+        contract["display_fields"] = contract["display_fields"][:-1]
+        path.write_text(json.dumps(contract), encoding="utf-8")
+        self.assertIn("展示字段", "\n".join(self.errors(root)))
 
     def test_rejects_a_second_active_prompt(self):
         root = self.fixture()

@@ -1,6 +1,9 @@
 import type { ReactElement, ReactNode } from "react";
 
-import type { JournalNormalization } from "../../journal/normalization-contract";
+import {
+  journalNormalizationFields,
+  type JournalNormalization,
+} from "../../journal/normalization-contract";
 import type { Journal } from "../../supabase/journals";
 
 const statusLabels = {
@@ -11,6 +14,10 @@ const statusLabels = {
   processing: "正在整理",
   stale: "原文已更新，等待重新整理",
 } as const;
+
+const fieldLabels = Object.fromEntries(
+  journalNormalizationFields.map(({ key, label }) => [key, label]),
+) as Record<keyof JournalNormalization, string>;
 
 function normalizedMetadata(journal: Journal): JournalNormalization | null {
   const metadata = journal.metadata;
@@ -75,12 +82,12 @@ export function JournalStructuredView({
         <p className="journal-raw-text">{journal.content}</p>
       ))}
       <div aria-label="助手整理" className="journal-normalized-sections">
-        {section("摘要", (
+        {section(fieldLabels.summary, (
           <p>{metadata?.summary || "未记录"}</p>
         ))}
-        {section("明确事实", evidenceList(metadata?.facts ?? []))}
-        {section("明确感受", evidenceList(metadata?.feelings ?? []))}
-        {section("人物", people.length === 0 ? (
+        {section(fieldLabels.facts, evidenceList(metadata?.facts ?? []))}
+        {section(fieldLabels.feelings, evidenceList(metadata?.feelings ?? []))}
+        {section(fieldLabels.people, people.length === 0 ? (
           <p className="quiet">未记录</p>
         ) : (
           <ul>
@@ -95,11 +102,11 @@ export function JournalStructuredView({
             ))}
           </ul>
         ))}
-        {section("地点或场景", evidenceList(metadata?.places ?? []))}
-        {section("生活主题", textList(metadata?.themes ?? []))}
-        {section("可能的规划线索", evidenceList(metadata?.planning_clues ?? []))}
-        {section("待用户确认的推测", evidenceList(metadata?.inferences ?? []))}
-        {section("标签", textList(metadata?.tags ?? journal.tags ?? []))}
+        {section(fieldLabels.places, evidenceList(metadata?.places ?? []))}
+        {section(fieldLabels.themes, textList(metadata?.themes ?? []))}
+        {section(fieldLabels.planning_clues, evidenceList(metadata?.planning_clues ?? []))}
+        {section(fieldLabels.inferences, evidenceList(metadata?.inferences ?? []))}
+        {section(fieldLabels.tags, textList(metadata?.tags ?? journal.tags ?? []))}
       </div>
     </article>
   );

@@ -230,6 +230,44 @@ class LifeConsoleCloudTest(unittest.TestCase):
         self.assertEqual(receipt["normalization_status"], "pending")
         self.assertEqual(len(transport.calls), 1)
 
+    def test_agent_can_normalize_an_existing_raw_journal_without_recreating_it(self):
+        normalization = {
+            "title": "Synthetic title", "summary": "Synthetic summary",
+            "facts": [], "feelings": [], "people": [], "places": [],
+            "themes": [], "planning_clues": [], "inferences": [], "tags": [],
+        }
+        transport = FakeTransport([
+            [{
+                "id": "00000000-0000-4000-8000-000000000240",
+                "source_revision": 2,
+                "status": "processing",
+            }],
+            [{"id": 41, "revision": 3, "raw_revision": 2}],
+        ])
+        client = CloudClient(transport, token_provider=lambda: "synthetic-token")
+
+        receipt = client.normalize_journal({
+            "journal_id": 41,
+            "raw_revision": 2,
+            "record_key": "journal:synthetic-existing-001",
+            "content": "Synthetic raw body",
+            "normalization": normalization,
+            "context_revisions": {},
+        })
+
+        self.assertEqual(receipt, {
+            "status": "saved",
+            "normalization_status": "completed",
+            "revision": 3,
+        })
+        self.assertEqual(
+            [call[1] for call in transport.calls],
+            [
+                "/rest/v1/rpc/begin_journal_normalization",
+                "/rest/v1/rpc/complete_journal_normalization",
+            ],
+        )
+
     def test_completion_failure_is_recorded_without_losing_raw_save(self):
         normalization = {
             "title": "Synthetic title", "summary": "", "facts": [],

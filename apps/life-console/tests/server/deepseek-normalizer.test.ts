@@ -118,9 +118,28 @@ describe("DeepSeek journal normalizer", () => {
     } catch (caught) {
       error = caught;
     }
-    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(fetch).toHaveBeenCalledTimes(2);
     expect(error).toBeInstanceOf(DeepSeekNormalizationError);
+    expect(error).toMatchObject({ code: "provider_http_429" });
     expect(String(error)).not.toContain("sensitive provider body");
     expect(String(error)).not.toContain(rawText);
+  });
+
+  it("times out without exposing the journal or credential", async () => {
+    const fetch = vi.fn((_input: RequestInfo | URL, init?: RequestInit) =>
+      new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => reject(
+          new DOMException("aborted", "AbortError"),
+        ));
+      }));
+    await expect(requestDeepSeekNormalization({
+      rawText,
+      contextEntities: [],
+      contextRevisions: {},
+    }, {
+      credential: "synthetic-server-key",
+      fetch,
+      timeoutMs: 5,
+    })).rejects.toMatchObject({ code: "provider_timeout" });
   });
 });

@@ -263,6 +263,82 @@ class CloudClient:
             "revision": completed_revision,
         }
 
+    def normalize_journal(self, record: dict[str, Any]) -> dict[str, Any]:
+        """Attach an Agent-produced contract result to an existing raw journal."""
+        journal_id = record.get("journal_id")
+        raw_revision = record.get("raw_revision")
+        record_key = record.get("record_key")
+        raw_text = record.get("content")
+        if not isinstance(journal_id, int) or journal_id <= 0:
+            raise ValueError("journal_id is required")
+        if not isinstance(raw_revision, int) or raw_revision <= 0:
+            raise ValueError("raw_revision is required")
+        if not isinstance(record_key, str) or not record_key.strip():
+            raise ValueError("record_key is required")
+        if not isinstance(raw_text, str) or not raw_text:
+            raise ValueError("content is required")
+        context_revisions = record.get("context_revisions", {})
+        if not isinstance(context_revisions, dict):
+            raise ValueError("context_revisions must be an object")
+        normalized = validate_normalization(
+            record.get("normalization"),
+            raw_text,
+            context_revisions,
+        )
+        contract = load_contract()
+        task_key = "journal-normalize:agent:" + hashlib.sha256(
+            f"{record_key}:{raw_revision}".encode("utf-8")
+        ).hexdigest()
+        job = _first_row(self._request(
+            "POST",
+            "/rest/v1/rpc/begin_journal_normalization",
+            body={
+                "p_journal_id": journal_id,
+                "p_source_revision": raw_revision,
+                "p_contract_version": contract["contract_version"],
+                "p_prompt_version": contract["prompt_version"],
+                "p_processor": "agent",
+                "p_task_key": task_key,
+            },
+        ))
+        job_id = job.get("id")
+        if not isinstance(job_id, str) or not job_id:
+            raise CloudWriteError("unavailable")
+        try:
+            completed = _first_row(self._request(
+                "POST",
+                "/rest/v1/rpc/complete_journal_normalization",
+                body={
+                    "p_job_id": job_id,
+                    "p_expected_source_revision": raw_revision,
+                    "p_metadata": normalized,
+                    "p_title": normalized["title"],
+                    "p_tags": normalized["tags"],
+                },
+            ))
+        except CloudWriteError:
+            try:
+                self._request(
+                    "POST",
+                    "/rest/v1/rpc/fail_journal_normalization",
+                    body={
+                        "p_job_id": job_id,
+                        "p_expected_source_revision": raw_revision,
+                        "p_failure_code": "agent_completion_failed",
+                    },
+                )
+            except CloudWriteError:
+                pass
+            raise
+        completed_revision = completed.get("revision")
+        if not isinstance(completed_revision, int):
+            raise CloudWriteError("unavailable")
+        return {
+            "status": "saved",
+            "normalization_status": "completed",
+            "revision": completed_revision,
+        }
+
     def upsert_daily_checkin(self, record: dict[str, Any]) -> dict[str, Any]:
         record_key = record.get("record_key")
         checkin_date = record.get("checkin_date")
@@ -516,7 +592,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("auth")
-    for command in ("journal", "daily-checkin"):
+    for command in ("journal", "normalize-journal", "daily-checkin"):
         child = subparsers.add_parser(command)
         child.add_argument("--input", default="-", help="JSON file or - for stdin")
     args = parser.parse_args(argv)
@@ -538,7 +614,12 @@ def main(argv: list[str] | None = None) -> int:
         raw = sys.stdin.read() if args.input == "-" else Path(args.input).read_text(encoding="utf-8")
         payload = json.loads(raw)
         client = _load_client(args.config)
-        receipt = client.create_journal(payload) if args.command == "journal" else client.upsert_daily_checkin(payload)
+        if args.command == "journal":
+            receipt = client.create_journal(payload)
+        elif args.command == "normalize-journal":
+            receipt = client.normalize_journal(payload)
+        else:
+            receipt = client.upsert_daily_checkin(payload)
     except (CloudWriteError, OSError, json.JSONDecodeError, ValueError) as exc:
         code = str(exc) if isinstance(exc, CloudWriteError) else "unavailable"
         print(json.dumps({"status": code}, ensure_ascii=False), file=sys.stderr)

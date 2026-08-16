@@ -15,6 +15,10 @@ import type { components } from "../../contracts/life-console";
 import type { Dashboard } from "../../data/dashboard";
 import { useSessionDraft } from "../../hooks/useSessionDraft";
 import { SESSION_DRAFT_STORAGE_PREFIX } from "../../lib/draft-storage";
+import {
+  journalContractVersion,
+  journalNormalizationFields,
+} from "../../journal/normalization-contract";
 import type { DailyCheckinRepositoryPort } from "../../supabase/daily-checkins";
 
 type FormMode = "journal" | "checkin";
@@ -432,7 +436,9 @@ export function RecordsPage({
         preview: {
           date: dashboard.date,
           source: "对话式记录",
-          summary: compactLine(eventText, 120),
+          normalization_contract_version: journalContractVersion,
+          normalization_state: "pending_after_save",
+          normalization_fields: journalNormalizationFields.map(({ label }) => label),
         },
       });
       return;
@@ -774,7 +780,7 @@ export function RecordsPage({
               : mode === "candidate-preview"
               ? "当前只展示合成数据；所有写动作都会被候选只读边界拦截。"
               : client
-              ? "系统可以生成结构化预览；只有确认保存后，才调用本机白名单工具写入。"
+              ? "系统只预览原文保存范围；保存成功后，才按统一日记契约整理。"
               : `当前是合成演示；预览与保存都不会改变真实${saveTarget}。`}
           </p>
           <div className="pill-row">
@@ -854,8 +860,8 @@ export function RecordsPage({
           <aside className="card pad preview-panel" aria-live="polite">
             <div className="section-head">
               <div>
-                <h2>结构化预览</h2>
-                <p className="quiet">只展示会写入的字段与未知项。</p>
+                <h2>原文保存预览</h2>
+                <p className="quiet">此处不提前伪造整理结果；完整整理只在原文保存成功后进行。</p>
               </div>
               <span className={`status ${capturePreview ? "blue" : "gray"}`}>
                 {capturePreview ? "已生成" : "草稿"}
@@ -868,7 +874,12 @@ export function RecordsPage({
                   <div><dt>日期</dt><dd>{String(capturePreview.preview?.event_date ?? capturePreview.preview?.date ?? dashboard.date)}</dd></div>
                   <div><dt>来源</dt><dd>对话式记录</dd></div>
                   <div><dt>意图</dt><dd>{capturePreview.intent ?? "未知"}</dd></div>
-                  <div><dt>摘要</dt><dd>{String(capturePreview.preview?.summary ?? "等待对话继续确认")}</dd></div>
+                  <div>
+                    <dt>保存后整理</dt>
+                    <dd>{Array.isArray(capturePreview.preview?.normalization_fields)
+                      ? capturePreview.preview.normalization_fields.join("、")
+                      : journalNormalizationFields.map(({ label }) => label).join("、")}</dd>
+                  </div>
                 </dl>
               </>
             ) : (

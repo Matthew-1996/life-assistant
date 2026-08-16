@@ -15,7 +15,10 @@ import {
   RepositoryError,
   type SupabaseResult,
 } from "../supabase/repository.js";
-import { requestDeepSeekNormalization } from "./deepseek-normalizer.js";
+import {
+  DeepSeekNormalizationError,
+  requestDeepSeekNormalization,
+} from "./deepseek-normalizer.js";
 
 export interface JournalNormalizationEnvironment {
   supabaseUrl: string;
@@ -159,12 +162,15 @@ export async function normalizeJournalRequest(
         contextEntities,
         contextRevisions,
       }, environment);
-    } catch {
+    } catch (error) {
+      const failureCode = error instanceof DeepSeekNormalizationError
+        ? error.code
+        : "provider_unavailable";
       try {
         await store.failNormalization({
           jobId: job.id,
           sourceRevision: body.source_revision,
-          failureCode: "provider_unavailable",
+          failureCode,
         });
       } catch {
         // The response remains fail-closed; no source content is emitted.

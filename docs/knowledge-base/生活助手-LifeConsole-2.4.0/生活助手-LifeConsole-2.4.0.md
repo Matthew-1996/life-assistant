@@ -1,6 +1,6 @@
 # PRD：Life Console 2.4.0
 
-状态：draft.1；Gate 1 已确认；待 Gate 2 方案评审。
+状态：implementation；Gate 1、Gate 2 已确认；Production 缺陷修复与单条授权验收进行中。
 
 ## 1. 背景与问题
 

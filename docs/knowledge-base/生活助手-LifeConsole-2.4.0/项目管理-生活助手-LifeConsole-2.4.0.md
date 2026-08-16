@@ -6,7 +6,7 @@
 - 子状态：统一契约、数据库状态机和 DeepSeek 兜底运行条件已上线；历史仍保持 legacy
 - 分支：`agent/life-console-240-unified-journal`
 - PR：Draft PR [#54](https://github.com/Matthew-1996/life-assistant/pull/54)
-- 真实数据：仅做去敏数量与状态校验；未向 DeepSeek 发送真实内容、未批量重写
+- 真实数据：PO 已授权仅重整本次明确指出的一条失败日记；Agent 优先、DeepSeek 仅兜底；历史不批量重写
 - 部署：已部署到 [正式站点](https://project-wpabq.vercel.app/)
 
 ## 2. 已完成
@@ -58,3 +58,5 @@
 | 2026-08-16 | 2.4.0 migration 与 Vercel Production 上线 | 已完成；历史 14 条保持 legacy，任务数 0 |
 | 2026-08-16 | 不用真实日记做上线探针 | 已执行；Owner 页面、配置存在性、合成 provider 调用和未认证 401 分层验收 |
 | 2026-08-16 | PR #54 继续保持 Draft | 已执行；不转 Ready、不合并 |
+| 2026-08-16 | 修复最新日记整理失败，并重新整理该条；Agent 优先，DeepSeek 仅兜底且需验证链路可用 | PO 已明确授权；不扩展到其他历史日记 |
+| 2026-08-16 | 保存前预览不得伪装成结构化整理；字段顺序、标签、Prompt 与 Schema 均来自唯一契约 | 缺陷修复决定 |

@@ -55,6 +55,10 @@ export class JournalNormalizationError extends Error {}
 
 export const journalContractVersion = contract.contract_version;
 export const journalPromptVersion = contract.prompt_version;
+export const journalNormalizationFields = contract.display_fields as readonly {
+  key: keyof JournalNormalization;
+  label: string;
+}[];
 
 const ajv = new Ajv({ allErrors: true, strict: true });
 const validateSchema = ajv.compile(contract.schema);

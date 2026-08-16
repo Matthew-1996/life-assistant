@@ -100,3 +100,18 @@ Gate 2 通用代码完成，2.4.0 数据库迁移与 Vercel Production 已于 20
 - Production 数据库迁移和部署：通过。
 - 历史日记批量重整：未执行。
 - PR #54：保持 Draft，不转 Ready、不合并。
+
+## 8. 2026-08-16 日记整理失败回归
+
+已确认：原文保存成功，DeepSeek 请求当次返回服务不可用；数据库随后把 failed job 原样返回，complete RPC 又只接受 processing job，导致用户承诺的“稍后重试”实际不可执行。
+
+修复验收范围：
+
+- 唯一契约增加字段展示顺序与中文标签，项目校验器验证其与 Schema 完整一致。
+- 保存前改为原文保存预览，不生成或展示伪摘要；保存后 Agent 与 DeepSeek 继续使用同一 Prompt、Schema、字段和渲染组件。
+- failed job 在总尝试次数小于 2 时可原地恢复 processing；completed 幂等，达到上限 fail closed。
+- DeepSeek 增加 20 秒超时、一次有限瞬态重试与去敏错误分类。
+- 新增 Owner 鉴权的纯合成健康探针，不读写真实日记。
+- PO 只授权本次指出的一条日记：先由 Agent 按统一契约重整；仅 Agent 无法完成时才允许 DeepSeek 兜底。其他历史记录不处理。
+
+最终 Production 部署、合成健康探针、单条 Agent 重整和前端读回结果在完成后补录；未完成前不得标记通过。

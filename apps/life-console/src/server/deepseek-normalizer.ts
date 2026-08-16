@@ -25,6 +25,15 @@ export interface DeepSeekNormalizationDependencies {
   credential: string;
   fetch: typeof globalThis.fetch;
   endpoint?: string;
+  timeoutMs?: number;
+}
+
+function providerHttpCode(status: number): string {
+  return `provider_http_${status}`;
+}
+
+function retryableStatus(status: number): boolean {
+  return status === 408 || status === 409 || status === 429 || status >= 500;
 }
 
 function readContent(value: unknown): string {
@@ -61,9 +70,12 @@ export async function requestDeepSeekNormalization(
     thinking: { type: "disabled" },
     response_format: { type: "json_object" },
   });
+  const timeoutMs = dependencies.timeoutMs ?? 20_000;
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
     let response: Response;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
     try {
       response = await dependencies.fetch(endpoint, {
         method: "POST",
@@ -72,12 +84,20 @@ export async function requestDeepSeekNormalization(
           "Content-Type": "application/json",
         },
         body: requestBody,
+        signal: controller.signal,
       });
-    } catch {
-      throw new DeepSeekNormalizationError("provider_unavailable");
+    } catch (error) {
+      const code = error instanceof DOMException && error.name === "AbortError"
+        ? "provider_timeout"
+        : "provider_unavailable";
+      if (attempt === 0) continue;
+      throw new DeepSeekNormalizationError(code);
+    } finally {
+      clearTimeout(timeout);
     }
     if (!response.ok) {
-      throw new DeepSeekNormalizationError("provider_unavailable");
+      if (attempt === 0 && retryableStatus(response.status)) continue;
+      throw new DeepSeekNormalizationError(providerHttpCode(response.status));
     }
     let payload: unknown;
     try {

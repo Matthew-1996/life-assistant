@@ -2,6 +2,7 @@
 
 import { describe, expect, it, vi } from "vitest";
 
+import { DeepSeekNormalizationError } from "../../src/server/deepseek-normalizer";
 import { normalizeJournalRequest } from "../../src/server/journal-normalization-service";
 
 const normalization = {
@@ -147,7 +148,7 @@ describe("journal normalization service", () => {
   it("records provider failure and returns only a generic redacted result", async () => {
     const fixture = dependencies({
       normalize: vi.fn(async () => {
-        throw new Error("Synthetic raw body and provider secret");
+        throw new DeepSeekNormalizationError("provider_http_429");
       }),
     });
     const response = await normalizeJournalRequest(
@@ -167,7 +168,27 @@ describe("journal normalization service", () => {
     expect(fixture.store.failNormalization).toHaveBeenCalledWith({
       jobId: "00000000-0000-4000-8000-000000000240",
       sourceRevision: 2,
-      failureCode: "provider_unavailable",
+      failureCode: "provider_http_429",
     });
+  });
+
+  it("maps unknown failures to a generic safe failure code", async () => {
+    const fixture = dependencies({
+      normalize: vi.fn(async () => {
+        throw new Error("Synthetic raw body and provider secret");
+      }),
+    });
+    await normalizeJournalRequest(
+      request({
+        journal_id: 31,
+        source_revision: 2,
+        task_key: "task:synthetic-0004",
+      }),
+      environment,
+      fixture.dependencies,
+    );
+    expect(fixture.store.failNormalization).toHaveBeenCalledWith(
+      expect.objectContaining({ failureCode: "provider_unavailable" }),
+    );
   });
 });

@@ -237,6 +237,23 @@ def validate_journal_normalization_contract(
         or not isinstance(contract.get("schema"), dict)
     ):
         errors.append("统一日记整理契约版本、Prompt 或 Schema 不完整")
+    required_normalization_fields = [
+        "title", "summary", "facts", "feelings", "people", "places",
+        "themes", "planning_clues", "inferences", "tags",
+    ]
+    display_fields = contract.get("display_fields")
+    if (
+        not isinstance(display_fields, list)
+        or [item.get("key") for item in display_fields if isinstance(item, dict)]
+        != required_normalization_fields
+        or any(
+            not isinstance(item, dict)
+            or not isinstance(item.get("label"), str)
+            or not item.get("label")
+            for item in display_fields or []
+        )
+    ):
+        errors.append("统一日记整理契约展示字段与 Schema 不一致")
 
     required_routes = {
         "journal/QUICK_CAPTURE.md": "journal-normalization-v1.json",
@@ -244,6 +261,10 @@ def validate_journal_normalization_contract(
         "tools/life_console_cloud.py": "validate_normalization",
         "apps/life-console/src/journal/normalization-contract.ts":
             "journal-normalization-v1.json",
+        "apps/life-console/src/features/journals/JournalStructuredView.tsx":
+            "journalNormalizationFields",
+        "apps/life-console/src/features/records/RecordsPage.tsx":
+            "journalNormalizationFields",
         "apps/life-console/src/server/deepseek-normalizer.ts":
             "buildJournalNormalizationMessages",
         "apps/life-console/src/server/journal-normalization-service.ts":
