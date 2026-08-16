@@ -18,7 +18,9 @@ alter table public.phase_reviews
     check (jsonb_typeof(structured_data) = 'object');
 
 update public.goals set record_key = 'legacy:goal:' || id::text;
+alter table public.journals disable trigger journals_record_revision;
 update public.journals set record_key = 'legacy:journal:' || id::text;
+alter table public.journals enable trigger journals_record_revision;
 update public.weekly_reviews set record_key = 'weekly:' || week_start::text;
 update public.phase_reviews
 set record_key = 'phase:' || period_start::text || ':' || period_end::text;

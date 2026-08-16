@@ -21,6 +21,19 @@ beforeAll(async () => {
     if (file.endsWith("0005_migration_tracking.sql")) {
       await db.exec("create role service_role nologin");
     }
+    if (file.endsWith("20260815165912_life_console_230_online_primary.sql")) {
+      await db.exec(`
+        insert into auth.users (id)
+        values ('00000000-0000-4000-8000-000000000230');
+        insert into public.journals (user_id, event_date, title, content)
+        values (
+          '00000000-0000-4000-8000-000000000230',
+          date '2030-01-01',
+          'Synthetic pre-migration journal',
+          'Synthetic content'
+        );
+      `);
+    }
     await db.exec(await readFile(new URL(file, import.meta.url), "utf8"));
   }
 });
@@ -30,6 +43,24 @@ afterAll(async () => {
 });
 
 describe("Life Console 2.3.0 online-primary migration", () => {
+  it("backfills existing journals without creating a false revision", async () => {
+    const journals = await db.query<{ record_key: string; revision: number }>(
+      `select record_key, revision
+       from public.journals
+       where user_id = '00000000-0000-4000-8000-000000000230'`,
+    );
+    const revisions = await db.query<{ count: number }>(
+      `select count(*)::int as count
+       from public.journal_revisions
+       where user_id = '00000000-0000-4000-8000-000000000230'`,
+    );
+
+    expect(journals.rows).toEqual([
+      { record_key: "legacy:journal:1", revision: 1 },
+    ]);
+    expect(revisions.rows).toEqual([{ count: 1 }]);
+  });
+
   it("preserves full-fidelity journal, review, and sleep fields", async () => {
     const columns = await db.query<{ table_name: string; column_name: string }>(
       `select table_name, column_name
