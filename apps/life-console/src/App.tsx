@@ -47,7 +47,7 @@ interface RefreshOutcome {
 interface AppProps {
   client?: LifeConsoleClient;
   initialDashboard?: Dashboard;
-  mode?: "local" | "sites" | "candidate-preview" | "supabase-candidate";
+  mode?: "local" | "sites" | "candidate-preview" | "supabase-candidate" | "supabase-production";
   stageAPocEnabled?: boolean;
   supabase?: SupabaseProductContext;
 }
@@ -59,6 +59,7 @@ export function App({
   stageAPocEnabled = false,
   supabase,
 }: AppProps) {
+  const supabaseMode = mode === "supabase-candidate" || mode === "supabase-production";
   const [activePage, setActivePage] = useState<PageId>("today");
   const [dashboard, setDashboard] = useState<Dashboard | null>(
     initialDashboard ?? (client ? null : syntheticDashboard),
@@ -126,7 +127,7 @@ export function App({
   }, [client]);
 
   useEffect(() => {
-    if (mode !== "supabase-candidate" || !client) return;
+    if (!supabaseMode || !client) return;
     const refreshWhenFocused = () => void refresh();
     const refreshWhenVisible = () => {
       if (document.visibilityState === "visible") void refresh();
@@ -139,7 +140,7 @@ export function App({
       window.removeEventListener("focus", refreshWhenFocused);
       document.removeEventListener("visibilitychange", refreshWhenVisible);
     };
-  }, [client, mode]);
+  }, [client, supabaseMode]);
 
   function blockCandidateWrite(
     event: MouseEvent<HTMLDivElement> | FormEvent<HTMLDivElement>,
@@ -156,7 +157,7 @@ export function App({
   }
 
   if (!dashboard) {
-    const remoteMode = mode === "sites" || mode === "supabase-candidate";
+    const remoteMode = mode === "sites" || supabaseMode;
     return (
       <main className="startup-state">
         <h1>
@@ -199,7 +200,7 @@ export function App({
         mode={mode}
         onSaved={refreshAfterWrite}
         draftScope={supabase?.session.userId}
-        supabasePanels={mode === "supabase-candidate" && supabase ? (
+        supabasePanels={supabaseMode && supabase ? (
           <div className="supabase-candidate-stack">
             <SupabaseJournalsPanel
               draftScope={supabase.session.userId}
@@ -238,7 +239,7 @@ export function App({
     >
       {error && (
         <div className="service-banner" role="alert">
-          {mode === "sites" || mode === "supabase-candidate" ? "私有工作台" : "本地服务"}暂不可用；页面保留上次已读取的状态，不会把新操作误报为已保存。
+          {mode === "sites" || supabaseMode ? "私有工作台" : "本地服务"}暂不可用；页面保留上次已读取的状态，不会把新操作误报为已保存。
           <button onClick={() => void refresh()} type="button">重试</button>
         </div>
       )}
@@ -257,6 +258,15 @@ export function App({
           role="status"
         >
           Life Console · 数据已迁移 · 生产环境
+        </div>
+      )}
+      {mode === "supabase-production" && (
+        <div
+          aria-label="线上唯一真相源"
+          className="service-banner"
+          role="status"
+        >
+          Life Console · Supabase 唯一真相源 · iCloud 单向备份
         </div>
       )}
       <div

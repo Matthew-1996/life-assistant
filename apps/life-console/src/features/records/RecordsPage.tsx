@@ -106,7 +106,7 @@ function supportsExplicitJournalKey(
 interface RecordsPageProps {
   dashboard: Dashboard;
   client?: LifeConsoleClient;
-  mode?: "local" | "sites" | "candidate-preview" | "supabase-candidate";
+  mode?: "local" | "sites" | "candidate-preview" | "supabase-candidate" | "supabase-production";
   onSaved?: () => boolean | Promise<boolean>;
   dailyCheckins?: DailyCheckinRepositoryPort;
   supabasePanels?: ReactNode;
@@ -181,7 +181,7 @@ function JournalCard({
 }: {
   journal: RecentJournal;
   client?: LifeConsoleClient;
-  mode: "local" | "sites" | "candidate-preview" | "supabase-candidate";
+  mode: "local" | "sites" | "candidate-preview" | "supabase-candidate" | "supabase-production";
   onChanged?: () => boolean | Promise<boolean>;
 }) {
   // 本地覆盖状态：卡片内触发整理/删除后立即反映，不必等下一次看板刷新。
@@ -286,7 +286,7 @@ function JournalCard({
             {state === "failed" ? "重新整理" : "整理"}
           </button>
         )}
-        {mode !== "supabase-candidate" && (
+        {mode !== "supabase-candidate" && mode !== "supabase-production" && (
           <button
             className="secondary-button danger"
             type="button"
@@ -338,11 +338,12 @@ export function RecordsPage({
   supabasePanels,
   draftScope = "anonymous",
 }: RecordsPageProps) {
-  const supabaseCandidate = mode === "supabase-candidate";
+  const supabaseCandidate = mode === "supabase-candidate" || mode === "supabase-production";
+  const supabaseProduction = mode === "supabase-production";
   const saveTarget = mode === "candidate-preview"
     ? "候选预览"
     : supabaseCandidate
-      ? "Supabase 候选环境"
+      ? supabaseProduction ? "线上数据库" : "Supabase 候选环境"
       : mode === "sites" ? "云端真相源" : "iCloud";
   const [formMode, setFormMode] = useState<FormMode>("journal");
   const {
@@ -519,7 +520,7 @@ export function RecordsPage({
         mode === "sites"
           ? "已保存到云端真相源；iCloud 冷备已进入队列"
           : supabaseCandidate
-            ? "已保存到 Supabase 候选环境"
+            ? supabaseProduction ? "已保存到线上数据库" : "已保存到 Supabase 候选环境"
           : autoEnriched
             ? "已保存到 iCloud，正在用 DeepSeek 整理…"
             : "已保存到 iCloud（云端整理未启动，可在卡片上手动整理）",
@@ -739,7 +740,9 @@ export function RecordsPage({
             {supabaseCandidate ? "轻量记录，明确保存。" : "先预览，再写入。"}
           </h1>
           <p className="lead">
-            {supabaseCandidate
+            {supabaseProduction
+              ? "日记、每日状态、目标与复盘统一保存到线上数据库；失败时保留当前浏览器草稿。"
+              : supabaseCandidate
               ? "记录页沿用原有的大输入与清晰层级；当前候选只开放已评审的日记、每日状态、周复盘和阶段复盘能力。"
               : "记录页以大对话输入为主，同时提供运动恢复、今日锚点与简洁表单兜底。点击保存前，内容只停留在当前草稿与预览。"}
           </p>
@@ -748,7 +751,9 @@ export function RecordsPage({
           <span className="status blue">写入语义</span>
           <h2>草稿不会自动生效</h2>
           <p className="quiet">
-            {supabaseCandidate
+            {supabaseProduction
+              ? "只有明确点击保存且线上返回成功才算已记录；冲突或失败时输入继续保留。"
+              : supabaseCandidate
               ? "只有明确点击保存才写入独立测试库；冲突或失败时输入继续保留。"
               : mode === "candidate-preview"
               ? "当前只展示合成数据；所有写动作都会被候选只读边界拦截。"
@@ -1148,14 +1153,14 @@ export function RecordsPage({
       )}
 
       {supabaseCandidate && supabasePanels && (
-        <section className="section supabase-records-workspace" aria-label="候选记录工作区">
+        <section className="section supabase-records-workspace" aria-label={supabaseProduction ? "线上记录工作区" : "候选记录工作区"}>
           <div className="section-head">
             <div>
               <p className="eyebrow">OWNER WORKSPACE</p>
-              <h2>已开放的候选记录</h2>
+              <h2>{supabaseProduction ? "线上记录与修订" : "已开放的候选记录"}</h2>
               <p className="quiet">日记、每日状态与复盘各自保留真实空态、修订和失败反馈。</p>
             </div>
-            <span className="status blue">纯合成数据</span>
+            <span className="status blue">{supabaseProduction ? "线上唯一真相源" : "纯合成数据"}</span>
           </div>
           {supabasePanels}
         </section>
@@ -1169,7 +1174,9 @@ export function RecordsPage({
               : "本地成功先算完成，派生展示只在需要时更新"}
           </strong>
           <span>
-            {supabaseCandidate
+            {supabaseProduction
+              ? "成功写入 Supabase 后才算完成；iCloud 只接收经过校验的单向备份，不接受反向自动覆盖。"
+              : supabaseCandidate
               ? "候选写入只进入独立 Supabase 测试项目；iCloud 仍是私人真相源，当前没有切换或同步。"
               : mode === "candidate-preview"
               ? "候选环境只展示合成投影，不连接或写入任何真相源。"

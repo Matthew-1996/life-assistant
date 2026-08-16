@@ -131,13 +131,15 @@ const reviews: ReviewRepositoryPort = {
   updatePhase: async () => { throw new Error("not used"); },
 };
 
-function renderCandidate() {
+function renderCandidate(
+  mode: "supabase-candidate" | "supabase-production" = "supabase-candidate",
+) {
   const signOut = vi.fn(async () => undefined);
   render(
     <App
       client={client}
       initialDashboard={dashboard}
-      mode="supabase-candidate"
+      mode={mode}
       supabase={{
         dailyCheckins,
         goals,
@@ -606,6 +608,19 @@ describe("Supabase candidate product application", () => {
     expect(screen.queryByText("合成室内训练")).toBeNull();
     expect(screen.queryByText("候选环境边界")).toBeNull();
     expect(screen.queryByText(/publishable key/i)).toBeNull();
+  });
+
+  it("presents Production as the online truth source instead of a synthetic candidate", () => {
+    renderCandidate("supabase-production");
+
+    expect(screen.getByText("Life Console · Online")).toBeTruthy();
+    expect(screen.getByLabelText("线上唯一真相源").textContent).toContain(
+      "Supabase 唯一真相源",
+    );
+    expect(screen.getByText(/iCloud 仅保留单向备份与恢复副本/)).toBeTruthy();
+    expect(screen.queryByText(/Supabase Candidate/)).toBeNull();
+    expect(screen.queryByText(/纯合成测试数据/)).toBeNull();
+    expect(screen.queryByText(/ICLOUD_PRIMARY/)).toBeNull();
   });
 
   it("keeps all four accepted product pages and puts sign-out in System", async () => {

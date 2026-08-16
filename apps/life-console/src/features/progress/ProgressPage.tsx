@@ -59,7 +59,7 @@ interface ProgressPageProps {
   client?: SitesLifeConsoleClient;
   dashboard: Dashboard;
   goals?: GoalRepositoryPort;
-  mode?: "local" | "sites" | "candidate-preview" | "supabase-candidate";
+  mode?: "local" | "sites" | "candidate-preview" | "supabase-candidate" | "supabase-production";
   onSaved?: () => boolean | void | Promise<boolean | void>;
   draftScope?: string;
 }
@@ -280,7 +280,8 @@ export function ProgressPage({
   draftScope,
 }: ProgressPageProps) {
   const week = naturalWeek(dashboard.date);
-  const supabaseCandidate = mode === "supabase-candidate";
+  const supabaseCandidate = mode === "supabase-candidate" || mode === "supabase-production";
+  const supabaseProduction = mode === "supabase-production";
 
   return (
     <section aria-labelledby="progress-title">
@@ -539,7 +540,7 @@ export function ProgressPage({
         </div>
         {supabaseCandidate && dashboard.progress.sleep.length === 0 ? (
           <p className="empty-state">
-            当前候选尚未接入睡眠时刻来源；不会根据睡眠质量评分推算入睡、醒来或离床时间。
+            {supabaseProduction ? "线上数据库尚无可展示的睡眠时刻；" : "当前候选尚未接入睡眠时刻来源；"}不会根据睡眠质量评分推算入睡、醒来或离床时间。
           </p>
         ) : (
           <div className="sleep-table" role="table" aria-label="近期睡眠时刻">

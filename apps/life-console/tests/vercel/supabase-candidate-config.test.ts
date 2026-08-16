@@ -124,8 +124,8 @@ describe("Supabase Production Vercel configuration", () => {
       syntheticProductionEnvironment,
     );
 
-    expect(config.buildCommand).toBe("npm run build:supabase-candidate");
-    expect(config.outputDirectory).toBe("dist/supabase-candidate");
+    expect(config.buildCommand).toBe("npm run build:supabase-production");
+    expect(config.outputDirectory).toBe("dist/supabase-production");
     expect(config.rewrites).toEqual([
       { source: "/auth/recovery", destination: "/index.html" },
     ]);
@@ -208,8 +208,8 @@ describe("Vercel deployment artifact generation", () => {
     try {
       expect(result.status).toBe(0);
       expect(JSON.parse(readFileSync(outputPath, "utf8"))).toMatchObject({
-        buildCommand: "npm run build:supabase-candidate",
-        outputDirectory: "dist/supabase-candidate",
+        buildCommand: "npm run build:supabase-production",
+        outputDirectory: "dist/supabase-production",
       });
     } finally {
       rmSync(root, { force: true, recursive: true });
@@ -270,8 +270,8 @@ describe("Vercel deployment artifact generation", () => {
 
       const artifact = readFileSync(outputPath, "utf8");
       const parsed = JSON.parse(artifact);
-      expect(parsed.buildCommand).toBe("npm run build:supabase-candidate");
-      expect(parsed.outputDirectory).toBe("dist/supabase-candidate");
+      expect(parsed.buildCommand).toBe("npm run build:supabase-production");
+      expect(parsed.outputDirectory).toBe("dist/supabase-production");
       expect(parsed.rewrites).toEqual([
         { source: "/auth/recovery", destination: "/index.html" },
       ]);

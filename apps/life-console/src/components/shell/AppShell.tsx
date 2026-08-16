@@ -15,7 +15,7 @@ const navigation: Array<{
 interface AppShellProps {
   activePage: PageId;
   date: string;
-  mode?: "local" | "sites" | "candidate-preview" | "supabase-candidate";
+  mode?: "local" | "sites" | "candidate-preview" | "supabase-candidate" | "supabase-production";
   children: ReactNode;
   onNavigate: (page: PageId) => void;
 }
@@ -34,7 +34,9 @@ export function AppShell({
         <div className="topbar-inner">
           <button
             aria-label={`Life Console ${
-              mode === "supabase-candidate"
+              mode === "supabase-production"
+                ? "Online"
+                : mode === "supabase-candidate"
                 ? "Supabase Candidate"
                 : mode === "candidate-preview"
                 ? "Candidate"
@@ -46,7 +48,9 @@ export function AppShell({
           >
             <span className="brand-mark" aria-hidden="true" />
             <span>
-              Life Console · {mode === "supabase-candidate"
+              Life Console · {mode === "supabase-production"
+                ? "Online"
+                : mode === "supabase-candidate"
                 ? "Supabase Candidate"
                 : mode === "candidate-preview"
                 ? "Candidate"
@@ -65,6 +69,9 @@ export function AppShell({
               <span className="source-badge source-badge--candidate">
                 Supabase 测试 · 合成数据
               </span>
+            )}
+            {mode === "supabase-production" && (
+              <span className="source-badge">Supabase · 在线</span>
             )}
             <nav aria-label="全局导航">
               {navigation.map((item) => (
