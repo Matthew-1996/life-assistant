@@ -28,10 +28,12 @@ function SupabaseSystemPage({
   onSignOut,
   session,
   backups,
+  production = false,
 }: {
   onSignOut?: () => Promise<void>;
   session?: AuthSession;
   backups?: BackupRepository;
+  production?: boolean;
 }) {
   const [showConnectionHelp, setShowConnectionHelp] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
@@ -96,7 +98,9 @@ function SupabaseSystemPage({
     <section aria-labelledby="system-title">
       <section className="hero">
         <div>
-          <p className="eyebrow">OWNER-ONLY · PRIVATE PREVIEW</p>
+          <p className="eyebrow">
+            {production ? "OWNER-ONLY · ONLINE PRIMARY" : "OWNER-ONLY · PRIVATE PREVIEW"}
+          </p>
           <h1 id="system-title">Life Console 已上线，数据已迁移。</h1>
           <p className="lead">
             系统页只保留登录、数据同步状态与 iCloud 最新备份。底层资源和工程配置不会暴露在产品界面。
@@ -306,6 +310,7 @@ export function SystemPage({
         onSignOut={onSignOut}
         session={ownerSession}
         backups={backups}
+        production={mode === "supabase-production"}
       />
     );
   }

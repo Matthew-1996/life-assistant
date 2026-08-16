@@ -610,7 +610,8 @@ describe("Supabase candidate product application", () => {
     expect(screen.queryByText(/publishable key/i)).toBeNull();
   });
 
-  it("presents Production as the online truth source instead of a synthetic candidate", () => {
+  it("presents Production as the online truth source instead of a synthetic candidate", async () => {
+    const user = userEvent.setup();
     renderCandidate("supabase-production");
 
     expect(screen.getByText("Life Console · Online")).toBeTruthy();
@@ -621,6 +622,10 @@ describe("Supabase candidate product application", () => {
     expect(screen.queryByText(/Supabase Candidate/)).toBeNull();
     expect(screen.queryByText(/纯合成测试数据/)).toBeNull();
     expect(screen.queryByText(/ICLOUD_PRIMARY/)).toBeNull();
+    await user.click(within(screen.getByRole("navigation", {
+      name: "全局导航",
+    })).getByRole("button", { name: "系统" }));
+    expect(screen.queryByText(/PRIVATE PREVIEW/)).toBeNull();
   });
 
   it("keeps all four accepted product pages and puts sign-out in System", async () => {
