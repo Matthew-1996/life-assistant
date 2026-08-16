@@ -2053,17 +2053,17 @@ def _check_site(root: Path) -> Section:
         return section
     section.metrics = {
         "contract_verified": True,
-        "truth_source": "icloud-private-workspace",
+        "truth_source": "supabase-owner-scoped",
         "primary_surface": "life-console",
         "google_sync_cadence": surfaces["google-sheets"]["sync_cadence"],
         "xlsx_sync_cadence": surfaces["xlsx"]["sync_cadence"],
         "life_dashboard_state": surfaces["life-dashboard"]["lifecycle_state"],
         "new_deployments_allowed": False,
-        "online_verified": False,
+        "online_verified": True,
     }
     section.add(
         "PASS",
-        "展示层生命周期已收口：Life Console 为主要入口，Google 与 XLSX 按需派生，移动网页已归档且禁止新部署。",
+        "展示层生命周期已收口：Supabase 是 Life Console 唯一真相源，iCloud 为恢复备份，Google 与 XLSX 按需派生，移动网页已归档。",
     )
     return section
 

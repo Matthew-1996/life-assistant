@@ -57,6 +57,8 @@ STATUS.md
 integrations/google-sheets.json
 integrations/google-sheets.sync-state.json
 integrations/journal-enrichment.json
+integrations/life-console-cloud.json
+.life-console-online-primary
 
 # Personalized workbook implementation (iCloud only)
 life-plan-schedule.json

@@ -148,7 +148,6 @@ export async function importMigration(options: {
       const { data: existingImports, error: existingError } = await client
         .from("migration_imports")
         .select("source_stable_id, imported_id")
-        .eq("migration_run_id", migrationRunId)
         .eq("table_name", resourceType);
       await checkError({ error: existingError }, "Failed to check existing imports");
 
@@ -231,6 +230,27 @@ export async function importMigration(options: {
           .from("migration_imports")
           .insert(importRecords);
         if (trackError) {
+          const insertedIds = (inserted ?? []).map((row) => row.id as number);
+          if (resourceType === "journals" && insertedIds.length > 0) {
+            const { error: revisionCleanupError } = await client
+              .from("journal_revisions")
+              .delete()
+              .in("journal_id", insertedIds);
+            await checkError(
+              { error: revisionCleanupError },
+              "Failed to clean journal revisions after tracking failure",
+            );
+          }
+          if (insertedIds.length > 0) {
+            const { error: rowCleanupError } = await client
+              .from(resourceType)
+              .delete()
+              .in("id", insertedIds);
+            await checkError(
+              { error: rowCleanupError },
+              `Failed to clean ${resourceType} after tracking failure`,
+            );
+          }
           const errDetail = trackError instanceof Error
             ? trackError.message
             : typeof trackError === "object" && trackError !== null
@@ -274,21 +294,38 @@ export async function importMigration(options: {
       // ignore secondary failure
     }
 
+    const cleanupErrors: string[] = [];
     for (let i = imported.length - 1; i >= 0; i -= 1) {
       const imp = imported[i];
       try {
-        await client.from(imp.tableName).delete().eq("id", imp.importedId);
+        if (imp.tableName === "journals") {
+          const { error: revisionCleanupError } = await client
+            .from("journal_revisions")
+            .delete()
+            .eq("journal_id", imp.importedId);
+          if (revisionCleanupError) cleanupErrors.push("journal_revisions");
+        }
+        const { error: rowCleanupError } = await client
+          .from(imp.tableName)
+          .delete()
+          .eq("id", imp.importedId);
+        if (rowCleanupError) cleanupErrors.push(imp.tableName);
       } catch {
-        // ignore rollback errors
+        cleanupErrors.push(imp.tableName);
       }
     }
     try {
-      await client
+      const { error: importCleanupError } = await client
         .from("migration_imports")
         .delete()
         .eq("migration_run_id", migrationRunId);
+      if (importCleanupError) cleanupErrors.push("migration_imports");
     } catch {
-      // ignore rollback errors
+      cleanupErrors.push("migration_imports");
+    }
+
+    if (cleanupErrors.length > 0) {
+      throw new Error("Import failed and compensating rollback was incomplete");
     }
 
     throw error instanceof Error ? error : new Error("Import failed");

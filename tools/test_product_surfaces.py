@@ -23,7 +23,7 @@ class ProductSurfaceTests(unittest.TestCase):
             json.dumps(
                 {
                     "schema_version": 1,
-                    "truth_source": "icloud-private-workspace",
+                    "truth_source": "supabase-owner-scoped",
                     "surfaces": [
                         {"id": surface_id, **fields}
                         for surface_id, fields in EXPECTED_SURFACES.items()

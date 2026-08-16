@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import type {
   SitesLifeConsoleClient,
@@ -8,6 +8,10 @@ import type { Dashboard } from "../../data/dashboard";
 import { useHasActiveSessionDrafts } from "../../hooks/useSessionDraft";
 import { clearAllSessionDrafts } from "../../lib/draft-storage";
 import type { AuthSession } from "../../supabase/auth";
+import type {
+  BackupRepository,
+  BackupStatus,
+} from "../../supabase/backups";
 import { ICloudBackupCard } from "./ICloudBackupCard";
 
 interface SystemPageProps {
@@ -17,19 +21,61 @@ interface SystemPageProps {
   onSignOut?: () => Promise<void>;
   ownerSession?: AuthSession;
   sitesStatus?: SitesSystemStatus | null;
+  backups?: BackupRepository;
 }
 
 function SupabaseSystemPage({
   onSignOut,
   session,
+  backups,
 }: {
   onSignOut?: () => Promise<void>;
   session?: AuthSession;
+  backups?: BackupRepository;
 }) {
   const [showConnectionHelp, setShowConnectionHelp] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [confirmingSignOut, setConfirmingSignOut] = useState(false);
   const hasUnsavedDrafts = useHasActiveSessionDrafts(session?.userId);
+  const [backupStatus, setBackupStatus] = useState<BackupStatus | null>(null);
+  const [backupError, setBackupError] = useState(false);
+
+  async function loadBackupStatus() {
+    if (!backups) return;
+    try {
+      setBackupStatus(await backups.latest());
+      setBackupError(false);
+    } catch {
+      setBackupError(true);
+    }
+  }
+
+  useEffect(() => {
+    void loadBackupStatus();
+    if (!backups) return;
+    const interval = window.setInterval(() => void loadBackupStatus(), 30_000);
+    return () => window.clearInterval(interval);
+  }, [backups]);
+
+  async function requestBackup() {
+    if (!backups || backupStatus?.status === "pending") return;
+    try {
+      setBackupStatus(await backups.start());
+      setBackupError(false);
+    } catch {
+      setBackupError(true);
+    }
+  }
+
+  const backupState = backupError
+    ? "FAILED_RETRYABLE"
+    : backupStatus?.status === "pending"
+      ? "PREPARING"
+      : backupStatus?.status === "success"
+        ? "SUCCESS"
+        : backupStatus?.status === "failed"
+          ? "FAILED_RETRYABLE"
+          : "READY";
 
   async function signOut(discardDrafts = false) {
     if (!onSignOut) return;
@@ -60,8 +106,8 @@ function SupabaseSystemPage({
           <span className={`status ${session ? "green" : "gray"}`}>
             {session ? "Owner 会话已验证" : "会话未确认"}
           </span>
-          <h2>Life Console 2.2.0</h2>
-          <p className="quiet">私人数据已安全迁移至 Supabase，iCloud 仍保留完整的真相源。</p>
+          <h2>Life Console 2.3.0</h2>
+          <p className="quiet">Supabase 是生活记录唯一真相源；iCloud 仅保存验证通过的恢复备份。</p>
         </aside>
       </section>
 
@@ -73,19 +119,20 @@ function SupabaseSystemPage({
         </article>
         <article className="card pad">
           <span className="status blue">同步边界</span>
-          <h2>Supabase 与 iCloud 双真相源</h2>
-          <p className="quiet">数据已迁移至 Supabase，iCloud 仍保留完整真相源。</p>
+          <h2>Supabase 单一真相源</h2>
+          <p className="quiet">网页、对话与自动回访统一写入线上；iCloud 不再接收活跃写入。</p>
         </article>
       </section>
 
       <section className="section">
         <ICloudBackupCard
-          onPrimaryAction={() => setShowConnectionHelp(true)}
-          state="AGENT_UNAVAILABLE"
+          lastSuccessAt={backupStatus?.completedAt}
+          onPrimaryAction={backups ? () => void requestBackup() : () => setShowConnectionHelp(true)}
+          state={backups ? backupState : "AGENT_UNAVAILABLE"}
         />
         {showConnectionHelp && (
           <p className="service-banner" role="status">
-            当前候选没有连接本机备份助手，也没有生成或替换任何 iCloud 备份。
+            请确认 Mac 本机备份助手正在运行；未成功前上一份有效备份保持不变。
           </p>
         )}
       </section>
@@ -138,7 +185,7 @@ function SupabaseSystemPage({
       </section>
 
       <p className="footer-note">
-        当前状态：SUPABASE_CANDIDATE · 纯合成测试数据 · ICLOUD_PRIMARY 未切换。
+        当前状态：SUPABASE_PRIMARY · iCloud 只读备份 · Owner-only。
       </p>
     </section>
   );
@@ -250,6 +297,7 @@ export function SystemPage({
   mode = "local",
   onSignOut,
   ownerSession,
+  backups,
   sitesStatus = null,
 }: SystemPageProps) {
   if (mode === "supabase-candidate") {
@@ -257,6 +305,7 @@ export function SystemPage({
       <SupabaseSystemPage
         onSignOut={onSignOut}
         session={ownerSession}
+        backups={backups}
       />
     );
   }

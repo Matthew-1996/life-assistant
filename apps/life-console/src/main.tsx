@@ -7,6 +7,7 @@ import { createSitesApiClient } from "./api/sites-client";
 import { syntheticDashboard } from "./data/dashboard";
 import { SupabaseAuthGate } from "./features/auth/SupabaseAuthGate";
 import { createSupabaseAuthService } from "./supabase/auth";
+import { BackupRepository } from "./supabase/backups";
 import {
   createLifeConsoleSupabaseClient,
   resolveSupabaseConfig,
@@ -55,6 +56,7 @@ if (supabaseCandidateMode) {
   const goals = new GoalRepository(supabase);
   const journals = new JournalRepository(supabase);
   const reviews = new ReviewRepository(supabase);
+  const backups = new BackupRepository(supabase);
   const auth = createSupabaseAuthService(supabase.auth);
   const dashboardClient = createSupabaseDashboardClient({
     dateProvider: shanghaiDate,
@@ -76,6 +78,7 @@ if (supabaseCandidateMode) {
             mode="supabase-candidate"
             supabase={{
               dailyCheckins,
+              backups,
               goals,
               journals,
               reviews,

@@ -21,6 +21,7 @@ import { StageAPocPanel } from "./features/system/StageAPocPanel";
 import { SystemPage } from "./features/system/SystemPage";
 import { TodayPage } from "./features/today/TodayPage";
 import type { AuthSession } from "./supabase/auth";
+import type { BackupRepository } from "./supabase/backups";
 import type { DailyCheckinRepositoryPort } from "./supabase/daily-checkins";
 import type { GoalRepositoryPort } from "./supabase/goals";
 import type { JournalRepositoryPort } from "./supabase/journals";
@@ -33,6 +34,7 @@ export interface SupabaseProductContext {
   reviews: ReviewRepositoryPort;
   session: AuthSession;
   signOut(): Promise<void>;
+  backups?: BackupRepository;
 }
 
 type RefreshStatus = "applied" | "failed" | "superseded";
@@ -221,6 +223,7 @@ export function App({
         mode={mode}
         onSignOut={supabase?.signOut}
         ownerSession={supabase?.session}
+        backups={supabase?.backups}
         sitesStatus={sitesStatus}
       />
     ),

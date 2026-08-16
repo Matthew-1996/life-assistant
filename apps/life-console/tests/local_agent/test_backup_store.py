@@ -82,6 +82,7 @@ class BackupStoreTest(unittest.TestCase):
         self.temporary = tempfile.TemporaryDirectory()
         self.root = Path(self.temporary.name)
         self.target = self.root / "backups" / "life-console-latest.zip"
+        self.previous = self.root / "backups" / "life-console-previous.zip"
         self.receipts = self.root / "state" / "pending-receipts.json"
         self.store = BackupStore(target_path=self.target, receipt_path=self.receipts)
 
@@ -115,6 +116,7 @@ class BackupStoreTest(unittest.TestCase):
         repeated = self.store.install(BytesIO(current), run_id="run_current")
 
         self.assertEqual(self.target.read_bytes(), current)
+        self.assertEqual(self.previous.read_bytes(), previous)
         self.assertFalse(receipt.idempotent)
         self.assertTrue(repeated.idempotent)
         self.assertEqual(len(self.store.pending_receipts()), 2)

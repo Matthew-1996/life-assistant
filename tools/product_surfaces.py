@@ -13,8 +13,14 @@ EXPECTED_SURFACES: dict[str, dict[str, str]] = {
     "life-console": {
         "lifecycle_state": "active",
         "role": "primary",
-        "sync_cadence": "on_demand",
-        "writeback": "local-tools-only",
+        "sync_cadence": "online",
+        "writeback": "supabase-owner-session",
+    },
+    "icloud-backup": {
+        "lifecycle_state": "active",
+        "role": "recovery-only",
+        "sync_cadence": "six_hourly_and_on_demand",
+        "writeback": "none",
     },
     "google-sheets": {
         "lifecycle_state": "derived",
@@ -79,7 +85,7 @@ def load_product_surfaces(root: Path) -> dict[str, dict[str, str]]:
         payload.get("schema_version"), bool
     ):
         raise ProductSurfaceError("product surface contract has invalid version")
-    if payload.get("truth_source") != "icloud-private-workspace":
+    if payload.get("truth_source") != "supabase-owner-scoped":
         raise ProductSurfaceError("product surface truth source is invalid")
     if not isinstance(payload.get("surfaces"), list):
         raise ProductSurfaceError("product surface list is invalid")

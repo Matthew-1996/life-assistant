@@ -45,11 +45,11 @@ export interface SourceManifest {
 
 const APPROVED_FIELDS: Record<MigrationResourceType, readonly string[]> = {
   goals: [
-    "id", "user_id", "title", "domain", "status", "priority", "start_date",
+    "id", "user_id", "record_key", "title", "domain", "status", "priority", "start_date",
     "target_date", "revision", "deleted_at", "created_at", "updated_at",
   ],
   journals: [
-    "id", "user_id", "event_date", "title", "content", "tags", "revision",
+    "id", "user_id", "record_key", "event_date", "title", "content", "tags", "metadata", "revision",
     "deleted_at", "created_at", "updated_at",
   ],
   journal_revisions: [
@@ -58,14 +58,15 @@ const APPROVED_FIELDS: Record<MigrationResourceType, readonly string[]> = {
   ],
   daily_checkins: [
     "id", "user_id", "checkin_date", "sleep_quality", "energy", "mood",
-    "life_feeling", "anchors", "notes", "revision", "created_at", "updated_at",
+    "life_feeling", "sleep_time", "wake_time", "out_of_bed_time",
+    "awake_in_bed", "anchors", "notes", "revision", "created_at", "updated_at",
   ],
   weekly_reviews: [
-    "id", "user_id", "week_start", "content", "revision", "deleted_at",
+    "id", "user_id", "record_key", "week_start", "content", "structured_data", "revision", "deleted_at",
     "created_at", "updated_at",
   ],
   phase_reviews: [
-    "id", "user_id", "period_start", "period_end", "content", "revision",
+    "id", "user_id", "record_key", "period_start", "period_end", "content", "structured_data", "revision",
     "deleted_at", "created_at", "updated_at",
   ],
   health_days: [

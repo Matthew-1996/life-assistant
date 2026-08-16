@@ -148,6 +148,25 @@ describe("private migration source manifest", () => {
     ]);
   });
 
+  it("accepts the 2.3.0 full-fidelity fields without opening arbitrary fields", async () => {
+    const approvedRoot = temporaryDirectory();
+    const manifest = fullSyntheticManifest(approvedRoot);
+    const approvedByResource: Partial<Record<MigrationResourceType, string[]>> = {
+      goals: ["id", "record_key"],
+      journals: ["id", "record_key", "metadata"],
+      daily_checkins: [
+        "id", "sleep_time", "wake_time", "out_of_bed_time", "awake_in_bed",
+      ],
+      weekly_reviews: ["id", "record_key", "structured_data"],
+      phase_reviews: ["id", "record_key", "structured_data"],
+    };
+    for (const resource of manifest.resources) {
+      resource.approvedFields = approvedByResource[resource.resourceType] ?? ["id"];
+    }
+
+    await expect(validateSourceManifest(manifest)).resolves.toEqual(manifest);
+  });
+
   it.each(APPROVED_MIGRATION_RESOURCE_TYPES)(
     "rejects a manifest missing approved resource type %s",
     async (missingResourceType) => {

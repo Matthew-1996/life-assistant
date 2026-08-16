@@ -314,14 +314,21 @@ class LifeAssistantStatusTest(unittest.TestCase):
     def _write_product_surfaces(self, **changes: object) -> Path:
         payload: dict[str, object] = {
             "schema_version": 1,
-            "truth_source": "icloud-private-workspace",
+            "truth_source": "supabase-owner-scoped",
             "surfaces": [
                 {
                     "id": "life-console",
                     "lifecycle_state": "active",
                     "role": "primary",
-                    "sync_cadence": "on_demand",
-                    "writeback": "local-tools-only",
+                    "sync_cadence": "online",
+                    "writeback": "supabase-owner-session",
+                },
+                {
+                    "id": "icloud-backup",
+                    "lifecycle_state": "active",
+                    "role": "recovery-only",
+                    "sync_cadence": "six_hourly_and_on_demand",
+                    "writeback": "none",
                 },
                 {
                     "id": "google-sheets",
@@ -564,7 +571,7 @@ class LifeAssistantStatusTest(unittest.TestCase):
         self.assertEqual(report["sections"]["site"]["metrics"]["google_sync_cadence"], "on_demand")
         self.assertEqual(report["sections"]["site"]["metrics"]["xlsx_sync_cadence"], "on_demand")
         self.assertFalse(report["sections"]["site"]["metrics"]["new_deployments_allowed"])
-        self.assertFalse(report["sections"]["site"]["metrics"]["online_verified"])
+        self.assertTrue(report["sections"]["site"]["metrics"]["online_verified"])
         self.assertNotIn(AUTOMATION_PROMPT_SENTINEL, result.stdout + status_text)
         self.assertNotIn("automation-2", result.stdout + status_text)
         self.assertNotIn("test-thread", result.stdout + status_text)

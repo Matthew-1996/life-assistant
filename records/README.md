@@ -1,5 +1,7 @@
 # 对话式生活状态台账
 
+> Life Console 2.3.0 切源后，本目录是只读历史快照。新增和更正统一调用 Owner 会话云端 Repository；只有线上返回 `saved` 才可回复已记录，失败不得回退本地 `upsert`。iCloud 仅接收 Supabase 单向备份。
+
 `records/` 保存三类彼此独立、只由对话触发的低暴露结构化回答：`daily-checkins.jsonl` 是每日状态，`weekly-reviews.jsonl` 是用户对完整自然周轻复盘问题的明确回答，`phase-reviews.jsonl` 是用户对某个阶段复盘日的明确回答。`phase-actions.jsonl` 则是从阶段回答派生的可恢复执行台账，不是第四份用户回答。`apple-health-history.jsonl` 另外保存用户已授权的最小客观设备摘要，不是用户的主观回答。这些层不复制原始对话或日记原文，也不互相反向补值。
 
 ## 可选苹果健康摘要：`apple-health-latest.txt`

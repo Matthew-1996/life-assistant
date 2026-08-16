@@ -21,7 +21,7 @@ export const BACKUP_RESOURCE_NAMES = [
 export type BackupResourceName = typeof BACKUP_RESOURCE_NAMES[number];
 export type BackupRecord = Record<string, unknown>;
 
-export const BACKUP_FORMAT_VERSION = "life-console-backup/1";
+export const BACKUP_FORMAT_VERSION = "life-console-backup/2";
 
 export type LifeConsoleSnapshot = {
   schema_version: number;
@@ -58,6 +58,21 @@ export interface BackupArchiveResult {
   manifest: BackupManifest;
 }
 
+export interface BackupStatus {
+  status: "pending" | "success" | "failed";
+  requestedAt: string;
+  completedAt: string | null;
+  counts: Record<string, number>;
+}
+
+interface BackupRunRow {
+  id: number;
+  status: "pending" | "success" | "failed";
+  created_at: string;
+  completed_at: string | null;
+  record_counts: Record<string, number>;
+}
+
 function invalidSnapshot(): RepositoryError {
   return new RepositoryError(
     "validation",
@@ -78,7 +93,7 @@ function isRecord(value: unknown): value is BackupRecord {
 function validateSnapshot(value: unknown): LifeConsoleSnapshot {
   if (
     !isRecord(value)
-    || value.schema_version !== 1
+    || value.schema_version !== 2
     || typeof value.exported_at !== "string"
     || value.exported_at.length === 0
   ) {
@@ -219,5 +234,46 @@ export class BackupRepository {
         ) as SupabaseResult<unknown>,
     );
     return validateSnapshot(value);
+  }
+
+  async start(): Promise<BackupStatus> {
+    const result = await this.client.rpc(
+      "request_life_console_backup",
+    ) as SupabaseResult<BackupRunRow[]>;
+    if (result.error) {
+      const status = result.status === 401 || result.status === 403
+        ? result.status
+        : 503;
+      throw new RepositoryError(
+        status === 503 ? "transient" : "unauthorized",
+        status,
+        status === 503 ? "backup_request_unavailable" : "unauthenticated",
+        "The backup request was not saved",
+      );
+    }
+    const rows = result.data;
+    return this.publicStatus(rows?.[0]);
+  }
+
+  async latest(): Promise<BackupStatus | null> {
+    const rows = await this.repository.executeRead<BackupRunRow[]>(
+      async () =>
+        await this.client
+          .from("backup_runs")
+          .select("id,status,created_at,completed_at,record_counts")
+          .order("created_at", { ascending: false })
+          .limit(1) as SupabaseResult<BackupRunRow[]>,
+    );
+    return rows?.[0] ? this.publicStatus(rows[0]) : null;
+  }
+
+  private publicStatus(row: BackupRunRow | undefined): BackupStatus {
+    if (!row) throw invalidSnapshot();
+    return {
+      status: row.status,
+      requestedAt: row.created_at,
+      completedAt: row.completed_at,
+      counts: row.record_counts,
+    };
   }
 }
