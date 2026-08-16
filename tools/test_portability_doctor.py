@@ -44,14 +44,21 @@ class PortabilityDoctorTests(unittest.TestCase):
             json.dumps(
                 {
                     "schema_version": 1,
-                    "truth_source": "icloud-private-workspace",
+                    "truth_source": "supabase-owner-scoped",
                     "surfaces": [
                         {
                             "id": "life-console",
                             "lifecycle_state": "active",
                             "role": "primary",
-                            "sync_cadence": "on_demand",
-                            "writeback": "local-tools-only",
+                            "sync_cadence": "online",
+                            "writeback": "supabase-owner-session",
+                        },
+                        {
+                            "id": "icloud-backup",
+                            "lifecycle_state": "active",
+                            "role": "recovery-only",
+                            "sync_cadence": "six_hourly_and_on_demand",
+                            "writeback": "none",
                         },
                         {
                             "id": "google-sheets",

@@ -11,10 +11,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import argparse
+import getpass
 import json
 from pathlib import Path
 import subprocess
 import sys
+import time
 from typing import Any, Callable, Protocol
 from urllib import error, parse, request
 
@@ -236,7 +238,7 @@ KEYCHAIN_SERVICE = "life-console-owner-session"
 DEFAULT_CONFIG = Path(__file__).resolve().parents[1] / "integrations" / "life-console-cloud.json"
 
 
-def keychain_access_token() -> str:
+def load_keychain_session() -> dict[str, Any]:
     completed = subprocess.run(
         ["/usr/bin/security", "find-generic-password", "-s", KEYCHAIN_SERVICE, "-a", "owner", "-w"],
         check=False,
@@ -249,10 +251,105 @@ def keychain_access_token() -> str:
         value = json.loads(completed.stdout)
     except json.JSONDecodeError as exc:
         raise CloudWriteError("unauthenticated") from exc
-    bearer = value.get("access_token") if isinstance(value, dict) else None
+    if not isinstance(value, dict):
+        raise CloudWriteError("unauthenticated")
+    return value
+
+
+def keychain_access_token() -> str:
+    bearer = load_keychain_session().get("access_token")
     if not isinstance(bearer, str) or not bearer:
         raise CloudWriteError("unauthenticated")
     return bearer
+
+
+def store_keychain_session(session: dict[str, Any]) -> None:
+    serialized = json.dumps(session, separators=(",", ":"), sort_keys=True)
+    completed = subprocess.run(
+        [
+            "/usr/bin/security",
+            "add-generic-password",
+            "-U",
+            "-s",
+            KEYCHAIN_SERVICE,
+            "-a",
+            "owner",
+            "-w",
+            serialized,
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if completed.returncode != 0:
+        raise CloudWriteError("unavailable")
+
+
+def session_token_provider(
+    transport: Transport,
+    *,
+    load: Callable[[], dict[str, Any]] = load_keychain_session,
+    store: Callable[[dict[str, Any]], None] = store_keychain_session,
+    now: Callable[[], float] = time.time,
+) -> Callable[[], str]:
+    """Return an Owner token provider that refreshes before session expiry."""
+
+    def provide() -> str:
+        session = load()
+        access_token = session.get("access_token")
+        refresh_token = session.get("refresh_token")
+        expires_at = session.get("expires_at")
+        if not isinstance(access_token, str) or not access_token:
+            raise CloudWriteError("unauthenticated")
+        if isinstance(expires_at, (int, float)) and expires_at > now() + 120:
+            return access_token
+        if not isinstance(refresh_token, str) or not refresh_token:
+            raise CloudWriteError("unauthenticated")
+        refreshed = transport.request(
+            "POST",
+            "/auth/v1/token?grant_type=refresh_token",
+            body={"refresh_token": refresh_token},
+        )
+        if not isinstance(refreshed, dict):
+            raise CloudWriteError("unauthenticated")
+        normalized = (
+            refreshed.get("session")
+            if isinstance(refreshed.get("session"), dict)
+            else refreshed
+        )
+        bearer = normalized.get("access_token")
+        if not isinstance(bearer, str) or not bearer:
+            raise CloudWriteError("unauthenticated")
+        store(normalized)
+        return bearer
+
+    return provide
+
+
+def authenticate_owner(
+    transport: Transport,
+    *,
+    email: str,
+    password: str,
+    store: Callable[[dict[str, Any]], None] = store_keychain_session,
+) -> dict[str, str]:
+    try:
+        session = transport.request(
+            "POST",
+            "/auth/v1/token?grant_type=password",
+            body={"email": email, "password": password},
+        )
+    except CloudWriteError:
+        raise
+    except (OSError, TimeoutError, error.URLError) as exc:
+        raise CloudWriteError("unavailable") from exc
+    if not isinstance(session, dict):
+        raise CloudWriteError("unauthenticated")
+    normalized = session.get("session") if isinstance(session.get("session"), dict) else session
+    if not isinstance(normalized.get("access_token"), str):
+        raise CloudWriteError("unauthenticated")
+    store(normalized)
+    return {"status": "authenticated"}
 
 
 def _load_client(config_path: Path) -> CloudClient:
@@ -262,9 +359,10 @@ def _load_client(config_path: Path) -> CloudClient:
         publishable_key = config["publishable_key"]
     except (OSError, KeyError, json.JSONDecodeError, TypeError) as exc:
         raise CloudWriteError("unavailable") from exc
+    transport = HttpTransport(base_url=base_url, publishable_key=publishable_key)
     return CloudClient(
-        HttpTransport(base_url=base_url, publishable_key=publishable_key),
-        token_provider=keychain_access_token,
+        transport,
+        token_provider=session_token_provider(transport),
     )
 
 
@@ -272,11 +370,26 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Life Console online-only writer")
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     subparsers = parser.add_subparsers(dest="command", required=True)
+    subparsers.add_parser("auth")
     for command in ("journal", "daily-checkin"):
         child = subparsers.add_parser(command)
         child.add_argument("--input", default="-", help="JSON file or - for stdin")
     args = parser.parse_args(argv)
     try:
+        if args.command == "auth":
+            config = json.loads(args.config.read_text(encoding="utf-8"))
+            email = input("Owner email: ").strip()
+            passphrase = getpass.getpass("Owner password: ")
+            receipt = authenticate_owner(
+                HttpTransport(
+                    base_url=config["project_url"],
+                    publishable_key=config["publishable_key"],
+                ),
+                email=email,
+                password=passphrase,
+            )
+            print(json.dumps(receipt, ensure_ascii=False, sort_keys=True))
+            return 0
         raw = sys.stdin.read() if args.input == "-" else Path(args.input).read_text(encoding="utf-8")
         payload = json.loads(raw)
         client = _load_client(args.config)

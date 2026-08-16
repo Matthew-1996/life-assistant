@@ -2,7 +2,12 @@ import io
 import json
 import unittest
 
-from life_console_cloud import CloudClient, CloudWriteError
+from life_console_cloud import (
+    CloudClient,
+    CloudWriteError,
+    authenticate_owner,
+    session_token_provider,
+)
 
 
 class FakeTransport:
@@ -19,6 +24,104 @@ class FakeTransport:
 
 
 class LifeConsoleCloudTest(unittest.TestCase):
+    def test_owner_auth_stores_session_without_returning_credentials(self):
+        transport = FakeTransport([{
+            "access_token": "synthetic-access",
+            "refresh_token": "synthetic-refresh",
+            "expires_in": 3600,
+        }])
+        stored = []
+
+        receipt = authenticate_owner(
+            transport,
+            email="owner@example.invalid",
+            password="synthetic-password",
+            store=lambda session: stored.append(session),
+        )
+
+        self.assertEqual(receipt, {"status": "authenticated"})
+        self.assertEqual(stored[0]["access_token"], "synthetic-access")
+        self.assertNotIn("synthetic-access", json.dumps(receipt))
+
+    def test_owner_auth_accepts_access_only_session_for_immediate_backup(self):
+        transport = FakeTransport([{"access_token": "synthetic-access"}])
+        stored = []
+        self.assertEqual(
+            authenticate_owner(
+                transport,
+                email="owner@example.invalid",
+                password="synthetic-password",
+                store=lambda session: stored.append(session),
+            ),
+            {"status": "authenticated"},
+        )
+        self.assertEqual(len(stored), 1)
+
+    def test_owner_auth_accepts_wrapped_session_response(self):
+        transport = FakeTransport([{
+            "user": {"id": "synthetic-owner"},
+            "session": {
+                "access_token": "synthetic-access",
+                "refresh_token": "synthetic-refresh",
+            },
+        }])
+        stored = []
+
+        receipt = authenticate_owner(
+            transport,
+            email="owner@example.invalid",
+            password="synthetic-password",
+            store=lambda session: stored.append(session),
+        )
+
+        self.assertEqual(receipt, {"status": "authenticated"})
+        self.assertEqual(stored[0]["refresh_token"], "synthetic-refresh")
+
+    def test_session_provider_refreshes_expiring_keychain_session(self):
+        transport = FakeTransport([{
+            "access_token": "synthetic-access-new",
+            "refresh_token": "synthetic-refresh-new",
+            "expires_at": 7200,
+        }])
+        stored = []
+        provider = session_token_provider(
+            transport,
+            load=lambda: {
+                "access_token": "synthetic-access-old",
+                "refresh_token": "synthetic-refresh-old",
+                "expires_at": 1020,
+            },
+            store=lambda session: stored.append(session),
+            now=lambda: 1000,
+        )
+
+        self.assertEqual(provider(), "synthetic-access-new")
+        self.assertEqual(
+            transport.calls[0][0:3],
+            (
+                "POST",
+                "/auth/v1/token?grant_type=refresh_token",
+                {"refresh_token": "synthetic-refresh-old"},
+            ),
+        )
+        self.assertEqual(stored[0]["refresh_token"], "synthetic-refresh-new")
+
+    def test_session_provider_reuses_unexpired_access_token(self):
+        transport = FakeTransport([])
+        provider = session_token_provider(
+            transport,
+            load=lambda: {
+                "access_token": "synthetic-access-current",
+                "refresh_token": "synthetic-refresh-current",
+                "expires_at": 5000,
+            },
+            store=lambda session: self.fail("unexpired session must not be rewritten"),
+            now=lambda: 1000,
+        )
+
+        self.assertEqual(provider(), "synthetic-access-current")
+        self.assertEqual(transport.calls, [])
+
     def test_journal_write_uses_stable_key_and_returns_redacted_receipt(self):
         transport = FakeTransport([[{"id": 41, "revision": 1}]])
         client = CloudClient(transport, token_provider=lambda: "synthetic-token")
