@@ -17,7 +17,7 @@ import { ICloudBackupCard } from "./ICloudBackupCard";
 interface SystemPageProps {
   client?: SitesLifeConsoleClient;
   dashboard: Dashboard;
-  mode?: "local" | "sites" | "candidate-preview" | "supabase-candidate";
+  mode?: "local" | "sites" | "candidate-preview" | "supabase-candidate" | "supabase-production";
   onSignOut?: () => Promise<void>;
   ownerSession?: AuthSession;
   sitesStatus?: SitesSystemStatus | null;
@@ -300,7 +300,7 @@ export function SystemPage({
   backups,
   sitesStatus = null,
 }: SystemPageProps) {
-  if (mode === "supabase-candidate") {
+  if (mode === "supabase-candidate" || mode === "supabase-production") {
     return (
       <SupabaseSystemPage
         onSignOut={onSignOut}

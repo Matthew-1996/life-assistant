@@ -130,10 +130,15 @@ export function createSupabaseProductionVercelConfig(environment) {
     );
   }
 
-  return createSupabaseCandidateVercelConfig({
+  const config = createSupabaseCandidateVercelConfig({
     ...environment,
     VERCEL_ENV: "preview",
   });
+  return {
+    ...config,
+    buildCommand: "npm run build:supabase-production",
+    outputDirectory: "dist/supabase-production",
+  };
 }
 
 export function createLifeConsoleVercelConfig(environment) {

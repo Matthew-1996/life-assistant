@@ -60,7 +60,7 @@ function currentWeekPathIndex(date: string): number {
 interface TodayPageProps {
   dashboard: Dashboard;
   client?: LifeConsoleClient;
-  mode?: "local" | "sites" | "candidate-preview" | "supabase-candidate";
+  mode?: "local" | "sites" | "candidate-preview" | "supabase-candidate" | "supabase-production";
   onNavigate?: (page: PageId) => void;
   onSaved?: () => boolean | Promise<boolean>;
   sourceTruth?: "ICLOUD_PRIMARY" | "SITES_D1_PRIMARY";
@@ -76,13 +76,14 @@ export function TodayPage({
   sourceTruth,
   draftScope = "anonymous",
 }: TodayPageProps) {
-  const supabaseCandidate = mode === "supabase-candidate";
+  const supabaseCandidate = mode === "supabase-candidate" || mode === "supabase-production";
+  const supabaseProduction = mode === "supabase-production";
   const todayPathIndex = currentWeekPathIndex(dashboard.date);
   const sitesPrimary = mode === "sites" && sourceTruth === "SITES_D1_PRIMARY";
   const saveTarget = mode === "candidate-preview"
     ? "候选预览"
     : supabaseCandidate
-      ? "Supabase 候选环境"
+      ? supabaseProduction ? "线上数据库" : "Supabase 候选环境"
       : mode === "sites" ? "云端真相源" : "iCloud";
   const [anchors, setAnchors] = useState<Anchors>(dashboard.today.anchors);
   const [conflict, setConflict] = useState<components["schemas"]["CheckinConflict"] | null>(null);
@@ -502,7 +503,9 @@ export function TodayPage({
           <p className="kicker">PRIVACY AND SAVE PATH</p>
           <h2 id="privacy-title">隐私与保存链路</h2>
           <p className="quiet-note">
-            {supabaseCandidate
+            {supabaseProduction
+              ? "当前页面通过 Owner 会话读写 Supabase 唯一真相源；iCloud 仅接收经过校验的单向备份。"
+              : supabaseCandidate
               ? "当前页面通过 Owner 会话读写独立 Supabase 测试环境，只允许纯合成测试数据；iCloud 私人真相源没有读取、上传或切换。"
               : mode === "candidate-preview"
               ? "当前仅展示内置合成数据；页面没有 API client，不读取或写入 D1、R2、KEK 与 iCloud。"
@@ -525,7 +528,7 @@ export function TodayPage({
             <span className="step-index">02</span>
             <div>
               <h3>{supabaseCandidate ? "数据真相源" : mode === "candidate-preview" ? "不绑定真相源" : mode === "sites" ? sitesPrimary ? "D1 唯一真相源" : "iCloud 真相源" : "iCloud 真相源"}</h3>
-              <p>{supabaseCandidate ? "真实数据已迁移至 Supabase，iCloud 仍保留完整真相源。" : mode === "candidate-preview" ? "候选环境不连接 D1、R2 或 iCloud。" : mode === "sites" ? sitesPrimary ? "所有写入使用 revision、幂等、审计与字段级加密。" : "空白 D1 只用于阶段 C 基础设施验收；尚未读取或上传真实 iCloud 数据。" : "日记、目标、台账与阶段决定以 iCloud 项目文件为准。"}</p>
+              <p>{supabaseProduction ? "Supabase 是生活记录的唯一真相源；iCloud 仅保留单向备份与恢复副本。" : supabaseCandidate ? "当前候选仅连接独立测试数据源，不改变 iCloud 真相源。" : mode === "candidate-preview" ? "候选环境不连接 D1、R2 或 iCloud。" : mode === "sites" ? sitesPrimary ? "所有写入使用 revision、幂等、审计与字段级加密。" : "空白 D1 只用于阶段 C 基础设施验收；尚未读取或上传真实 iCloud 数据。" : "日记、目标、台账与阶段决定以 iCloud 项目文件为准。"}</p>
             </div>
           </article>
           <article className="chain-step">
@@ -538,7 +541,9 @@ export function TodayPage({
         </div>
       </section>
       <p className="footer-note">
-        {supabaseCandidate
+        {supabaseProduction
+          ? "ONLINE_PRIMARY · Supabase 唯一真相源 · iCloud 单向备份。"
+          : supabaseCandidate
           ? "mode=SUPABASE_CANDIDATE · 纯合成测试数据 · ICLOUD_PRIMARY 未切换。"
           : mode === "candidate-preview"
           ? "mode=CANDIDATE_PREVIEW · 合成数据 · 无真相源绑定。"
