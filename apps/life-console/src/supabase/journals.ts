@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { JournalNormalization } from "../journal/normalization-contract";
+import type { JournalNormalization } from "../journal/normalization-contract.js";
 
 import {
   LifeConsoleRepository,
@@ -8,7 +8,7 @@ import {
   type Cursor,
   type Page,
   type SupabaseResult,
-} from "./repository";
+} from "./repository.js";
 
 export interface Journal {
   id: number;

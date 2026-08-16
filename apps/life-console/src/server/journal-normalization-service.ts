@@ -5,17 +5,17 @@ import {
   journalPromptVersion,
   type JournalContextEntity,
   type JournalNormalization,
-} from "../journal/normalization-contract";
+} from "../journal/normalization-contract.js";
 import {
   JournalRepository,
   type JournalNormalizationJob,
-} from "../supabase/journals";
+} from "../supabase/journals.js";
 import {
   LifeConsoleRepository,
   RepositoryError,
   type SupabaseResult,
-} from "../supabase/repository";
-import { requestDeepSeekNormalization } from "./deepseek-normalizer";
+} from "../supabase/repository.js";
+import { requestDeepSeekNormalization } from "./deepseek-normalizer.js";
 
 export interface JournalNormalizationEnvironment {
   supabaseUrl: string;

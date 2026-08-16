@@ -1,6 +1,6 @@
-import Ajv from "ajv";
+import { Ajv } from "ajv";
 
-import contract from "../../contracts/journal-normalization-v1.json";
+import contract from "../../contracts/journal-normalization-v1.json" with { type: "json" };
 
 export type ExplicitBasis = "explicit_text";
 export type PersonBasis = "explicit_text" | "confirmed_profile";

@@ -4,7 +4,7 @@ import {
   validateJournalNormalization,
   type JournalContextEntity,
   type JournalNormalization,
-} from "../journal/normalization-contract";
+} from "../journal/normalization-contract.js";
 
 const DEEPSEEK_ENDPOINT = "https://api.deepseek.com/chat/completions";
 

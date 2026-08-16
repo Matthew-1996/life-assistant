@@ -10,4 +10,4 @@
 - [项目管理](项目管理-生活助手-LifeConsole-2.4.0.md)
 - [实施计划](实施计划-生活助手-LifeConsole-2.4.0.md)
 
-当前状态：Gate 1、Gate 2 已确认；统一契约、revision-safe 数据状态机、Agent 主路径、纯合成 DeepSeek 服务端边界和统一前端已在 Draft PR #54 完成并通过本地门禁。DeepSeek 只作为无法触发 Agent 时的候选兜底；在 PO 单独确认第三方模型数据处理边界前，不接入真实日记、不配置密钥、不部署。候选部署、真实 POC、历史重整、PR Ready/合并均未执行。
+当前状态：Gate 1、Gate 2 已确认；统一契约、revision-safe 数据状态机、Agent 主路径、DeepSeek 服务端兜底和统一前端已在 Draft PR #54 完成。2.4.0 migration 与 Vercel Production 已于 2026-08-16 上线；复用既有 Keychain 凭据完成了不含个人数据的真实 DeepSeek 连通性验证。既有 14 条日记保持 `legacy`，未触发历史批量整理。真实日记质量 POC、PR Ready/合并仍未执行。
