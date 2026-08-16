@@ -3,6 +3,7 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import {
   copyFileSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -39,8 +40,8 @@ function createGeneratorFixture() {
   const root = mkdtempSync(join(tmpdir(), "life-console-vercel-config-"));
   mkdirSync(resolve(root, "scripts"));
   copyFileSync(
-    resolve(process.cwd(), "vercel.mjs"),
-    resolve(root, "vercel.mjs"),
+    resolve(process.cwd(), "scripts/write-vercel-config.mjs"),
+    resolve(root, "scripts/write-vercel-config.mjs"),
   );
   copyFileSync(
     resolve(process.cwd(), "scripts/supabase-candidate-config.mjs"),
@@ -52,7 +53,7 @@ function createGeneratorFixture() {
 function runGenerator(root: string, outputPath: string) {
   return spawnSync(
     process.execPath,
-    ["vercel.mjs", "--write", outputPath],
+    ["scripts/write-vercel-config.mjs", "--write", outputPath],
     {
       cwd: root,
       encoding: "utf8",
@@ -185,10 +186,44 @@ describe("Supabase Production Vercel configuration", () => {
 });
 
 describe("Vercel deployment artifact generation", () => {
-  it("keeps vercel.mjs imports side-effect-free", () => {
+  it("avoids the reserved dynamic-config entrypoint while keeping the generator runnable", () => {
+    expect(existsSync(resolve(process.cwd(), "vercel.mjs"))).toBe(false);
+
+    const root = mkdtempSync(join(tmpdir(), "life-console-vercel-entrypoint-"));
+    const outputPath = resolve(root, ".vercel/life-console.production.json");
     const result = spawnSync(
       process.execPath,
-      ["--input-type=module", "--eval", "await import('./vercel.mjs')"],
+      [
+        resolve(process.cwd(), "scripts/write-vercel-config.mjs"),
+        "--write",
+        ".vercel/life-console.production.json",
+      ],
+      {
+        cwd: root,
+        encoding: "utf8",
+        env: syntheticProductionEnvironment,
+      },
+    );
+
+    try {
+      expect(result.status).toBe(0);
+      expect(JSON.parse(readFileSync(outputPath, "utf8"))).toMatchObject({
+        buildCommand: "npm run build:supabase-candidate",
+        outputDirectory: "dist/supabase-candidate",
+      });
+    } finally {
+      rmSync(root, { force: true, recursive: true });
+    }
+  });
+
+  it("keeps generator imports side-effect-free", () => {
+    const result = spawnSync(
+      process.execPath,
+      [
+        "--input-type=module",
+        "--eval",
+        "await import('./scripts/write-vercel-config.mjs')",
+      ],
       {
         cwd: process.cwd(),
         encoding: "utf8",
@@ -223,7 +258,7 @@ describe("Vercel deployment artifact generation", () => {
         process.execPath,
         [
           `--env-file=${environmentPath}`,
-          "vercel.mjs",
+          "scripts/write-vercel-config.mjs",
           "--write",
           ".vercel/life-console.production.json",
         ],
@@ -275,15 +310,19 @@ describe("Vercel deployment artifact generation", () => {
   it("reports CLI usage with the one allowed output path", () => {
     const root = createGeneratorFixture();
     try {
-      const result = spawnSync(process.execPath, ["vercel.mjs", "--write"], {
+      const result = spawnSync(
+        process.execPath,
+        ["scripts/write-vercel-config.mjs", "--write"],
+        {
         cwd: root,
         encoding: "utf8",
         env: syntheticProductionEnvironment,
-      });
+        },
+      );
 
       expect(result.status).not.toBe(0);
       expect(result.stderr).toContain(
-        "Usage: node vercel.mjs --write .vercel/life-console.production.json",
+        "Usage: node scripts/write-vercel-config.mjs --write .vercel/life-console.production.json",
       );
     } finally {
       rmSync(root, { recursive: true, force: true });

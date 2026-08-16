@@ -10,7 +10,7 @@ import { randomUUID } from "node:crypto";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { createLifeConsoleVercelConfig } from "./scripts/supabase-candidate-config.mjs";
+import { createLifeConsoleVercelConfig } from "./supabase-candidate-config.mjs";
 
 const outputRelativePath = ".vercel/life-console.production.json";
 const outputFilename = "life-console.production.json";
@@ -129,7 +129,9 @@ export function writeVercelConfig(environment = process.env) {
 
 function assertCliArguments(argv) {
   if (argv.length !== 2 || argv[0] !== "--write" || !argv[1]) {
-    throw new Error(`Usage: node vercel.mjs --write ${outputRelativePath}`);
+    throw new Error(
+      `Usage: node scripts/write-vercel-config.mjs --write ${outputRelativePath}`,
+    );
   }
   if (argv[1] !== outputRelativePath) {
     throw new Error(`Output path must be ${outputRelativePath}`);
