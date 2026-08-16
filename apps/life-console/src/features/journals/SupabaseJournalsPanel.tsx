@@ -18,6 +18,7 @@ import {
   RepositoryError,
   type Cursor,
 } from "../../supabase/repository";
+import { JournalStructuredView } from "./JournalStructuredView";
 
 export interface SupabaseJournalsPanelProps {
   repository: JournalRepositoryPort;
@@ -764,15 +765,7 @@ export function SupabaseJournalsPanel({
                   </form>
                 ) : (
                   <>
-                    <div className="supabase-journal-summary">
-                      <div>
-                        <strong>{displayTitle}</strong>
-                        <span>{journal.event_date}</span>
-                      </div>
-                      <span className="status gray">
-                        revision #{journal.revision}
-                      </span>
-                    </div>
+                    <JournalStructuredView journal={journal} />
                     <div className="button-row">
                       <button
                         aria-label={`编辑 ${displayTitle}`}

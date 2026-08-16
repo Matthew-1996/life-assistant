@@ -14,7 +14,11 @@ import type {
   DailyCheckinRepositoryPort,
 } from "./daily-checkins";
 import type { Goal, GoalRepositoryPort } from "./goals";
-import type { Journal, JournalRepositoryPort } from "./journals";
+import type {
+  Journal,
+  JournalNormalizationRepositoryPort,
+  JournalRepositoryPort,
+} from "./journals";
 import { RepositoryError, type Cursor } from "./repository";
 
 type ErrorCode = ErrorResponse["error"]["code"];
@@ -48,6 +52,11 @@ export interface SupabaseDashboardClientOptions {
   dailyCheckins: DailyCheckinRepositoryPort;
   goals: GoalRepositoryPort;
   journals: JournalRepositoryPort;
+  normalizeJournal?: (input: {
+    journalId: number;
+    sourceRevision: number;
+    taskKey: string;
+  }) => Promise<"completed" | "failed" | "pending">;
   now?: () => Date;
   createIdempotencyKey?: () => string;
   createOperationId?: () => string;
@@ -177,14 +186,29 @@ function recentJournals(journals: Journal[]): Dashboard["records"]["recent_journ
     )
     .slice(0, 10)
     .map((journal) => {
-      const summary = compactLine(journal.content, 240);
-      const title = compactLine(journal.title ?? summary, 100);
+      const normalized = journal.metadata
+        && "summary" in journal.metadata
+        ? journal.metadata
+        : null;
+      const rawSummary = compactLine(journal.content, 240);
+      const summary = compactLine(normalized?.summary || rawSummary, 240);
+      const title = compactLine(
+        journal.title ?? normalized?.title ?? rawSummary,
+        100,
+      );
+      const state = journal.normalization_status === "completed"
+        ? "enriched"
+        : journal.normalization_status === "processing"
+          ? "working"
+          : journal.normalization_status === "failed"
+            ? "failed"
+            : "raw";
       return {
         id: String(journal.id),
         date: journal.event_date,
         title: title || "未命名记录",
         summary,
-        enrichment_state: "raw" as const,
+        enrichment_state: state,
       };
     });
 }
@@ -354,6 +378,7 @@ export function createSupabaseDashboardClient({
   dailyCheckins,
   goals,
   journals,
+  normalizeJournal,
   now = () => new Date(),
   createIdempotencyKey = () =>
     `web_${crypto.randomUUID().replaceAll("-", "")}`,
@@ -367,8 +392,74 @@ export function createSupabaseDashboardClient({
   );
   const journalWrites = new Map<
     string,
-    { key: string; pending?: Promise<Journal> }
+    {
+      key: string;
+      pending?: Promise<{
+        journal: Journal;
+        normalizationStatus: "completed" | "failed" | "pending";
+      }>;
+    }
   >();
+
+  function supportsRawFirstJournal(
+    repository: JournalRepositoryPort,
+  ): repository is JournalNormalizationRepositoryPort {
+    return "createRaw" in repository
+      && typeof repository.createRaw === "function";
+  }
+
+  function normalizationMessage(
+    status: "completed" | "failed" | "pending",
+  ): string {
+    if (status === "completed") return "日记原文已保存，整理完成。";
+    if (status === "failed") {
+      return "日记原文已保存；整理失败，可稍后重试。";
+    }
+    return "日记原文已保存，正在等待整理。";
+  }
+
+  async function createJournalRecord(
+    input: JournalInput,
+    idempotencyKey: string,
+  ): Promise<{
+    journal: Journal;
+    normalizationStatus: "completed" | "failed" | "pending";
+  }> {
+    if (!supportsRawFirstJournal(journals)) {
+      return {
+        journal: await journals.create(idempotencyKey, {
+          date: input.event_date,
+          title: input.title ?? null,
+          content: input.text,
+          tags: input.tags ?? [],
+        }),
+        normalizationStatus: "pending",
+      };
+    }
+    const journal = await journals.createRaw(idempotencyKey, {
+      recordKey: idempotencyKey,
+      date: input.event_date,
+      eventTime: input.event_time ?? null,
+      timePrecision: input.time_precision,
+      source: "life_console",
+      privacy: "owner-only",
+      content: input.text,
+    });
+    const sourceRevision = journal.raw_revision;
+    if (!normalizeJournal || !Number.isSafeInteger(sourceRevision)) {
+      return { journal, normalizationStatus: "pending" };
+    }
+    try {
+      const normalizationStatus = await normalizeJournal({
+        journalId: journal.id,
+        sourceRevision: sourceRevision as number,
+        taskKey: `journal:${journal.id}:revision:${sourceRevision}:deepseek`,
+      });
+      return { journal, normalizationStatus };
+    } catch {
+      return { journal, normalizationStatus: "failed" };
+    }
+  }
 
   async function dashboard(): Promise<Dashboard> {
     const date = resolveDate();
@@ -482,20 +573,15 @@ export function createSupabaseDashboardClient({
       journalWrites.set(fingerprint, write);
     }
     try {
-      write.pending ??= journals.create(write.key, {
-        date: input.event_date,
-        title: input.title ?? null,
-        content: input.text,
-        tags: input.tags ?? [],
-      });
-      const created = await write.pending;
+      write.pending ??= createJournalRecord(input, write.key);
+      const { journal: created, normalizationStatus } = await write.pending;
       if (journalWrites.get(fingerprint) === write) {
         journalWrites.delete(fingerprint);
       }
       return commandReceipt(
         "created",
         created.revision,
-        "日记已保存到测试云端。",
+        normalizationMessage(normalizationStatus),
         operationId,
       );
     } catch (error) {
@@ -512,16 +598,12 @@ export function createSupabaseDashboardClient({
   ): Promise<CommandReceipt> {
     const operationId = createOperationId();
     try {
-      const created = await journals.create(idempotencyKey, {
-        date: input.event_date,
-        title: input.title ?? null,
-        content: input.text,
-        tags: input.tags ?? [],
-      });
+      const { journal: created, normalizationStatus } =
+        await createJournalRecord(input, idempotencyKey);
       return commandReceipt(
         "created",
         created.revision,
-        "日记已保存到测试云端。",
+        normalizationMessage(normalizationStatus),
         operationId,
       );
     } catch (error) {

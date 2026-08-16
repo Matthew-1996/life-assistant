@@ -467,7 +467,13 @@ export function RecordsPage({
     }
     const fact = firstSentence(eventText, 180);
     const title = firstSentence(eventText, 120);
-    const journalInput: JournalInput = {
+    const journalInput: JournalInput = supabaseCandidate ? {
+      schema_version: 1,
+      event_date: dashboard.date,
+      event_time: null,
+      time_precision: "unknown",
+      text: eventText,
+    } : {
       schema_version: 1,
       event_date: dashboard.date,
       event_time: null,
@@ -484,6 +490,7 @@ export function RecordsPage({
     };
     setCaptureSaving(true);
     try {
+      let saveResult;
       if (supabaseCandidate && supportsExplicitJournalKey(client)) {
         const fingerprint = journalFingerprint(journalInput);
         const idempotencyKey = captureDraft.idempotencyKey
@@ -495,9 +502,12 @@ export function RecordsPage({
           idempotencyKey,
           text: captureText,
         });
-        await client.journalWithIdempotency(journalInput, idempotencyKey);
+        saveResult = await client.journalWithIdempotency(
+          journalInput,
+          idempotencyKey,
+        );
       } else {
-        await client.journal(journalInput);
+        saveResult = await client.journal(journalInput);
       }
       await persistCaptureDraft(EMPTY_CONVERSATION_DRAFT);
       let autoEnriched = false;
@@ -517,10 +527,10 @@ export function RecordsPage({
         // 云端整理失败不影响已保存的本地记录；卡片会显示"整理失败"并可手动重试。
       }
       setReceipt(
-        mode === "sites"
+        supabaseCandidate
+          ? saveResult.message
+          : mode === "sites"
           ? "已保存到云端真相源；iCloud 冷备已进入队列"
-          : supabaseCandidate
-            ? supabaseProduction ? "已保存到线上数据库" : "已保存到 Supabase 候选环境"
           : autoEnriched
             ? "已保存到 iCloud，正在用 DeepSeek 整理…"
             : "已保存到 iCloud（云端整理未启动，可在卡片上手动整理）",
@@ -584,7 +594,13 @@ export function RecordsPage({
           240,
         );
         const raw = feeling ? `${eventText}\n\n感受：${feeling}` : eventText;
-        const journalInput: JournalInput = {
+        const journalInput: JournalInput = supabaseCandidate ? {
+          schema_version: 1,
+          event_date: String(values.get("date")),
+          event_time: time || null,
+          time_precision: String(values.get("precision")) as "exact" | "approximate" | "unknown",
+          text: raw,
+        } : {
           schema_version: 1,
           event_date: String(values.get("date")),
           event_time: time || null,
@@ -924,7 +940,11 @@ export function RecordsPage({
                 type="text"
                 value={simpleFormsDraft.journal.feeling}
               />
-              <p className="form-hint">会立刻生成标题、摘要、事实和感受；不会调用外部 AI。</p>
+              <p className="form-hint">
+                {supabaseCandidate
+                  ? "先保存原文，再按统一契约异步整理；整理失败不影响原文。"
+                  : "会立刻生成标题、摘要、事实和感受；不会调用外部 AI。"}
+              </p>
               <label htmlFor="journal-date">事件日期</label>
               <input
                 disabled={conflict !== null || formSaving}
