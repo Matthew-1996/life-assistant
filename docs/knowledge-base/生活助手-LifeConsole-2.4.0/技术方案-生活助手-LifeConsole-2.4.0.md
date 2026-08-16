@@ -16,11 +16,10 @@ Life Console ─保存原文─┘          │
 
 ## 2. 单一约束源
 
-实施阶段新增并只维护：
+当前只维护一个机器可读工件：
 
-- `contracts/journal-normalization-v1.schema.json`：机器可验证字段与限制。
-- `prompts/journal-normalization-v1.md`：唯一整理规则和 JSON 示例，不含真实人物或日记。
-- 生成的 TypeScript/Python 类型或校验器：不得手工维护第二份字段定义。
+- `apps/life-console/contracts/journal-normalization-v1.json`：同时保存 contract version、prompt version、唯一 system Prompt、字段 Schema 与长度限制，不含真实人物或日记。
+- TypeScript `normalization-contract.ts` 与 Python `journal_normalization_contract.py` 都读取这一工件；不得复制第二份 Prompt 或字段定义。
 
 `journal/QUICK_CAPTURE.md`、Agent Skill、Life Console 和自动化只引用契约版本，不复制规则正文。项目校验器检查重复 Prompt、版本漂移和未引用 Schema。
 
@@ -28,7 +27,9 @@ Life Console ─保存原文─┘          │
 
 `journals` 保持原文真相，并增加或规范：
 
-- `raw_text`：原文；若沿用 `content`，明确其语义只能是原文。
+- `content`：唯一原文；整理完成 RPC 不得修改。
+- `event_time`、`time_precision`、`source`、`privacy`
+- `raw_revision`
 - `normalization_status`
 - `normalization_contract_version`
 - `normalization_prompt_version`
@@ -50,7 +51,7 @@ Life Console ─保存原文─┘          │
 
 人物档案补充使用 `basis=confirmed_profile` 与人物投影 revision，不把整份个人档案复制进日记。主题与标签是分类结果；推测必须明确标记不确定性，不能被下游当作事实。
 
-新增 `journal_normalization_jobs`，以 `(user_id, journal_id, source_revision, contract_version)` 唯一，记录任务状态、尝试次数和租约；不记录原文或模型输出日志。
+新增 `journal_normalization_jobs`，以用户、任务键及 journal/source revision/contract/processor 组合防重，记录任务状态和尝试次数；不记录原文或模型输出日志。
 
 新增最小 `journal_context_entities` 投影，只保存逐项获批的人物规范称呼、别名、关系和 revision。它不是 `USER.md` 副本，也不包含职业、健康或其他长期资料。
 
@@ -95,7 +96,7 @@ Agent 不直接拼 Markdown 保存；Markdown/页面均从结构化 JSON 渲染�
 ## 7. 触发与重试
 
 - Agent 来源：创建后由当前 Agent立即处理。
-- Web 来源：创建成功后非阻塞调用 Vercel Function；页面重新打开时可恢复 pending/failed 状态并由用户重试。
+- Web 来源：`create_journal_v2` 成功后才调用 Vercel Function；Function 完成或失败都不改变“原文已保存”的事实。页面重新打开时可恢复 pending/failed 状态并由用户重试。
 - 本阶段不使用数据库触发器直接发外网请求，不使用无限 cron，也不因模型失败回写本地文件。
 - POC 通过后再评审是否增加有限后台队列；当前简单方案避免引入 service-role 和无人值守私人数据外发。
 
@@ -121,3 +122,13 @@ DeepSeek 开放平台协议要求 API Key 不得暴露在客户端，并要求�
 - 旧 `metadata` 在读取层映射为 legacy，不自动改写。
 - 当前仅存基础字段的新记录可显示 pending，但不自动发起历史整理。
 - 现有 Markdown 结构化日记迁移另行设计，不在本版本自动执行。
+
+## 10. Gate 2 实现结论
+
+- `create_journal_v2` 先保存原文，稳定 `record_key` 与短期幂等键共同防重。
+- begin/complete/fail 三类 RPC 绑定 Owner、任务键与 `raw_revision`；原文变化后旧任务完成会返回 conflict。
+- Agent 写入端先校验统一契约，再提交 `processor=agent`；无有效整理结果时保留 pending。
+- 浏览器只把 journal ID、source revision 与 task key 发给同源 Vercel Function；Function 使用用户 Supabase JWT，不使用 service-role。
+- DeepSeek 边界固定 `deepseek-v4-flash`、非思考、JSON Object、非流式；只对空或无效模型内容重试一次，不自动切换 Pro。
+- `DEEPSEEK_API_KEY` 只允许服务端环境变量；配置生成物、CSP 和浏览器 bundle 不包含 Key 或供应商端点。
+- 本轮全部供应商响应为注入式合成 fixture，没有真实 API 请求、Key、账号、费用或真实日记处理。

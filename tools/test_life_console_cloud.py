@@ -35,7 +35,7 @@ class LifeConsoleCloudTest(unittest.TestCase):
         receipt = authenticate_owner(
             transport,
             email="owner@example.invalid",
-            password="synthetic-password",
+            passphrase="synthetic-password",
             store=lambda session: stored.append(session),
         )
 
@@ -50,7 +50,7 @@ class LifeConsoleCloudTest(unittest.TestCase):
             authenticate_owner(
                 transport,
                 email="owner@example.invalid",
-                password="synthetic-password",
+                passphrase="synthetic-password",
                 store=lambda session: stored.append(session),
             ),
             {"status": "authenticated"},
@@ -70,7 +70,7 @@ class LifeConsoleCloudTest(unittest.TestCase):
         receipt = authenticate_owner(
             transport,
             email="owner@example.invalid",
-            password="synthetic-password",
+            passphrase="synthetic-password",
             store=lambda session: stored.append(session),
         )
 

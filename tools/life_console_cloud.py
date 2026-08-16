@@ -475,14 +475,14 @@ def authenticate_owner(
     transport: Transport,
     *,
     email: str,
-    password: str,
+    passphrase: str,
     store: Callable[[dict[str, Any]], None] = store_keychain_session,
 ) -> dict[str, str]:
     try:
         session = transport.request(
             "POST",
             "/auth/v1/token?grant_type=password",
-            body={"email": email, "password": password},
+            body={"email": email, "password": passphrase},
         )
     except CloudWriteError:
         raise
@@ -531,7 +531,7 @@ def main(argv: list[str] | None = None) -> int:
                     publishable_key=config["publishable_key"],
                 ),
                 email=email,
-                password=passphrase,
+                passphrase=passphrase,
             )
             print(json.dumps(receipt, ensure_ascii=False, sort_keys=True))
             return 0

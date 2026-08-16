@@ -36,7 +36,7 @@ describe("DeepSeek journal normalizer", () => {
       contextEntities: [],
       contextRevisions: {},
     }, {
-      apiKey: "synthetic-server-key",
+      credential: "synthetic-server-key",
       fetch,
     })).resolves.toEqual(normalization);
 
@@ -67,7 +67,7 @@ describe("DeepSeek journal normalizer", () => {
       rawText,
       contextEntities: [],
       contextRevisions: {},
-    }, { apiKey: "synthetic-server-key", fetch })).resolves.toEqual(
+    }, { credential: "synthetic-server-key", fetch })).resolves.toEqual(
       normalization,
     );
     expect(fetch).toHaveBeenCalledTimes(2);
@@ -82,7 +82,7 @@ describe("DeepSeek journal normalizer", () => {
       rawText,
       contextEntities: [],
       contextRevisions: {},
-    }, { apiKey: "synthetic-server-key", fetch })).rejects.toBeInstanceOf(
+    }, { credential: "synthetic-server-key", fetch })).rejects.toBeInstanceOf(
       DeepSeekNormalizationError,
     );
     expect(fetch).toHaveBeenCalledTimes(2);
@@ -92,7 +92,7 @@ describe("DeepSeek journal normalizer", () => {
       contextEntities: [],
       contextRevisions: {},
     }, {
-      apiKey: "synthetic-server-key",
+      credential: "synthetic-server-key",
       endpoint: "https://example.invalid/chat/completions",
       fetch,
     })).rejects.toMatchObject({
@@ -114,7 +114,7 @@ describe("DeepSeek journal normalizer", () => {
         rawText,
         contextEntities: [],
         contextRevisions: {},
-      }, { apiKey: "synthetic-server-key", fetch });
+      }, { credential: "synthetic-server-key", fetch });
     } catch (caught) {
       error = caught;
     }

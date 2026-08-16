@@ -2,7 +2,7 @@
 
 ## 1. 当前状态
 
-仅方案评审。没有创建模型密钥、数据库迁移、真实日记处理、候选或正式部署。
+Gate 2 通用代码与纯合成测试完成，Draft PR #54 保持 Draft。已新增版本化数据库迁移文件，但未应用到候选或 Production；没有创建模型密钥、调用真实模型、处理真实日记、部署、切源或合并。
 
 ## 2. 测试策略
 
@@ -58,3 +58,28 @@
 - Vercel Production 部署；
 - 历史批量整理；
 - PR 转 Ready、合并或资源删除。
+
+## 5. 2026-08-16 Gate 2 验证证据
+
+| 门禁 | 结果 |
+|---|---|
+| 统一契约 TypeScript + Python | 10 项通过（5 + 5） |
+| 数据库迁移与 Journal Repository | 15 项通过 |
+| Agent 云端写入与契约 | 18 项通过 |
+| DeepSeek 服务端、请求服务与 Vercel 配置 | 26 项通过，全部为注入式合成响应 |
+| 统一渲染、异步写入和候选 UI 聚焦回归 | 50 项通过 |
+| `python3 -m unittest discover -s tools -p 'test_*.py'` | 365 项运行，364 通过、1 跳过；沙箱外回环权限复跑通过 |
+| `npm test` | Vitest 50 文件 / 434 项通过；随附 Python 92 项通过 |
+| `npm run build` | 通过，常规 JS 326.25 kB（gzip 97.44 kB） |
+| `npm run build:supabase-candidate` | 通过；JS 578.24 kB（gzip 165.05 kB），仅既有 >500 kB 非阻断 warning |
+| 治理、Git 隐私、`git diff --check` | 通过 |
+
+`tools/validate_project.py` 在独立 Git worktree 中不能作为全绿证据：它按设计要求读取未复制到 worktree 的 iCloud 私人文件、自动化、工作簿及本地集成文件，同时命中一条已有历史文档失效链接。2.4.0 新增的统一契约专项校验 5 项全部通过；不得把根工作区旧代码的校验结果冒充为本分支验证。
+
+## 6. 当前验收结论
+
+- Gate 2 授权范围：通过。
+- 真实 DeepSeek 数据处理与模型质量 POC：未执行，等待单独授权与账号隐私设置复核。
+- 候选/Production 数据库迁移和部署：未执行。
+- 历史日记批量重整：未执行。
+- PR #54：保持 Draft，不转 Ready、不合并。

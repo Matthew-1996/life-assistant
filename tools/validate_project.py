@@ -209,6 +209,95 @@ AUTOMATION_FIELDS = {
 AUTOMATION_SCHEDULE_FIELDS = {"frequency", "weekday"}
 AUTOMATION_WEEKDAYS = {"MO", "TU", "WE", "TH", "FR", "SA", "SU"}
 JOURNAL_REVIEW_POLICY = "journal/review-policy.json"
+
+
+def validate_journal_normalization_contract(
+    root: Path,
+    errors: list[str],
+) -> None:
+    contract_path = (
+        root
+        / "apps/life-console/contracts/journal-normalization-v1.json"
+    )
+    if not contract_path.is_file():
+        errors.append("缺少统一日记整理契约")
+        return
+    try:
+        contract = json.loads(contract_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        errors.append("统一日记整理契约不是有效 UTF-8 JSON")
+        return
+    if (
+        not isinstance(contract, dict)
+        or contract.get("contract_version") != "journal-normalization/1.0.0"
+        or contract.get("prompt_version")
+        != "journal-normalization-prompt/1.0.0"
+        or not isinstance(contract.get("system_prompt"), str)
+        or not contract.get("system_prompt")
+        or not isinstance(contract.get("schema"), dict)
+    ):
+        errors.append("统一日记整理契约版本、Prompt 或 Schema 不完整")
+
+    required_routes = {
+        "journal/QUICK_CAPTURE.md": "journal-normalization-v1.json",
+        "journal/README.md": "journal-normalization-v1.json",
+        "tools/life_console_cloud.py": "validate_normalization",
+        "apps/life-console/src/journal/normalization-contract.ts":
+            "journal-normalization-v1.json",
+        "apps/life-console/src/server/deepseek-normalizer.ts":
+            "buildJournalNormalizationMessages",
+        "apps/life-console/src/server/journal-normalization-service.ts":
+            "journalContractVersion",
+        "apps/life-console/src/supabase/dashboard.ts": "createRaw",
+    }
+    for relative, marker in required_routes.items():
+        path = root / relative
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeError):
+            errors.append(f"统一日记活跃路由缺失：{relative}")
+            continue
+        if marker not in text:
+            errors.append(f"活跃日记路由未绑定统一契约版本：{relative}")
+
+    service_path = (
+        root
+        / "apps/life-console/src/server/journal-normalization-service.ts"
+    )
+    if service_path.is_file():
+        service = service_path.read_text(encoding="utf-8")
+        if "journalPromptVersion" not in service:
+            errors.append("活跃日记路由未绑定统一契约版本：服务端 Prompt")
+
+    active_prompt_roots = [
+        root / "apps/life-console/src/server",
+        root / "apps/life-console/src/supabase",
+    ]
+    for directory in active_prompt_roots:
+        if not directory.is_dir():
+            continue
+        for path in directory.rglob("*.ts"):
+            text = path.read_text(encoding="utf-8")
+            if re.search(r"\b(?:SYSTEM_PROMPT|JOURNAL_PROMPT)\s*=", text):
+                errors.append(
+                    "发现第二份活跃日记 Prompt："
+                    + str(path.relative_to(root))
+                )
+
+    config_path = (
+        root
+        / "apps/life-console/scripts/supabase-candidate-config.mjs"
+    )
+    try:
+        config = config_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError):
+        errors.append("缺少 DeepSeek 服务端 Key 部署边界")
+    else:
+        if (
+            "VITE_DEEPSEEK_API_KEY" not in config
+            or "must remain server-only" not in config
+        ):
+            errors.append("浏览器 DeepSeek Key 未被配置门禁拒绝")
 JOURNAL_REVIEW_POLICY_FIELDS = {
     "schema_version",
     "timezone",
@@ -938,6 +1027,7 @@ def validate() -> list[str]:
     validate_optional_phase_actions(errors)
     validate_design_governance(errors)
     validate_product_surface_lifecycle(errors)
+    validate_journal_normalization_contract(ROOT, errors)
 
     skill_path = SKILL_DIR / "SKILL.md"
     if skill_path.is_file():

@@ -22,7 +22,7 @@ export interface DeepSeekNormalizationInput {
 }
 
 export interface DeepSeekNormalizationDependencies {
-  apiKey: string;
+  credential: string;
   fetch: typeof globalThis.fetch;
   endpoint?: string;
 }
@@ -47,7 +47,7 @@ export async function requestDeepSeekNormalization(
   if (endpoint !== DEEPSEEK_ENDPOINT) {
     throw new DeepSeekNormalizationError("provider_endpoint_is_not_allowlisted");
   }
-  if (!dependencies.apiKey) {
+  if (!dependencies.credential) {
     throw new DeepSeekNormalizationError("provider_key_unavailable");
   }
 
@@ -68,7 +68,7 @@ export async function requestDeepSeekNormalization(
       response = await dependencies.fetch(endpoint, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${dependencies.apiKey}`,
+          Authorization: `Bearer ${dependencies.credential}`,
           "Content-Type": "application/json",
         },
         body: requestBody,

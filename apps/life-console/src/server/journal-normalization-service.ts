@@ -274,7 +274,7 @@ class SupabaseJournalNormalizationStore implements JournalNormalizationStore {
 const defaultDependencies: JournalNormalizationServiceDependencies = {
   createStore: createSupabaseStore,
   normalize: (input, environment) => requestDeepSeekNormalization(input, {
-    apiKey: environment.deepSeekApiKey,
+    credential: environment.deepSeekApiKey,
     fetch: globalThis.fetch,
   }),
 };
