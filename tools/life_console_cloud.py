@@ -204,6 +204,35 @@ class CloudClient:
             raise CloudWriteError("unavailable")
         return rows[0] if rows else None
 
+    def request_backup(self) -> dict[str, Any]:
+        return _first_row(self._request(
+            "POST",
+            "/rest/v1/rpc/request_life_console_backup",
+            body={},
+        ))
+
+    def cutover_online_primary(
+        self,
+        *,
+        run_id: str,
+        manifest_digest: str,
+        journals: list[dict[str, Any]],
+        daily_checkins: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        result = self._request(
+            "POST",
+            "/rest/v1/rpc/cutover_life_console_230",
+            body={
+                "p_run_id": run_id,
+                "p_manifest_digest": manifest_digest,
+                "p_journals": journals,
+                "p_daily_checkins": daily_checkins,
+            },
+        )
+        if not isinstance(result, dict):
+            raise CloudWriteError("unavailable")
+        return result
+
     def backup_snapshot(self) -> dict[str, Any]:
         value = self._request(
             "POST",

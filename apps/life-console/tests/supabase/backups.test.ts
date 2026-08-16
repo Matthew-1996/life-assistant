@@ -58,7 +58,7 @@ function sha256(value: Uint8Array | string): string {
 
 describe("synthetic backup snapshots", () => {
   it("creates a pending manual backup request and reads only redacted status", async () => {
-    const insertLimit = vi.fn(async () => ({
+    const rpc = vi.fn(async () => ({
       data: [{
         id: 12,
         status: "pending",
@@ -81,10 +81,8 @@ describe("synthetic backup snapshots", () => {
       status: 200,
     }));
     const client = {
+      rpc,
       from: vi.fn(() => ({
-        insert: vi.fn(() => ({
-          select: vi.fn(() => ({ limit: insertLimit })),
-        })),
         select: vi.fn(() => ({
           order: vi.fn(() => ({ limit })),
         })),
@@ -95,6 +93,7 @@ describe("synthetic backup snapshots", () => {
     await expect(repository.start()).resolves.toMatchObject({
       status: "pending",
     });
+    expect(rpc).toHaveBeenCalledWith("request_life_console_backup");
     await expect(repository.latest()).resolves.toEqual({
       status: "success",
       requestedAt: "2030-01-01T03:04:05Z",

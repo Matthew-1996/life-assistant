@@ -237,11 +237,9 @@ export class BackupRepository {
   }
 
   async start(): Promise<BackupStatus> {
-    const result = await this.client
-      .from("backup_runs")
-      .insert({ status: "pending", manifest_version: 2 })
-      .select("id,status,created_at,completed_at,record_counts")
-      .limit(1) as SupabaseResult<BackupRunRow[]>;
+    const result = await this.client.rpc(
+      "request_life_console_backup",
+    ) as SupabaseResult<BackupRunRow[]>;
     if (result.error) {
       const status = result.status === 401 || result.status === 403
         ? result.status

@@ -10,9 +10,15 @@
 
 React Repository 与本机 `CloudClient` 使用相同 Supabase REST/RPC。Owner access/refresh session 只进入 macOS Keychain；浏览器只持有普通 Owner 会话；禁止 service-role。回执只返回 `saved/conflict/unauthenticated/unavailable`、资源类型与 revision。
 
+本机 token provider 在到期前刷新 Owner session 并原子更新 Keychain。公开项目配置使用 Git 忽略、权限 `0600` 的本机绑定；配置缺失或仍是脱敏占位时认证失败关闭，不回退本地写入。
+
+生产收口使用 `cutover_life_console_230` 单事务 RPC。它先断言固定计数、十组三重重复、每组唯一已追踪 canonical 和唯一测试归档目标，再按 revision→journal 顺序删除，导入三篇日记与一天状态、写迁移跟踪并复核最终计数。任何内容、数量、来源键或约束不一致都会回滚整笔事务。
+
 ## 备份
 
 `export_life_console_snapshot()` 以 invoker 权限返回 schema 2 的八类资源一致性快照。Agent 生成 canonical NDJSON、资源 SHA-256 和 `life-console-backup/2` 清单，由 `BackupStore` 校验并原子安装 latest；替换前把已验证 latest 保存为 previous。每六小时以及手动请求处理一次。恢复只进入隔离目录。
+
+手动和自动请求统一调用 Owner-scoped `request_life_console_backup` RPC，由数据库写入正确 `user_id`。macOS LaunchAgent 安装器固定 `StartInterval=21600`、`RunAtLoad=true`，只在切源标记和本机云绑定同时存在时安装。
 
 ## 安全
 

@@ -167,6 +167,38 @@ class LifeConsoleCloudTest(unittest.TestCase):
         ))
         self.assertEqual(transport.calls[1][2]["awake_in_bed"], "yes")
 
+    def test_backup_request_uses_owner_scoped_rpc(self):
+        transport = FakeTransport([[
+            {"id": 9, "status": "pending", "manifest_version": 2},
+        ]])
+        client = CloudClient(transport, token_provider=lambda: "synthetic-token")
+        self.assertEqual(client.request_backup()["status"], "pending")
+        self.assertEqual(
+            transport.calls[0][0:3],
+            ("POST", "/rest/v1/rpc/request_life_console_backup", {}),
+        )
+
+    def test_cutover_uses_single_rpc_and_returns_only_redacted_result(self):
+        transport = FakeTransport([{
+            "status": "completed",
+            "removed_journals": 20,
+            "inserted_journals": 3,
+        }])
+        client = CloudClient(transport, token_provider=lambda: "synthetic-token")
+        result = client.cutover_online_primary(
+            run_id="00000000-0000-4000-8000-000000000230",
+            manifest_digest="a" * 64,
+            journals=[{"content": "synthetic-private-body"}],
+            daily_checkins=[],
+        )
+
+        self.assertEqual(result["status"], "completed")
+        self.assertNotIn("synthetic-private-body", json.dumps(result))
+        self.assertEqual(
+            transport.calls[0][0:2],
+            ("POST", "/rest/v1/rpc/cutover_life_console_230"),
+        )
+
     def test_network_failure_is_reported_unsaved_without_local_fallback(self):
         transport = FakeTransport([OSError("synthetic unavailable")])
         client = CloudClient(transport, token_provider=lambda: "synthetic-token")

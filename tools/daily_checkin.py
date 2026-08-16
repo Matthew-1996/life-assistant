@@ -651,7 +651,7 @@ def main() -> int:
     args = _parser().parse_args()
     try:
         if args.command == "upsert":
-            if (args.root.resolve() / ONLINE_PRIMARY_MARKER).is_file():
+            if (args.root.resolve().parent / ONLINE_PRIMARY_MARKER).is_file():
                 raise CheckinError(
                     "本地活跃写入已停用；请使用 tools/life_console_cloud.py 写入线上唯一真相源"
                 )

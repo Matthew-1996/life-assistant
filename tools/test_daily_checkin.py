@@ -31,6 +31,16 @@ class DailyCheckinTests(unittest.TestCase):
         data_path = self.root / "daily-checkins.jsonl"
         return [json.loads(line) for line in data_path.read_text("utf-8").splitlines() if line]
 
+    def test_online_primary_marker_blocks_local_active_write(self):
+        (self.root.parent / ".life-console-online-primary").write_text(
+            "{}\n", encoding="utf-8"
+        )
+
+        blocked = self.run_tool("--date", "2030-01-01", "--mood", "3", expect=2)
+
+        self.assertIn("本地活跃写入已停用", blocked.stderr)
+        self.assertFalse((self.root / "daily-checkins.jsonl").exists())
+
     def test_same_values_are_true_noop_and_later_fields_update_same_row(self):
         first = self.run_tool(
             "--date", "2026-08-02", "--sleep-quality", "3", "--note-summary", "散步后稍舒服"

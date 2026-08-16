@@ -5,6 +5,7 @@ import unittest
 
 from life_console_backup_agent import CloudBackupAgent
 from life_console_cloud import CloudClient
+from verify_life_console_cloud_backup import verify_isolated_restore
 
 
 class FakeTransport:
@@ -57,6 +58,10 @@ class CloudBackupAgentTest(unittest.TestCase):
             self.assertEqual(transport.calls[1][0:2], (
                 "POST", "/rest/v1/rpc/export_life_console_snapshot",
             ))
+            self.assertEqual(
+                verify_isolated_restore(root / "life-console-latest.zip")["counts"]["journals"],
+                1,
+            )
 
     def test_no_pending_request_is_a_noop(self):
         transport = FakeTransport([[]])
