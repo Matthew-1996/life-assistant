@@ -28,6 +28,14 @@ export interface DeepSeekNormalizationDependencies {
   timeoutMs?: number;
 }
 
+function invalidResultCode(error: unknown): string {
+  if (error instanceof JournalNormalizationError) {
+    return "provider_contract_rejected";
+  }
+  if (error instanceof SyntaxError) return "provider_invalid_json";
+  return "provider_invalid_response";
+}
+
 function providerHttpCode(status: number): string {
   return `provider_http_${status}`;
 }
@@ -99,9 +107,9 @@ export async function requestDeepSeekNormalization(
       if (attempt === 0 && retryableStatus(response.status)) continue;
       throw new DeepSeekNormalizationError(providerHttpCode(response.status));
     }
-    let payload: unknown;
+    let invalidCode = "provider_invalid_response";
     try {
-      payload = await response.json();
+      const payload: unknown = await response.json();
       const content = readContent(payload);
       const parsed = JSON.parse(content) as unknown;
       return validateJournalNormalization(
@@ -110,14 +118,9 @@ export async function requestDeepSeekNormalization(
         input.contextRevisions,
       );
     } catch (error) {
-      if (
-        !(error instanceof SyntaxError)
-        && !(error instanceof JournalNormalizationError)
-      ) {
-        throw new DeepSeekNormalizationError("provider_invalid_response");
-      }
+      invalidCode = invalidResultCode(error);
       if (attempt === 1) {
-        throw new DeepSeekNormalizationError("provider_invalid_response");
+        throw new DeepSeekNormalizationError(invalidCode);
       }
     }
   }

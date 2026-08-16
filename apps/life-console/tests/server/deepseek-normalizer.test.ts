@@ -82,9 +82,9 @@ describe("DeepSeek journal normalizer", () => {
       rawText,
       contextEntities: [],
       contextRevisions: {},
-    }, { credential: "synthetic-server-key", fetch })).rejects.toBeInstanceOf(
-      DeepSeekNormalizationError,
-    );
+    }, { credential: "synthetic-server-key", fetch })).rejects.toMatchObject({
+      code: "provider_invalid_json",
+    });
     expect(fetch).toHaveBeenCalledTimes(2);
 
     await expect(requestDeepSeekNormalization({
@@ -98,6 +98,26 @@ describe("DeepSeek journal normalizer", () => {
     })).rejects.toMatchObject({
       code: "provider_endpoint_is_not_allowlisted",
     });
+  });
+
+  it("distinguishes contract rejection from invalid JSON", async () => {
+    const invalidContract = {
+      ...normalization,
+      facts: [{
+        text: "Invented fact",
+        basis: "explicit_text",
+        evidence: "absent from the source",
+      }],
+    };
+    const fetch = vi.fn(async () => response(JSON.stringify(invalidContract)));
+    await expect(requestDeepSeekNormalization({
+      rawText,
+      contextEntities: [],
+      contextRevisions: {},
+    }, { credential: "synthetic-server-key", fetch })).rejects.toMatchObject({
+      code: "provider_contract_rejected",
+    });
+    expect(fetch).toHaveBeenCalledTimes(2);
   });
 
   it("does not retry HTTP failures or expose provider response bodies", async () => {
