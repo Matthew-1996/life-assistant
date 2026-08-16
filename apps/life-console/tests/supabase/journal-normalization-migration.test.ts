@@ -36,6 +36,7 @@ beforeAll(async () => {
     "../../supabase/migrations/20260815165912_life_console_230_online_primary.sql",
     "../../supabase/migrations/20260816170000_unified_journal_normalization.sql",
     "../../supabase/migrations/20260816171759_retry_failed_journal_normalization.sql",
+    "../../supabase/migrations/20260817043000_preserve_completed_journal_normalization.sql",
   ];
   for (const migration of migrations) {
     if (migration.endsWith("0005_migration_tracking.sql")) {
@@ -244,6 +245,105 @@ describe("Life Console 2.4.0 journal normalization migration", () => {
       )
     `);
     expect(completed.rows).toEqual([{ status: "completed", attempts: 2 }]);
+  });
+
+  it("reopens one completed Agent job for a newer prompt version", async () => {
+    const created = await queryAs<{ id: number; raw_revision: number }>(`
+      select id, raw_revision from public.create_journal_v2(
+        'journal:synthetic-agent-prompt-upgrade',
+        'idem:synthetic-agent-prompt-upgrade',
+        date '2030-02-04', null, 'unknown', 'agent', 'owner-only',
+        'Synthetic prompt upgrade raw'
+      )
+    `);
+    const row = created.rows[0];
+    const taskKey = 'task:synthetic-agent-prompt-upgrade';
+    const first = await queryAs<{ id: string }>(`
+      select id from public.begin_journal_normalization(
+        ${row.id}, ${row.raw_revision},
+        'journal-normalization/1.0.0',
+        'journal-normalization-prompt/1.0.0',
+        'agent', '${taskKey}'
+      )
+    `);
+    await queryAs(`select * from public.complete_journal_normalization(
+      '${first.rows[0].id}'::uuid, ${row.raw_revision},
+      '{"title":"First title","summary":"","facts":[],"feelings":[],"people":[],"places":[],"themes":[],"planning_clues":[],"inferences":[],"tags":[]}'::jsonb,
+      'First title', array[]::text[]
+    )`);
+
+    const reopened = await queryAs<{
+      id: string;
+      status: string;
+      attempts: number;
+      prompt_version: string;
+    }>(`
+      select id, status, attempts, prompt_version
+      from public.begin_journal_normalization(
+        ${row.id}, ${row.raw_revision},
+        'journal-normalization/1.0.0',
+        'journal-normalization-prompt/1.0.1',
+        'agent', '${taskKey}'
+      )
+    `);
+    expect(reopened.rows).toEqual([{
+      id: first.rows[0].id,
+      status: "processing",
+      attempts: 2,
+      prompt_version: "journal-normalization-prompt/1.0.1",
+    }]);
+  });
+
+  it("does not let a failed provider overwrite a completed Agent result", async () => {
+    const created = await queryAs<{ id: number; raw_revision: number }>(`
+      select id, raw_revision from public.create_journal_v2(
+        'journal:synthetic-cross-processor-failure',
+        'idem:synthetic-cross-processor-failure',
+        date '2030-02-05', null, 'unknown', 'agent', 'owner-only',
+        'Synthetic cross processor raw'
+      )
+    `);
+    const row = created.rows[0];
+    const agent = await queryAs<{ id: string }>(`
+      select id from public.begin_journal_normalization(
+        ${row.id}, ${row.raw_revision},
+        'journal-normalization/1.0.0',
+        'journal-normalization-prompt/1.0.1',
+        'agent', 'task:synthetic-cross-processor-agent'
+      )
+    `);
+    await queryAs(`select * from public.complete_journal_normalization(
+      '${agent.rows[0].id}'::uuid, ${row.raw_revision},
+      '{"title":"Agent title","summary":"","facts":[],"feelings":[],"people":[],"places":[],"themes":[],"planning_clues":[],"inferences":[],"tags":[]}'::jsonb,
+      'Agent title', array[]::text[]
+    )`);
+    const provider = await queryAs<{ id: string }>(`
+      select id from public.begin_journal_normalization(
+        ${row.id}, ${row.raw_revision},
+        'journal-normalization/1.0.0',
+        'journal-normalization-prompt/1.0.1',
+        'deepseek', 'task:synthetic-cross-processor-provider'
+      )
+    `);
+    await queryAs(`select * from public.fail_journal_normalization(
+      '${provider.rows[0].id}'::uuid, ${row.raw_revision}, 'provider_timeout'
+    )`);
+
+    const journal = await queryAs<{
+      normalization_status: string;
+      normalization_processor: string;
+      title: string;
+      content: string;
+    }>(`
+      select normalization_status, normalization_processor, title, content
+      from public.journals where id = ${row.id}
+    `);
+    expect(journal.rows).toEqual([{
+      normalization_status: "completed",
+      normalization_processor: "agent",
+      title: "Agent title",
+      content: "Synthetic cross processor raw",
+    }]);
   });
 
   it("enables RLS on jobs and the approved person context projection", async () => {
