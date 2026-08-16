@@ -2,7 +2,7 @@
 
 ## 1. 当前状态
 
-- 主阶段：待设计方案评审
+- 主阶段：待联调
 - 子状态：进行中
 - 分支：`agent/life-console-240-unified-journal`
 - PR：Draft PR [#54](https://github.com/Matthew-1996/life-assistant/pull/54)
@@ -15,6 +15,8 @@
 - Gate 1：统一日记契约 1.0、原文先保存、异步整理、已确认人物档案可补充、历史不批量重写。
 - 官方 DeepSeek 模型、JSON Output、思考模式、API Key 与隐私政策调研。
 - PRD、需求、设计、技术和测试方案 draft.1。
+- Gate 2：统一字段、证据依据、Agent 主处理、Vercel 服务端 DeepSeek 兜底、`deepseek-v4-flash` 非思考模式和纯合成 POC 已确认；真实 DeepSeek 数据处理仍未授权。
+- 版本内实施计划已形成，按 Inline Execution 与 TDD 执行。
 
 ## 3. 阶段计划
 
@@ -40,5 +42,6 @@
 |---|---|---|
 | 2026-08-16 | 统一日记契约 1.0；原文先保存、异步整理 | PO 已确认 |
 | 2026-08-16 | 仅使用已确认个人档案补充人物关系 | PO 已确认；真实条目待逐项授权 |
-| 2026-08-16 | Agent 优先、DeepSeek 候选兜底 | PO 建议；待 Gate 2 完整确认 |
+| 2026-08-16 | Agent 优先、DeepSeek 候选兜底 | Gate 2 已确认；只允许纯合成 POC |
 | 2026-08-16 | 历史日记不批量重写 | PO 已确认 |
+| 2026-08-16 | 统一字段、证据依据、Agent 主处理、Vercel DeepSeek 兜底和纯合成 POC | Gate 2 已确认；不含真实数据、密钥、部署或合并 |
