@@ -356,7 +356,7 @@ describe("Supabase Journals panel", () => {
     expect((content as HTMLTextAreaElement).value).toBe(
       "Conflicting synthetic draft",
     );
-    expect(screen.getByRole("alert").textContent).toContain(
+    expect((await screen.findByRole("alert")).textContent).toContain(
       "记录已在其他页面更新",
     );
     expect((screen.getByLabelText("新日记正文") as HTMLTextAreaElement).disabled)
