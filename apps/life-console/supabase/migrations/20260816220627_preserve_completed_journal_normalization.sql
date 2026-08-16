@@ -1,5 +1,5 @@
 -- Life Console 2.4.0: keep completed results authoritative across provider attempts.
--- Generated with Supabase CLI 2.114.0 before remote application.
+-- Generated with Supabase CLI 2.114.0; version aligned with remote migration history.
 
 create or replace function public.begin_journal_normalization(
   p_journal_id bigint,
