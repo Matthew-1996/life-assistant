@@ -20,7 +20,13 @@
 | 最终生产计数 | 通过 | 日记 14、每日状态 15、目标 5、周复盘 1、阶段复盘 1、健康汇总 8；重复组 0，日记 revision 15 |
 | 切源后备份 | 通过 | latest 为清理后数据，previous 为清理前数据；两份均完成隔离恢复验证 |
 | 本地活动写入 | 通过 | 根切源标记生效；日记与每日状态旧命令拒绝新增并引导云端适配器 |
-| Production 应用与真实故障路径 | 待完成 | 等待 PR CI、squash 合并、Production 部署后验收 |
+| Production 应用与真实故障路径 | 通过 | 2.3.0 与三个上线 hotfix 均经 Node、Python、隐私 CI 后 squash 合并；正式别名指向最新 READY 构建，Owner 四页可读，运行时错误聚合为空 |
+| 正式环境真相源文案 | 通过 | Production 使用独立构建模式；首页、记录页、系统页仅显示 Supabase 唯一真相源与 iCloud 单向备份，不再显示 Candidate、合成数据或未切源文案 |
+| 未登录访问 | 通过 | 登录前正式认证链路返回 unauthenticated；Auth Gate 回归覆盖会话缺失与失效，不回落到演示数据 |
+| 正式站手动备份 | 通过 | Owner 在系统页只触发一次备份请求；本机 LaunchAgent 处理后 exit 0，页面回读新的成功时间 |
+| 六小时本机备份 | 通过 | LaunchAgent 使用签名应用启动器访问 iCloud，StartInterval=21600，RunAtLoad=true；安装后实跑 exit 0 |
 | 已登录非 Owner 403 | 延期 | 当前没有第二身份，不以未登录 401 冒充 403 |
 
 生产清理与导入只通过 Owner 会话和数据库事务处理原始字段；聊天、Git、PR 和本文均只保存数量与结论。
+
+上线期间首次 Production 部署因根目录旧 `vercel.mjs` 与 Vercel 动态配置入口重名而在构建前失败，未覆盖旧正式站。修复将生成器迁至 `scripts/write-vercel-config.mjs`，并使用显式 Production 配置和独立 `supabase-production` 构建模式；回归测试锁住保留文件名与正式/候选文案隔离。

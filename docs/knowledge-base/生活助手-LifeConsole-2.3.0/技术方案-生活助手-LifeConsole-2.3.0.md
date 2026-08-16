@@ -20,6 +20,14 @@ React Repository 与本机 `CloudClient` 使用相同 Supabase REST/RPC。Owner 
 
 手动和自动请求统一调用 Owner-scoped `request_life_console_backup` RPC，由数据库写入正确 `user_id`。macOS LaunchAgent 安装器固定 `StartInterval=21600`、`RunAtLoad=true`，只在切源标记和本机云绑定同时存在时安装。
 
+LaunchAgent 不直接用系统 Python 访问 iCloud，而由已签名的 `Life Console.app` 启动器承接 macOS 文件权限，再通过 `LIFE_CONSOLE_PYTHON` 调用备份命令。安装测试校验启动器、解释器、周期和 plist 权限；运行验收要求 exit 0。
+
+## Production 发布
+
+Vercel Production 使用 `build:supabase-production` 和 `dist/supabase-production`，候选环境继续使用 `build:supabase-candidate`。两者复用 Repository 和安全头，但 Production 将 UI 标记为 `ONLINE_PRIMARY`，不得出现 Candidate、合成数据或 `ICLOUD_PRIMARY` 文案。
+
+动态配置生成器位于 `scripts/write-vercel-config.mjs`。根目录不得出现 Vercel 保留的 `vercel.mjs`，否则平台会把生成器误判为动态配置并在构建前拒绝发布。发布必须先生成权限 `0600` 的本地配置，再通过 `--local-config` 部署最新已合并 `main`。
+
 ## 安全
 
 Git、PR、文档与日志不保存真实内容、邮箱、Token、服务标识或完整 URL。生产预检只输出计数和结构断言；原文只在 Owner 会话、数据库和 iCloud 私有备份之间流动。
