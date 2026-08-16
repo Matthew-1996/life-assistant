@@ -5,7 +5,7 @@
 - 主阶段：待设计方案评审
 - 子状态：进行中
 - 分支：`agent/life-console-240-unified-journal`
-- PR：待创建 Draft PR
+- PR：Draft PR [#54](https://github.com/Matthew-1996/life-assistant/pull/54)
 - 真实数据：未读取、未处理
 - 部署：未执行
 
