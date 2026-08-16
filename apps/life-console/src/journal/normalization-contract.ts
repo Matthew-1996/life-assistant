@@ -125,7 +125,14 @@ export function buildJournalNormalizationMessages(
     revision: entity.revision,
   }));
   return [
-    { role: "system", content: contract.system_prompt },
+    {
+      role: "system",
+      content: [
+        contract.system_prompt,
+        "输出必须精确满足以下唯一 JSON Schema：",
+        JSON.stringify(contract.schema),
+      ].join("\n"),
+    },
     {
       role: "user",
       content: [

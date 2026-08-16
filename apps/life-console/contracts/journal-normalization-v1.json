@@ -1,6 +1,6 @@
 {
   "contract_version": "journal-normalization/1.0.0",
-  "prompt_version": "journal-normalization-prompt/1.0.0",
+  "prompt_version": "journal-normalization-prompt/1.0.1",
   "display_fields": [
     { "key": "title", "label": "标题" },
     { "key": "summary", "label": "摘要" },
