@@ -9,4 +9,4 @@
 - [工程评审与验收](工程评审与验收-生活助手-LifeConsole-2.3.0.md)
 - [项目管理](项目管理-生活助手-LifeConsole-2.3.0.md)
 
-当前状态：生产数据清理、独有记录导入、切源标记及前后两代备份已完成并验证；待 PR CI、squash 合并、每六小时 LaunchAgent 安装与 Vercel Production 应用发布收口。
+当前状态：2.3.0 已完成生产数据清理、独有记录导入、Supabase 唯一真相源切换、前后两代备份、六小时 LaunchAgent、Vercel Production 发布与 Owner 上线验收。已登录非 Owner 403 因没有第二身份继续延期。
