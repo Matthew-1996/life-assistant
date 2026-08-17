@@ -148,6 +148,9 @@ REQUIRED_FILES = [
 ]
 
 TEXT_SUFFIXES = {".json", ".md", ".mjs", ".py", ".ts", ".tsx", ".txt", ".yaml", ".yml"}
+PRIVATE_RAW_ARCHIVE_DIRS = {
+    Path("career/个人知识库"),
+}
 EXCLUDED_DIRS = {
     ".git",
     ".worktrees",
@@ -542,12 +545,20 @@ def parse_simple_frontmatter(text: str) -> dict[str, str]:
     return result
 
 
-def iter_text_files() -> list[Path]:
+def iter_text_files(root: Path = ROOT) -> list[Path]:
     files: list[Path] = []
-    for path in ROOT.rglob("*"):
+    for path in root.rglob("*"):
         if not path.is_file() or path.suffix.lower() not in TEXT_SUFFIXES:
             continue
-        if any(part in EXCLUDED_DIRS for part in path.relative_to(ROOT).parts) or ".DS_Store" in path.parts:
+        relative = path.relative_to(root)
+        if (
+            any(part in EXCLUDED_DIRS for part in relative.parts)
+            or ".DS_Store" in path.parts
+            or any(
+                relative == archive or archive in relative.parents
+                for archive in PRIVATE_RAW_ARCHIVE_DIRS
+            )
+        ):
             continue
         files.append(path)
     return sorted(files)
