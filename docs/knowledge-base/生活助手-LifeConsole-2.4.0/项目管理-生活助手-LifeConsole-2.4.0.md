@@ -2,12 +2,12 @@
 
 ## 1. 当前状态
 
-- 主阶段：发布候选 Production 验收通过，等待 PR #54 完整审查、Ready 与 squash merge
-- 子状态：统一契约、数据库状态机、DeepSeek 合成链路和唯一授权单条均已验收；历史不批量处理
-- 分支：`agent/life-console-240-unified-journal`
-- PR：Draft PR [#54](https://github.com/Matthew-1996/life-assistant/pull/54)
+- 主阶段：已正式上线
+- 子状态：统一契约、数据库状态机、DeepSeek 合成链路、唯一授权单条与 main Production 均已验收；本文件随发布证据 PR 合入后成为正式知识库基线；历史不批量处理
+- 分支清理：功能与发布证据分支在发布证据 PR 合并后由本轮操作清理；不在合并前自证完成
+- PR：功能 PR [#54](https://github.com/Matthew-1996/life-assistant/pull/54) 已 squash merge；发布证据 PR [#55](https://github.com/Matthew-1996/life-assistant/pull/55) 承载本次去敏证据与上线状态基线
 - 真实数据：此前明确指出的唯一 failed journal 已由 Agent 完成；原文未变化，未触发其他日记，DeepSeek 兜底未调用
-- 部署：发布候选已部署到 [正式站点](https://project-wpabq.vercel.app/)；正式上线仍以 main 合并部署与 release-evidence 为准
+- 部署：[正式站点](https://project-wpabq.vercel.app/) 已为 main merge commit 对应的 `READY / PROMOTED` Production
 
 ## 2. 已完成
 
@@ -27,7 +27,8 @@
 - 从唯一契约自动注入 JSON Schema，Prompt 升级到 1.0.1；修复 completed Agent 与 failed provider 的跨 processor 状态覆盖。
 - Supabase migration `20260816220627_preserve_completed_journal_normalization` 已应用，函数权限读回符合 Owner/RLS 边界。
 - 唯一授权单条已由 Agent 原子完成；metadata、原文不变性、job 集合与统一渲染均通过验收。
-- 合并前独立审查已识别并修复自动外发、人物最小化、幂等重复、Agent 优先级、RPC 锁顺序、鉴权前置、Agent 原文读回与伪摘要问题；等待修复复审和 CI。
+- 合并前独立审查已识别并修复自动外发、人物最小化、幂等重复、Agent 优先级、RPC 锁顺序、鉴权前置、Agent 原文读回与伪摘要问题；修复复审无阻断，最终 CI 全绿。
+- PR #54 已 squash merge；main Production 精确对应 merge commit，合并后合成探针和唯一授权单条只读复验通过。
 
 ## 3. 阶段计划
 
@@ -38,7 +39,7 @@
 3. 阶段 B：Agent processor 与 Supabase revision RPC。已完成代码、合成测试和 Production migration。
 4. 阶段 C：Vercel Function + DeepSeek 合成 POC。注入式测试及真实接口纯合成连通性均通过，不接真实日记。
 5. 阶段 D：唯一授权单条端到端质量验收。已完成；Agent 处理，DeepSeek 未调用。
-6. 阶段 E：正式上线。发布候选验收已完成；待 PR #54 合并、main Production 复验和 release-evidence 合并。
+6. 阶段 E：正式上线。PR #54 合并和 main Production 复验已完成；本文件随 PR #55 合并形成 release-evidence 闭环，随后执行本地分支/worktree 清理。
 
 ## 4. 开放风险
 
@@ -69,3 +70,5 @@
 | 2026-08-17 | 允许完成 Production 合成探针、唯一授权单条、PR Ready/合并与正式发布证据 | PO 已明确授权；其他日记、人物资料、充值和删除仍不在范围 |
 | 2026-08-17 | Production 合成探针与唯一授权单条验收通过 | Agent 完成；原文不变；其他日记未触发；DeepSeek 兜底未调用 |
 | 2026-08-17 | completed Agent 结果不得被另一 processor 的失败覆盖 | migration 已应用；PGlite 8/8，远端权限读回通过 |
+| 2026-08-17 | PR #54 Ready、squash merge并正式发布 main Production | 已完成；CI 全绿，正式 alias 精确对应 merge commit |
+| 2026-08-17 | 合并后纯合成探针与唯一授权单条只读复验 | 已通过；未写入、未处理其他日记、未发送人物资料、DeepSeek 未调用 |
