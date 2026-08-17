@@ -6,7 +6,7 @@
 - 子状态：私人迁移执行已完成并保留明确限制；等待 PO 浏览验收
 - 唯一分支：`agent/career-planner-100`
 - 独立 worktree：已建立
-- PR：当前分支完成验证后创建 Draft PR
+- PR：Draft PR [#57](https://github.com/Matthew-1996/life-assistant/pull/57)
 - 真实数据：PO 已授权迁移《个人知识库梳理》列出的来源、递归子文档、图片和附件；仅写入 iCloud
 - 提醒：已创建一条含五次工作日运行的 heartbeat，并完成读回验证
 - 迁移结果：220 个 Wiki 节点恢复元数据完整；8,551 个私有文件约 2.92 GB，零空文件；39/39 个离线抽样通过
