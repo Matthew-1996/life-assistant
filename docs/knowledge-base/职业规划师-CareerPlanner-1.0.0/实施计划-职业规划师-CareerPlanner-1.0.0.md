@@ -98,3 +98,24 @@
 - [x] **Step 2:** 只把真实通过项写入验收和 PMO；真实材料导入保持未授权。
 - [x] **Step 3:** 提交通用文件；私人 `career/`、目标、计划和提醒规格不进入 Git。
 - [x] **Step 4:** 打开 `career/` 给用户检查，并报告提醒状态与未完成项。
+
+### Task 5: 私人工作知识库迁移
+
+**Private files:**
+- Create: `career/个人知识库/`
+- Modify: `career/README.md`
+- Replace with compatibility guide: `career/01-原始资料/来源清单.md`
+
+**Public documentation:**
+- Modify: `AGENTS.md`
+- Modify: Career Planner 1.0.0 的 PRD、设计、存储、PMO 与验收文档
+
+**Interfaces:**
+- Consumes: PO 授权的《个人知识库梳理》来源清单及其中飞书知识库的递归子节点。
+- Produces: 仅位于 iCloud 的原生导出、离线可读副本、图片、附件、恢复元数据、哈希和完整性报告。
+
+- [ ] **Step 1:** 建立 `career/个人知识库/`、管理层和四个业务一级类目；旧原始资料目录改为兼容说明。
+- [ ] **Step 2:** 递归枚举知识库节点，保留父子关系、顺序、来源标识和捕获时间。
+- [ ] **Step 3:** 为每个节点保存可获得的原生导出、可读正文、图片和附件；失败项不得降级为完整。
+- [ ] **Step 4:** 保存绩效总结原文，不做职业分析、摘要改写或证据提炼。
+- [ ] **Step 5:** 生成迁移清单、SHA-256、完整性报告和恢复说明，验证全部私人文件被 Git 排除。

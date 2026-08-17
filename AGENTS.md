@@ -23,6 +23,7 @@
 | Google 表格或 XLSX 派生展示 | `integrations/README.md` 与 `integrations/GOOGLE_SYNC_SOP.md` |
 | 自动化 | `automations/生活状态回访.md`、注册表和规范 Prompt；运行实例不是唯一记录 |
 | 换机、恢复、备份或环境重建 | `PORTABILITY.md`、`PROJECT_CONTEXT.md` 和 `tools/portability_doctor.py` |
+| 职业规划、工作资料归档或简历交接 | `docs/knowledge-base/职业规划师-CareerPlanner-1.0.0/README.md`；私人原文只进入 `career/个人知识库/`，分析与交付物继续使用 `career/02-职业证据/` 至 `career/06-简历与求职/` |
 | 代码、规则、设计、测试或 Git | 最高规范 → 当前版本知识库/PMO → `GIT_WORKFLOW.md` |
 
 先完成用户当前请求，再考虑建档或系统改进；不要让助手设置成为任务门槛。
@@ -46,6 +47,7 @@
 ## Git 与多 Agent
 
 - GitHub 只保存通用代码、测试、模板和去敏方案；真实个人资料、记录、绑定、导出、备份及混合个性化文件只留在 iCloud。
+- `career/个人知识库/` 是职业工作原文、图片、附件和恢复元数据的唯一私人真相源，禁止进入 Git；旧 `career/01-原始资料/` 仅可保留兼容说明，不再接收原文。
 - 不直接在 `main` 提交或推送。每个任务使用独立 `agent/<短任务名>` 分支、独立 worktree 和 Draft PR。
 - 开始前运行 `tools/setup_git_collaboration.sh`；提交前运行治理、隐私、差异、项目与相关测试检查。
 - 不使用 checkout/reset/强制推送丢弃他人修改。任务合并或关闭后立即删除对应活动分支和 worktree；空闲时远端与本地只保留 `main`。
