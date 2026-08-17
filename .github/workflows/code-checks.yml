@@ -55,6 +55,14 @@ jobs:
           tools.test_project_governance
           tools.test_verify_backup
           tools.test_weekly_review
+      - name: Run Life Console local Agent contract tests
+        env:
+          PYTHONPATH: tools
+        run: >-
+          python -m unittest -v
+          test_journal_normalization_contract
+          test_life_console_cloud
+          test_validate_project
 
   node:
     needs: privacy

@@ -109,6 +109,30 @@ function createRepository(
 }
 
 describe("Supabase Journals panel", () => {
+  it("uses the unified structured renderer for saved raw and normalized data", async () => {
+    const normalizedJournal: Journal = {
+      ...syntheticJournal,
+      normalization_status: "completed",
+      metadata: {
+        title: "Synthetic Journal",
+        summary: "Unified synthetic summary",
+        facts: [], feelings: [], people: [], places: [], themes: [],
+        planning_clues: [], inferences: [], tags: ["reflection"],
+      },
+    };
+    render(<SupabaseJournalsPanel repository={createRepository([
+      normalizedJournal,
+    ])} />);
+
+    const view = await screen.findByRole("article", {
+      name: "Synthetic Journal",
+    });
+    expect(view.querySelector(".journal-raw-text")?.textContent).toBe(
+      "Synthetic journal content",
+    );
+    expect(screen.getByText("Unified synthetic summary")).toBeTruthy();
+  });
+
   it("locks create fields while their write is pending", async () => {
     const user = userEvent.setup();
     let release: ((journal: Journal) => void) | undefined;
@@ -332,7 +356,7 @@ describe("Supabase Journals panel", () => {
     expect((content as HTMLTextAreaElement).value).toBe(
       "Conflicting synthetic draft",
     );
-    expect(screen.getByRole("alert").textContent).toContain(
+    expect((await screen.findByRole("alert")).textContent).toContain(
       "记录已在其他页面更新",
     );
     expect((screen.getByLabelText("新日记正文") as HTMLTextAreaElement).disabled)

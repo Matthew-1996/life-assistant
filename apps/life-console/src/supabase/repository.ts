@@ -247,7 +247,7 @@ export class LifeConsoleRepository {
 
     const rows = await this.executeRead(read) ?? [];
     const items = rows.slice(0, limit);
-    const lastItem = items.at(-1) as
+    const lastItem = (items.length > 0 ? items[items.length - 1] : undefined) as
       | (T & Record<string, unknown>)
       | undefined;
     const nextCursor = rows.length > limit && lastItem

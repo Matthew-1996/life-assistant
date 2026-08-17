@@ -20,6 +20,7 @@
     "check:contracts": "npm run generate:contracts && npm run generate:sites-contracts && git diff --exit-code -- src/contracts/life-console.ts src/contracts/life-console-sites.ts",
     "test": "npm run check:contracts && vitest run && npm run test:python",
     "test:contracts": "npm run check:contracts && vitest run tests/contract",
+    "test:journal-contract": "vitest run tests/journal/normalization-contract.test.ts && cd ../.. && python3 -m unittest tools.test_journal_normalization_contract -v",
     "test:e2e:synthetic": "playwright test",
     "test:integration:miniflare": "vitest run tests/integration",
     "test:worker": "vitest run tests/worker",

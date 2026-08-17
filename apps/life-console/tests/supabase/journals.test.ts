@@ -70,6 +70,139 @@ const syntheticRevision = {
 };
 
 describe("Journal Repository", () => {
+  it("creates raw text through the v2 RPC before any normalization", async () => {
+    const pendingJournal = {
+      ...syntheticJournal,
+      normalization_status: "pending",
+      raw_revision: 1,
+      source: "life_console",
+      time_precision: "unknown",
+    };
+    const { repository, requests } = createJournalRepository([
+      { status: 200, body: [pendingJournal] },
+    ]);
+
+    await expect(repository.createRaw("synthetic-idempotency-key", {
+      recordKey: "journal:synthetic-stable-key",
+      date: "2030-03-01",
+      eventTime: null,
+      timePrecision: "unknown",
+      source: "life_console",
+      privacy: "owner-only",
+      content: "Synthetic journal content",
+    })).resolves.toEqual(pendingJournal);
+
+    expect(new URL(requests[0].url).pathname).toBe(
+      "/rest/v1/rpc/create_journal_v2",
+    );
+    expect(JSON.parse(await requests[0].text())).toEqual({
+      p_content: "Synthetic journal content",
+      p_event_date: "2030-03-01",
+      p_event_time: null,
+      p_idempotency_key: "synthetic-idempotency-key",
+      p_privacy: "owner-only",
+      p_record_key: "journal:synthetic-stable-key",
+      p_source: "life_console",
+      p_time_precision: "unknown",
+    });
+  });
+
+  it("begins and completes normalization behind the raw revision", async () => {
+    const job = {
+      id: "00000000-0000-4000-8000-000000000240",
+      journal_id: 31,
+      source_revision: 1,
+      status: "processing",
+      processor: "agent",
+    };
+    const completed = {
+      ...syntheticJournal,
+      title: "Structured synthetic title",
+      normalization_status: "completed",
+      raw_revision: 1,
+      normalized_source_revision: 1,
+      revision: 2,
+    };
+    const { repository, requests } = createJournalRepository([
+      { status: 200, body: [job] },
+      { status: 200, body: [completed] },
+    ]);
+
+    await expect(repository.beginNormalization({
+      journalId: 31,
+      sourceRevision: 1,
+      contractVersion: "journal-normalization/1.0.0",
+      promptVersion: "journal-normalization-prompt/1.0.0",
+      processor: "agent",
+      taskKey: "task:synthetic-1",
+    })).resolves.toEqual(job);
+    await expect(repository.completeNormalization({
+      jobId: job.id,
+      sourceRevision: 1,
+      metadata: {
+        title: "Structured synthetic title",
+        summary: "Synthetic summary",
+        facts: [], feelings: [], people: [], places: [], themes: [],
+        planning_clues: [], inferences: [], tags: [],
+      },
+      title: "Structured synthetic title",
+      tags: [],
+    })).resolves.toEqual(completed);
+
+    expect(new URL(requests[0].url).pathname).toBe(
+      "/rest/v1/rpc/begin_journal_normalization",
+    );
+    expect(new URL(requests[1].url).pathname).toBe(
+      "/rest/v1/rpc/complete_journal_normalization",
+    );
+  });
+
+  it("records normalization failure without retrying or hiding staleness", async () => {
+    const job = {
+      id: "00000000-0000-4000-8000-000000000240",
+      journal_id: 31,
+      source_revision: 1,
+      status: "failed",
+      processor: "deepseek",
+    };
+    const failed = createJournalRepository([
+      { status: 200, body: [job] },
+    ]);
+    await expect(failed.repository.failNormalization({
+      jobId: job.id,
+      sourceRevision: 1,
+      failureCode: "provider_unavailable",
+    })).resolves.toEqual(job);
+    expect(JSON.parse(await failed.requests[0].text())).toEqual({
+      p_expected_source_revision: 1,
+      p_failure_code: "provider_unavailable",
+      p_job_id: job.id,
+    });
+
+    const stale = createJournalRepository([
+      {
+        status: 409,
+        body: { code: "journal_source_stale", message: "synthetic stale" },
+      },
+    ]);
+    await expect(stale.repository.completeNormalization({
+      jobId: job.id,
+      sourceRevision: 1,
+      metadata: {
+        title: "Synthetic title",
+        summary: "Synthetic summary",
+        facts: [], feelings: [], people: [], places: [], themes: [],
+        planning_clues: [], inferences: [], tags: [],
+      },
+      title: "Synthetic title",
+      tags: [],
+    })).rejects.toMatchObject({
+      code: "journal_source_stale",
+      kind: "conflict",
+      status: 409,
+    });
+    expect(stale.requests).toHaveLength(1);
+  });
   it("lists active journals through the fixed event-date cursor", async () => {
     const { repository, requests } = createJournalRepository([
       { status: 200, body: [syntheticJournal] },

@@ -13,6 +13,18 @@ function requiredValue(environment, key) {
   return value.trim();
 }
 
+function validateDeepSeekEnvironment(environment) {
+  if (Object.prototype.hasOwnProperty.call(environment, "VITE_DEEPSEEK_API_KEY")) {
+    throw new Error("DEEPSEEK_API_KEY must remain server-only");
+  }
+  const unexpectedDeepSeekKey = Object.keys(environment).find(
+    (key) => key.includes("DEEPSEEK") && key !== "DEEPSEEK_API_KEY",
+  );
+  if (unexpectedDeepSeekKey) {
+    throw new Error("Deployments may define only DEEPSEEK_API_KEY");
+  }
+}
+
 export function resolveCandidateProjectOrigin(environment) {
   const rawUrl = requiredValue(environment, "VITE_SUPABASE_URL");
   const url = new URL(rawUrl);
@@ -53,6 +65,7 @@ export function candidateContentSecurityPolicy(environment) {
 }
 
 export function createSupabaseCandidateVercelConfig(environment) {
+  validateDeepSeekEnvironment(environment);
   for (const key of requiredEnvironmentKeys) requiredValue(environment, key);
   const publishableKey = requiredValue(
     environment,

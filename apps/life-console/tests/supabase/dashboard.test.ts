@@ -12,6 +12,7 @@ import type {
 import type { Goal, GoalRepositoryPort } from "../../src/supabase/goals";
 import type {
   Journal,
+  JournalNormalizationRepositoryPort,
   JournalRepositoryPort,
 } from "../../src/supabase/journals";
 import { RepositoryError } from "../../src/supabase/repository";
@@ -279,8 +280,8 @@ describe("Supabase dashboard client adapter", () => {
     expect(dashboard.progress.sample_counts).toEqual({ daily: 2, missing: 5 });
     expect(dashboard.records.recent_journals[0]).toEqual(expect.objectContaining({
       id: "32",
-      title: "Newest entry with deterministic whitespace.",
-      summary: "Newest entry with deterministic whitespace.",
+      title: "待整理日记",
+      summary: "原文已保存，尚未按统一契约整理。",
     }));
   });
 
@@ -324,6 +325,79 @@ describe("Supabase dashboard client adapter", () => {
       source: { state: "saved", revision: 1 },
       read_model: "current",
     }));
+  });
+
+  it("saves raw before starting fallback normalization and reports its state", async () => {
+    const repos = repositories();
+    let releaseRaw: ((value: Journal) => void) | undefined;
+    const createRaw = vi.fn(() => new Promise<Journal>((resolve) => {
+      releaseRaw = resolve;
+    }));
+    (repos.journals as JournalNormalizationRepositoryPort).createRaw = createRaw;
+    const normalizeJournal = vi.fn(async () => "completed" as const);
+    const client = createSupabaseDashboardClient({
+      ...clientOptions(repos),
+      normalizeJournal,
+    });
+    const input = {
+      schema_version: 1 as const,
+      event_date: "2030-04-03",
+      event_time: null,
+      time_precision: "unknown" as const,
+      text: "Raw-first synthetic journal",
+      tags: [],
+    };
+
+    const pending = client.journalWithIdempotency(
+      input,
+      "synthetic-persisted-key",
+    );
+    expect(createRaw).toHaveBeenCalledWith("synthetic-persisted-key", {
+      recordKey: "synthetic-persisted-key",
+      date: "2030-04-03",
+      eventTime: null,
+      timePrecision: "unknown",
+      source: "life_console",
+      privacy: "owner-only",
+      content: "Raw-first synthetic journal",
+    });
+    expect(normalizeJournal).not.toHaveBeenCalled();
+
+    releaseRaw?.(journal({
+      content: input.text,
+      raw_revision: 1,
+      normalization_status: "pending",
+    }));
+    const receipt = await pending;
+    expect(normalizeJournal).toHaveBeenCalledWith({
+      journalId: 31,
+      sourceRevision: 1,
+      taskKey: "journal:31:revision:1:deepseek",
+    });
+    expect(receipt.message).toBe("日记原文已保存，整理完成。");
+  });
+
+  it("keeps the raw save successful when fallback normalization fails", async () => {
+    const repos = repositories();
+    (repos.journals as JournalNormalizationRepositoryPort).createRaw = vi.fn(
+      async () => journal({ raw_revision: 1, normalization_status: "pending" }),
+    );
+    const client = createSupabaseDashboardClient({
+      ...clientOptions(repos),
+      normalizeJournal: vi.fn(async () => "failed" as const),
+    });
+
+    const receipt = await client.journalWithIdempotency({
+      schema_version: 1,
+      event_date: "2030-04-03",
+      event_time: null,
+      time_precision: "unknown",
+      text: "Synthetic provider failure",
+      tags: [],
+    }, "synthetic-persisted-key");
+
+    expect(receipt.source.state).toBe("saved");
+    expect(receipt.message).toBe("日记原文已保存；整理失败，可稍后重试。");
   });
 
   it("reuses a journal idempotency key after failure and releases it after success", async () => {

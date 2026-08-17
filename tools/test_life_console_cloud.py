@@ -35,7 +35,7 @@ class LifeConsoleCloudTest(unittest.TestCase):
         receipt = authenticate_owner(
             transport,
             email="owner@example.invalid",
-            password="synthetic-password",
+            passphrase="synthetic-password",
             store=lambda session: stored.append(session),
         )
 
@@ -50,7 +50,7 @@ class LifeConsoleCloudTest(unittest.TestCase):
             authenticate_owner(
                 transport,
                 email="owner@example.invalid",
-                password="synthetic-password",
+                passphrase="synthetic-password",
                 store=lambda session: stored.append(session),
             ),
             {"status": "authenticated"},
@@ -70,7 +70,7 @@ class LifeConsoleCloudTest(unittest.TestCase):
         receipt = authenticate_owner(
             transport,
             email="owner@example.invalid",
-            password="synthetic-password",
+            passphrase="synthetic-password",
             store=lambda session: stored.append(session),
         )
 
@@ -122,27 +122,223 @@ class LifeConsoleCloudTest(unittest.TestCase):
         self.assertEqual(provider(), "synthetic-access-current")
         self.assertEqual(transport.calls, [])
 
-    def test_journal_write_uses_stable_key_and_returns_redacted_receipt(self):
-        transport = FakeTransport([[{"id": 41, "revision": 1}]])
+    def test_journal_write_saves_raw_v2_first_and_returns_redacted_receipt(self):
+        transport = FakeTransport([[{
+            "id": 41,
+            "revision": 1,
+            "raw_revision": 1,
+            "normalization_status": "pending",
+        }]])
         client = CloudClient(transport, token_provider=lambda: "synthetic-token")
 
         receipt = client.create_journal({
             "record_key": "journal:synthetic-stable-001",
             "event_date": "2030-01-01",
-            "title": "Synthetic",
             "content": "Synthetic body",
-            "tags": ["synthetic"],
+            "event_time": None,
+            "time_precision": "unknown",
+            "source": "agent",
+            "privacy": "owner-only",
         })
 
         self.assertEqual(receipt, {
             "status": "saved",
-            "resource": "journal",
+            "normalization_status": "pending",
             "revision": 1,
         })
         method, path, body, _ = transport.calls[0]
-        self.assertEqual((method, path), ("POST", "/rest/v1/rpc/create_journal"))
+        self.assertEqual((method, path), ("POST", "/rest/v1/rpc/create_journal_v2"))
         self.assertEqual(body["p_idempotency_key"], "journal:synthetic-stable-001")
+        self.assertEqual(body["p_content"], "Synthetic body")
+        self.assertNotIn("p_title", body)
         self.assertNotIn("Synthetic body", json.dumps(receipt))
+
+    def test_agent_normalization_runs_after_raw_save_with_revision_guard(self):
+        normalization = {
+            "title": "Synthetic title",
+            "summary": "Synthetic summary",
+            "facts": [{
+                "text": "A synthetic fact",
+                "basis": "explicit_text",
+                "evidence": "Synthetic body",
+            }],
+            "feelings": [],
+            "people": [],
+            "places": [],
+            "themes": ["synthetic"],
+            "planning_clues": [],
+            "inferences": [],
+            "tags": ["synthetic"],
+        }
+        transport = FakeTransport([
+            [{"id": 41, "revision": 1, "raw_revision": 1}],
+            [{
+                "id": "00000000-0000-4000-8000-000000000240",
+                "source_revision": 1,
+                "status": "processing",
+            }],
+            [{
+                "id": 41,
+                "revision": 2,
+                "raw_revision": 1,
+                "normalization_status": "completed",
+            }],
+        ])
+        client = CloudClient(transport, token_provider=lambda: "synthetic-token")
+
+        receipt = client.create_journal({
+            "record_key": "journal:synthetic-stable-003",
+            "event_date": "2030-01-03",
+            "content": "Synthetic body",
+            "normalization": normalization,
+            "context_revisions": {},
+        })
+
+        self.assertEqual(receipt, {
+            "status": "saved",
+            "normalization_status": "completed",
+            "revision": 2,
+        })
+        self.assertEqual(
+            [call[1] for call in transport.calls],
+            [
+                "/rest/v1/rpc/create_journal_v2",
+                "/rest/v1/rpc/begin_journal_normalization",
+                "/rest/v1/rpc/complete_journal_normalization",
+            ],
+        )
+        self.assertEqual(transport.calls[1][2]["p_source_revision"], 1)
+        self.assertEqual(transport.calls[2][2]["p_expected_source_revision"], 1)
+        self.assertEqual(transport.calls[2][2]["p_metadata"], normalization)
+
+    def test_invalid_agent_normalization_keeps_raw_saved_and_never_completes(self):
+        transport = FakeTransport([[
+            {"id": 41, "revision": 1, "raw_revision": 1},
+        ]])
+        client = CloudClient(transport, token_provider=lambda: "synthetic-token")
+
+        receipt = client.create_journal({
+            "record_key": "journal:synthetic-stable-004",
+            "event_date": "2030-01-04",
+            "content": "Synthetic body",
+            "normalization": {
+                "title": "Invalid incomplete normalization",
+            },
+        })
+
+        self.assertEqual(receipt["status"], "saved")
+        self.assertEqual(receipt["normalization_status"], "pending")
+        self.assertEqual(len(transport.calls), 1)
+
+    def test_agent_can_normalize_an_existing_raw_journal_without_recreating_it(self):
+        normalization = {
+            "title": "Synthetic title", "summary": "Synthetic summary",
+            "facts": [], "feelings": [], "people": [], "places": [],
+            "themes": [], "planning_clues": [], "inferences": [], "tags": [],
+        }
+        transport = FakeTransport([
+            [{
+                "id": 41,
+                "record_key": "journal:synthetic-existing-001",
+                "content": "Synthetic raw body",
+                "raw_revision": 2,
+                "revision": 2,
+                "normalization_status": "pending",
+            }],
+            [{
+                "id": "00000000-0000-4000-8000-000000000240",
+                "source_revision": 2,
+                "status": "processing",
+            }],
+            [{"id": 41, "revision": 3, "raw_revision": 2}],
+        ])
+        client = CloudClient(transport, token_provider=lambda: "synthetic-token")
+
+        receipt = client.normalize_journal({
+            "journal_id": 41,
+            "raw_revision": 2,
+            "record_key": "journal:synthetic-existing-001",
+            "content": "Synthetic raw body",
+            "normalization": normalization,
+            "context_revisions": {},
+        })
+
+        self.assertEqual(receipt, {
+            "status": "saved",
+            "normalization_status": "completed",
+            "revision": 3,
+        })
+        self.assertEqual(
+            [call[1] for call in transport.calls],
+            [
+                transport.calls[0][1],
+                "/rest/v1/rpc/begin_journal_normalization",
+                "/rest/v1/rpc/complete_journal_normalization",
+            ],
+        )
+        self.assertTrue(transport.calls[0][1].startswith("/rest/v1/journals?"))
+
+    def test_existing_normalization_rejects_content_that_does_not_match_source(self):
+        transport = FakeTransport([[{
+            "id": 41,
+            "record_key": "journal:synthetic-existing-002",
+            "content": "Authoritative synthetic raw",
+            "raw_revision": 2,
+            "revision": 2,
+            "normalization_status": "pending",
+        }]])
+        client = CloudClient(transport, token_provider=lambda: "synthetic-token")
+        with self.assertRaisesRegex(CloudWriteError, "conflict"):
+            client.normalize_journal({
+                "journal_id": 41,
+                "raw_revision": 2,
+                "record_key": "journal:synthetic-existing-002",
+                "content": "Different synthetic raw",
+                "normalization": {
+                    "title": "Synthetic title", "summary": "", "facts": [],
+                    "feelings": [], "people": [], "places": [], "themes": [],
+                    "planning_clues": [], "inferences": [], "tags": [],
+                },
+                "context_revisions": {},
+            })
+        self.assertEqual(len(transport.calls), 1)
+
+    def test_completion_failure_is_recorded_without_losing_raw_save(self):
+        normalization = {
+            "title": "Synthetic title", "summary": "", "facts": [],
+            "feelings": [], "people": [], "places": [], "themes": [],
+            "planning_clues": [], "inferences": [], "tags": [],
+        }
+        transport = FakeTransport([
+            [{"id": 41, "revision": 1, "raw_revision": 1}],
+            [{
+                "id": "00000000-0000-4000-8000-000000000240",
+                "source_revision": 1,
+            }],
+            CloudWriteError("unavailable"),
+            [{
+                "id": "00000000-0000-4000-8000-000000000240",
+                "status": "failed",
+            }],
+        ])
+        client = CloudClient(transport, token_provider=lambda: "synthetic-token")
+
+        receipt = client.create_journal({
+            "record_key": "journal:synthetic-stable-005",
+            "event_date": "2030-01-05",
+            "content": "Synthetic body",
+            "normalization": normalization,
+        })
+
+        self.assertEqual(receipt, {
+            "status": "saved",
+            "normalization_status": "failed",
+            "revision": 1,
+        })
+        self.assertEqual(
+            transport.calls[-1][1],
+            "/rest/v1/rpc/fail_journal_normalization",
+        )
 
     def test_daily_checkin_preserves_sleep_fields_in_online_record(self):
         transport = FakeTransport([
@@ -209,6 +405,7 @@ class LifeConsoleCloudTest(unittest.TestCase):
                 "event_date": "2030-01-02",
                 "content": "Synthetic unsaved body",
             })
+        self.assertEqual(len(transport.calls), 1)
 
 
 if __name__ == "__main__":

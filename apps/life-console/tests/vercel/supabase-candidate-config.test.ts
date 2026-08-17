@@ -80,6 +80,20 @@ describe("Supabase candidate Vercel configuration", () => {
     expect(JSON.stringify(config)).not.toContain("sb_secret_");
   });
 
+  it("keeps the optional DeepSeek key server-only and out of generated config", () => {
+    const serverKey = "synthetic-deepseek-server-key";
+    const config = createSupabaseCandidateVercelConfig({
+      ...syntheticEnvironment,
+      DEEPSEEK_API_KEY: serverKey,
+    });
+    expect(JSON.stringify(config)).not.toContain(serverKey);
+    expect(JSON.stringify(config)).not.toContain("api.deepseek.com");
+    expect(() => createSupabaseCandidateVercelConfig({
+      ...syntheticEnvironment,
+      VITE_DEEPSEEK_API_KEY: serverKey,
+    })).toThrow(/must remain server-only/);
+  });
+
   it("accepts legacy JWT anon keys (eyJ-prefixed)", () => {
     const legacyEnv = {
       ...syntheticEnvironment,
@@ -134,6 +148,19 @@ describe("Supabase Production Vercel configuration", () => {
     );
   });
 
+  it("allows only the named server DeepSeek key without serializing it", () => {
+    const serverKey = "synthetic-deepseek-server-key";
+    const config = createSupabaseProductionVercelConfig({
+      ...syntheticProductionEnvironment,
+      DEEPSEEK_API_KEY: serverKey,
+    });
+    expect(JSON.stringify(config)).not.toContain(serverKey);
+    expect(() => createSupabaseProductionVercelConfig({
+      ...syntheticProductionEnvironment,
+      DEEPSEEK_ENDPOINT: "https://example.invalid",
+    })).toThrow(/only DEEPSEEK_API_KEY/);
+  });
+
   it("fails closed outside the exact independent Production project", () => {
     expect(() => createSupabaseProductionVercelConfig({
       ...syntheticProductionEnvironment,
@@ -186,6 +213,32 @@ describe("Supabase Production Vercel configuration", () => {
 });
 
 describe("Vercel deployment artifact generation", () => {
+  it("type-checks the journal normalization function with Vercel NodeNext resolution", () => {
+    const result = spawnSync(
+      resolve(process.cwd(), "node_modules/.bin/tsc"),
+      [
+        "--noEmit",
+        "--module", "NodeNext",
+        "--moduleResolution", "NodeNext",
+        "--target", "ES2020",
+        "--lib", "ES2020,DOM,DOM.Iterable",
+        "--esModuleInterop",
+        "--allowSyntheticDefaultImports",
+        "--resolveJsonModule",
+        "--strict",
+        "--skipLibCheck",
+        "--types", "node",
+        "api/journal-normalize.ts",
+      ],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+      },
+    );
+
+    expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0);
+  });
+
   it("avoids the reserved dynamic-config entrypoint while keeping the generator runnable", () => {
     expect(existsSync(resolve(process.cwd(), "vercel.mjs"))).toBe(false);
 

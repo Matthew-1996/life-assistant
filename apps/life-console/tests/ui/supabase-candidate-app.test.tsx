@@ -533,7 +533,7 @@ describe("Supabase candidate product application", () => {
         action: "created" as const,
         source: { state: "saved" as const, revision: 1 },
         read_model: "current" as const,
-        message: "日记已保存到测试云端。",
+        message: "日记原文已保存，整理完成。",
       });
     const keyedClient = { ...client, journalWithIdempotency };
     const renderKeyedCandidate = () => render(
@@ -585,7 +585,7 @@ describe("Supabase candidate product application", () => {
     }));
     await waitFor(() => expect(journalWithIdempotency).toHaveBeenCalledTimes(3));
     expect(journalWithIdempotency.mock.calls[2][1]).not.toBe(firstKey);
-    await screen.findByText("已保存到 Supabase 候选环境");
+    await screen.findByText("日记原文已保存，整理完成。");
     expect(localStorage.getItem(
       `${SESSION_DRAFT_STORAGE_PREFIX}synthetic-owner:records-conversation-v2`,
     )).toBeNull();

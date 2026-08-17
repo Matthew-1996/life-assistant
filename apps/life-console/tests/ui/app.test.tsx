@@ -137,12 +137,13 @@ describe("Life Console synthetic UI", () => {
     const preview = vi.fn().mockResolvedValue({
       schema_version: 1,
       state: "available",
-      message: "已生成结构化预览",
+      message: "已生成原文保存预览",
       intent: "journal",
       preview: {
         event_date: syntheticDashboard.date,
-        summary: "今天完成了最低版",
-        completion: "minimum",
+        normalization_contract_version: "journal-normalization/1.0.0",
+        normalization_state: "pending_after_save",
+        normalization_fields: ["标题", "摘要", "明确事实", "明确感受", "人物", "地点或场景", "生活主题", "可能的规划线索", "待用户确认的推测", "标签"],
       },
     });
     const client = {
@@ -162,8 +163,9 @@ describe("Life Console synthetic UI", () => {
 
     await waitFor(() => expect(preview).toHaveBeenCalledTimes(1));
     expect(journal).not.toHaveBeenCalled();
-    expect(screen.getByText("结构化预览")).toBeTruthy();
-    expect(screen.getByText("今天完成了最低版")).toBeTruthy();
+    expect(screen.getByText("原文保存预览")).toBeTruthy();
+    expect(screen.getByText(/标题、摘要、明确事实/)).toBeTruthy();
+    expect(screen.queryByText("今天完成了最低版")).toBeNull();
   });
 
   it("keeps recorded journals and daily context visible on the record page", async () => {
