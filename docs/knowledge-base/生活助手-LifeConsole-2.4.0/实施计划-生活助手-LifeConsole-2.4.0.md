@@ -10,9 +10,10 @@
 
 ## Global Constraints
 
-- Do not create or read a real DeepSeek key and do not call a real model endpoint in this Gate.
-- Do not read or process real journals, real people records, iCloud history, or Production data.
-- Do not deploy, merge PR #54, switch truth sources, or delete resources.
+- Gate 2 的初始约束是只做合成验证；2026-08-17 的收口授权仅放开 Production 纯合成探针、此前明确指出的唯一 failed journal、PR #54 Ready/合并和正式发布证据，不扩展到其他真实记录。
+- 只复用本机 Keychain 与既有 Production Secret，不输出凭据，不创建新 Key，不充值或购买。
+- 唯一真实日记由 Agent 优先处理；只有 Agent 生成、校验或原子完成失败时才允许 DeepSeek 兜底，且活动人物投影必须为 0。
+- 不读取其他日记原文、不发送人物资料、不批量处理历史、不删除数据。
 - Supabase remains the sole journal truth source; raw text is persisted before normalization.
 - Agent is the primary processor for Agent-originated entries; DeepSeek is only the non-Agent fallback.
 - `deepseek-v4-flash` non-thinking mode is the only allowed synthetic POC model; no automatic model switching.
@@ -361,6 +362,25 @@ Expected: all applicable checks pass. If `validate_project.py` still cannot run 
 - [ ] **Step 5: Update Gate 2 evidence and commit**
 
 Record only synthetic counts, commands, pass/fail state, current limitations, and the fact that no real provider/network/deployment occurred. Commit the verifier and evidence update, push PR #54, and wait for CI without making the PR Ready.
+
+---
+
+### Task 7: Production 正式上线收口
+
+**范围：** 仅使用 Keychain Owner 会话做纯合成健康探针，并完成此前授权的唯一 failed journal；不读取其他日记、不发送人物投影、不输出凭据。
+
+- [x] 增加固定健康原因码与最小结构化日志；日志仅含 route、reason、HTTP 状态、耗时和 Vercel request ID。
+- [x] 将 DeepSeek 的认证/计费、限流、超时、上游 5xx、请求拒绝、无效 JSON、契约拒绝与未知不可用分层，并保持一次有限重试。
+- [x] 从唯一契约 JSON 自动注入精确 Schema，Prompt 版本升级为 `journal-normalization-prompt/1.0.1`，不维护第二份格式。
+- [x] Production 纯合成已登录探针通过：`HTTP 200 / provider_ok / no-store`。
+- [x] 只读确认 failed job 恰好为 1，活动人物投影为 0；Agent 结果先经统一契约本地校验。
+- [x] 修复跨 processor 并发状态：Prompt 升级可原地重开一次 completed Agent job，失败 provider 不得覆盖同 source revision 的 completed 结果；PGlite 回归 8/8 通过。
+- [x] Supabase migration `20260816220627_preserve_completed_journal_normalization` 已应用并读回；RPC 为 SECURITY INVOKER，anon 不可执行，authenticated 可执行。
+- [x] 唯一授权日记已由 Agent 原子完成；metadata 契约有效，processor 为 Agent，原文 revision 与 SHA-256 均未变化，job 集合未扩张，其他日记未触发；DeepSeek 兜底未调用。
+- [x] 统一渲染组件精确回归 5/5 通过。
+- [ ] 更新 PR #54 说明，完成 `origin/main...HEAD` 安全/并发/隐私审查并等待最终 CI。
+- [ ] 将 PR #54 转 Ready、squash merge；等待 main Production READY 并复跑合成探针与单条只读核对。
+- [ ] 从最新 main 创建独立 release-evidence Draft PR，合并去敏证据并清理两个已完成 worktree/branch。
 
 ## Self-review
 

@@ -2,12 +2,12 @@
 
 ## 1. 当前状态
 
-- 主阶段：Production 已部署，等待 PR #54 代码审查与后续真实单条验收决策
-- 子状态：统一契约、数据库状态机和 DeepSeek 兜底运行条件已上线；历史仍保持 legacy
+- 主阶段：发布候选 Production 验收通过，等待 PR #54 完整审查、Ready 与 squash merge
+- 子状态：统一契约、数据库状态机、DeepSeek 合成链路和唯一授权单条均已验收；历史不批量处理
 - 分支：`agent/life-console-240-unified-journal`
 - PR：Draft PR [#54](https://github.com/Matthew-1996/life-assistant/pull/54)
-- 真实数据：PO 已授权仅重整本次明确指出的一条失败日记；Agent 优先、DeepSeek 仅兜底；历史不批量重写
-- 部署：已部署到 [正式站点](https://project-wpabq.vercel.app/)
+- 真实数据：此前明确指出的唯一 failed journal 已由 Agent 完成；原文未变化，未触发其他日记，DeepSeek 兜底未调用
+- 部署：发布候选已部署到 [正式站点](https://project-wpabq.vercel.app/)；正式上线仍以 main 合并部署与 release-evidence 为准
 
 ## 2. 已完成
 
@@ -23,6 +23,10 @@
 - 复用既有 macOS Keychain DeepSeek 凭据完成纯合成真实接口校验，并配置为 Vercel Production-only Sensitive 变量。
 - Supabase 2.4.0 migration 已应用；既有 14 条日记保持 `legacy`，新整理任务为 0。
 - 修复 Vercel NodeNext ESM 解析、Node 请求适配和 Production 构建配置缺失，最终正式站点与接口验收通过。
+- 增加去敏健康原因码与最小日志，Production Keychain Owner 纯合成探针通过 `HTTP 200 / provider_ok / no-store`。
+- 从唯一契约自动注入 JSON Schema，Prompt 升级到 1.0.1；修复 completed Agent 与 failed provider 的跨 processor 状态覆盖。
+- Supabase migration `20260816220627_preserve_completed_journal_normalization` 已应用，函数权限读回符合 Owner/RLS 边界。
+- 唯一授权单条已由 Agent 原子完成；metadata、原文不变性、job 集合与统一渲染均通过验收。
 
 ## 3. 阶段计划
 
@@ -32,8 +36,8 @@
 2. 阶段 A：统一 Schema、Prompt、生成类型和纯合成契约测试。已完成。
 3. 阶段 B：Agent processor 与 Supabase revision RPC。已完成代码、合成测试和 Production migration。
 4. 阶段 C：Vercel Function + DeepSeek 合成 POC。注入式测试及真实接口纯合成连通性均通过，不接真实日记。
-5. 阶段 D：真实非敏感单条端到端质量验收。待 PO 后续决定；当前未执行。
-6. 阶段 E：Production 上线。已完成；PR 仍为 Draft，未合并。
+5. 阶段 D：唯一授权单条端到端质量验收。已完成；Agent 处理，DeepSeek 未调用。
+6. 阶段 E：正式上线。发布候选验收已完成；待 PR #54 合并、main Production 复验和 release-evidence 合并。
 
 ## 4. 开放风险
 
@@ -42,7 +46,8 @@
 - 个人关系投影属于新的线上私人数据，真实值必须逐项授权。
 - 现有候选 bundle 大于 500 kB，属于后续性能优化项，不阻断当前合成验收。
 - 依赖安装报告一项既有 high severity 审计项；本版本未在无单独评审的情况下自动升级依赖。
-- 真实日记首次 DeepSeek 质量验收尚未执行；上线结论只覆盖合成连通性、鉴权和状态机。
+- DeepSeek 只完成纯合成质量与连通性验收；本次唯一真实单条由 Agent 完成，真实原文未发送给 DeepSeek。
+- 本机 iCloud worktree 下 Vitest/PGlite 偶有冷启动超时；功能断言已在提高本地时限后通过，并以 GitHub CI 作为合并门禁。
 
 ## 5. 决策日志
 
@@ -60,3 +65,6 @@
 | 2026-08-16 | PR #54 继续保持 Draft | 已执行；不转 Ready、不合并 |
 | 2026-08-16 | 修复最新日记整理失败，并重新整理该条；Agent 优先，DeepSeek 仅兜底且需验证链路可用 | PO 已明确授权；不扩展到其他历史日记 |
 | 2026-08-16 | 保存前预览不得伪装成结构化整理；字段顺序、标签、Prompt 与 Schema 均来自唯一契约 | 缺陷修复决定 |
+| 2026-08-17 | 允许完成 Production 合成探针、唯一授权单条、PR Ready/合并与正式发布证据 | PO 已明确授权；其他日记、人物资料、充值和删除仍不在范围 |
+| 2026-08-17 | Production 合成探针与唯一授权单条验收通过 | Agent 完成；原文不变；其他日记未触发；DeepSeek 兜底未调用 |
+| 2026-08-17 | completed Agent 结果不得被另一 processor 的失败覆盖 | migration 已应用；PGlite 8/8，远端权限读回通过 |

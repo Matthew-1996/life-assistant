@@ -2,7 +2,7 @@
 
 ## 1. 当前状态
 
-Gate 2 通用代码完成，2.4.0 数据库迁移与 Vercel Production 已于 2026-08-16 上线，Draft PR #54 继续保持 Draft。复用了 macOS Keychain 中既有 DeepSeek 凭据，并以不含个人数据的合成请求验证真实接口；没有创建新账号或新 Key，没有发送真实日记、批量重写历史、切源或合并 PR。
+2.4.0 发布候选已完成 Production 收口验收，Draft PR #54 继续保持 Draft，尚未标记正式上线。复用了 macOS Keychain 中既有 Owner/DeepSeek 凭据；纯合成已登录健康探针通过。此前授权的唯一 failed journal 已由 Agent 原子完成，DeepSeek 未接收该条真实原文；没有创建新账号或新 Key，没有充值、批量重写历史、处理其他日记、发送人物资料、删除数据或合并 PR。
 
 ## 2. 测试策略
 
@@ -49,7 +49,7 @@ Gate 2 通用代码完成，2.4.0 数据库迁移与 Vercel Production 已于 20
 3. DeepSeek 隐私设置与数据处理授权未完成时，只可使用合成文本。
 4. 候选通过后再由 PO 决定是否授权一条人工输入的非敏感真实日记做端到端验收。
 
-## 4. Gate 2 授权不包含
+## 4. Gate 2 初始授权边界（历史）
 
 - 创建或充值 DeepSeek 账号；
 - 保存真实 DeepSeek API Key；
@@ -58,6 +58,8 @@ Gate 2 通用代码完成，2.4.0 数据库迁移与 Vercel Production 已于 20
 - Vercel Production 部署；
 - 历史批量整理；
 - PR 转 Ready、合并或资源删除。
+
+2026-08-17 PO 明确放开本版本收口所需的 Production 纯合成探针、唯一 failed journal、PR #54 Ready/合并和 release-evidence；其他真实数据、人物资料、充值、删除与批处理仍不在范围。
 
 ## 5. 2026-08-16 Gate 2 验证证据
 
@@ -96,10 +98,11 @@ Gate 2 通用代码完成，2.4.0 数据库迁移与 Vercel Production 已于 20
 ## 7. 当前验收结论
 
 - Gate 2 授权范围：通过。
-- 真实 DeepSeek 接口的纯合成连通性：通过；真实日记处理与模型质量 POC 未执行。
-- Production 数据库迁移和部署：通过。
+- 真实 DeepSeek 接口的纯合成连通性：`HTTP 200 / provider_ok / no-store`，通过。
+- 唯一授权真实日记：Agent 原子完成；metadata 契约有效，原文 revision/SHA-256 不变，job 集合不扩张，其他日记未触发；DeepSeek 未调用。
+- Production 数据库迁移和发布候选部署：通过；正式上线仍待 main 合并部署和 release-evidence。
 - 历史日记批量重整：未执行。
-- PR #54：保持 Draft，不转 Ready、不合并。
+- PR #54：当前仍为 Draft；完整 diff review 和最终 CI 通过后，按 PO 授权转 Ready 并 squash merge。
 
 ## 8. 2026-08-16 日记整理失败回归
 
@@ -114,4 +117,17 @@ Gate 2 通用代码完成，2.4.0 数据库迁移与 Vercel Production 已于 20
 - 新增 Owner 鉴权的纯合成健康探针，不读写真实日记。
 - PO 只授权本次指出的一条日记：先由 Agent 按统一契约重整；仅 Agent 无法完成时才允许 DeepSeek 兜底。其他历史记录不处理。
 
-最终 Production 部署、合成健康探针、单条 Agent 重整和前端读回结果在完成后补录；未完成前不得标记通过。
+### 2026-08-17 收口验收结果
+
+| 验收项 | 结果 |
+|---|---|
+| 去敏健康诊断 | 固定 reason 枚举；日志仅含 route、reason、HTTP 状态、耗时与 Vercel request ID；22 项专项测试通过 |
+| Schema 单一来源 | 从 `journal-normalization-v1.json` 自动注入；Prompt `1.0.1`；契约/健康/DeepSeek 27 项通过 |
+| Production 合成探针 | Owner Keychain 已登录，`HTTP 200 / provider_ok / no-store` |
+| 并发状态修复 | Prompt 升级原地重开一次；failed provider 不覆盖 completed Agent；PGlite 8/8 |
+| Production migration | `20260816220627_preserve_completed_journal_normalization` 已应用；SECURITY INVOKER，anon 无 execute，authenticated 有 execute |
+| 唯一真实单条 | Agent completed；统一契约有效；原文 revision 与 SHA-256 不变；job 总数不变；其他日记未触发；DeepSeek 未调用 |
+| 统一渲染 | `JournalStructuredView` 5/5 通过；未打开批量 Production 页面 |
+| GitHub CI | 每次功能推送的 privacy、python、node 均通过；最终 merge 仍以最新提交 CI 为门禁 |
+
+本机完整 Python/Vitest 在 iCloud worktree 中出现过回环端口权限、并发锁竞争和硬编码 5 秒冷启动超时；对应回环、PGlite、组件和 Production build 均已精确复跑通过，干净 GitHub CI 未复现功能失败。`tools/validate_project.py` 仍按设计因独立 worktree 缺少私人 iCloud 文件而失败，不作为本分支伪造的全绿证据。
