@@ -2,7 +2,7 @@
 
 ## 1. 当前状态
 
-- 主阶段：已正式上线；Production CSP 启动热修复进行中
+- 主阶段：已正式上线；Production CSP 启动热修复已部署并通过真实浏览器复验
 - 子状态：统一契约、数据库状态机、DeepSeek 合成链路、唯一授权单条与 main Production 均已验收；本文件随发布证据 PR 合入后成为正式知识库基线；历史不批量处理
 - 分支清理：功能与发布证据分支在发布证据 PR 合并后由本轮操作清理；不在合并前自证完成
 - PR：功能 PR [#54](https://github.com/Matthew-1996/life-assistant/pull/54) 已 squash merge；发布证据 PR [#55](https://github.com/Matthew-1996/life-assistant/pull/55) 承载本次去敏证据与上线状态基线
@@ -80,4 +80,6 @@
 - 根因：浏览器会导入的 `normalization-contract.ts` 在模块初始化时执行 Ajv `compile`，Ajv 通过 `new Function` 生成校验代码。
 - 修复：将 Ajv 校验器拆到仅服务端导入的模块；浏览器仍从唯一契约读取版本、字段与展示标签。
 - 本地证据：真实 Chromium 回归已观察到修复前 `unsafe-eval` 红灯与修复后绿灯；Vitest 54 文件 / 464 项、构建与 Playwright 4 项通过。
-- 待完成：Draft PR、Production 部署、正式 alias 真实浏览器渲染与控制台去敏复验。
+- GitHub：Draft PR #56 已建档并保持 Draft，未合并。
+- Production：Vercel `READY`，正式 alias 指向当前热修复提交；首页 200，严格 CSP 与 `nosniff` 保持，未登录 POST 健康门禁为 401。
+- 真实浏览器：新会话加载新资产后全局导航与 Online 工作台可见，控制台无 error/warn。

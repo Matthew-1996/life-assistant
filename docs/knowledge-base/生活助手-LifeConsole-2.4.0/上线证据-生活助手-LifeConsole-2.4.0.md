@@ -37,3 +37,13 @@ Life Console 2.4.0 已于 2026-08-17 正式上线。功能 PR [#54](https://gith
 ## 5. 发布边界
 
 本次正式发布只包含通用代码、Production 状态机、纯合成 provider 健康验证，以及此前经 PO 明确授权的唯一失败日记验收。该条由 Agent 完成；DeepSeek 未接收其原文。没有扩大到其他记录、人物资料或历史批量整理。
+
+## 6. 2026-08-17 Production CSP 启动热修复
+
+- 用户稳定复现正式站点空白；浏览器证据显示 Ajv 在前端共享模块初始化时触发 `new Function`，被正确的 Production `script-src 'self'` 拒绝。
+- 修复将 Ajv 校验器移入仅服务端导入的模块，保留严格 CSP，未添加 `unsafe-eval`。
+- TDD 先在真实 Chromium + Production CSP 下精确观察 `unsafe-eval` 红灯，再以同一回归确认修复后全局导航可见。
+- 本地门禁：Vitest 54 文件 / 464 项、Life Console Python 92 项、仓库工具 369 项（1 跳过）、Production build 和 Playwright 4/4 通过；隐私、历史隐私、治理与差异检查通过。
+- Vercel Production 为 `READY`，正式 alias 指向当前热修复提交；首页 200，严格 CSP 和 `nosniff` 保持，未登录 POST 健康门禁为 401。
+- 全新浏览器会话已渲染全局导航与 Online 工作台，新会话控制台无 error/warn。Draft PR #56 保持 Draft，未合并。
+- 本轮只发布通用代码与去敏证据；未写入日记或数据库，未调用模型，未处理其他记录。

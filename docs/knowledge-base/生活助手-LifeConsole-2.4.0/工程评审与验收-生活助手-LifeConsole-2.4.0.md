@@ -158,4 +158,6 @@
 | 全量 Vitest | 54 文件 / 464 项通过 |
 | Production build | 通过；常规 JS 326.98 kB（gzip 97.70 kB） |
 | Playwright | 4/4 通过，包含严格 CSP 真实启动回归 |
-| Production | 待 Draft PR 建档、部署与真实浏览器验收 |
+| Draft PR | #56 已建档并保持 Draft，未合并 |
+| Production | Vercel `READY`；正式 alias 指向当前热修复提交；首页 200，严格 CSP / `nosniff` 存在，未登录 POST 健康门禁 401 |
+| 真实浏览器 | 全新会话渲染全局导航和 Online 工作台；新会话控制台无 error/warn |
