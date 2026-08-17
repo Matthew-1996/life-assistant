@@ -2,7 +2,7 @@
 
 ## 1. 当前状态
 
-2.4.0 发布候选已完成 Production 收口验收，Draft PR #54 继续保持 Draft，尚未标记正式上线。复用了 macOS Keychain 中既有 Owner/DeepSeek 凭据；纯合成已登录健康探针通过。此前授权的唯一 failed journal 已由 Agent 原子完成，DeepSeek 未接收该条真实原文；没有创建新账号或新 Key，没有充值、批量重写历史、处理其他日记、发送人物资料、删除数据或合并 PR。
+2.4.0 已正式上线。PR #54 已通过独立安全、并发与隐私复审及全部 CI，并以 squash merge 合入 `main`；main Production 为 `READY / PROMOTED`，正式 alias 精确对应 merge commit。合并后复用了 macOS Keychain 中既有 Owner 会话执行纯合成健康探针并通过。此前授权的唯一 failed journal 已由 Agent 原子完成并经精确只读复验，DeepSeek 未接收该条真实原文；没有创建新账号或新 Key，没有充值、批量重写历史、处理其他日记、发送人物资料或删除数据。
 
 ## 2. 测试策略
 
@@ -100,9 +100,20 @@
 - Gate 2 授权范围：通过。
 - 真实 DeepSeek 接口的纯合成连通性：`HTTP 200 / provider_ok / no-store`，通过。
 - 唯一授权真实日记：Agent 原子完成；metadata 契约有效，原文 revision/SHA-256 不变，job 集合不扩张，其他日记未触发；DeepSeek 未调用。
-- Production 数据库迁移和发布候选部署：通过；正式上线仍待 main 合并部署和 release-evidence。
+- Production 数据库迁移、main 部署与 release-evidence：通过。
 - 历史日记批量重整：未执行。
-- PR #54：当前仍为 Draft；完整 diff review 和最终 CI 通过后，按 PO 授权转 Ready 并 squash merge。
+- PR #54：独立复审无阻断，privacy/python/node CI 全绿，已 Ready 并 squash merge。
+
+## 7.1 2026-08-17 正式发布复验
+
+| 验收项 | 结果 |
+|---|---|
+| 功能合并 | PR #54 已 squash merge；merge commit `bbb58861a55d020972b80c4e0f7929fd39e8e123` |
+| main Production | Vercel `READY / PROMOTED`；正式 alias 精确指向 merge commit |
+| 合并后合成探针 | Keychain Owner 会话；`HTTP 200 / provider_ok / no-store`；未读写真实日记 |
+| 唯一授权单条只读复验 | 目标唯一、completed、Agent、契约有效、source revision 一致、job 集合未变化；本轮无写入 |
+| 授权边界 | 未处理其他日记，未发送人物资料，未调用 DeepSeek 真实数据兜底 |
+| 去敏上线记录 | 见[上线证据](上线证据-生活助手-LifeConsole-2.4.0.md) |
 
 ## 8. 2026-08-16 日记整理失败回归
 

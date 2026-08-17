@@ -380,9 +380,9 @@ Record only synthetic counts, commands, pass/fail state, current limitations, an
 - [x] 统一渲染组件精确回归 5/5 通过。
 - [x] 合并前独立审查修复：Production 浏览器不再自动触发 DeepSeek；人物投影仅保留原文明示匹配项；同 task processing 拒绝重复执行；completed 幂等返回；Agent 结果不被晚到 provider 覆盖；RPC 锁顺序统一为 job → journal。
 - [x] Agent 现有记录原子工具先按精确 ID 读取 Owner-scoped 原文并核对 revision，再校验与完成；调用方文本不再作为唯一依据。
-- [ ] 更新 PR #54 说明，复核 `origin/main...HEAD` 安全/并发/隐私修复并等待最终 CI。
-- [ ] 将 PR #54 转 Ready、squash merge；等待 main Production READY 并复跑合成探针与单条只读核对。
-- [ ] 从最新 main 创建独立 release-evidence Draft PR，合并去敏证据并清理两个已完成 worktree/branch。
+- [x] 更新 PR #54 说明，复核 `origin/main...HEAD` 安全/并发/隐私修复并等待最终 CI；独立复审无阻断，privacy/python/node 全绿。
+- [x] 将 PR #54 转 Ready、squash merge；main Production `READY / PROMOTED`，合并后合成探针与单条只读核对均通过。
+- [x] 从最新 main 创建独立 release-evidence 分支并记录去敏证据；证据 PR 合并后清理两个已完成 worktree/branch。
 
 ## Self-review
 
