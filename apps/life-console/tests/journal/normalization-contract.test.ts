@@ -8,8 +8,8 @@ import {
   journalNormalizationFields,
   journalPromptVersion,
   type JournalNormalization,
-  validateJournalNormalization,
 } from "../../src/journal/normalization-contract";
+import { validateJournalNormalization } from "../../src/server/journal-normalization-validator";
 
 const rawText = "今天和同伴甲在河边散步，感觉很放松，希望以后每周都来走走。";
 

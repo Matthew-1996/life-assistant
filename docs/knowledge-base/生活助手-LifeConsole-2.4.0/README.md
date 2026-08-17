@@ -11,4 +11,4 @@
 - [实施计划](实施计划-生活助手-LifeConsole-2.4.0.md)
 - [上线证据](上线证据-生活助手-LifeConsole-2.4.0.md)
 
-当前状态：2.4.0 已正式上线。PR #54 已通过独立安全、并发与隐私复审及全部 CI，并以 squash merge 合入 `main`；Vercel Production `READY / PROMOTED`，正式 alias 精确对应 merge commit。合并后 Keychain Owner 纯合成探针为 `HTTP 200 / provider_ok / no-store`。此前授权的唯一 failed journal 已由 Agent 原子完成并经精确只读复验，统一契约有效、原文 source revision 一致、任务集合未变化；未触发其他日记，DeepSeek 未接收该条真实原文。历史不做批量整理。
+当前状态：2.4.0 已正式上线。PR #54 已通过独立安全、并发与隐私复审及全部 CI，并以 squash merge 合入 `main`；Vercel Production `READY / PROMOTED`。2026-08-17 发现浏览器共享契约模块在严格 CSP 下触发 Ajv `unsafe-eval`，导致首屏空白；PO 已明确授权修复并上线，当前热修复分支已完成 TDD 和本地构建，待 Production 复验。修复不放开 `unsafe-eval`，不读写日记或数据库。

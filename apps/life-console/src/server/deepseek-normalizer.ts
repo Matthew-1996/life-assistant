@@ -1,10 +1,12 @@
 import {
   buildJournalNormalizationMessages,
-  JournalNormalizationError,
-  validateJournalNormalization,
   type JournalContextEntity,
   type JournalNormalization,
 } from "../journal/normalization-contract.js";
+import {
+  JournalNormalizationError,
+  validateJournalNormalization,
+} from "./journal-normalization-validator.js";
 
 const DEEPSEEK_ENDPOINT = "https://api.deepseek.com/chat/completions";
 
