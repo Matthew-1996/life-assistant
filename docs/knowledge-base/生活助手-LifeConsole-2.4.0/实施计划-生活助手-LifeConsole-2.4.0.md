@@ -378,7 +378,9 @@ Record only synthetic counts, commands, pass/fail state, current limitations, an
 - [x] Supabase migration `20260816220627_preserve_completed_journal_normalization` 已应用并读回；RPC 为 SECURITY INVOKER，anon 不可执行，authenticated 可执行。
 - [x] 唯一授权日记已由 Agent 原子完成；metadata 契约有效，processor 为 Agent，原文 revision 与 SHA-256 均未变化，job 集合未扩张，其他日记未触发；DeepSeek 兜底未调用。
 - [x] 统一渲染组件精确回归 5/5 通过。
-- [ ] 更新 PR #54 说明，完成 `origin/main...HEAD` 安全/并发/隐私审查并等待最终 CI。
+- [x] 合并前独立审查修复：Production 浏览器不再自动触发 DeepSeek；人物投影仅保留原文明示匹配项；同 task processing 拒绝重复执行；completed 幂等返回；Agent 结果不被晚到 provider 覆盖；RPC 锁顺序统一为 job → journal。
+- [x] Agent 现有记录原子工具先按精确 ID 读取 Owner-scoped 原文并核对 revision，再校验与完成；调用方文本不再作为唯一依据。
+- [ ] 更新 PR #54 说明，复核 `origin/main...HEAD` 安全/并发/隐私修复并等待最终 CI。
 - [ ] 将 PR #54 转 Ready、squash merge；等待 main Production READY 并复跑合成探针与单条只读核对。
 - [ ] 从最新 main 创建独立 release-evidence Draft PR，合并去敏证据并清理两个已完成 worktree/branch。
 

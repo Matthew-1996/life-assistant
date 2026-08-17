@@ -29,18 +29,27 @@ function dependencies(overrides: Record<string, unknown> = {}) {
   const store = {
     getJournal: vi.fn(async () => ({
       id: 31,
-      content: "Synthetic raw body",
+      content: "Synthetic Person wrote Synthetic raw body",
       raw_revision: 2,
     })),
-    getContextEntities: vi.fn(async () => [{
-      display_name: "Synthetic Person",
-      aliases: ["Person"],
-      relation: "confirmed relation",
-      revision: "profile-revision-1",
-    }]),
+    getContextEntities: vi.fn(async () => [
+      {
+        display_name: "Synthetic Person",
+        aliases: ["Person"],
+        relation: "confirmed relation",
+        revision: "profile-revision-1",
+      },
+      {
+        display_name: "Unmentioned Person",
+        aliases: ["Absent Alias"],
+        relation: "must not be sent",
+        revision: "profile-revision-2",
+      },
+    ]),
     beginNormalization: vi.fn(async () => ({
       id: "00000000-0000-4000-8000-000000000240",
       source_revision: 2,
+      status: "processing" as "processing" | "completed" | "failed" | "stale",
     })),
     completeNormalization: vi.fn(async () => undefined),
     failNormalization: vi.fn(async () => undefined),
@@ -105,7 +114,7 @@ describe("journal normalization service", () => {
       "synthetic-owner-token",
     );
     expect(fixture.normalize).toHaveBeenCalledWith({
-      rawText: "Synthetic raw body",
+      rawText: "Synthetic Person wrote Synthetic raw body",
       contextEntities: [{
         text: "Synthetic Person",
         aliases: ["Person"],
@@ -127,6 +136,29 @@ describe("journal normalization service", () => {
       sourceRevision: 2,
       normalization,
     });
+  });
+
+  it("does not contact the provider again for an already completed task", async () => {
+    const fixture = dependencies();
+    fixture.store.beginNormalization.mockResolvedValueOnce({
+      id: "00000000-0000-4000-8000-000000000240",
+      source_revision: 2,
+      status: "completed",
+    });
+    const response = await normalizeJournalRequest(
+      request({
+        journal_id: 31,
+        source_revision: 2,
+        task_key: "task:synthetic-completed",
+      }),
+      environment,
+      fixture.dependencies,
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ status: "completed" });
+    expect(fixture.normalize).not.toHaveBeenCalled();
+    expect(fixture.store.completeNormalization).not.toHaveBeenCalled();
+    expect(fixture.store.getContextEntities).not.toHaveBeenCalled();
   });
 
   it("rejects a stale source revision before calling the provider", async () => {

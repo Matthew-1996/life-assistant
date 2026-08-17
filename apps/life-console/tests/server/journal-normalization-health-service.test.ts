@@ -32,6 +32,29 @@ describe("journal normalization provider health", () => {
     expect(normalize).not.toHaveBeenCalled();
   });
 
+  it("reports missing provider configuration only after authentication", async () => {
+    const normalize = vi.fn();
+    const log = vi.fn();
+    const response = await journalNormalizationHealthRequest(
+      request(), { ...environment, deepSeekApiKey: "" }, {
+        verifyBearer: vi.fn(async () => true),
+        normalize,
+        log,
+      },
+    );
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({
+      status: "provider_unavailable",
+      reason: "configuration_unavailable",
+    });
+    expect(normalize).not.toHaveBeenCalled();
+    expect(log).toHaveBeenCalledWith(expect.objectContaining({
+      route: "/api/journal-normalize-health",
+      reason: "configuration_unavailable",
+      http_status: 503,
+    }));
+  });
+
   it("uses only a built-in synthetic journal and returns a redacted result", async () => {
     const normalize = vi.fn(async () => ({
       title: "合成标题", summary: "合成摘要", facts: [], feelings: [],

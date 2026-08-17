@@ -20,20 +20,6 @@ EVIDENCE_FIELDS = (
     "planning_clues",
     "inferences",
 )
-REQUIRED_FIELDS = (
-    "title",
-    "summary",
-    "facts",
-    "feelings",
-    "people",
-    "places",
-    "themes",
-    "planning_clues",
-    "inferences",
-    "tags",
-)
-
-
 class JournalNormalizationError(ValueError):
     pass
 
@@ -63,19 +49,22 @@ def _evidence_item(
     *,
     basis: str,
 ) -> dict[str, str]:
+    limits = load_contract()["limits"]
     if not isinstance(value, dict) or set(value) != {"text", "basis", "evidence"}:
         raise JournalNormalizationError("schema validation failed: evidence item")
     if value.get("basis") != basis:
         raise JournalNormalizationError("schema validation failed: evidence basis")
-    text = _short_text(value.get("text"), "text", 180)
-    evidence = _short_text(value.get("evidence"), "evidence", 240)
+    text = _short_text(value.get("text"), "text", limits["item_text_max"])
+    evidence = _short_text(
+        value.get("evidence"), "evidence", limits["evidence_max"]
+    )
     if evidence not in raw_text:
         raise JournalNormalizationError("evidence is absent from raw text")
     return {"text": text, "basis": basis, "evidence": evidence}
 
 
 def _list(value: Any, field: str) -> list[Any]:
-    if not isinstance(value, list) or len(value) > 12:
+    if not isinstance(value, list) or len(value) > load_contract()["limits"]["list_max"]:
         raise JournalNormalizationError(f"schema validation failed: {field}")
     return value
 
@@ -85,14 +74,26 @@ def validate_normalization(
     raw_text: str,
     context_revisions: Mapping[str, str],
 ) -> dict[str, Any]:
-    if not isinstance(value, dict) or set(value) != set(REQUIRED_FIELDS):
+    contract = load_contract()
+    schema = contract.get("schema")
+    limits = contract.get("limits")
+    if not isinstance(schema, dict) or not isinstance(limits, dict):
+        raise JournalNormalizationError("journal contract schema unavailable")
+    required_fields = schema.get("required")
+    if not isinstance(required_fields, list) or not all(
+        isinstance(field, str) for field in required_fields
+    ):
+        raise JournalNormalizationError("journal contract fields unavailable")
+    if not isinstance(value, dict) or set(value) != set(required_fields):
         raise JournalNormalizationError("schema validation failed: fields")
     if not isinstance(raw_text, str):
         raise JournalNormalizationError("raw text must be a string")
 
     normalized: dict[str, Any] = {
-        "title": _short_text(value["title"], "title", 120),
-        "summary": _short_text(value["summary"], "summary", 300, empty=True),
+        "title": _short_text(value["title"], "title", limits["title_max"]),
+        "summary": _short_text(
+            value["summary"], "summary", limits["summary_max"], empty=True
+        ),
     }
     for field in EVIDENCE_FIELDS:
         expected_basis = (
@@ -112,15 +113,21 @@ def validate_normalization(
         if set(item).difference(allowed) or not required.issubset(item):
             raise JournalNormalizationError("schema validation failed: person")
         person = {
-            "text": _short_text(item.get("text"), "person.text", 180),
+            "text": _short_text(
+                item.get("text"), "person.text", limits["item_text_max"]
+            ),
             "basis": item.get("basis"),
-            "evidence": _short_text(item.get("evidence"), "person.evidence", 240),
+            "evidence": _short_text(
+                item.get("evidence"), "person.evidence", limits["evidence_max"]
+            ),
             "profile_revision": item.get("profile_revision"),
         }
         if "relation" in item:
             relation = item["relation"]
             if relation is not None:
-                relation = _short_text(relation, "person.relation", 120)
+                relation = _short_text(
+                    relation, "person.relation", limits["title_max"]
+                )
             person["relation"] = relation
         if person["evidence"] not in raw_text:
             raise JournalNormalizationError("evidence is absent from raw text")
@@ -141,10 +148,10 @@ def validate_normalization(
 
     for field in ("themes", "tags"):
         normalized[field] = [
-            _short_text(item, field, 60)
+            _short_text(item, field, limits["category_max"])
             for item in _list(value[field], field)
         ]
-    return {field: normalized[field] for field in REQUIRED_FIELDS}
+    return {field: normalized[field] for field in required_fields}
 
 
 def build_messages(
@@ -158,7 +165,18 @@ def build_messages(
         separators=(",", ":"),
     )
     return [
-        {"role": "system", "content": contract["system_prompt"]},
+        {
+            "role": "system",
+            "content": (
+                contract["system_prompt"]
+                + "\n输出必须精确满足以下唯一 JSON Schema：\n"
+                + json.dumps(
+                    contract["schema"],
+                    ensure_ascii=False,
+                    separators=(",", ":"),
+                )
+            ),
+        },
         {
             "role": "user",
             "content": (

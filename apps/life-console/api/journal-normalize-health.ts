@@ -30,44 +30,16 @@ export default async function handler(
   request: VercelRequest,
   response: VercelResponse,
 ): Promise<void> {
-  const startedAt = Date.now();
   const environment = {
     supabaseUrl: process.env.VITE_SUPABASE_URL ?? "",
     supabasePublishableKey:
       process.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "",
     deepSeekApiKey: process.env.DEEPSEEK_API_KEY ?? "",
   };
-  const result = !environment.supabaseUrl
-      || !environment.supabasePublishableKey
-      || !environment.deepSeekApiKey
-    ? Response.json({
-      status: "provider_unavailable",
-      reason: "configuration_unavailable",
-    }, {
-      status: 503,
-      headers: { "Cache-Control": "no-store" },
-    })
-    : await journalNormalizationHealthRequest(
-      toWebRequest(request),
-      environment,
-    );
-  if (
-    result.status === 503
-    && (!environment.supabaseUrl
-      || !environment.supabasePublishableKey
-      || !environment.deepSeekApiKey)
-  ) {
-    const requestId = request.headers["x-vercel-id"];
-    console.log(JSON.stringify({
-      route: "/api/journal-normalize-health",
-      reason: "configuration_unavailable",
-      http_status: 503,
-      duration_ms: Math.max(0, Date.now() - startedAt),
-      request_id: Array.isArray(requestId)
-        ? requestId[0]?.slice(0, 128) ?? null
-        : requestId?.slice(0, 128) ?? null,
-    }));
-  }
+  const result = await journalNormalizationHealthRequest(
+    toWebRequest(request),
+    environment,
+  );
   response.statusCode = result.status;
   result.headers.forEach((value, name) => response.setHeader(name, value));
   response.end(await result.text());

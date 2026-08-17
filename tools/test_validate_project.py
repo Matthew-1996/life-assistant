@@ -17,7 +17,19 @@ CONTRACT = {
             "themes", "planning_clues", "inferences", "tags",
         )
     ],
-    "schema": {"type": "object"},
+    "schema": {
+        "type": "object",
+        "required": [
+            "title", "summary", "facts", "feelings", "people", "places",
+            "themes", "planning_clues", "inferences", "tags",
+        ],
+        "properties": {
+            key: {} for key in (
+                "title", "summary", "facts", "feelings", "people", "places",
+                "themes", "planning_clues", "inferences", "tags",
+            )
+        },
+    },
 }
 
 
@@ -54,6 +66,14 @@ class JournalNormalizationProjectValidationTests(unittest.TestCase):
 
     def test_accepts_one_versioned_contract_and_all_active_routes(self):
         self.assertEqual(self.errors(self.fixture()), [])
+
+    def test_accepts_a_prompt_patch_version_from_the_canonical_contract(self):
+        root = self.fixture()
+        path = root / "apps/life-console/contracts/journal-normalization-v1.json"
+        contract = json.loads(path.read_text())
+        contract["prompt_version"] = "journal-normalization-prompt/1.0.1"
+        path.write_text(json.dumps(contract), encoding="utf-8")
+        self.assertEqual(self.errors(root), [])
 
     def test_rejects_missing_contract(self):
         root = self.fixture()

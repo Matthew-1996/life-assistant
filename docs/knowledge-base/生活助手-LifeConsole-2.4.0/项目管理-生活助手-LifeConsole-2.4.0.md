@@ -27,6 +27,7 @@
 - 从唯一契约自动注入 JSON Schema，Prompt 升级到 1.0.1；修复 completed Agent 与 failed provider 的跨 processor 状态覆盖。
 - Supabase migration `20260816220627_preserve_completed_journal_normalization` 已应用，函数权限读回符合 Owner/RLS 边界。
 - 唯一授权单条已由 Agent 原子完成；metadata、原文不变性、job 集合与统一渲染均通过验收。
+- 合并前独立审查已识别并修复自动外发、人物最小化、幂等重复、Agent 优先级、RPC 锁顺序、鉴权前置、Agent 原文读回与伪摘要问题；等待修复复审和 CI。
 
 ## 3. 阶段计划
 

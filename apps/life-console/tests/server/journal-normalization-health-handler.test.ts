@@ -18,7 +18,7 @@ afterEach(() => {
 });
 
 describe("Vercel journal normalization health handler", () => {
-  it("returns a redacted configuration reason when server variables are absent", async () => {
+  it("requires authentication before revealing configuration availability", async () => {
     delete process.env.VITE_SUPABASE_URL;
     delete process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
     delete process.env.DEEPSEEK_API_KEY;
@@ -34,18 +34,10 @@ describe("Vercel journal normalization health handler", () => {
       headers: { "x-vercel-id": "iad1::synthetic-config-request" },
     }, response);
 
-    expect(response.statusCode).toBe(503);
+    expect(response.statusCode).toBe(401);
     expect(response.end).toHaveBeenCalledWith(JSON.stringify({
-      status: "provider_unavailable",
-      reason: "configuration_unavailable",
+      status: "unauthenticated",
     }));
-    expect(log).toHaveBeenCalledTimes(1);
-    expect(JSON.parse(String(log.mock.calls[0]?.[0]))).toEqual({
-      route: "/api/journal-normalize-health",
-      reason: "configuration_unavailable",
-      http_status: 503,
-      duration_ms: expect.any(Number),
-      request_id: "iad1::synthetic-config-request",
-    });
+    expect(log).not.toHaveBeenCalled();
   });
 });

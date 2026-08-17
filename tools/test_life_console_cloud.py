@@ -238,6 +238,14 @@ class LifeConsoleCloudTest(unittest.TestCase):
         }
         transport = FakeTransport([
             [{
+                "id": 41,
+                "record_key": "journal:synthetic-existing-001",
+                "content": "Synthetic raw body",
+                "raw_revision": 2,
+                "revision": 2,
+                "normalization_status": "pending",
+            }],
+            [{
                 "id": "00000000-0000-4000-8000-000000000240",
                 "source_revision": 2,
                 "status": "processing",
@@ -263,10 +271,37 @@ class LifeConsoleCloudTest(unittest.TestCase):
         self.assertEqual(
             [call[1] for call in transport.calls],
             [
+                transport.calls[0][1],
                 "/rest/v1/rpc/begin_journal_normalization",
                 "/rest/v1/rpc/complete_journal_normalization",
             ],
         )
+        self.assertTrue(transport.calls[0][1].startswith("/rest/v1/journals?"))
+
+    def test_existing_normalization_rejects_content_that_does_not_match_source(self):
+        transport = FakeTransport([[{
+            "id": 41,
+            "record_key": "journal:synthetic-existing-002",
+            "content": "Authoritative synthetic raw",
+            "raw_revision": 2,
+            "revision": 2,
+            "normalization_status": "pending",
+        }]])
+        client = CloudClient(transport, token_provider=lambda: "synthetic-token")
+        with self.assertRaisesRegex(CloudWriteError, "conflict"):
+            client.normalize_journal({
+                "journal_id": 41,
+                "raw_revision": 2,
+                "record_key": "journal:synthetic-existing-002",
+                "content": "Different synthetic raw",
+                "normalization": {
+                    "title": "Synthetic title", "summary": "", "facts": [],
+                    "feelings": [], "people": [], "places": [], "themes": [],
+                    "planning_clues": [], "inferences": [], "tags": [],
+                },
+                "context_revisions": {},
+            })
+        self.assertEqual(len(transport.calls), 1)
 
     def test_completion_failure_is_recorded_without_losing_raw_save(self):
         normalization = {

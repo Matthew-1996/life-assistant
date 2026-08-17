@@ -128,6 +128,7 @@
 | Production migration | `20260816220627_preserve_completed_journal_normalization` 已应用；SECURITY INVOKER，anon 无 execute，authenticated 有 execute |
 | 唯一真实单条 | Agent completed；统一契约有效；原文 revision 与 SHA-256 不变；job 总数不变；其他日记未触发；DeepSeek 未调用 |
 | 统一渲染 | `JournalStructuredView` 5/5 通过；未打开批量 Production 页面 |
+| 独立审查修复 | 浏览器自动外发已关闭；已完成/处理中任务不重复调用 provider；Agent 优先与统一锁顺序由 11 项 PGlite 回归覆盖；未整理列表不再用原文截断伪装摘要 |
 | GitHub CI | 每次功能推送的 privacy、python、node 均通过；最终 merge 仍以最新提交 CI 为门禁 |
 
 本机完整 Python/Vitest 在 iCloud worktree 中出现过回环端口权限、并发锁竞争和硬编码 5 秒冷启动超时；对应回环、PGlite、组件和 Production build 均已精确复跑通过，干净 GitHub CI 未复现功能失败。`tools/validate_project.py` 仍按设计因独立 worktree 缺少私人 iCloud 文件而失败，不作为本分支伪造的全绿证据。

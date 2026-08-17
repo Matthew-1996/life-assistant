@@ -37,6 +37,7 @@ beforeAll(async () => {
     "../../supabase/migrations/20260816170000_unified_journal_normalization.sql",
     "../../supabase/migrations/20260816171759_retry_failed_journal_normalization.sql",
     "../../supabase/migrations/20260816220627_preserve_completed_journal_normalization.sql",
+    "../../supabase/migrations/20260817021112_enforce_agent_normalization_priority.sql",
   ];
   for (const migration of migrations) {
     if (migration.endsWith("0005_migration_tracking.sql")) {
@@ -304,6 +305,14 @@ describe("Life Console 2.4.0 journal normalization migration", () => {
       )
     `);
     const row = created.rows[0];
+    const provider = await queryAs<{ id: string }>(`
+      select id from public.begin_journal_normalization(
+        ${row.id}, ${row.raw_revision},
+        'journal-normalization/1.0.0',
+        'journal-normalization-prompt/1.0.1',
+        'deepseek', 'task:synthetic-cross-processor-provider'
+      )
+    `);
     const agent = await queryAs<{ id: string }>(`
       select id from public.begin_journal_normalization(
         ${row.id}, ${row.raw_revision},
@@ -317,14 +326,6 @@ describe("Life Console 2.4.0 journal normalization migration", () => {
       '{"title":"Agent title","summary":"","facts":[],"feelings":[],"people":[],"places":[],"themes":[],"planning_clues":[],"inferences":[],"tags":[]}'::jsonb,
       'Agent title', array[]::text[]
     )`);
-    const provider = await queryAs<{ id: string }>(`
-      select id from public.begin_journal_normalization(
-        ${row.id}, ${row.raw_revision},
-        'journal-normalization/1.0.0',
-        'journal-normalization-prompt/1.0.1',
-        'deepseek', 'task:synthetic-cross-processor-provider'
-      )
-    `);
     await queryAs(`select * from public.fail_journal_normalization(
       '${provider.rows[0].id}'::uuid, ${row.raw_revision}, 'provider_timeout'
     )`);
@@ -344,6 +345,69 @@ describe("Life Console 2.4.0 journal normalization migration", () => {
       title: "Agent title",
       content: "Synthetic cross processor raw",
     }]);
+  });
+
+  it("rejects a second begin while the same task is processing", async () => {
+    const created = await queryAs<{ id: number; raw_revision: number }>(`
+      select id, raw_revision from public.create_journal_v2(
+        'journal:synthetic-processing-lock', 'idem:synthetic-processing-lock',
+        date '2030-02-06', null, 'unknown', 'agent', 'owner-only',
+        'Synthetic processing raw'
+      )
+    `);
+    const row = created.rows[0];
+    const call = () => queryAs(`select * from public.begin_journal_normalization(
+      ${row.id}, ${row.raw_revision}, 'journal-normalization/1.0.0',
+      'journal-normalization-prompt/1.0.1', 'agent',
+      'task:synthetic-processing-lock'
+    )`);
+    await call();
+    await expect(call()).rejects.toThrow(/already processing/i);
+  });
+
+  it("does not let a late successful provider overwrite a completed Agent", async () => {
+    const created = await queryAs<{ id: number; raw_revision: number }>(`
+      select id, raw_revision from public.create_journal_v2(
+        'journal:synthetic-late-provider', 'idem:synthetic-late-provider',
+        date '2030-02-07', null, 'unknown', 'agent', 'owner-only',
+        'Synthetic late provider raw'
+      )
+    `);
+    const row = created.rows[0];
+    const provider = await queryAs<{ id: string }>(`select id from public.begin_journal_normalization(
+      ${row.id}, ${row.raw_revision}, 'journal-normalization/1.0.0',
+      'journal-normalization-prompt/1.0.1', 'deepseek', 'task:synthetic-late-provider-ds'
+    )`);
+    const agent = await queryAs<{ id: string }>(`select id from public.begin_journal_normalization(
+      ${row.id}, ${row.raw_revision}, 'journal-normalization/1.0.0',
+      'journal-normalization-prompt/1.0.1', 'agent', 'task:synthetic-late-provider-agent'
+    )`);
+    const fields = '"summary":"","facts":[],"feelings":[],"people":[],"places":[],"themes":[],"planning_clues":[],"inferences":[],"tags":[]';
+    await queryAs(`select * from public.complete_journal_normalization(
+      '${agent.rows[0].id}'::uuid, ${row.raw_revision},
+      '{"title":"Agent wins",${fields}}'::jsonb, 'Agent wins', array[]::text[]
+    )`);
+    await queryAs(`select * from public.complete_journal_normalization(
+      '${provider.rows[0].id}'::uuid, ${row.raw_revision},
+      '{"title":"Provider late",${fields}}'::jsonb, 'Provider late', array[]::text[]
+    )`);
+    const current = await queryAs<{ title: string; normalization_processor: string }>(`
+      select title, normalization_processor from public.journals where id = ${row.id}
+    `);
+    expect(current.rows).toEqual([{ title: "Agent wins", normalization_processor: "agent" }]);
+  });
+
+  it("keeps normalization RPC lock order job before journal", async () => {
+    const functions = await db.query<{ name: string; definition: string }>(`
+      select p.proname as name, pg_get_functiondef(p.oid) as definition
+      from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public'
+        and p.proname in ('begin_journal_normalization', 'complete_journal_normalization', 'fail_journal_normalization')
+    `);
+    for (const item of functions.rows) {
+      expect(item.definition.indexOf("journal_normalization_jobs"))
+        .toBeLessThan(item.definition.indexOf("public.journals"));
+    }
   });
 
   it("enables RLS on jobs and the approved person context projection", async () => {

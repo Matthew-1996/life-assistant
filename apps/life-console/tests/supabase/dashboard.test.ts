@@ -280,8 +280,8 @@ describe("Supabase dashboard client adapter", () => {
     expect(dashboard.progress.sample_counts).toEqual({ daily: 2, missing: 5 });
     expect(dashboard.records.recent_journals[0]).toEqual(expect.objectContaining({
       id: "32",
-      title: "Newest entry with deterministic whitespace.",
-      summary: "Newest entry with deterministic whitespace.",
+      title: "待整理日记",
+      summary: "原文已保存，尚未按统一契约整理。",
     }));
   });
 

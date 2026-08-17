@@ -10,6 +10,7 @@ const SYNTHETIC_JOURNAL =
   "合成日记：今天整理了书桌，感觉轻松，希望明天继续保持。";
 
 export type HealthFailureReason =
+  | "configuration_unavailable"
   | "auth_unavailable"
   | "provider_auth_or_billing"
   | "provider_rate_limited"
@@ -152,6 +153,14 @@ export async function journalNormalizationHealthRequest(
   } catch {
     emit("auth_unavailable", 503);
     return response(503, "provider_unavailable", "auth_unavailable");
+  }
+  if (!environment.deepSeekApiKey) {
+    emit("configuration_unavailable", 503);
+    return response(
+      503,
+      "provider_unavailable",
+      "configuration_unavailable",
+    );
   }
   try {
     await dependencies.normalize({

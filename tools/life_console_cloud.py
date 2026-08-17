@@ -267,16 +267,34 @@ class CloudClient:
         """Attach an Agent-produced contract result to an existing raw journal."""
         journal_id = record.get("journal_id")
         raw_revision = record.get("raw_revision")
-        record_key = record.get("record_key")
-        raw_text = record.get("content")
         if not isinstance(journal_id, int) or journal_id <= 0:
             raise ValueError("journal_id is required")
         if not isinstance(raw_revision, int) or raw_revision <= 0:
             raise ValueError("raw_revision is required")
+        source = _first_row(self._request(
+            "GET",
+            "/rest/v1/journals?"
+            + parse.urlencode({
+                "id": f"eq.{journal_id}",
+                "deleted_at": "is.null",
+                "select": (
+                    "id,record_key,content,raw_revision,revision,"
+                    "normalization_status"
+                ),
+                "limit": "1",
+            }),
+        ))
+        if source.get("id") != journal_id or source.get("raw_revision") != raw_revision:
+            raise CloudWriteError("conflict")
+        record_key = source.get("record_key")
+        raw_text = source.get("content")
         if not isinstance(record_key, str) or not record_key.strip():
-            raise ValueError("record_key is required")
+            raise CloudWriteError("unavailable")
         if not isinstance(raw_text, str) or not raw_text:
-            raise ValueError("content is required")
+            raise CloudWriteError("unavailable")
+        supplied_content = record.get("content")
+        if supplied_content is not None and supplied_content != raw_text:
+            raise CloudWriteError("conflict")
         context_revisions = record.get("context_revisions", {})
         if not isinstance(context_revisions, dict):
             raise ValueError("context_revisions must be an object")
@@ -304,6 +322,15 @@ class CloudClient:
         job_id = job.get("id")
         if not isinstance(job_id, str) or not job_id:
             raise CloudWriteError("unavailable")
+        if job.get("status") == "completed":
+            revision = source.get("revision")
+            if not isinstance(revision, int):
+                raise CloudWriteError("unavailable")
+            return {
+                "status": "saved",
+                "normalization_status": "completed",
+                "revision": revision,
+            }
         try:
             completed = _first_row(self._request(
                 "POST",

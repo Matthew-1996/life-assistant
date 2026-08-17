@@ -230,20 +230,27 @@ def validate_journal_normalization_contract(
     if (
         not isinstance(contract, dict)
         or contract.get("contract_version") != "journal-normalization/1.0.0"
-        or contract.get("prompt_version")
-        != "journal-normalization-prompt/1.0.0"
+        or not isinstance(contract.get("prompt_version"), str)
+        or re.fullmatch(
+            r"journal-normalization-prompt/\d+\.\d+\.\d+",
+            contract["prompt_version"],
+        ) is None
         or not isinstance(contract.get("system_prompt"), str)
         or not contract.get("system_prompt")
         or not isinstance(contract.get("schema"), dict)
     ):
         errors.append("统一日记整理契约版本、Prompt 或 Schema 不完整")
-    required_normalization_fields = [
-        "title", "summary", "facts", "feelings", "people", "places",
-        "themes", "planning_clues", "inferences", "tags",
-    ]
+    schema = contract.get("schema") if isinstance(contract, dict) else None
+    required_normalization_fields = (
+        schema.get("required") if isinstance(schema, dict) else None
+    )
+    properties = schema.get("properties") if isinstance(schema, dict) else None
     display_fields = contract.get("display_fields")
     if (
         not isinstance(display_fields, list)
+        or not isinstance(required_normalization_fields, list)
+        or not isinstance(properties, dict)
+        or set(properties) != set(required_normalization_fields)
         or [item.get("key") for item in display_fields if isinstance(item, dict)]
         != required_normalization_fields
         or any(

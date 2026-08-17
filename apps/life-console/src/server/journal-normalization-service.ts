@@ -47,7 +47,7 @@ export interface JournalNormalizationStore {
     sourceRevision: number;
     processor: "deepseek";
     taskKey: string;
-  }): Promise<Pick<JournalNormalizationJob, "id" | "source_revision">>;
+  }): Promise<Pick<JournalNormalizationJob, "id" | "source_revision" | "status">>;
   completeNormalization(input: {
     jobId: string;
     sourceRevision: number;
@@ -139,7 +139,18 @@ export async function normalizeJournalRequest(
     if (journal.raw_revision !== body.source_revision) {
       return json(409, "conflict");
     }
-    const storedContext = await store.getContextEntities();
+    const job = await store.beginNormalization({
+      journalId: body.journal_id,
+      sourceRevision: body.source_revision,
+      processor: "deepseek",
+      taskKey: body.task_key,
+    });
+    if (job.status === "completed") return json(200, "completed");
+    const storedContext = (await store.getContextEntities()).filter((entity) =>
+      [entity.display_name, ...entity.aliases].some((name) =>
+        name.length > 0 && journal.content.includes(name)
+      )
+    );
     const contextEntities = storedContext.map((entity) => ({
       text: entity.display_name,
       aliases: [...entity.aliases],
@@ -149,12 +160,6 @@ export async function normalizeJournalRequest(
     const contextRevisions = Object.fromEntries(
       storedContext.map((entity) => [entity.display_name, entity.revision]),
     );
-    const job = await store.beginNormalization({
-      journalId: body.journal_id,
-      sourceRevision: body.source_revision,
-      processor: "deepseek",
-      taskKey: body.task_key,
-    });
     let normalization: JournalNormalization;
     try {
       normalization = await dependencies.normalize({

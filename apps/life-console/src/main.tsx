@@ -65,33 +65,6 @@ if (supabaseMode) {
     dailyCheckins,
     goals,
     journals,
-    normalizeJournal: async (input) => {
-      const { data, error } = await supabase.auth.getSession();
-      const bearer = data.session?.access_token;
-      if (error || !bearer) return "failed";
-      const response = await fetch("/api/journal-normalize", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${bearer}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          journal_id: input.journalId,
-          source_revision: input.sourceRevision,
-          task_key: input.taskKey,
-        }),
-      });
-      let payload: unknown;
-      try {
-        payload = await response.json();
-      } catch {
-        return "failed";
-      }
-      const status = payload && typeof payload === "object"
-        ? (payload as { status?: unknown }).status
-        : null;
-      return status === "completed" ? "completed" : "failed";
-    },
   });
   const isRecoveryPath = window.location.pathname === "/auth/recovery";
   createRoot(root).render(

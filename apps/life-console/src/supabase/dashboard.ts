@@ -194,12 +194,6 @@ function recentJournals(journals: Journal[]): Dashboard["records"]["recent_journ
         && "summary" in journal.metadata
         ? journal.metadata
         : null;
-      const rawSummary = compactLine(journal.content, 240);
-      const summary = compactLine(normalized?.summary || rawSummary, 240);
-      const title = compactLine(
-        journal.title ?? normalized?.title ?? rawSummary,
-        100,
-      );
       const state = journal.normalization_status === "completed"
         ? "enriched"
         : journal.normalization_status === "processing"
@@ -207,6 +201,15 @@ function recentJournals(journals: Journal[]): Dashboard["records"]["recent_journ
           : journal.normalization_status === "failed"
             ? "failed"
             : "raw";
+      const completed = state === "enriched" && normalized;
+      const title = completed
+        ? compactLine(journal.title ?? normalized.title, 100)
+        : state === "failed" ? "整理失败的日记" : "待整理日记";
+      const summary = completed
+        ? compactLine(normalized.summary, 240)
+        : state === "failed"
+          ? "原文已保存；整理失败，可稍后重试。"
+          : "原文已保存，尚未按统一契约整理。";
       return {
         id: String(journal.id),
         date: journal.event_date,

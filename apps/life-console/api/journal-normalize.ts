@@ -54,17 +54,6 @@ export default async function handler(
       process.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "",
     deepSeekApiKey: process.env.DEEPSEEK_API_KEY ?? "",
   };
-  if (
-    !environment.supabaseUrl
-    || !environment.supabasePublishableKey
-    || !environment.deepSeekApiKey
-  ) {
-    await sendWebResponse(response, Response.json({ status: "normalization_unavailable" }, {
-      status: 503,
-      headers: { "Cache-Control": "no-store" },
-    }));
-    return;
-  }
   await sendWebResponse(
     response,
     await normalizeJournalRequest(toWebRequest(request), environment),
