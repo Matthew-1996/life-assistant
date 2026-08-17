@@ -37,7 +37,7 @@ beforeAll(async () => {
     "../../supabase/migrations/20260816170000_unified_journal_normalization.sql",
     "../../supabase/migrations/20260816171759_retry_failed_journal_normalization.sql",
     "../../supabase/migrations/20260816220627_preserve_completed_journal_normalization.sql",
-    "../../supabase/migrations/20260817021112_enforce_agent_normalization_priority.sql",
+    "../../supabase/migrations/20260817022619_enforce_agent_normalization_priority.sql",
   ];
   for (const migration of migrations) {
     if (migration.endsWith("0005_migration_tracking.sql")) {

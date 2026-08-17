@@ -1,4 +1,5 @@
 -- Life Console 2.4.0: serialize normalization jobs and keep Agent results authoritative.
+-- Version aligned with the Production migration history.
 
 create or replace function public.begin_journal_normalization(
   p_journal_id bigint,
