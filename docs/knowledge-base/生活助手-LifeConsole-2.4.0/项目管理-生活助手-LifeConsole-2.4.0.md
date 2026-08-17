@@ -3,9 +3,9 @@
 ## 1. 当前状态
 
 - 主阶段：已正式上线
-- 子状态：统一契约、数据库状态机、DeepSeek 合成链路、唯一授权单条、main Production 与发布证据均已验收；历史不批量处理
-- 功能分支：`agent/life-console-240-unified-journal`，待完成发布证据后清理
-- PR：功能 PR [#54](https://github.com/Matthew-1996/life-assistant/pull/54) 已 squash merge
+- 子状态：统一契约、数据库状态机、DeepSeek 合成链路、唯一授权单条与 main Production 均已验收；本文件随发布证据 PR 合入后成为正式知识库基线；历史不批量处理
+- 分支清理：功能与发布证据分支在发布证据 PR 合并后由本轮操作清理；不在合并前自证完成
+- PR：功能 PR [#54](https://github.com/Matthew-1996/life-assistant/pull/54) 已 squash merge；发布证据 PR [#55](https://github.com/Matthew-1996/life-assistant/pull/55) 承载本次去敏证据与上线状态基线
 - 真实数据：此前明确指出的唯一 failed journal 已由 Agent 完成；原文未变化，未触发其他日记，DeepSeek 兜底未调用
 - 部署：[正式站点](https://project-wpabq.vercel.app/) 已为 main merge commit 对应的 `READY / PROMOTED` Production
 
@@ -39,7 +39,7 @@
 3. 阶段 B：Agent processor 与 Supabase revision RPC。已完成代码、合成测试和 Production migration。
 4. 阶段 C：Vercel Function + DeepSeek 合成 POC。注入式测试及真实接口纯合成连通性均通过，不接真实日记。
 5. 阶段 D：唯一授权单条端到端质量验收。已完成；Agent 处理，DeepSeek 未调用。
-6. 阶段 E：正式上线。已完成 PR #54 合并、main Production 复验与 release-evidence 收口。
+6. 阶段 E：正式上线。PR #54 合并和 main Production 复验已完成；本文件随 PR #55 合并形成 release-evidence 闭环，随后执行本地分支/worktree 清理。
 
 ## 4. 开放风险
 
