@@ -143,3 +143,21 @@
 | GitHub CI | 每次功能推送的 privacy、python、node 均通过；最终 merge 仍以最新提交 CI 为门禁 |
 
 本机完整 Python/Vitest 在 iCloud worktree 中出现过回环端口权限、并发锁竞争和硬编码 5 秒冷启动超时；对应回环、PGlite、组件和 Production build 均已精确复跑通过，干净 GitHub CI 未复现功能失败。`tools/validate_project.py` 仍按设计因独立 worktree 缺少私人 iCloud 文件而失败，不作为本分支伪造的全绿证据。
+
+## 9. 2026-08-17 Production CSP 空白页热修复
+
+线上真实浏览器稳定复现：页面返回 200，但 Ajv 在浏览器入口执行 `new Function`，被 Production `script-src 'self'` CSP 拒绝，React 在挂载前中止。该结论同时由空 DOM、浏览器 CSP `EvalError` 与源码导入链支持。
+
+修复保留严格 CSP，不添加 `unsafe-eval`；仅将 Ajv Schema 编译和证据校验拆到服务端模块，前端共享契约仍使用同一 JSON 真相源。
+
+| 验收项 | 当前结果 |
+|---|---|
+| TDD 红灯 | 真实 Chromium 在 Production CSP 下精确失败于 `unsafe-eval` |
+| TDD 绿灯 | 同一回归在服务端拆分后通过，全局导航可见 |
+| 服务端契约回归 | normalization contract + DeepSeek + Vercel config 30/30 通过 |
+| 全量 Vitest | 54 文件 / 464 项通过 |
+| Production build | 通过；常规 JS 326.98 kB（gzip 97.70 kB） |
+| Playwright | 4/4 通过，包含严格 CSP 真实启动回归 |
+| Draft PR | #56 已建档并保持 Draft，未合并 |
+| Production | Vercel `READY`；正式 alias 指向当前热修复提交；首页 200，严格 CSP / `nosniff` 存在，未登录 POST 健康门禁 401 |
+| 真实浏览器 | 全新会话渲染全局导航和 Online 工作台；新会话控制台无 error/warn |

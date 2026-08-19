@@ -5,10 +5,16 @@ import { fileURLToPath } from "node:url";
 
 import { Miniflare } from "miniflare";
 
+import { candidateContentSecurityPolicy } from "./supabase-candidate-config.mjs";
+
 const applicationRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const assetsRoot = resolve(applicationRoot, "dist/client");
 const origin = "http://127.0.0.1:47821";
 const syntheticKek = Buffer.alloc(32, 7).toString("base64url");
+const syntheticContentSecurityPolicy = candidateContentSecurityPolicy({
+  VITE_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_synthetic_only",
+  VITE_SUPABASE_URL: "https://synthetic-project.supabase.co",
+});
 
 const miniflare = new Miniflare({
   compatibilityDate: "2025-08-01",
@@ -105,6 +111,7 @@ async function handleAsset(request, response, url) {
   }
   response.writeHead(200, {
     "Cache-Control": "no-store",
+    "Content-Security-Policy": syntheticContentSecurityPolicy,
     "Content-Type": contentTypes[extension(path)] ?? "application/octet-stream",
   });
   response.end(request.method === "HEAD" ? undefined : content);
