@@ -17,6 +17,13 @@ test("keeps the four-page workbench inside a phone viewport", async ({ page }) =
 
   await expect(page.getByRole("navigation", { name: "全局导航" })).toBeVisible();
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  const todayViewport = await page.evaluate(() => ({
+    body: document.body.scrollWidth,
+    document: document.documentElement.scrollWidth,
+    width: window.innerWidth,
+  }));
+  expect(todayViewport.body).toBeLessThanOrEqual(todayViewport.width);
+  expect(todayViewport.document).toBeLessThanOrEqual(todayViewport.width);
 
   for (const pageName of ["记录", "进展", "系统"] as const) {
     await page.getByRole("button", { name: pageName, exact: true }).click();
@@ -31,9 +38,61 @@ test("keeps the four-page workbench inside a phone viewport", async ({ page }) =
   }
 });
 
+test("keeps the 2.5 workbench in-screen and stacks columns below 1180px content width", async ({ page }) => {
+  for (const width of [1440, 1280, 1024, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/");
+    await expect(page.getByRole("region", { name: "本周寄语" })).toBeVisible();
+    await expect(page.getByRole("region", { exact: true, name: "Todo" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "每日新闻" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "今日锚点" })).toBeVisible();
+
+    const layout = await page.evaluate(() => {
+      const primary = document.querySelector<HTMLElement>(".workbench-primary");
+      const gantt = document.querySelector<HTMLElement>(".todo-gantt__scroll");
+      if (!primary || !gantt) throw new Error("2.5 workbench layout is missing");
+      return {
+        body: document.body.scrollWidth,
+        columns: getComputedStyle(primary).gridTemplateColumns.split(" ").length,
+        document: document.documentElement.scrollWidth,
+        ganttClient: gantt.clientWidth,
+        ganttScroll: gantt.scrollWidth,
+        overflowing: [...document.querySelectorAll<HTMLElement>("body *")]
+          .map((element) => ({
+            className: element.className,
+            clientWidth: element.clientWidth,
+            right: Math.round(element.getBoundingClientRect().right),
+            scrollWidth: element.scrollWidth,
+            tag: element.tagName,
+          }))
+          .filter((element) => element.right > window.innerWidth + 1 || element.scrollWidth > element.clientWidth + 1)
+          .slice(0, 20),
+        width: window.innerWidth,
+      };
+    });
+    expect(layout.body, JSON.stringify(layout.overflowing)).toBeLessThanOrEqual(layout.width);
+    expect(layout.document).toBeLessThanOrEqual(layout.width);
+    expect(layout.ganttClient).toBeLessThanOrEqual(layout.width);
+    expect(layout.ganttScroll).toBeGreaterThanOrEqual(layout.ganttClient);
+    expect(layout.columns).toBe(width >= 1280 ? 2 : 1);
+
+    for (const pageName of ["记录", "进展", "系统"] as const) {
+      await page.getByRole("button", { exact: true, name: pageName }).click();
+      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+      const pageWidth = await page.evaluate(() => ({
+        body: document.body.scrollWidth,
+        document: document.documentElement.scrollWidth,
+        width: window.innerWidth,
+      }));
+      expect(pageWidth.body, `${pageName} @ ${width}px`).toBeLessThanOrEqual(pageWidth.width);
+      expect(pageWidth.document, `${pageName} @ ${width}px`).toBeLessThanOrEqual(pageWidth.width);
+    }
+  }
+});
+
 test("creates a goal through the synthetic Sites Worker", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByText("阶段 C 基础设施状态", { exact: false })).toBeVisible();
+  await expect(page.getByRole("region", { name: "本周寄语" })).toBeVisible();
 
   await page.getByRole("button", { name: "进展" }).click();
   await page.getByLabel("目标名称").fill("Playwright synthetic goal");

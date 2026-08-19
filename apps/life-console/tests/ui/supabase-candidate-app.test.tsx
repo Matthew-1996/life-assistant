@@ -594,20 +594,23 @@ describe("Supabase candidate product application", () => {
     )).toBeNull();
   });
 
-  it("uses the accepted full workbench and a truthful empty state", () => {
+  it("uses the accepted 2.5 workbench and truthful service empty states", () => {
     renderCandidate();
 
     expect(screen.getByText("Life Console · Supabase Candidate")).toBeTruthy();
     expect(
-      screen.getByRole("heading", { level: 1, name: "今天，从真实数据开始。" }),
+      screen.getByRole("heading", {
+        level: 1,
+        name: "把重要的事情放在看得见的地方，给今天留出一段真正能完成的时间。",
+      }),
     ).toBeTruthy();
     expect(screen.getByLabelText("私有候选边界").textContent).toContain(
       "生产环境",
     );
-    expect(screen.getByRole("region", { name: "目标空态" })).toBeTruthy();
-    const currentPath = document.querySelector(".timeline .day-row.today");
-    expect(currentPath?.textContent).toContain("周二");
-    expect(currentPath?.textContent).toContain("今日建议");
+    expect(screen.getByRole("region", { name: "Todo" })).toBeTruthy();
+    expect(screen.getByText("当前预览未连接 Todo 数据源。")).toBeTruthy();
+    expect(screen.getByRole("region", { name: "每日新闻" })).toBeTruthy();
+    expect(screen.getByRole("region", { name: "今日锚点" })).toBeTruthy();
     expect(screen.queryByText("合成室内训练")).toBeNull();
     expect(screen.queryByText("候选环境边界")).toBeNull();
     expect(screen.queryByText(/publishable key/i)).toBeNull();
@@ -621,7 +624,9 @@ describe("Supabase candidate product application", () => {
     expect(screen.getByLabelText("线上唯一真相源").textContent).toContain(
       "Supabase 唯一真相源",
     );
-    expect(screen.getByText(/iCloud 仅保留单向备份与恢复副本/)).toBeTruthy();
+    expect(screen.getByLabelText("线上唯一真相源").textContent).toContain(
+      "iCloud 单向备份",
+    );
     expect(screen.queryByText(/Supabase Candidate/)).toBeNull();
     expect(screen.queryByText(/纯合成测试数据/)).toBeNull();
     expect(screen.queryByText(/ICLOUD_PRIMARY/)).toBeNull();

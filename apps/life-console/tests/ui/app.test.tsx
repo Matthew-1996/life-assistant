@@ -40,7 +40,10 @@ describe("Life Console synthetic UI", () => {
     render(<App />);
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "一周试行控制台。" }),
+      screen.getByRole("heading", {
+        level: 1,
+        name: "把重要的事情放在看得见的地方，给今天留出一段真正能完成的时间。",
+      }),
     ).toBeTruthy();
 
     const progress = navigationButton("进展");
@@ -72,15 +75,14 @@ describe("Life Console synthetic UI", () => {
     expect(screen.getByRole("link", { name: "跳到主要内容" })).toBeTruthy();
   });
 
-  it("makes the trial week projects the workbench focus", () => {
+  it("uses the accepted 2.5 workbench information architecture", () => {
     render(<App />);
 
-    const projects = screen.getByRole("region", { name: "本周双轨试行" });
-    expect(within(projects).getByText("合成室内训练")).toBeTruthy();
-    expect(within(projects).getByText("合成 Agent 实操")).toBeTruthy();
-    expect(screen.getByText("今日只做一个")).toBeTruthy();
-    expect(screen.getByText("本周路径，轻量可回退。")).toBeTruthy();
-    expect(screen.getByText("最低版不是失败")).toBeTruthy();
+    expect(screen.getByRole("region", { name: "本周寄语" })).toBeTruthy();
+    expect(screen.getByRole("region", { name: "Todo" })).toBeTruthy();
+    expect(screen.getByRole("region", { name: "每日新闻" })).toBeTruthy();
+    expect(screen.getByRole("region", { name: "今日锚点" })).toBeTruthy();
+    expect(screen.queryByText("隐私与保存链路")).toBeNull();
   });
 
   it("keeps unknown distinct from skipped in anchor controls", async () => {
@@ -100,18 +102,14 @@ describe("Life Console synthetic UI", () => {
     expect(skipped.getAttribute("aria-pressed")).toBe("true");
   });
 
-  it("renders confirmed auxiliary goals as read-only active projects", () => {
+  it("keeps confirmed auxiliary goals on the progress page", async () => {
+    const user = userEvent.setup();
     render(<App />);
+    await user.click(navigationButton("进展"));
 
-    const projects = screen.getByRole("region", { name: "本周双轨试行" });
-    expect(within(projects).getByText("合成室内训练")).toBeTruthy();
-    expect(within(projects).getByText("合成 Agent 实操")).toBeTruthy();
-    expect(
-      within(projects).getAllByText("2026-01-12 至 2026-01-18", {
-        selector: "span",
-      }),
-    ).toHaveLength(2);
-    expect(within(projects).getAllByText("只读项目")).toHaveLength(2);
+    expect(screen.getByText("合成室内训练")).toBeTruthy();
+    expect(screen.getByText("合成 Agent 实操")).toBeTruthy();
+    expect(screen.getByText("只读项目")).toBeTruthy();
   });
 
   it("shows quick record cards for movement and daily anchors instead of Agent fields", async () => {

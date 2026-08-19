@@ -207,14 +207,17 @@ git commit -m "feat(life-console): add deterministic projections"
 - Create: `apps/life-console/src/features/messages/WeeklyMessageHero.tsx`
 - Modify: `apps/life-console/src/features/today/TodayPage.tsx`
 - Modify: `apps/life-console/src/App.tsx`
+- Modify: `apps/life-console/src/main.tsx`
+- Modify: `apps/life-console/src/styles.css`
 - Test: `apps/life-console/tests/ui/today-250.test.tsx`
 - Test: `apps/life-console/tests/ui/todo-panel.test.tsx`
+- Test: `apps/life-console/tests/playwright/synthetic-write.spec.ts`
 
 **Interfaces:**
 - Consumes: Task 2 Repository ports、Task 3 projections。
 - Produces: 精简工作台和可测试的 Todo/list/gantt 组件。
 
-- [ ] **Step 1: 写工作台信息架构和 Todo 交互红灯**
+- [x] **Step 1: 写工作台信息架构和 Todo 交互红灯**
 
 ```tsx
 expect(screen.queryByText("隐私与保存链路")).not.toBeInTheDocument();
@@ -225,15 +228,15 @@ await user.click(screen.getByRole("button", { name: "新建 Todo" }));
 expect(repository.create).toHaveBeenCalledTimes(1);
 ```
 
-- [ ] **Step 2: 运行红灯**
+- [x] **Step 2: 运行红灯**
 
 Run: `npx vitest run tests/ui/today-250.test.tsx tests/ui/todo-panel.test.tsx`
 
-- [ ] **Step 3: 拆分 Today 并实现最小 UI**
+- [x] **Step 3: 拆分 Today 并实现最小 UI**
 
 容器只负责编排 hero、Todo 8 栏、新闻 4 栏和锚点；Repository 状态、表单和 Gantt 分别留在聚焦组件。今日锚点保留 2.4.0 四项、四种语义、revision 保存链路和草稿恢复，仅新增非空状态进展显示。内容区不足 1180px 时 Todo/新闻转为上下布局，所有 Grid 子项使用 `minmax(0, …)`；提交中不得顺带修改 Records/Progress。
 
-- [ ] **Step 4: 运行交互、可访问性和甘特边界测试**
+- [x] **Step 4: 运行交互、可访问性和甘特边界测试**
 
 Run: `npx vitest run tests/ui/today-250.test.tsx tests/ui/todo-panel.test.tsx`
 Expected: PASS；重复提交禁用、DDL 校验、状态、逾期、14 天窗口、今日锚点进展/修改可见；1440px、1280px、1024px 和 390px 的页面根节点无横向溢出。

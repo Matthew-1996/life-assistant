@@ -20,8 +20,11 @@ import { SupabaseReviewsPanel } from "./features/reviews/SupabaseReviewsPanel";
 import { StageAPocPanel } from "./features/system/StageAPocPanel";
 import { SystemPage } from "./features/system/SystemPage";
 import { TodayPage } from "./features/today/TodayPage";
+import type { DailyNewsClient } from "./domain/daily-news";
+import type { TodoRepositoryPort } from "./domain/todos";
 import type { AuthSession } from "./supabase/auth";
 import type { BackupRepository } from "./supabase/backups";
+import type { DashboardMessageRepositoryPort } from "./supabase/dashboard-messages";
 import type { DailyCheckinRepositoryPort } from "./supabase/daily-checkins";
 import type { GoalRepositoryPort } from "./supabase/goals";
 import type { JournalRepositoryPort } from "./supabase/journals";
@@ -32,6 +35,8 @@ export interface SupabaseProductContext {
   goals: GoalRepositoryPort;
   journals: JournalRepositoryPort;
   reviews: ReviewRepositoryPort;
+  dashboardMessages?: DashboardMessageRepositoryPort;
+  todos?: TodoRepositoryPort;
   session: AuthSession;
   signOut(): Promise<void>;
   backups?: BackupRepository;
@@ -50,6 +55,9 @@ interface AppProps {
   mode?: "local" | "sites" | "candidate-preview" | "supabase-candidate" | "supabase-production";
   stageAPocEnabled?: boolean;
   supabase?: SupabaseProductContext;
+  dailyNews?: DailyNewsClient;
+  dashboardMessages?: DashboardMessageRepositoryPort;
+  todos?: TodoRepositoryPort;
 }
 
 export function App({
@@ -58,6 +66,9 @@ export function App({
   mode = "local",
   stageAPocEnabled = false,
   supabase,
+  dailyNews,
+  dashboardMessages,
+  todos,
 }: AppProps) {
   const supabaseMode = mode === "supabase-candidate" || mode === "supabase-production";
   const [activePage, setActivePage] = useState<PageId>("today");
@@ -177,9 +188,12 @@ export function App({
         client={mode === "candidate-preview" ? undefined : client}
         mode={mode}
         draftScope={supabase?.session.userId}
+        dailyNews={dailyNews}
+        dashboardMessages={dashboardMessages ?? supabase?.dashboardMessages}
         onNavigate={setActivePage}
         onSaved={refreshAfterWrite}
         sourceTruth={sitesStatus?.source_truth}
+        todos={todos ?? supabase?.todos}
       />
     ),
     progress: (

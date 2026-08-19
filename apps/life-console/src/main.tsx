@@ -13,9 +13,11 @@ import {
   resolveSupabaseConfig,
 } from "./supabase/client";
 import { DailyCheckinRepository } from "./supabase/daily-checkins";
+import { DashboardMessageRepository } from "./supabase/dashboard-messages";
 import { GoalRepository } from "./supabase/goals";
 import { JournalRepository } from "./supabase/journals";
 import { ReviewRepository } from "./supabase/reviews";
+import { TodoRepository } from "./supabase/todos";
 import { createSupabaseDashboardClient } from "./supabase/dashboard";
 import "./styles.css";
 
@@ -55,9 +57,11 @@ if (supabaseMode) {
   }
   const supabase = createLifeConsoleSupabaseClient(config);
   const dailyCheckins = new DailyCheckinRepository(supabase);
+  const dashboardMessages = new DashboardMessageRepository(supabase);
   const goals = new GoalRepository(supabase);
   const journals = new JournalRepository(supabase);
   const reviews = new ReviewRepository(supabase);
+  const todos = new TodoRepository(supabase);
   const backups = new BackupRepository(supabase);
   const auth = createSupabaseAuthService(supabase.auth);
   const dashboardClient = createSupabaseDashboardClient({
@@ -80,12 +84,14 @@ if (supabaseMode) {
             mode={supabaseProductionMode ? "supabase-production" : "supabase-candidate"}
             supabase={{
               dailyCheckins,
+              dashboardMessages,
               backups,
               goals,
               journals,
               reviews,
               session,
               signOut,
+              todos,
             }}
           />
         )}
