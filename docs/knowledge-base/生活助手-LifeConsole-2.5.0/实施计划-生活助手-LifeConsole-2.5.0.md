@@ -24,7 +24,7 @@
 ### Task 1: Owner 数据模型与原子 RPC
 
 **Files:**
-- Create: `apps/life-console/supabase/migrations/20260819233000_life_console_250.sql`
+- Create: `apps/life-console/supabase/migrations/20260819161427_life_console_250.sql`（Supabase CLI 2.111.0 生成）
 - Test: `apps/life-console/tests/supabase/life-console-250-migration.test.ts`
 - Test: `apps/life-console/tests/supabase/life-console-250-rls.test.ts`
 
@@ -32,20 +32,24 @@
 - Produces: `todo_items`、`todo_status_events`、`dashboard_messages`；六个固定 RPC。
 - Consumes: 既有 `idempotency_keys`、`audit_events`、`journals` revision trigger 和 `auth.uid()` 模式。
 
-- [ ] **Step 1: 写 migration 结构红灯**
+- [x] **Step 1: 写 migration 结构红灯**
 
 ```ts
-expect(schema).toContain("create table public.todo_items");
-expect(schema).toContain("create function public.transition_todo");
-expect(schema).toContain("create function public.restore_journal");
+expect(catalogTables).toEqual([
+  "dashboard_messages",
+  "todo_items",
+  "todo_status_events",
+]);
+expect(transitionResult.status).toBe("completed");
+expect(restoredJournal.deleted_at).toBeNull();
 ```
 
-- [ ] **Step 2: 运行红灯**
+- [x] **Step 2: 运行红灯**
 
 Run: `npx vitest run tests/supabase/life-console-250-migration.test.ts`
 Expected: FAIL，migration 文件或固定对象不存在。
 
-- [ ] **Step 3: 写最小 DDL、RLS 与 RPC**
+- [x] **Step 3: 写最小 DDL、RLS 与 RPC**
 
 ```sql
 create table public.todo_items (
@@ -67,15 +71,15 @@ create table public.todo_items (
 
 RPC 必须锁定目标行、验证 `expected_revision`、事务内更新时间和事件，并只返回当前 Owner 行。
 
-- [ ] **Step 4: 写并运行双 Owner、幂等、revision、时间与软删除测试**
+- [x] **Step 4: 写并运行双 Owner、幂等、revision、时间与软删除测试**
 
 Run: `npx vitest run tests/supabase/life-console-250-migration.test.ts tests/supabase/life-console-250-rls.test.ts`
 Expected: PASS；Owner B 无法读写 Owner A；重复 key 同请求返回同 id；stale revision 拒绝。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
-git add apps/life-console/supabase/migrations/20260820_life_console_250.sql apps/life-console/tests/supabase/life-console-250-*.test.ts
+git add apps/life-console/supabase/migrations/20260819161427_life_console_250.sql apps/life-console/tests/supabase/life-console-250-*.test.ts
 git commit -m "feat(life-console): add 2.5 owner data model"
 ```
 
