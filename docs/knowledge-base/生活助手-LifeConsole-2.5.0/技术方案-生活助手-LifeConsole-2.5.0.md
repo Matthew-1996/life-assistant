@@ -1,6 +1,6 @@
 # 技术方案：Life Console 2.5.0
 
-状态：draft.1，待 PO Gate 2 评审。
+状态：draft.2，已按首轮反馈补充响应式与今日锚点复用约束，待 PO Gate 2 复评。
 
 ## 1. 总体架构
 
@@ -100,6 +100,8 @@ Owner Agent (Monday 12:00 Asia/Shanghai)
 ## 8. 前端与 CSP
 
 - Today、Records、Progress 拆为页面容器和聚焦组件；Repository 注入继续由 `App` 统一装配。
+- 今日锚点继续读取 `daily_checkins.anchors` 并复用现有 check-in 更新与 revision 冲突链路；填写进展为四个 key 中非空值的派生计数，不新增存储字段。
+- 内容区达到 1180px 才使用 Todo/新闻、记录/复盘和趋势双栏；不足时转为上下布局。所有 Grid 子项使用 `minmax(0, …)`，长文本允许换行；只有甘特和睡眠表允许卡片内部滚动，页面根节点不得横向滚动。
 - 样式拆为 token、共享组件、页面样式；禁止在浏览器引入运行时 Schema 编译。
 - Production CSP 保持 `script-src 'self'`；`img-src` 只新增 `https://images.unsplash.com`，不增加 `unsafe-eval`、通配域名或 data 以外的新协议。
 - 增加本地 favicon，关闭当前非阻断 `/favicon.ico` 404。

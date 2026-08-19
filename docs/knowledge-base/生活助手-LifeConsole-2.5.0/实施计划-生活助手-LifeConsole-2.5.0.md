@@ -210,6 +210,8 @@ git commit -m "feat(life-console): add deterministic projections"
 
 ```tsx
 expect(screen.queryByText("隐私与保存链路")).not.toBeInTheDocument();
+expect(screen.getByRole("group", { name: "起床状态" })).toBeInTheDocument();
+expect(screen.getByText("0 / 4 已填写")).toBeInTheDocument();
 await user.type(screen.getByLabelText("Todo 项目"), "合成验收任务");
 await user.click(screen.getByRole("button", { name: "新建 Todo" }));
 expect(repository.create).toHaveBeenCalledTimes(1);
@@ -221,12 +223,12 @@ Run: `npx vitest run tests/ui/today-250.test.tsx tests/ui/todo-panel.test.tsx`
 
 - [ ] **Step 3: 拆分 Today 并实现最小 UI**
 
-容器只负责编排 hero、Todo 8 栏、新闻 4 栏和锚点；Repository 状态、表单和 Gantt 分别留在聚焦组件。提交中不得顺带修改 Records/Progress。
+容器只负责编排 hero、Todo 8 栏、新闻 4 栏和锚点；Repository 状态、表单和 Gantt 分别留在聚焦组件。今日锚点保留 2.4.0 四项、四种语义、revision 保存链路和草稿恢复，仅新增非空状态进展显示。内容区不足 1180px 时 Todo/新闻转为上下布局，所有 Grid 子项使用 `minmax(0, …)`；提交中不得顺带修改 Records/Progress。
 
 - [ ] **Step 4: 运行交互、可访问性和甘特边界测试**
 
 Run: `npx vitest run tests/ui/today-250.test.tsx tests/ui/todo-panel.test.tsx`
-Expected: PASS；重复提交禁用、DDL 校验、状态、逾期和 14 天窗口可见。
+Expected: PASS；重复提交禁用、DDL 校验、状态、逾期、14 天窗口、今日锚点进展/修改可见；1440px、1280px、1024px 和 390px 的页面根节点无横向溢出。
 
 - [ ] **Step 5: 提交**
 

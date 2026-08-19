@@ -3,7 +3,7 @@
 ## 1. 当前状态
 
 - 主阶段：待设计方案评审。
-- 子状态：2.4.0 基线已收口；2.5.0 worktree、治理基线和正式文档 draft.1 已建立；生产功能未开始。
+- 子状态：2.4.0 基线已收口；首轮视觉反馈已进入 draft.2 修订；生产功能未开始。
 - 分支：`agent/life-console-250`，独立 worktree。
 - PR：[Draft PR #58](https://github.com/Matthew-1996/life-assistant/pull/58)，保持 Draft 至全量验收与合并门禁。
 - 数据库、Owner Preview、自动化与 Production：均未变更。
@@ -25,7 +25,7 @@
 
 | 门禁 | 当前状态 | 恢复条件 |
 |---|---|---|
-| 正式视觉/设计/技术 | pending | PO 明确确认 Visual Companion 与 draft.1 文档 |
+| 正式视觉/设计/技术 | pending | PO 明确确认 Visual Companion v2 与 draft.2 文档 |
 | Supabase migration | pending | 代码与合成数据库验收通过，PO 当次确认 |
 | Owner Preview 写入 | pending | 合成 Preview 通过，PO 确认合成写入范围 |
 | 寄语自动化创建 | pending | Preview 通过，PO 确认 Prompt、RRULE 和权限 |
@@ -50,4 +50,6 @@
 | 2026-08-19 | 寄语每周更新，读取最小 Owner 上下文 | PO 已确认 |
 | 2026-08-19 | 新闻使用 GDELT + 白名单 + DeepSeek 公开摘要 + Runtime Cache | PO 已确认 |
 | 2026-08-19 | #56 Ready、合并与基线清理 | PO 已确认并完成 |
+| 2026-08-20 | 固定 1440px 评审画板按可用宽度缩放；实际双栏在不足 1180px 时转单栏 | PO 反馈，draft.2 已修订 |
+| 2026-08-20 | 今日锚点复用 2.4.0 四项、四状态、进展与修改链路 | PO 反馈，draft.2 已修订 |
 | 2026-08-19 | 视觉、设计、技术确认前不写生产功能 | 当前门禁 |
