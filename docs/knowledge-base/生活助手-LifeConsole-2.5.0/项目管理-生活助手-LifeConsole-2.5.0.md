@@ -5,7 +5,7 @@
 - 主阶段：待设计方案评审。
 - 子状态：2.4.0 基线已收口；2.5.0 worktree、治理基线和正式文档 draft.1 已建立；生产功能未开始。
 - 分支：`agent/life-console-250`，独立 worktree。
-- PR：单一 Draft PR 在首个文档提交后创建。
+- PR：[Draft PR #58](https://github.com/Matthew-1996/life-assistant/pull/58)，保持 Draft 至全量验收与合并门禁。
 - 数据库、Owner Preview、自动化与 Production：均未变更。
 
 ## 2. 阶段计划
@@ -13,7 +13,7 @@
 每个连续工作块不超过 4 小时：
 
 1. 基线收口：#56 合并、Production CSP 复验、热修复分支/worktree 清理。已完成。
-2. 立项：2.5.0 worktree、完整文档、Draft PR。进行中。
+2. 立项：2.5.0 worktree、完整文档、Draft PR。已完成。
 3. Gate 2：Visual Companion 桌面/移动视觉、设计与技术评审。进行中。
 4. 数据能力：migration、RLS、RPC、Repository、backup v3。
 5. 页面与算法：工作台、记录、进展、样式拆分。
