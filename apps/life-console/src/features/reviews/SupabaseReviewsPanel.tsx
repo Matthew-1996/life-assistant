@@ -9,6 +9,7 @@ import {
 
 import { useSessionDraft } from "../../hooks/useSessionDraft";
 import { SESSION_DRAFT_STORAGE_PREFIX } from "../../lib/draft-storage";
+import { projectReviewFields } from "./review-projection";
 import type {
   PhaseReview,
   ReviewRepositoryPort,
@@ -156,6 +157,24 @@ function matchesFilter(values: string[], filter: string): boolean {
 
 function cursorMarker(cursor: Cursor): string {
   return `${cursor.sortValue}:${cursor.id}`;
+}
+
+function ReviewReading({ review }: { review: { content: string; structured_data: Record<string, unknown> } }) {
+  const projection = projectReviewFields(review.structured_data);
+  if (projection.fields.length === 0 && projection.fallbackText === null) {
+    return <p className="review-reading__raw">{review.content}</p>;
+  }
+  return (
+    <div className="review-reading">
+      {projection.fields.length > 0 && (
+        <dl>{projection.fields.map((field) => (
+          <div key={field.key}><dt>{field.label}</dt><dd>{field.value}</dd></div>
+        ))}</dl>
+      )}
+      {projection.fallbackText && <pre>{projection.fallbackText}</pre>}
+      <details><summary>查看原始文本</summary><p>{review.content}</p></details>
+    </div>
+  );
 }
 
 export function SupabaseReviewsPanel({
@@ -760,7 +779,7 @@ export function SupabaseReviewsPanel({
                         <time dateTime={review.week_start}>
                           周起始日：{review.week_start}
                         </time>
-                        <p>{review.content}</p>
+                        <ReviewReading review={review} />
                         <button
                           disabled={conflict !== null
                             || loadingConflict
@@ -902,7 +921,7 @@ export function SupabaseReviewsPanel({
                         <span>
                           阶段：{review.period_start} — {review.period_end}
                         </span>
-                        <p>{review.content}</p>
+                        <ReviewReading review={review} />
                         <button
                           disabled={conflict !== null
                             || loadingConflict

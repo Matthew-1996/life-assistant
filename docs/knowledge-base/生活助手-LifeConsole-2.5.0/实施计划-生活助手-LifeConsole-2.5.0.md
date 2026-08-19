@@ -241,7 +241,7 @@ Run: `npx vitest run tests/ui/today-250.test.tsx tests/ui/todo-panel.test.tsx`
 Run: `npx vitest run tests/ui/today-250.test.tsx tests/ui/todo-panel.test.tsx`
 Expected: PASS；重复提交禁用、DDL 校验、状态、逾期、14 天窗口、今日锚点进展/修改可见；1440px、1280px、1024px 和 390px 的页面根节点无横向溢出。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add apps/life-console/src/features/today apps/life-console/src/features/todos apps/life-console/src/features/news apps/life-console/src/features/messages apps/life-console/src/App.tsx apps/life-console/tests/ui
@@ -264,7 +264,7 @@ git commit -m "feat(life-console): rebuild the 2.5 workbench"
 - Consumes: Task 2 Journal/Review ports、Task 3 review projection。
 - Produces: 三段 Records 页面和软删除/恢复交互。
 
-- [ ] **Step 1: 写移除区块、折叠和确认红灯**
+- [x] **Step 1: 写移除区块、折叠和确认红灯**
 
 ```tsx
 expect(screen.queryByText("原文保存预览")).not.toBeInTheDocument();
@@ -273,19 +273,19 @@ expect(screen.getByRole("dialog", { name: "移到已删除" })).toBeVisible();
 expect(repository.softDelete).not.toHaveBeenCalled();
 ```
 
-- [ ] **Step 2: 运行红灯后实现最小组件拆分**
+- [x] **Step 2: 运行红灯后实现最小组件拆分**
 
 Run: `npx vitest run tests/ui/records-250.test.tsx tests/ui/journal-delete-restore.test.tsx`
 
-- [ ] **Step 3: 实现删除/恢复和复盘滚动**
+- [x] **Step 3: 实现删除/恢复和复盘滚动**
 
 确认按钮调用 expected revision；冲突保留弹窗并提示刷新。复盘正文使用 `max-height: 320px; overflow: auto; overflow-wrap: anywhere`。
 
-- [ ] **Step 4: 运行 Records 与既有日记/复盘回归**
+- [x] **Step 4: 运行 Records 与既有日记/复盘回归**
 
 Run: `npx vitest run tests/ui/records-250.test.tsx tests/ui/journal-delete-restore.test.tsx tests/ui/supabase-journals-panel.test.tsx tests/ui/supabase-reviews-panel.test.tsx`
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add apps/life-console/src/features/records apps/life-console/src/features/journals apps/life-console/src/features/reviews apps/life-console/tests/ui

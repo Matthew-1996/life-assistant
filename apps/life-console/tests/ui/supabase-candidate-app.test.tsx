@@ -277,7 +277,7 @@ describe("Supabase candidate product application", () => {
     await waitFor(() => expect(client.dashboard).toHaveBeenCalledTimes(2));
   });
 
-  it("moves untouched simple forms to the refreshed Shanghai date", async () => {
+  it("refreshes the displayed Shanghai date without retired simple forms", async () => {
     const user = userEvent.setup();
     const nextDashboard = structuredClone(dashboard);
     nextDashboard.date = "2030-01-02";
@@ -288,19 +288,13 @@ describe("Supabase candidate product application", () => {
     await waitFor(() => expect(client.dashboard).toHaveBeenCalledTimes(1));
     const nav = screen.getByRole("navigation", { name: "全局导航" });
     await user.click(within(nav).getByRole("button", { name: "记录" }));
-    expect((screen.getByLabelText("事件日期") as HTMLInputElement).value).toBe(
-      "2030-01-01",
-    );
+    expect(screen.queryByLabelText("事件日期")).toBeNull();
+    expect(screen.queryByRole("tab", { name: "每日状态" })).toBeNull();
 
     window.dispatchEvent(new Event("focus"));
 
-    await waitFor(() => expect(
-      (screen.getByLabelText("事件日期") as HTMLInputElement).value,
-    ).toBe("2030-01-02"));
-    await user.click(screen.getByRole("tab", { name: "每日状态" }));
-    expect((screen.getByLabelText("日期") as HTMLInputElement).value).toBe(
-      "2030-01-02",
-    );
+    await waitFor(() => expect(client.dashboard).toHaveBeenCalledTimes(2));
+    expect(screen.getByRole("button", { name: /2030-01-02/ })).toBeTruthy();
   });
 
   it("restores a failed Today anchor draft after page navigation", async () => {
@@ -386,7 +380,7 @@ describe("Supabase candidate product application", () => {
     )).toBeNull();
   });
 
-  it("loads the selected historical check-in revision before saving", async () => {
+  it("does not expose historical check-in editing on the record page", async () => {
     const user = userEvent.setup();
     const historicalDate = "2029-12-31";
     const historical = {
@@ -438,23 +432,13 @@ describe("Supabase candidate product application", () => {
 
     const nav = screen.getByRole("navigation", { name: "全局导航" });
     await user.click(within(nav).getByRole("button", { name: "记录" }));
-    await user.click(screen.getByRole("tab", { name: "每日状态" }));
-    const date = screen.getByLabelText(/^日期$/);
-    await user.clear(date);
-    await user.type(date, historicalDate);
-    await user.selectOptions(screen.getByLabelText("精力"), "4");
-    await user.click(screen.getByRole("button", { name: "更新这些状态" }));
-
-    await waitFor(() => expect(checkin).toHaveBeenCalledOnce());
-    expect(historicalCheckins.get).toHaveBeenCalledWith(historicalDate);
-    expect(checkin).toHaveBeenCalledWith(historicalDate, {
-      schema_version: 1,
-      expect_revision: 7,
-      fields: { energy: 4 },
-    });
+    expect(screen.queryByRole("tab", { name: "每日状态" })).toBeNull();
+    expect(screen.queryByLabelText("精力")).toBeNull();
+    expect(historicalCheckins.get).not.toHaveBeenCalled();
+    expect(checkin).not.toHaveBeenCalled();
   });
 
-  it("guards the fallback form against duplicate submits while saving", async () => {
+  it("guards the primary conversation form against duplicate submits while saving", async () => {
     const user = userEvent.setup();
     let release: ((value: Awaited<ReturnType<LifeConsoleClient["journal"]>>) => void)
       | undefined;
@@ -483,8 +467,11 @@ describe("Supabase candidate product application", () => {
     );
     const nav = screen.getByRole("navigation", { name: "全局导航" });
     await user.click(within(nav).getByRole("button", { name: "记录" }));
-    await user.type(screen.getByLabelText("发生了什么"), "Synthetic entry");
-    const submit = screen.getByRole("button", { name: "保存日记" });
+    await user.type(
+      screen.getByLabelText("直接描述想记录的内容"),
+      "Synthetic entry",
+    );
+    const submit = screen.getByRole("button", { name: "保存到 Supabase 候选环境" });
     await user.click(submit);
     submit.closest("form")?.dispatchEvent(new Event("submit", {
       bubbles: true,
@@ -494,7 +481,7 @@ describe("Supabase candidate product application", () => {
     expect(journal).toHaveBeenCalledOnce();
     expect(screen.queryByText("已保存到 Supabase 候选环境")).toBeNull();
     expect((screen.getByRole("button", {
-      name: "正在保存…",
+      name: "保存中…",
     }) as HTMLButtonElement).disabled).toBe(true);
 
     release?.({
@@ -508,21 +495,19 @@ describe("Supabase candidate product application", () => {
     await screen.findByText("日记已保存到测试云端。");
   });
 
-  it("restores both simple fallback drafts after navigating away", async () => {
+  it("restores the primary conversation draft after navigating away", async () => {
     const user = userEvent.setup();
     renderCandidate();
     const nav = screen.getByRole("navigation", { name: "全局导航" });
     await user.click(within(nav).getByRole("button", { name: "记录" }));
-    await user.type(screen.getByLabelText("发生了什么"), "Synthetic journal draft");
-    await user.click(screen.getByRole("tab", { name: "每日状态" }));
-    await user.selectOptions(screen.getByLabelText("情绪"), "4");
+    await user.type(
+      screen.getByLabelText("直接描述想记录的内容"),
+      "Synthetic journal draft",
+    );
 
     await user.click(within(nav).getByRole("button", { name: "系统" }));
     await user.click(within(nav).getByRole("button", { name: "记录" }));
-    await user.click(screen.getByRole("tab", { name: "日记" }));
     expect(await screen.findByDisplayValue("Synthetic journal draft")).toBeTruthy();
-    await user.click(screen.getByRole("tab", { name: "每日状态" }));
-    expect((screen.getByLabelText("情绪") as HTMLSelectElement).value).toBe("4");
   });
 
   it("restores a main journal key after remount and resets it when the payload changes", async () => {
@@ -645,7 +630,7 @@ describe("Supabase candidate product application", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "轻量记录，明确保存。" }),
     ).toBeTruthy();
-    expect(screen.getByText("保存结果明确可见，失败时不丢草稿")).toBeTruthy();
+    expect(screen.getByText("一句话也可以；只有明确保存成功才算已记录。")).toBeTruthy();
     expect(await screen.findByRole("heading", { name: "日记管理与修订" })).toBeTruthy();
     expect(await screen.findByRole("heading", { name: "复盘" })).toBeTruthy();
 

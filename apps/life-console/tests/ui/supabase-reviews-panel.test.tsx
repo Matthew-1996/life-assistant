@@ -195,6 +195,31 @@ describe("Supabase Reviews panel", () => {
     expect(screen.queryByText("Synthetic phase")).toBeNull();
   });
 
+  it("projects known structured fields in Chinese and safely wraps unknown data", async () => {
+    const structuredWeekly: WeeklyReview = {
+      ...weekly,
+      structured_data: {
+        answers: {
+          better_summary: "节奏更稳定",
+          next_track: "adjust",
+        },
+        future_schema: {
+          note: "这是一段尚未识别的长字段内容",
+        },
+      },
+    };
+    const { container } = render(
+      <SupabaseReviewsPanel repository={repository([structuredWeekly])} />,
+    );
+
+    expect(await screen.findByText("变好的地方")).toBeTruthy();
+    expect(screen.getByText("节奏更稳定")).toBeTruthy();
+    expect(screen.getByText("下一方向")).toBeTruthy();
+    expect(screen.getByText("调整")).toBeTruthy();
+    expect(screen.getByText(/future_schema/)).toBeTruthy();
+    expect(container.querySelector(".review-reading pre")).toBeTruthy();
+  });
+
   it("creates weekly and phase reviews through separate inputs", async () => {
     const user = userEvent.setup();
     const repo = repository();

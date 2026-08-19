@@ -5,6 +5,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { webcrypto } from "node:crypto";
@@ -117,6 +118,7 @@ function createRepository(
 
 describe("Supabase Journals panel", () => {
   it("uses the unified structured renderer for saved raw and normalized data", async () => {
+    const user = userEvent.setup();
     const normalizedJournal: Journal = {
       ...syntheticJournal,
       normalization_status: "completed",
@@ -134,9 +136,10 @@ describe("Supabase Journals panel", () => {
     const view = await screen.findByRole("article", {
       name: "Synthetic Journal",
     });
-    expect(view.querySelector(".journal-raw-text")?.textContent).toBe(
-      "Synthetic journal content",
-    );
+    expect(within(view).getByRole("region", { name: "用户原话" }).textContent)
+      .toContain("Synthetic journal content");
+    expect(screen.queryByText("Unified synthetic summary")).toBeNull();
+    await user.click(within(view).getByRole("button", { name: "展开助手整理" }));
     expect(screen.getByText("Unified synthetic summary")).toBeTruthy();
   });
 
@@ -595,13 +598,14 @@ describe("Supabase Journals panel", () => {
     ).toBeNull();
   });
 
-  it("does not expose withdrawal, restore, or delete actions", async () => {
+  it("exposes recoverable deletion without permanent delete", async () => {
     const repository = createRepository([syntheticJournal]);
     render(<SupabaseJournalsPanel repository={repository} />);
     await screen.findByText("Synthetic Journal");
 
     expect(screen.queryByRole("button", { name: /撤回/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: /恢复/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: /删除/ })).toBeNull();
+    expect(screen.getByRole("button", { name: "删除日记" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /查看已删除/ })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /永久删除/ })).toBeNull();
   });
 });

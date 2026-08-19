@@ -33,7 +33,7 @@ describe("Life Console candidate preview", () => {
     expect(screen.queryByText("HTTPS 回环与 Worker 容量 POC")).toBeNull();
 
     await user.click(navigationButton("记录"));
-    expect(screen.getByRole("heading", { name: "先预览，再写入。" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "轻量记录，明确保存。" })).toBeTruthy();
 
     await user.click(navigationButton("进展"));
     expect(
