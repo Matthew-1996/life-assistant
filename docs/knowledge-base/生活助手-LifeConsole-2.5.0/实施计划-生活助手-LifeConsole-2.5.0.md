@@ -164,7 +164,7 @@ git commit -m "feat(life-console): add repositories and backup v3"
 - Produces: `sortTodos`、`isOverdue`、`selectTodayTodos`、`observeTrend`、`projectReviewFields`。
 - Consumes: Task 2 domain types。
 
-- [ ] **Step 1: 写纯函数红灯**
+- [x] **Step 1: 写纯函数红灯**
 
 ```ts
 expect(observeTrend([3, 4, 4], [2, 2, 3])).toEqual({
@@ -177,20 +177,20 @@ expect(observeTrend([3, 4], [2, 3, 4])).toEqual({
 });
 ```
 
-- [ ] **Step 2: 运行红灯并确认因函数缺失失败**
+- [x] **Step 2: 运行红灯并确认因函数缺失失败**
 
 Run: `npx vitest run tests/features/todo-projections.test.ts tests/features/trend-observations.test.ts tests/features/review-projection.test.ts`
 
-- [ ] **Step 3: 实现最小纯函数**
+- [x] **Step 3: 实现最小纯函数**
 
 趋势阈值使用相对变化：绝对变化小于前窗均值的 5% 视为稳定；前窗为 0 时只比较绝对值。任何窗口有效样本少于 3 返回 `insufficient`。
 
-- [ ] **Step 4: 运行专项与类型检查**
+- [x] **Step 4: 运行专项与类型检查**
 
 Run: `npx vitest run tests/features`
 Expected: PASS，无诊断用语、未知字段回退为自动换行文本。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add apps/life-console/src/features apps/life-console/tests/features
