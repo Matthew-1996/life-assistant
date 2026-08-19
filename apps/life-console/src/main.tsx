@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 
 import { App } from "./App";
 import { createApiClient } from "./api/client";
+import { createDailyNewsApiClient } from "./api/daily-news-client";
 import { createSitesApiClient } from "./api/sites-client";
 import { syntheticDashboard } from "./data/dashboard";
 import { SupabaseAuthGate } from "./features/auth/SupabaseAuthGate";
@@ -66,6 +67,14 @@ if (supabaseMode) {
   const todos = new TodoRepository(supabase);
   const backups = new BackupRepository(supabase);
   const auth = createSupabaseAuthService(supabase.auth);
+  const dailyNews = createDailyNewsApiClient({
+    fetch: globalThis.fetch,
+    getAccessToken: async () => {
+      const { data, error } = await supabase.auth.getSession();
+      if (error) throw error;
+      return data.session?.access_token ?? null;
+    },
+  });
   const dashboardClient = createSupabaseDashboardClient({
     dateProvider: shanghaiDate,
     dailyCheckins,
@@ -82,6 +91,7 @@ if (supabaseMode) {
         {({ session, signOut }) => (
           <App
             client={dashboardClient}
+            dailyNews={dailyNews}
             key={session.userId}
             mode={supabaseProductionMode ? "supabase-production" : "supabase-candidate"}
             supabase={{

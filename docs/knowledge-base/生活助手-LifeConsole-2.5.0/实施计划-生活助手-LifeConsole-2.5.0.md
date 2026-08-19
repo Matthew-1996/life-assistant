@@ -347,7 +347,7 @@ git commit -m "feat(life-console): add deterministic progress trends"
 - Produces: Owner endpoint、Cron endpoint、GDELT/DeepSeek/cache 注入式服务。
 - Consumes: Task 2 `DailyNewsDigest`。
 
-- [ ] **Step 1: 写鉴权、白名单、去重、配比和降级红灯**
+- [x] **Step 1: 写鉴权、白名单、去重、配比和降级红灯**
 
 ```ts
 expect(await cronRequest(unauthorized)).toMatchObject({ status: 401 });
@@ -361,20 +361,20 @@ expect(new Set(selected.map((item) => item.region))).toEqual(
 expect(await service.getDigest()).toMatchObject({ state: "stale" });
 ```
 
-- [ ] **Step 2: 运行红灯**
+- [x] **Step 2: 运行红灯**
 
 Run: `npx vitest run tests/server/daily-news-*.test.ts tests/vercel/daily-news-handlers.test.ts`
 
-- [ ] **Step 3: 实现注入式服务和固定 Schema**
+- [x] **Step 3: 实现注入式服务和固定 Schema**
 
 外部请求统一 AbortController 超时和响应体上限；模型输入只包含公开字段；缓存写入必须在完整 5 条结果校验后发生。
 
-- [ ] **Step 4: 配置 Cron、区域和 CSP 图片域测试**
+- [x] **Step 4: 配置 Cron、区域和 CSP 图片域测试**
 
 Run: `npx vitest run tests/vercel`
 Expected: Cron 为每天 23:00 UTC（上海次日 07:00），两个端点同区，浏览器配置只新增 Unsplash 图片域。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add apps/life-console/api apps/life-console/src/server apps/life-console/tests/server apps/life-console/tests/vercel apps/life-console/package.json apps/life-console/package-lock.json apps/life-console/scripts/supabase-candidate-config.mjs

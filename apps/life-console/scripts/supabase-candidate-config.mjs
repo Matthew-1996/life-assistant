@@ -25,6 +25,24 @@ function validateDeepSeekEnvironment(environment) {
   }
 }
 
+function validateCronEnvironment(environment) {
+  if (Object.prototype.hasOwnProperty.call(environment, "VITE_CRON_SECRET")) {
+    throw new Error("CRON_SECRET must remain server-only");
+  }
+  const unexpectedCronKey = Object.keys(environment).find(
+    (key) => key.includes("CRON") && key !== "CRON_SECRET",
+  );
+  if (unexpectedCronKey) {
+    throw new Error("Deployments may define only CRON_SECRET");
+  }
+  if (Object.prototype.hasOwnProperty.call(environment, "CRON_SECRET")) {
+    const secret = environment.CRON_SECRET;
+    if (typeof secret !== "string" || [...secret.trim()].length < 16) {
+      throw new Error("CRON_SECRET must contain at least 16 characters");
+    }
+  }
+}
+
 export function resolveCandidateProjectOrigin(environment) {
   const rawUrl = requiredValue(environment, "VITE_SUPABASE_URL");
   const url = new URL(rawUrl);
@@ -57,7 +75,7 @@ export function candidateContentSecurityPolicy(environment) {
     "font-src 'self'",
     "form-action 'none'",
     "frame-ancestors 'none'",
-    "img-src 'self' data:",
+    "img-src 'self' data: https://images.unsplash.com",
     "object-src 'none'",
     "script-src 'self'",
     "style-src 'self' 'unsafe-inline'",
@@ -66,6 +84,7 @@ export function candidateContentSecurityPolicy(environment) {
 
 export function createSupabaseCandidateVercelConfig(environment) {
   validateDeepSeekEnvironment(environment);
+  validateCronEnvironment(environment);
   for (const key of requiredEnvironmentKeys) requiredValue(environment, key);
   const publishableKey = requiredValue(
     environment,
@@ -92,6 +111,16 @@ export function createSupabaseCandidateVercelConfig(environment) {
     framework: "vite",
     installCommand: "npm ci",
     outputDirectory: "dist/supabase-candidate",
+    functions: {
+      "api/daily-news.ts": {
+        maxDuration: 30,
+        regions: ["hkg1"],
+      },
+      "api/cron/daily-news.ts": {
+        maxDuration: 30,
+        regions: ["hkg1"],
+      },
+    },
     rewrites: [
       {
         source: "/auth/recovery",
@@ -150,6 +179,12 @@ export function createSupabaseProductionVercelConfig(environment) {
   return {
     ...config,
     buildCommand: "npm run build:supabase-production",
+    crons: [
+      {
+        path: "/api/cron/daily-news",
+        schedule: "0 23 * * *",
+      },
+    ],
     outputDirectory: "dist/supabase-production",
   };
 }
