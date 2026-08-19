@@ -1,0 +1,53 @@
+# 项目管理：Life Console 2.5.0
+
+## 1. 当前状态
+
+- 主阶段：待设计方案评审。
+- 子状态：2.4.0 基线已收口；2.5.0 worktree、治理基线和正式文档 draft.1 已建立；生产功能未开始。
+- 分支：`agent/life-console-250`，独立 worktree。
+- PR：单一 Draft PR 在首个文档提交后创建。
+- 数据库、Owner Preview、自动化与 Production：均未变更。
+
+## 2. 阶段计划
+
+每个连续工作块不超过 4 小时：
+
+1. 基线收口：#56 合并、Production CSP 复验、热修复分支/worktree 清理。已完成。
+2. 立项：2.5.0 worktree、完整文档、Draft PR。进行中。
+3. Gate 2：Visual Companion 桌面/移动视觉、设计与技术评审。进行中。
+4. 数据能力：migration、RLS、RPC、Repository、backup v3。
+5. 页面与算法：工作台、记录、进展、样式拆分。
+6. 内容服务：寄语展示、新闻 API、Runtime Cache、降级。
+7. 测试与 Preview：合成 Preview，再经确认做 Owner Preview。
+8. 上线：经逐项确认后 migration、自动化、PR 合并和 Production。
+
+## 3. 门禁与恢复条件
+
+| 门禁 | 当前状态 | 恢复条件 |
+|---|---|---|
+| 正式视觉/设计/技术 | pending | PO 明确确认 Visual Companion 与 draft.1 文档 |
+| Supabase migration | pending | 代码与合成数据库验收通过，PO 当次确认 |
+| Owner Preview 写入 | pending | 合成 Preview 通过，PO 确认合成写入范围 |
+| 寄语自动化创建 | pending | Preview 通过，PO 确认 Prompt、RRULE 和权限 |
+| 2.5.0 PR 合并 | pending | 全量 CI、独立复审、PO 验收通过并确认 |
+| Production | pending | 账号/项目绑定复核、回滚方案和 PO 上线确认 |
+
+## 4. 开放风险
+
+- 新闻源可用性和 GDELT 结果质量不稳定：白名单、动态配比、最近成功缓存降级。
+- Runtime Cache 区域一致性：两个端点固定同区并测试缓存命中。
+- Unsplash Key 可能不存在：Preview 使用合成元数据，Production 使用渐变。
+- 当前 bundle 大于 500 kB：样式/组件拆分时观察，不为追求指标引入无关架构。
+- iCloud worktree 偶发 interrupted syscall：每次创建后验证对象、HEAD 和工作树完整性。
+
+## 5. 决策日志
+
+| 日期 | 决定 | 状态 |
+|---|---|---|
+| 2026-08-19 | 2.5.0 一个版本分阶段完成 | PO 已确认 |
+| 2026-08-19 | Todo DDL 不自动延后，逾期派生 | PO 已确认 |
+| 2026-08-19 | 日记只软删除并可恢复 | PO 已确认 |
+| 2026-08-19 | 寄语每周更新，读取最小 Owner 上下文 | PO 已确认 |
+| 2026-08-19 | 新闻使用 GDELT + 白名单 + DeepSeek 公开摘要 + Runtime Cache | PO 已确认 |
+| 2026-08-19 | #56 Ready、合并与基线清理 | PO 已确认并完成 |
+| 2026-08-19 | 视觉、设计、技术确认前不写生产功能 | 当前门禁 |

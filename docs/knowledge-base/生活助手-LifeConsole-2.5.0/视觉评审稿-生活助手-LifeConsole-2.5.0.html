@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Life Console 2.5.0 视觉评审</title>
+  <style>
+    :root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", sans-serif; color: #172033; background: #eef2f8; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 32px; background: radial-gradient(circle at 12% 0%, #f9fbff, #edf2f8 42%, #e8edf5); }
+    h1,h2,h3,p { margin-top: 0; }
+    .review-head { max-width: 1440px; margin: 0 auto 28px; display: flex; justify-content: space-between; gap: 24px; align-items: end; }
+    .review-head h1 { font-size: 34px; letter-spacing: -.8px; margin-bottom: 8px; }
+    .review-head p { color: #667085; margin-bottom: 0; }
+    .badge { display: inline-flex; padding: 8px 12px; border-radius: 999px; background: rgba(255,255,255,.78); border: 1px solid rgba(255,255,255,.9); color: #4b5b78; font-size: 13px; box-shadow: 0 12px 30px rgba(50,65,95,.08); }
+    .section { max-width: 1440px; margin: 0 auto 34px; }
+    .section-title { display: flex; align-items: baseline; gap: 12px; margin-bottom: 14px; }
+    .section-title h2 { font-size: 22px; margin: 0; }
+    .section-title span { color: #7b879c; font-size: 13px; }
+    .canvas { overflow: hidden; border: 1px solid rgba(255,255,255,.9); background: rgba(255,255,255,.66); border-radius: 28px; box-shadow: 0 24px 70px rgba(43,58,87,.13); }
+    .desktop-shell { width: 1440px; min-height: 940px; background: #f5f7fb; }
+    .desktop-shell.compact { min-height: 810px; }
+    .app-nav { height: 72px; padding: 0 48px; display: flex; align-items: center; gap: 34px; background: rgba(255,255,255,.82); border-bottom: 1px solid #e7eaf0; }
+    .brand { font-weight: 750; font-size: 19px; letter-spacing: -.3px; margin-right: 10px; }
+    .nav-item { color: #6b7485; font-size: 14px; }
+    .nav-item.active { color: #151b29; font-weight: 650; }
+    .avatar { margin-left: auto; width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(145deg,#101828,#53647e); box-shadow: inset 0 0 0 4px #fff; }
+    .page { padding: 30px 48px 44px; }
+    .hero { height: 226px; border-radius: 26px; padding: 34px 38px; display: flex; flex-direction: column; justify-content: end; color: white; background: radial-gradient(circle at 75% 20%, rgba(255,255,255,.34), transparent 32%), linear-gradient(125deg,#14284f 0%,#4e6fb0 48%,#b48ba5 100%); box-shadow: 0 24px 46px rgba(46,70,122,.25); position: relative; overflow: hidden; }
+    .hero:after { content:""; position:absolute; width:380px; height:380px; right:-90px; top:-180px; border-radius:50%; border:1px solid rgba(255,255,255,.35); box-shadow:0 0 0 48px rgba(255,255,255,.05),0 0 0 96px rgba(255,255,255,.04); }
+    .eyebrow { font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; opacity: .8; margin-bottom: 12px; }
+    .hero-copy { max-width: 760px; font-size: 31px; line-height: 1.3; letter-spacing: -.5px; font-weight: 650; margin-bottom: 12px; }
+    .hero-meta { font-size: 12px; opacity: .76; }
+    .dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 22px; margin-top: 22px; }
+    .card { background: rgba(255,255,255,.92); border: 1px solid rgba(255,255,255,.95); border-radius: 22px; padding: 22px; box-shadow: 0 14px 34px rgba(48,64,92,.08); }
+    .card-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
+    .card-head h3 { margin:0; font-size:18px; letter-spacing:-.2px; }
+    .segmented { background:#eef1f6; border-radius:10px; padding:3px; display:flex; font-size:12px; color:#677186; }
+    .segmented b { padding:6px 11px; background:white; border-radius:8px; color:#172033; box-shadow:0 2px 8px rgba(31,42,67,.08); }
+    .primary { border:0; background:#172033; color:white; border-radius:10px; padding:9px 13px; font-weight:650; }
+    .todo-row { display:grid; grid-template-columns:32px 1fr 50px 82px 112px; gap:10px; align-items:center; padding:12px 2px; border-top:1px solid #edf0f4; font-size:13px; }
+    .todo-title { font-weight:620; }
+    .priority { justify-self:start; border-radius:999px; padding:4px 8px; font-size:11px; font-weight:700; }
+    .p0 { background:#fee8ea; color:#bf263b; }.p1{background:#fff1d9;color:#9a5a00}.p2{background:#e9f0fb;color:#315f99}
+    .status { color:#5f6b7f; }.late{color:#c82f43;font-weight:650}
+    .gantt { margin-top:16px; padding-top:15px; border-top:1px solid #e9edf2; }
+    .days { display:grid; grid-template-columns:repeat(14,1fr); font-size:9px; color:#8a94a6; text-align:center; }
+    .gantt-line { height:22px; margin-top:6px; position:relative; background:repeating-linear-gradient(90deg,#f2f4f7 0,#f2f4f7 calc(7.142% - 1px),#e2e6ed calc(7.142% - 1px),#e2e6ed 7.142%); border-radius:6px; }
+    .bar { position:absolute; height:10px; top:6px; border-radius:999px; background:linear-gradient(90deg,#5f7fd0,#7d9be4); }
+    .done { background:linear-gradient(90deg,#4aa57c,#6dc7a1); }
+    .news { padding:15px 0; border-top:1px solid #edf0f4; }
+    .news:first-of-type { border-top:0; padding-top:0; }
+    .news-meta { display:flex; gap:8px; font-size:10px; color:#788498; margin-bottom:7px; text-transform:uppercase; }
+    .news h4 { margin:0 0 7px; font-size:14px; line-height:1.35; }
+    .news p { margin:0; color:#667085; font-size:11px; line-height:1.55; }
+    .anchor { margin-top:22px; display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
+    .anchor .card { min-height:100px; }
+    .metric { color:#60708b; font-size:11px; margin-bottom:8px; }.metric-value{font-size:18px;font-weight:700}
+    .records-layout { display:grid; grid-template-columns: 1.1fr .9fr; gap:22px; }
+    .composer { min-height:190px; }
+    .textarea { height:96px; background:#f5f7fa; border:1px solid #e4e8ef; border-radius:14px; padding:14px; color:#9aa3b1; font-size:13px; }
+    .journal-card { padding:18px 0; border-top:1px solid #edf0f4; }
+    .journal-card:first-of-type{border-top:0;padding-top:0}.journal-date{font-size:11px;color:#8993a4}.journal-title{font-weight:700;margin:6px 0}.journal-raw{font-size:13px;color:#536076;line-height:1.55}.link{font-size:12px;color:#3768ae;font-weight:650;margin-top:10px}.menu{color:#99a2b2;font-weight:800}
+    .review-fields { display:grid; grid-template-columns:1fr 1fr; gap:10px; max-height:210px; overflow:auto; }
+    .review-field { background:#f6f8fb; border-radius:12px; padding:12px; font-size:12px; line-height:1.5; }
+    .review-field b { display:block; margin-bottom:5px; color:#2b374b; }
+    .goals { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:22px; }
+    .goal { min-height:100px; }.goal b{display:block;margin-bottom:7px}.goal span{font-size:11px;color:#748097}
+    .trend-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+    .chart { height:160px; margin-top:15px; border-radius:14px; background:linear-gradient(#fff,#f7f9fc); position:relative; overflow:hidden; border:1px solid #edf0f5; }
+    .chart:before { content:""; position:absolute; inset:18px 10px; background:repeating-linear-gradient(0deg,transparent 0,transparent 32px,#edf0f4 33px); }
+    .spark { position:absolute; left:20px; right:20px; top:74px; height:3px; background:linear-gradient(90deg,#b4c2df 0 46%,transparent 46% 50%,#5376c5 50%); transform:skewY(-8deg); box-shadow:0 16px 0 rgba(83,118,197,.18); }
+    .observation { margin-top:12px; font-size:12px; color:#52627a; }
+    .sleep-table { width:100%; border-collapse:collapse; font-size:12px; }.sleep-table th,.sleep-table td{padding:10px;border-top:1px solid #edf0f4;text-align:left}.sleep-table th{color:#798397;font-weight:600}
+    .mobile-grid { display:flex; flex-wrap:wrap; gap:22px; align-items:flex-start; }
+    .mobile { width:390px; min-height:820px; border-radius:38px; background:#f5f7fb; overflow:hidden; border:8px solid #1e2533; box-shadow:0 26px 60px rgba(34,47,72,.2); position:relative; }
+    .mobile .app-nav { height:58px; padding:0 16px; gap:0; }.mobile .nav-item{display:none}.mobile .avatar{width:30px;height:30px}.mobile .page{padding:16px 14px 84px}.mobile .hero{height:210px;padding:22px;border-radius:22px}.mobile .hero-copy{font-size:22px}.mobile .dashboard-grid,.mobile .records-layout,.mobile .trend-grid,.mobile .goals{display:block}.mobile .card{margin-top:14px;padding:16px;border-radius:18px}.mobile .todo-row{grid-template-columns:26px 1fr 42px;}.mobile .todo-row .status,.mobile .todo-row time{display:none}.mobile .anchor{display:block}.mobile .anchor .card{min-height:76px}.mobile .review-fields{grid-template-columns:1fr}.mobile .goals .card{min-height:80px}.bottom-nav{display:flex;position:absolute;left:0;right:0;bottom:0;height:66px;background:rgba(255,255,255,.94);border-top:1px solid #e6e9ef;align-items:center;justify-content:space-around;font-size:10px;color:#7a8497}.bottom-nav b{color:#22314d}.phone-label{text-align:center;margin-top:12px;color:#68758b;font-size:12px;font-weight:650}
+    .state-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+    .dialog-stage { min-height:300px; padding:30px; background:linear-gradient(130deg,#e9edf4,#f7f9fc); display:flex; align-items:center; justify-content:center; }
+    .dialog { width:390px; background:rgba(255,255,255,.96); border-radius:22px; padding:24px; box-shadow:0 30px 80px rgba(38,51,78,.24); }.dialog h3{font-size:19px}.dialog p{color:#667085;font-size:13px;line-height:1.55}.dialog-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:22px}.secondary,.danger{border:0;border-radius:10px;padding:9px 13px;font-weight:650}.secondary{background:#edf0f5;color:#344054}.danger{background:#d92d45;color:#fff}
+    .deleted { opacity:.76; background:#f7f8fa; }.restore{color:#276e55;font-weight:700;font-size:12px}
+    .empty { min-height:300px; display:flex; align-items:center; justify-content:center; text-align:center; padding:30px; }.empty-mark{width:52px;height:52px;margin:0 auto 14px;border-radius:18px;background:linear-gradient(145deg,#e5ebf5,#f9fbff);display:grid;place-items:center;color:#7890b8;font-size:22px}.empty p{color:#7b8798;font-size:13px;line-height:1.55;max-width:310px}
+    .review-actions { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .option { border:1px solid #dce2ec; background:rgba(255,255,255,.8); border-radius:18px; padding:18px; cursor:pointer; }.option:hover{border-color:#9ab0d2}.option h3{font-size:16px;margin-bottom:6px}.option p{font-size:12px;color:#69768b;margin:0}.option.selected{border-color:#4f76bd;box-shadow:0 0 0 3px rgba(79,118,189,.12)}
+    @media (max-width: 900px) { body{padding:16px}.review-head{display:block}.badge{margin-top:12px}.desktop-shell{transform:scale(.48);transform-origin:top left}.canvas.desktop{height:452px}.state-grid,.review-actions{grid-template-columns:1fr}.mobile-grid{justify-content:center}.section-title{display:block}.section-title span{display:block;margin-top:4px} }
+  </style>
+</head>
+<body>
+  <header class="review-head">
+    <div><div class="eyebrow" style="color:#5d6f8d">Life Console · Design Gate 2</div><h1>2.5.0 正式视觉评审</h1><p>一条视觉方向，覆盖 1440px、390px 与关键异常状态。页面内容均为合成示例。</p></div>
+    <div class="badge">Apple 顶层设计系统 · 信息减法 · Owner-first</div>
+  </header>
+
+  <section class="section">
+    <div class="section-title"><h2>工作台 · 1440px</h2><span>寄语横幅 → Todo 8 栏 / 新闻 4 栏 → 今日锚点</span></div>
+    <div class="canvas desktop"><div class="desktop-shell">
+      <nav class="app-nav"><div class="brand">Life Console</div><div class="nav-item active">工作台</div><div class="nav-item">记录</div><div class="nav-item">进展</div><div class="nav-item">系统</div><div class="avatar"></div></nav>
+      <main class="page">
+        <section class="hero"><div class="eyebrow">本周寄语 · 8 月 17 日更新</div><div class="hero-copy">把重要的事情放在看得见的地方，给今天留出一段真正能完成的时间。</div><div class="hero-meta">内置渐变降级 · 图片可用时显示摄影师与 Unsplash 归因</div></section>
+        <div class="dashboard-grid">
+          <section class="card"><div class="card-head"><h3>Todo</h3><div style="display:flex;gap:10px"><div class="segmented"><b>今日</b><span style="padding:6px 11px">全部</span></div><button class="primary">＋ 新建</button></div></div>
+            <div class="todo-row"><span>01</span><span class="todo-title">完成 2.5.0 视觉评审</span><span class="priority p0">P0</span><span class="status">进行中</span><time>今天 23:30</time></div>
+            <div class="todo-row"><span>02</span><span class="todo-title">整理本周项目复盘</span><span class="priority p1">P1</span><span class="status late">已逾期</span><time>今天 18:00</time></div>
+            <div class="todo-row"><span>03</span><span class="todo-title">安排一次户外散步</span><span class="priority p2">P2</span><span class="status">未开始</span><time>明天 19:00</time></div>
+            <div class="gantt"><div class="days"><span>17</span><span>18</span><span>19</span><span>20</span><span>21</span><span>22</span><span>23</span><span>24</span><span>25</span><span>26</span><span>27</span><span>28</span><span>29</span><span>30</span></div><div class="gantt-line"><i class="bar" style="left:14%;width:34%"></i></div><div class="gantt-line"><i class="bar done" style="left:4%;width:22%"></i></div><div class="gantt-line"><i class="bar" style="left:50%;width:28%"></i></div></div>
+          </section>
+          <aside class="card"><div class="card-head"><h3>每日新闻</h3><span style="font-size:11px;color:#7e899b">07:00 更新</span></div>
+            <article class="news"><div class="news-meta"><b>科技</b><span>国际</span><span>2 小时前</span></div><h4>开放技术标准发布新的互操作规范</h4><p>相关机构公布新版规范，重点提升系统间兼容性；实施时间与后续影响仍待确认。</p></article>
+            <article class="news"><div class="news-meta"><b>财经</b><span>国内</span></div><h4>公开市场发布最新政策信息</h4><p>公告披露主要安排与时间窗口，市场影响仍需观察后续公开数据。</p></article>
+            <article class="news"><div class="news-meta"><b>政治</b><span>国际</span></div><h4>多方就区域议题举行公开会谈</h4><p>与会方公布会谈议程，具体结果尚未由可靠来源完整披露。</p></article>
+          </aside>
+        </div>
+        <div class="anchor"><div class="card"><div class="metric">今天最重要</div><div class="metric-value">完成视觉评审</div></div><div class="card"><div class="metric">精力安排</div><div class="metric-value">晚上留白 1 小时</div></div><div class="card"><div class="metric">可以不做</div><div class="metric-value">额外整理工作</div></div></div>
+      </main>
+    </div></div>
+  </section>
+
+  <section class="section">
+    <div class="section-title"><h2>记录 · 1440px</h2><span>仅保留对话式记录、日记与修订、复盘</span></div>
+    <div class="canvas desktop"><div class="desktop-shell compact">
+      <nav class="app-nav"><div class="brand">Life Console</div><div class="nav-item">工作台</div><div class="nav-item active">记录</div><div class="nav-item">进展</div><div class="nav-item">系统</div><div class="avatar"></div></nav>
+      <main class="page"><div class="records-layout">
+        <div><section class="card composer"><div class="card-head"><h3>对话式记录</h3><span style="font-size:11px;color:#7b8798">原文先保存</span></div><div class="textarea">写下刚刚发生的事、你的感受，或任何想保留下来的内容…</div><div style="text-align:right;margin-top:12px"><button class="primary">保存记录</button></div></section>
+          <section class="card" style="margin-top:22px"><div class="card-head"><h3>线上记录与修订</h3><span class="segmented"><b>当前</b><span style="padding:6px 11px">已删除</span></span></div><article class="journal-card"><div style="display:flex;justify-content:space-between"><div><span class="journal-date">2026 年 8 月 19 日</span><div class="journal-title">一次专注的项目整理</div></div><span class="menu">•••</span></div><div class="journal-raw">“今天把分散的需求重新整理了一遍，决定先把真正重要的部分做清楚。”</div><div class="link">展开助手整理与修订 ↓</div></article><article class="journal-card"><span class="journal-date">2026 年 8 月 18 日</span><div class="journal-title">晚间散步</div><div class="journal-raw">“晚饭后出去走了走，感觉节奏慢下来很多。”</div><div class="link">展开助手整理与修订 ↓</div></article></section></div>
+        <aside><section class="card"><div class="card-head"><h3>复盘</h3><div class="segmented"><b>周复盘</b><span style="padding:6px 11px">阶段复盘</span></div></div><div class="review-fields"><div class="review-field"><b>本周改善</b>睡眠、精力和情绪记录比前一周更稳定。</div><div class="review-field"><b>主要阻力</b>工作事项仍带来焦虑，需要减少晚间继续处理的频率。</div><div class="review-field"><b>目标意图</b>调整当前计划，优先完成最重要的一项。</div><div class="review-field"><b>下周实验</b>每天只保留一个必须完成事项，其余延后评估。</div></div></section></aside>
+      </div></main>
+    </div></div>
+  </section>
+
+  <section class="section">
+    <div class="section-title"><h2>进展 · 1440px</h2><span>目标、14 天趋势、7 天睡眠时刻</span></div>
+    <div class="canvas desktop"><div class="desktop-shell compact">
+      <nav class="app-nav"><div class="brand">Life Console</div><div class="nav-item">工作台</div><div class="nav-item">记录</div><div class="nav-item active">进展</div><div class="nav-item">系统</div><div class="avatar"></div></nav>
+      <main class="page"><div class="goals"><div class="card goal"><b>保持稳定作息</b><span>活跃目标 · 生活节奏</span></div><div class="card goal"><b>完成当前版本</b><span>活跃目标 · 项目</span></div><div class="card goal"><b>每周安排户外时间</b><span>活跃目标 · 健康</span></div></div>
+        <div class="trend-grid"><section class="card"><div class="card-head"><h3>主观信号 · 14 天</h3><span style="font-size:11px;color:#5d7db7">较前 7 天上升</span></div><div class="chart"><div class="spark"></div></div><div class="observation">最近 7 天有效样本 5 天；精力评分较前 7 天上升。</div></section><section class="card"><div class="card-head"><h3>活动与睡眠 · 14 天</h3><span style="font-size:11px;color:#5d7db7">整体稳定</span></div><div class="chart"><div class="spark" style="transform:skewY(2deg)"></div></div><div class="observation">步数与睡眠时长保持稳定；缺失日期不参与比较。</div></section></div>
+        <section class="card" style="margin-top:20px"><div class="card-head"><h3>最近 7 天睡眠时刻</h3><span style="font-size:11px;color:#7f8999">设备与显式记录</span></div><table class="sleep-table"><thead><tr><th>日期</th><th>入睡</th><th>醒来</th><th>离床</th></tr></thead><tbody><tr><td>8 月 19 日</td><td>23:42</td><td>07:18</td><td>07:31</td></tr><tr><td>8 月 18 日</td><td>00:06</td><td>07:36</td><td>07:48</td></tr><tr><td>8 月 17 日</td><td>未记录</td><td>07:20</td><td>07:35</td></tr></tbody></table></section>
+      </main>
+    </div></div>
+  </section>
+
+  <section class="section">
+    <div class="section-title"><h2>移动端 · 390px</h2><span>单列信息流，底部四页导航，页面本身无横向滚动</span></div>
+    <div class="mobile-grid">
+      <div><div class="mobile"><nav class="app-nav"><div class="brand">Life Console</div><div class="avatar"></div></nav><main class="page"><section class="hero"><div class="eyebrow">本周寄语</div><div class="hero-copy">把重要的事情放在看得见的地方。</div><div class="hero-meta">8 月 17 日更新</div></section><section class="card"><div class="card-head"><h3>Todo</h3><button class="primary">＋</button></div><div class="todo-row"><span>01</span><span class="todo-title">完成视觉评审</span><span class="priority p0">P0</span></div><div class="todo-row"><span>02</span><span class="todo-title">整理本周复盘</span><span class="priority p1">P1</span></div><div class="gantt"><div class="gantt-line"><i class="bar" style="left:12%;width:42%"></i></div></div></section><section class="card"><div class="card-head"><h3>每日新闻</h3><span style="font-size:10px;color:#7e899b">07:00</span></div><article class="news"><div class="news-meta"><b>科技</b><span>国际</span></div><h4>开放技术标准发布新规范</h4><p>公开信息显示，新规范将改善系统互操作性。</p></article></section></main><div class="bottom-nav"><b>工作台</b><span>记录</span><span>进展</span><span>系统</span></div></div><div class="phone-label">工作台</div></div>
+      <div><div class="mobile"><nav class="app-nav"><div class="brand">Life Console</div><div class="avatar"></div></nav><main class="page"><section class="card composer"><div class="card-head"><h3>对话式记录</h3></div><div class="textarea">写下此刻…</div><div style="text-align:right;margin-top:10px"><button class="primary">保存</button></div></section><section class="card"><div class="card-head"><h3>线上记录</h3><span class="segmented"><b>当前</b></span></div><article class="journal-card"><span class="journal-date">8 月 19 日</span><div class="journal-title">一次专注的整理</div><div class="journal-raw">“今天把真正重要的部分做清楚了。”</div><div class="link">展开整理 ↓</div></article></section><section class="card"><div class="card-head"><h3>周复盘</h3></div><div class="review-fields"><div class="review-field"><b>本周改善</b>生活节奏更稳定。</div><div class="review-field"><b>主要阻力</b>晚间仍会继续处理工作。</div></div></section></main><div class="bottom-nav"><span>工作台</span><b>记录</b><span>进展</span><span>系统</span></div></div><div class="phone-label">记录</div></div>
+      <div><div class="mobile"><nav class="app-nav"><div class="brand">Life Console</div><div class="avatar"></div></nav><main class="page"><div class="goals"><div class="card goal"><b>保持稳定作息</b><span>活跃目标</span></div></div><section class="card"><div class="card-head"><h3>主观信号</h3><span style="font-size:10px;color:#5d7db7">上升</span></div><div class="chart"><div class="spark"></div></div><div class="observation">最近 7 天有效样本 5 天。</div></section><section class="card"><div class="card-head"><h3>睡眠时刻</h3></div><table class="sleep-table"><tr><th>日期</th><th>入睡</th><th>离床</th></tr><tr><td>8/19</td><td>23:42</td><td>07:31</td></tr><tr><td>8/18</td><td>00:06</td><td>07:48</td></tr></table></section></main><div class="bottom-nav"><span>工作台</span><span>记录</span><b>进展</b><span>系统</span></div></div><div class="phone-label">进展</div></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-title"><h2>关键状态</h2><span>删除/恢复、内容降级和数据不足</span></div>
+    <div class="state-grid">
+      <div class="canvas dialog-stage"><div class="dialog"><div class="eyebrow" style="color:#8b5360">可恢复删除</div><h3>把这条日记移到“已删除”？</h3><p>日记不会被永久删除。之后可在“已删除”列表中恢复，助手整理和修订记录会一起保留。</p><div class="dialog-actions"><button class="secondary">取消</button><button class="danger">移到已删除</button></div></div></div>
+      <div class="canvas" style="padding:22px"><div class="card-head"><h3>已删除</h3><span style="font-size:11px;color:#7d8798">1 条</span></div><article class="journal-card deleted"><div style="display:flex;justify-content:space-between"><div><span class="journal-date">8 月 16 日删除</span><div class="journal-title">合成日记示例</div></div><span class="restore">恢复</span></div><div class="journal-raw">“这是一条用于展示恢复流程的合成记录。”</div></article><div class="empty" style="min-height:150px"><div><div class="empty-mark">✓</div><p>恢复后会回到当前记录列表；revision 冲突时先刷新，不覆盖新状态。</p></div></div></div>
+      <div class="canvas empty"><div><div class="empty-mark">↻</div><h3>显示上一份成功摘要</h3><p>今日新闻暂时无法更新。当前内容生成于 8 月 18 日 07:04，可稍后重试。</p><button class="secondary">重新获取</button></div></div>
+      <div class="canvas empty"><div><div class="empty-mark">···</div><h3>数据不足</h3><p>最近 7 天或前 7 天有效样本少于 3 天，因此不生成趋势判断。</p></div></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-title"><h2>评审结论</h2><span>在 Visual Companion 中点击可记录选择；终端文字反馈优先</span></div>
+    <div class="review-actions">
+      <div class="option" data-choice="approve-life-console-250" onclick="toggleSelect(this)"><h3>方向通过</h3><p>信息层级、密度、桌面/移动布局和关键状态可以进入实现。</p></div>
+      <div class="option" data-choice="revise-life-console-250" onclick="toggleSelect(this)"><h3>需要调整</h3><p>在终端说明需要调整的页面、层级、密度或交互，我会生成下一版。</p></div>
+    </div>
+  </section>
+</body>
+</html>

@@ -80,6 +80,6 @@
 - 根因：浏览器会导入的 `normalization-contract.ts` 在模块初始化时执行 Ajv `compile`，Ajv 通过 `new Function` 生成校验代码。
 - 修复：将 Ajv 校验器拆到仅服务端导入的模块；浏览器仍从唯一契约读取版本、字段与展示标签。
 - 本地证据：真实 Chromium 回归已观察到修复前 `unsafe-eval` 红灯与修复后绿灯；Vitest 54 文件 / 464 项、构建与 Playwright 4 项通过。
-- GitHub：Draft PR #56 已建档并保持 Draft，未合并。
+- GitHub：PR #56 已于 2026-08-19 squash merge；远端与本地热修复分支、worktree 已清理。
 - Production：Vercel `READY`，正式 alias 指向当前热修复提交；首页 200，严格 CSP 与 `nosniff` 保持，未登录 POST 健康门禁为 401。
 - 真实浏览器：新会话加载新资产后全局导航与 Online 工作台可见，控制台无 error/warn。

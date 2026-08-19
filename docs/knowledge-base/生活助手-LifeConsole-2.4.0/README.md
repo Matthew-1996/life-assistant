@@ -11,4 +11,4 @@
 - [实施计划](实施计划-生活助手-LifeConsole-2.4.0.md)
 - [上线证据](上线证据-生活助手-LifeConsole-2.4.0.md)
 
-当前状态：2.4.0 已正式上线。PR #54 已通过独立安全、并发与隐私复审及全部 CI，并以 squash merge 合入 `main`。2026-08-17 发现浏览器共享契约模块在严格 CSP 下触发 Ajv `unsafe-eval`，导致首屏空白；热修复已从 Draft PR #56 分支部署到 Vercel Production，正式 alias 为 `READY`并指向当前热修复提交。新浏览器会话在严格 CSP 下已正常渲染全局导航与 Online 工作台，控制台无 error/warn。修复未放开 `unsafe-eval`，未读写日记或数据库；PR #56 保持 Draft，未合并。
+当前状态：2.4.0 已正式上线。PR #54 已完成统一日记整理，PR #56 已于 2026-08-19 squash merge，正式收口严格 CSP 启动热修复。合并后 Production 首页 200，`script-src 'self'` 保持，无 `unsafe-eval`、页面错误或错误覆盖层；热修复分支/worktree 已清理。修复未读写日记或数据库。
