@@ -27,12 +27,14 @@ import type { BackupRepository } from "./supabase/backups";
 import type { DashboardMessageRepositoryPort } from "./supabase/dashboard-messages";
 import type { DailyCheckinRepositoryPort } from "./supabase/daily-checkins";
 import type { GoalRepositoryPort } from "./supabase/goals";
+import type { HealthRepositoryPort } from "./supabase/health";
 import type { JournalRepositoryPort } from "./supabase/journals";
 import type { ReviewRepositoryPort } from "./supabase/reviews";
 
 export interface SupabaseProductContext {
   dailyCheckins: DailyCheckinRepositoryPort;
   goals: GoalRepositoryPort;
+  health?: HealthRepositoryPort;
   journals: JournalRepositoryPort;
   reviews: ReviewRepositoryPort;
   dashboardMessages?: DashboardMessageRepositoryPort;
@@ -198,9 +200,9 @@ export function App({
     ),
     progress: (
       <ProgressPage
-        client={mode === "sites" ? client as SitesLifeConsoleClient : undefined}
         dashboard={dashboard}
         goals={supabase?.goals}
+        health={supabase?.health}
         mode={mode}
         onSaved={refreshAfterWrite}
         draftScope={supabase?.session.userId}

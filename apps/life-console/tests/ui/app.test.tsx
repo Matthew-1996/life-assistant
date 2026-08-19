@@ -50,7 +50,7 @@ describe("Life Console synthetic UI", () => {
     progress.focus();
     await user.keyboard("{Enter}");
     expect(
-      screen.getByRole("heading", { level: 1, name: "自然周路径，不惩罚空白。" }),
+      screen.getByRole("heading", { level: 1, name: "目标与趋势" }),
     ).toBeTruthy();
 
     await user.click(navigationButton("记录"));
@@ -109,7 +109,8 @@ describe("Life Console synthetic UI", () => {
 
     expect(screen.getByText("合成室内训练")).toBeTruthy();
     expect(screen.getByText("合成 Agent 实操")).toBeTruthy();
-    expect(screen.getByText("只读项目")).toBeTruthy();
+    expect(screen.getAllByText("活跃目标").length).toBeGreaterThan(0);
+    expect(screen.queryByText("只读项目")).toBeNull();
   });
 
   it("keeps the 2.5 record page focused on the conversation entry", async () => {
@@ -157,41 +158,38 @@ describe("Life Console synthetic UI", () => {
     expect(screen.getByRole("region", { name: "对话式记录面板" })).toBeTruthy();
   });
 
-  it("derives the current weekday from the dashboard date", async () => {
+  it("anchors the seven-day sleep table to the dashboard date", async () => {
     const user = userEvent.setup();
     render(<App />);
     await user.click(navigationButton("进展"));
 
-    const current = document.querySelector('.week-path li[data-current="true"]');
-    expect(current?.textContent).toContain("周一");
-    expect(current?.textContent).toContain("今天");
-    expect(current?.textContent).toContain("01-12");
+    const table = screen.getByRole("table", { name: "最近 7 天睡眠时刻" });
+    expect(within(table).getByText("2026-01-12")).toBeTruthy();
+    expect(within(table).getByText("2026-01-06")).toBeTruthy();
+    expect(screen.queryByText("自然周")).toBeNull();
   });
 
-  it("presents low-pressure progress and weekend review guidance", async () => {
+  it("keeps progress focused on goals, trends and sleep timing", async () => {
     const user = userEvent.setup();
     render(<App />);
     await user.click(navigationButton("进展"));
 
-    expect(screen.getByText("双轨进展")).toBeTruthy();
-    expect(screen.getByText("主观信号")).toBeTruthy();
-    expect(screen.getByText("缺失值不惩罚")).toBeTruthy();
-    expect(screen.getByText("周末只看四件事")).toBeTruthy();
-    expect(screen.getByText("下一周只保留、调整或停止哪一件事？")).toBeTruthy();
+    expect(screen.getByRole("region", { name: "目标" })).toBeTruthy();
+    expect(screen.getByRole("region", { name: "14 天趋势" })).toBeTruthy();
+    expect(screen.getByRole("table", { name: "最近 7 天睡眠时刻" })).toBeTruthy();
+    expect(screen.queryByText("双轨进展")).toBeNull();
+    expect(screen.queryByText("周末只看四件事")).toBeNull();
   });
 
-  it("renders separate trend segments across missing values", async () => {
+  it("renders missing trend days as separate markers", async () => {
     const user = userEvent.setup();
     render(<App />);
     await user.click(navigationButton("进展"));
 
-    const moodChart = screen.getByRole("img", {
-      name: "情绪趋势，缺失点断开",
-    });
-    expect(moodChart.querySelectorAll("polyline")).toHaveLength(2);
-    const moodCard = moodChart.closest("article");
-    expect(moodCard).not.toBeNull();
-    expect(within(moodCard!).getByText("样本 2 · 缺失 1")).toBeTruthy();
+    const mood = screen.getByRole("article", { name: "情绪 14 天趋势" });
+    expect(mood.querySelectorAll(".trend-bar-250")).toHaveLength(14);
+    expect(mood.querySelectorAll('[data-missing="true"]')).toHaveLength(12);
+    expect(within(mood).getByText("数据不足")).toBeTruthy();
   });
 
   it("saves conversation capture without browser persistence in demo mode", async () => {

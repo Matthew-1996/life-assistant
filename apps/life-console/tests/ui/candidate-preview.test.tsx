@@ -37,7 +37,7 @@ describe("Life Console candidate preview", () => {
 
     await user.click(navigationButton("进展"));
     expect(
-      screen.getByRole("heading", { name: "自然周路径，不惩罚空白。" }),
+      screen.getByRole("heading", { name: "目标与趋势" }),
     ).toBeTruthy();
 
     await user.click(navigationButton("系统"));

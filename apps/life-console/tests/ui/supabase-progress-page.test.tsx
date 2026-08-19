@@ -62,7 +62,7 @@ function dashboardWithoutSleepTimes() {
 describe("Supabase candidate progress page", () => {
   it("renders repository goals and source-backed rating trends", async () => {
     const repository = createRepository([repositoryGoal]);
-    const { container } = render(
+    render(
       <ProgressPage
         dashboard={dashboardWithoutSleepTimes()}
         goals={repository}
@@ -73,23 +73,13 @@ describe("Supabase candidate progress page", () => {
     expect(
       screen.getByRole("heading", {
         level: 1,
-        name: "自然周路径，不惩罚空白。",
+        name: "目标与趋势",
       }),
     ).toBeTruthy();
-    expect(screen.getByText("真实样本")).toBeTruthy();
-
-    const currentDay = container.querySelector(
-      '.week-path li[data-current="true"]',
-    );
-    expect(currentDay?.textContent).toContain("已有主观评分");
-
-    const moodChart = screen.getByRole("img", {
-      name: "情绪趋势，缺失点断开",
-    });
-    expect(moodChart.querySelectorAll("polyline")).toHaveLength(2);
-    const moodCard = moodChart.closest("article");
-    expect(moodCard).not.toBeNull();
-    expect(within(moodCard!).getByText("样本 2 · 缺失 1")).toBeTruthy();
+    const mood = screen.getByRole("article", { name: "情绪 14 天趋势" });
+    expect(mood.querySelectorAll(".trend-bar-250")).toHaveLength(14);
+    expect(mood.querySelectorAll('[data-missing="true"]')).toHaveLength(12);
+    expect(within(mood).getByText("数据不足")).toBeTruthy();
 
     expect(await screen.findByText("Repository 目标")).toBeTruthy();
     expect(repository.list).toHaveBeenCalledOnce();
@@ -112,11 +102,9 @@ describe("Supabase candidate progress page", () => {
     );
 
     expect(await screen.findByText("还没有目标")).toBeTruthy();
-    expect(
-      screen.getByText(
-        "当前候选尚未接入睡眠时刻来源；不会根据睡眠质量评分推算入睡、醒来或离床时间。",
-      ),
-    ).toBeTruthy();
+    const sleep = screen.getByRole("table", { name: "最近 7 天睡眠时刻" });
+    expect(within(sleep).getAllByRole("row")).toHaveLength(8);
+    expect(within(sleep).getAllByText("未记录").length).toBeGreaterThan(0);
 
     expect(screen.queryByText("本周最低成功")).toBeNull();
     expect(screen.queryByText("2+")).toBeNull();
@@ -124,6 +112,7 @@ describe("Supabase candidate progress page", () => {
     expect(screen.queryByText("合成室内训练")).toBeNull();
     expect(screen.queryByText("合成 Agent 实操")).toBeNull();
     expect(screen.queryByText("周末只看四件事")).toBeNull();
+    expect(screen.queryByText("复盘边界")).toBeNull();
     expect(screen.queryByText(/28%|22%/)).toBeNull();
   });
 });

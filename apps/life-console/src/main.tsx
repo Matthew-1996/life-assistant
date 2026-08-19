@@ -15,6 +15,7 @@ import {
 import { DailyCheckinRepository } from "./supabase/daily-checkins";
 import { DashboardMessageRepository } from "./supabase/dashboard-messages";
 import { GoalRepository } from "./supabase/goals";
+import { HealthRepository } from "./supabase/health";
 import { JournalRepository } from "./supabase/journals";
 import { ReviewRepository } from "./supabase/reviews";
 import { TodoRepository } from "./supabase/todos";
@@ -59,6 +60,7 @@ if (supabaseMode) {
   const dailyCheckins = new DailyCheckinRepository(supabase);
   const dashboardMessages = new DashboardMessageRepository(supabase);
   const goals = new GoalRepository(supabase);
+  const health = new HealthRepository(supabase);
   const journals = new JournalRepository(supabase);
   const reviews = new ReviewRepository(supabase);
   const todos = new TodoRepository(supabase);
@@ -87,6 +89,7 @@ if (supabaseMode) {
               dashboardMessages,
               backups,
               goals,
+              health,
               journals,
               reviews,
               session,

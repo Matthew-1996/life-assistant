@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -148,7 +148,7 @@ describe("Life Console Sites mode", () => {
     expect(screen.getByText(/当前只实现合成界面状态/)).toBeTruthy();
   });
 
-  it("creates a cloud goal from a locally persisted draft", async () => {
+  it("keeps the retired cloud write tools off the 2.5 progress page", async () => {
     const user = userEvent.setup();
     const sitesClient = client();
     (sitesClient.createGoal as ReturnType<typeof vi.fn>).mockResolvedValue({
@@ -164,20 +164,10 @@ describe("Life Console Sites mode", () => {
     );
 
     await user.click(navigationButton("进展"));
-    await user.type(screen.getByLabelText("目标名称"), "合成云端目标");
-    await waitFor(() => {
-      const stored = localStorage.getItem("life-console:sites:goal-draft");
-      expect(stored).toBeTruthy();
-      expect(stored).not.toContain("合成云端目标");
-    });
-    await user.click(screen.getByRole("button", { name: "保存目标" }));
-
-    await waitFor(() => {
-      expect(screen.getByText("已保存到云端 · revision #1")).toBeTruthy();
-    });
-    expect(sitesClient.createGoal).toHaveBeenCalledWith(expect.objectContaining({
-      title: "合成云端目标",
-      status: "focus",
-    }));
+    expect(screen.getByRole("heading", { name: "目标与趋势" })).toBeTruthy();
+    expect(screen.queryByLabelText("目标名称")).toBeNull();
+    expect(screen.queryByRole("button", { name: "保存目标" })).toBeNull();
+    expect(screen.queryByText("云端写入工具")).toBeNull();
+    expect(sitesClient.createGoal).not.toHaveBeenCalled();
   });
 });

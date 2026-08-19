@@ -636,7 +636,7 @@ describe("Supabase candidate product application", () => {
 
     await user.click(within(nav).getByRole("button", { name: "进展" }));
     expect(
-      screen.getByRole("heading", { level: 1, name: "自然周路径，不惩罚空白。" }),
+      screen.getByRole("heading", { level: 1, name: "目标与趋势" }),
     ).toBeTruthy();
     expect(await screen.findByText("还没有目标")).toBeTruthy();
     expect(screen.queryByText("2+")).toBeNull();

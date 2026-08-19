@@ -304,7 +304,7 @@ git commit -m "feat(life-console): simplify records and restore journals"
 - Consumes: `HealthRepositoryPort` 和 `observeTrend`。
 - Produces: 目标、14 天趋势、7 天睡眠三段式页面。
 
-- [ ] **Step 1: 写信息架构、缺失语义和睡眠红灯**
+- [x] **Step 1: 写信息架构、缺失语义和睡眠红灯**
 
 ```tsx
 expect(screen.queryByText(/自然周进展/)).not.toBeInTheDocument();
@@ -312,15 +312,15 @@ expect(screen.getByText("数据不足")).toBeVisible();
 expect(screen.getByRole("columnheader", { name: "离床" })).toBeVisible();
 ```
 
-- [ ] **Step 2: 运行红灯并实现最小视图**
+- [x] **Step 2: 运行红灯并实现最小视图**
 
 Run: `npx vitest run tests/ui/progress-250.test.tsx`
 
-- [ ] **Step 3: 覆盖四个健康指标与主观信号**
+- [x] **Step 3: 覆盖四个健康指标与主观信号**
 
 不得从日记或设备推断主观值；所有缺失点保留空洞，不插值。
 
-- [ ] **Step 4: 运行 Progress 回归并提交**
+- [x] **Step 4: 运行 Progress 回归并提交**
 
 Run: `npx vitest run tests/ui/progress-250.test.tsx tests/ui/supabase-progress-page.test.tsx`
 
