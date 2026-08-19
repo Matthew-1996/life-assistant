@@ -13,4 +13,4 @@
 - [项目管理](项目管理-生活助手-LifeConsole-2.5.0.md)
 - [上线证据](上线证据-生活助手-LifeConsole-2.5.0.md)
 
-当前状态：需求范围与架构方向已确认，[Draft PR #58](https://github.com/Matthew-1996/life-assistant/pull/58) 已建立；正式视觉、设计和技术文档待 PO 评审，生产功能实现尚未开始。基线 PR #56 已合并，`main` 严格 CSP 与真实浏览器启动已复验通过。
+当前状态：Gate 1 范围和 Gate 2 v2 正式视觉、设计与技术方案均已由 PO 确认，[Draft PR #58](https://github.com/Matthew-1996/life-assistant/pull/58) 已进入 TDD 开发。Supabase 远程 migration、Owner Preview、自动化与 Production 仍未执行，继续遵守各自门禁。

@@ -2,8 +2,8 @@
 
 ## 1. 当前状态
 
-- 主阶段：待设计方案评审。
-- 子状态：2.4.0 基线已收口；首轮视觉反馈已进入 draft.2 修订；生产功能未开始。
+- 主阶段：TDD 开发。
+- 子状态：Gate 2 v2 已通过；开始 Owner 数据模型与原子 RPC，本地实现不代表远程 migration 获批。
 - 分支：`agent/life-console-250`，独立 worktree。
 - PR：[Draft PR #58](https://github.com/Matthew-1996/life-assistant/pull/58)，保持 Draft 至全量验收与合并门禁。
 - 数据库、Owner Preview、自动化与 Production：均未变更。
@@ -14,8 +14,8 @@
 
 1. 基线收口：#56 合并、Production CSP 复验、热修复分支/worktree 清理。已完成。
 2. 立项：2.5.0 worktree、完整文档、Draft PR。已完成。
-3. Gate 2：Visual Companion 桌面/移动视觉、设计与技术评审。进行中。
-4. 数据能力：migration、RLS、RPC、Repository、backup v3。
+3. Gate 2：Visual Companion 桌面/移动视觉、设计与技术评审。已完成。
+4. 数据能力：migration 文件、RLS、RPC、Repository、backup v3。进行中。
 5. 页面与算法：工作台、记录、进展、样式拆分。
 6. 内容服务：寄语展示、新闻 API、Runtime Cache、降级。
 7. 测试与 Preview：合成 Preview，再经确认做 Owner Preview。
@@ -25,7 +25,7 @@
 
 | 门禁 | 当前状态 | 恢复条件 |
 |---|---|---|
-| 正式视觉/设计/技术 | pending | PO 明确确认 Visual Companion v2 与 draft.2 文档 |
+| 正式视觉/设计/技术 | approved | PO 于 2026-08-20 明确确认 Gate 2 v2 通过 |
 | Supabase migration | pending | 代码与合成数据库验收通过，PO 当次确认 |
 | Owner Preview 写入 | pending | 合成 Preview 通过，PO 确认合成写入范围 |
 | 寄语自动化创建 | pending | Preview 通过，PO 确认 Prompt、RRULE 和权限 |
@@ -52,4 +52,5 @@
 | 2026-08-19 | #56 Ready、合并与基线清理 | PO 已确认并完成 |
 | 2026-08-20 | 固定 1440px 评审画板按可用宽度缩放；实际双栏在不足 1180px 时转单栏 | PO 反馈，draft.2 已修订 |
 | 2026-08-20 | 今日锚点复用 2.4.0 四项、四状态、进展与修改链路 | PO 反馈，draft.2 已修订 |
-| 2026-08-19 | 视觉、设计、技术确认前不写生产功能 | 当前门禁 |
+| 2026-08-20 | Gate 2 v2 正式视觉、设计与技术方案 | PO 已确认，进入 TDD 开发 |
+| 2026-08-19 | 视觉、设计、技术确认前不写生产功能 | Gate 2 v2 后已满足 |

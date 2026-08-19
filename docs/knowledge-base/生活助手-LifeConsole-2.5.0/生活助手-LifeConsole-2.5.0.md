@@ -1,6 +1,6 @@
 # PRD：Life Console 2.5.0
 
-状态：Gate 1 已确认；正式视觉、设计与技术方案待 Gate 2 评审。
+状态：Gate 1 与 Gate 2 v2 已确认；按批准方案进入 TDD 开发。
 
 ## 1. 背景与目标
 
