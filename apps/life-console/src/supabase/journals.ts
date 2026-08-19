@@ -127,6 +127,7 @@ export interface JournalListOptions {
 
 export interface JournalRepositoryPort {
   list(options?: JournalListOptions): Promise<Page<Journal>>;
+  listDeleted(options?: JournalListOptions): Promise<Page<Journal>>;
   get(id: number): Promise<Journal | null>;
   revisions(id: number): Promise<JournalRevision[]>;
   create(key: string, input: CreateJournalInput): Promise<Journal>;
@@ -135,6 +136,8 @@ export interface JournalRepositoryPort {
     expectedRevision: number,
     input: UpdateJournalInput,
   ): Promise<Journal>;
+  softDelete(id: number, expectedRevision: number): Promise<Journal>;
+  restore(id: number, expectedRevision: number): Promise<Journal>;
 }
 
 export interface JournalNormalizationRepositoryPort
@@ -307,6 +310,16 @@ export class JournalRepository implements JournalRepositoryPort {
     return this.repository.listPage<Journal>({
       table: "journals",
       sortColumn: "event_date",
+      pageSize: options.pageSize,
+      cursor: options.cursor,
+    });
+  }
+
+  listDeleted(options: JournalListOptions = {}): Promise<Page<Journal>> {
+    return this.repository.listPage<Journal>({
+      table: "journals",
+      sortColumn: "event_date",
+      deletedOnly: true,
       pageSize: options.pageSize,
       cursor: options.cursor,
     });
@@ -492,5 +505,25 @@ export class JournalRepository implements JournalRepositoryPort {
       expectedRevision,
       normalizeUpdate(input),
     );
+  }
+
+  async softDelete(id: number, expectedRevision: number): Promise<Journal> {
+    const rows = await this.repository.executeWrite<Journal[]>(async () =>
+      await this.client.rpc("soft_delete_journal", {
+        p_journal_id: positiveId(id),
+        p_expected_revision: positiveRevision(expectedRevision),
+      }) as SupabaseResult<Journal[]>
+    );
+    return requireResult(rows, "empty_journal_delete_result", "Journal deletion returned no row");
+  }
+
+  async restore(id: number, expectedRevision: number): Promise<Journal> {
+    const rows = await this.repository.executeWrite<Journal[]>(async () =>
+      await this.client.rpc("restore_journal", {
+        p_journal_id: positiveId(id),
+        p_expected_revision: positiveRevision(expectedRevision),
+      }) as SupabaseResult<Journal[]>
+    );
+    return requireResult(rows, "empty_journal_restore_result", "Journal restore returned no row");
   }
 }

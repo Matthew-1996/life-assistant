@@ -413,4 +413,35 @@ describe("Life Console 2.5.0 owner data behavior", () => {
     );
     expect(repeatedRestore.rows).toEqual(restored.rows);
   });
+
+  it("exports an owner-only schema v3 snapshot without public news cache", async () => {
+    const ownerSnapshot = await queryAs<{ snapshot: Record<string, unknown> }>(
+      "authenticated",
+      ownerA,
+      "select public.export_life_console_snapshot() as snapshot",
+    );
+    const snapshot = ownerSnapshot.rows[0].snapshot as {
+      schema_version: number;
+      todo_items: unknown[];
+      todo_status_events: unknown[];
+      dashboard_messages: unknown[];
+    };
+    expect(snapshot.schema_version).toBe(3);
+    expect(snapshot.todo_items.length).toBeGreaterThan(0);
+    expect(snapshot.todo_status_events.length).toBeGreaterThan(0);
+    expect(snapshot.dashboard_messages.length).toBeGreaterThan(0);
+    expect(JSON.stringify(snapshot)).not.toMatch(/daily.news|news/i);
+
+    const otherOwner = await queryAs<{ snapshot: Record<string, unknown> }>(
+      "authenticated",
+      ownerB,
+      "select public.export_life_console_snapshot() as snapshot",
+    );
+    expect(otherOwner.rows[0].snapshot).toMatchObject({
+      schema_version: 3,
+      todo_items: [],
+      todo_status_events: [],
+      dashboard_messages: [],
+    });
+  });
 });

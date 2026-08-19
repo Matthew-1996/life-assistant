@@ -15,6 +15,7 @@ from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 from local_agent.backup_store import (
     BACKUP_FORMAT_VERSION,
     EXPECTED_RESOURCES,
+    LEGACY_EXPECTED_RESOURCES,
     BackupAgentError,
     BackupStore,
     BackupStoreLimits,
@@ -28,13 +29,19 @@ def archive_bytes(
     empty_resources: bool = False,
     mutate_manifest=None,
     extra_writer=None,
+    format_version: str = BACKUP_FORMAT_VERSION,
 ) -> bytes:
+    resource_names = (
+        LEGACY_EXPECTED_RESOURCES
+        if format_version == "life-console-backup/2"
+        else EXPECTED_RESOURCES
+    )
     payloads = {
         name: b"" if empty_resources else (
             json.dumps({"id": f"{name}_synthetic", "value": record_text}, sort_keys=True)
             + "\n"
         ).encode("utf-8")
-        for name in EXPECTED_RESOURCES
+        for name in resource_names
     }
     resources = {
         name: {
@@ -45,7 +52,7 @@ def archive_bytes(
         for name, payload in payloads.items()
     }
     manifest = {
-        "format_version": BACKUP_FORMAT_VERSION,
+        "format_version": format_version,
         "source_product_version": "2.1.0",
         "source_schema_version": "synthetic-v1",
         "export_id": "export_synthetic",
@@ -106,6 +113,18 @@ class BackupStoreTest(unittest.TestCase):
         persisted = self.receipts.read_text(encoding="utf-8")
         self.assertNotIn("synthetic interruption", persisted)
         self.assertNotIn(str(self.root), persisted)
+
+    def test_installs_a_legacy_v2_archive_without_inventing_new_resources(self) -> None:
+        payload = archive_bytes(format_version="life-console-backup/2")
+
+        receipt = self.store.install(BytesIO(payload), run_id="run_legacy_v2")
+
+        self.assertEqual(receipt.format_version, "life-console-backup/2")
+        self.assertEqual(
+            receipt.counts,
+            {name: 1 for name in LEGACY_EXPECTED_RESOURCES},
+        )
+        self.assertNotIn("todo_items", receipt.counts)
 
     def test_successful_install_replaces_the_previous_archive_and_is_idempotent(self) -> None:
         previous = archive_bytes(record_text="previous")

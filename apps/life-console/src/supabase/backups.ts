@@ -7,7 +7,7 @@ import {
   type SupabaseResult,
 } from "./repository";
 
-export const BACKUP_RESOURCE_NAMES = [
+export const LEGACY_BACKUP_RESOURCE_NAMES = [
   "goals",
   "journals",
   "journal_revisions",
@@ -18,13 +18,24 @@ export const BACKUP_RESOURCE_NAMES = [
   "health_segments",
 ] as const;
 
+export const BACKUP_RESOURCE_NAMES = [
+  ...LEGACY_BACKUP_RESOURCE_NAMES,
+  "todo_items",
+  "todo_status_events",
+  "dashboard_messages",
+] as const;
+
 export type BackupResourceName = typeof BACKUP_RESOURCE_NAMES[number];
 export type BackupRecord = Record<string, unknown>;
 
-export const BACKUP_FORMAT_VERSION = "life-console-backup/2";
+export const BACKUP_FORMAT_VERSION = "life-console-backup/3";
+export const READABLE_BACKUP_FORMATS = [
+  "life-console-backup/2",
+  "life-console-backup/3",
+] as const;
 
 export type LifeConsoleSnapshot = {
-  schema_version: number;
+  schema_version: 2 | 3;
   exported_at: string;
   profiles?: BackupRecord[];
   backup_runs?: BackupRecord[];
@@ -93,17 +104,29 @@ function isRecord(value: unknown): value is BackupRecord {
 function validateSnapshot(value: unknown): LifeConsoleSnapshot {
   if (
     !isRecord(value)
-    || value.schema_version !== 2
+    || (value.schema_version !== 2 && value.schema_version !== 3)
     || typeof value.exported_at !== "string"
     || value.exported_at.length === 0
   ) {
     throw invalidSnapshot();
   }
-  for (const name of BACKUP_RESOURCE_NAMES) {
+  const requiredResources = value.schema_version === 2
+    ? LEGACY_BACKUP_RESOURCE_NAMES
+    : BACKUP_RESOURCE_NAMES;
+  for (const name of requiredResources) {
     const rows = value[name];
     if (!Array.isArray(rows) || rows.some((row) => !isRecord(row))) {
       throw invalidSnapshot();
     }
+  }
+  if (value.schema_version === 2) {
+    const normalized = {
+      ...value,
+      todo_items: [],
+      todo_status_events: [],
+      dashboard_messages: [],
+    };
+    return normalized as unknown as LifeConsoleSnapshot;
   }
   return value as LifeConsoleSnapshot;
 }

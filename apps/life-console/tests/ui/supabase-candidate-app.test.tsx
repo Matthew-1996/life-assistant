@@ -117,10 +117,13 @@ const goals: GoalRepositoryPort = {
 };
 const journals: JournalRepositoryPort = {
   list: async () => ({ items: [], nextCursor: null }),
+  listDeleted: async () => ({ items: [], nextCursor: null }),
   get: async () => null,
   revisions: async () => [],
   create: async () => { throw new Error("not used"); },
   update: async () => { throw new Error("not used"); },
+  softDelete: async () => { throw new Error("not used"); },
+  restore: async () => { throw new Error("not used"); },
 };
 const reviews: ReviewRepositoryPort = {
   listWeekly: async () => ({ items: [], nextCursor: null }),

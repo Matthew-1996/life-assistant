@@ -109,12 +109,19 @@ function repositories({
   };
   const journals: JournalRepositoryPort = {
     list: vi.fn(async () => ({ items: journalRows, nextCursor: null })),
+    listDeleted: vi.fn(async () => ({ items: [], nextCursor: null })),
     get: vi.fn(async () => null),
     revisions: vi.fn(async () => []),
     create: vi.fn(async () => {
       throw new Error("not configured");
     }),
     update: vi.fn(async () => {
+      throw new Error("not used");
+    }),
+    softDelete: vi.fn(async () => {
+      throw new Error("not used");
+    }),
+    restore: vi.fn(async () => {
       throw new Error("not used");
     }),
   };

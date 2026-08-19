@@ -24,9 +24,13 @@ from typing import BinaryIO, Mapping
 from zipfile import BadZipFile, ZipFile
 
 
-BACKUP_FORMAT_VERSION = "life-console-backup/2"
+BACKUP_FORMAT_VERSION = "life-console-backup/3"
+READABLE_BACKUP_FORMATS = (
+    "life-console-backup/2",
+    "life-console-backup/3",
+)
 RECEIPT_FORMAT_VERSION = "life-console-local-receipts/1"
-EXPECTED_RESOURCES = (
+LEGACY_EXPECTED_RESOURCES = (
     "goals",
     "journals",
     "journal_revisions",
@@ -36,6 +40,15 @@ EXPECTED_RESOURCES = (
     "health_days",
     "health_segments",
 )
+EXPECTED_RESOURCES = LEGACY_EXPECTED_RESOURCES + (
+    "todo_items",
+    "todo_status_events",
+    "dashboard_messages",
+)
+RESOURCES_BY_FORMAT = {
+    "life-console-backup/2": LEGACY_EXPECTED_RESOURCES,
+    "life-console-backup/3": EXPECTED_RESOURCES,
+}
 RUN_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
 HEX_SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 
@@ -187,7 +200,7 @@ class BackupStore:
                     "idempotent": True,
                 })
 
-            counts = self._validate_archive(temporary_path)
+            format_version, counts = self._validate_archive(temporary_path)
             reread_digest = self._sha256_file(temporary_path)
             if reread_digest != archive_sha256:
                 raise BackupAgentError("archive_readback_mismatch")
@@ -221,7 +234,7 @@ class BackupStore:
             receipt = BackupReceipt(
                 run_id=run_id,
                 archive_sha256=archive_sha256,
-                format_version=BACKUP_FORMAT_VERSION,
+                format_version=format_version,
                 completed_at=datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
                 counts=counts,
             )
@@ -279,7 +292,7 @@ class BackupStore:
             path.unlink(missing_ok=True)
             raise
 
-    def _validate_archive(self, path: Path) -> dict[str, int]:
+    def _validate_archive(self, path: Path) -> tuple[str, dict[str, int]]:
         try:
             with ZipFile(path) as archive:
                 infos = archive.infolist()
@@ -307,10 +320,10 @@ class BackupStore:
                 if "manifest.json" not in names:
                     raise BackupAgentError("manifest_missing")
                 manifest = json.loads(archive.read("manifest.json"))
-                resources = self._validate_manifest(manifest)
+                format_version, resources = self._validate_manifest(manifest)
                 declared_paths = {"manifest.json"}
                 counts: dict[str, int] = {}
-                for resource_name in EXPECTED_RESOURCES:
+                for resource_name in RESOURCES_BY_FORMAT[format_version]:
                     metadata = resources[resource_name]
                     resource_path = metadata["path"]
                     declared_paths.add(resource_path)
@@ -329,7 +342,7 @@ class BackupStore:
                     resources
                 ):
                     raise BackupAgentError("content_digest_mismatch")
-                return counts
+                return format_version, counts
         except BackupAgentError:
             raise
         except (BadZipFile, KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
@@ -347,7 +360,9 @@ class BackupStore:
             raise BackupAgentError("archive_symlink_rejected")
 
     @staticmethod
-    def _validate_manifest(manifest: object) -> dict[str, dict[str, object]]:
+    def _validate_manifest(
+        manifest: object,
+    ) -> tuple[str, dict[str, dict[str, object]]]:
         if not isinstance(manifest, dict):
             raise BackupAgentError("manifest_invalid")
         required_strings = (
@@ -356,7 +371,8 @@ class BackupStore:
             "export_id",
             "exported_at",
         )
-        if manifest.get("format_version") != BACKUP_FORMAT_VERSION:
+        format_version = manifest.get("format_version")
+        if format_version not in READABLE_BACKUP_FORMATS:
             raise BackupAgentError("format_version_rejected")
         if any(not isinstance(manifest.get(field), str) or not manifest[field] for field in required_strings):
             raise BackupAgentError("manifest_invalid")
@@ -364,7 +380,8 @@ class BackupStore:
         if not isinstance(digest, str) or not HEX_SHA256_PATTERN.fullmatch(digest):
             raise BackupAgentError("manifest_invalid")
         resources = manifest.get("resources")
-        if not isinstance(resources, dict) or set(resources) != set(EXPECTED_RESOURCES):
+        expected_resources = RESOURCES_BY_FORMAT[format_version]
+        if not isinstance(resources, dict) or set(resources) != set(expected_resources):
             raise BackupAgentError("resource_set_rejected")
         validated: dict[str, dict[str, object]] = {}
         for name, metadata in resources.items():
@@ -384,7 +401,7 @@ class BackupStore:
             ):
                 raise BackupAgentError("resource_metadata_invalid")
             validated[name] = {"path": path, "count": count, "sha256": sha256}
-        return validated
+        return format_version, validated
 
     @staticmethod
     def _validate_ndjson(payload: bytes) -> int:
@@ -463,10 +480,10 @@ class BackupStore:
                 or not RUN_ID_PATTERN.fullmatch(run_id)
                 or not isinstance(archive_sha256, str)
                 or not HEX_SHA256_PATTERN.fullmatch(archive_sha256)
-                or format_version != BACKUP_FORMAT_VERSION
+                or format_version not in READABLE_BACKUP_FORMATS
                 or not isinstance(completed_at, str)
                 or not isinstance(counts, dict)
-                or set(counts) != set(EXPECTED_RESOURCES)
+                or set(counts) != set(RESOURCES_BY_FORMAT[format_version])
                 or any(not isinstance(item, int) or isinstance(item, bool) or item < 0 for item in counts.values())
             ):
                 raise ValueError

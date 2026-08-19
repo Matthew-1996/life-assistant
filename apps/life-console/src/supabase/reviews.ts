@@ -12,6 +12,7 @@ interface ReviewBase {
   id: number;
   user_id: string;
   content: string;
+  structured_data: Record<string, unknown>;
   revision: number;
   deleted_at: string | null;
   created_at: string;

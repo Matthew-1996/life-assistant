@@ -94,6 +94,10 @@ git commit -m "feat(life-console): add 2.5 owner data model"
 - Modify: `apps/life-console/src/supabase/journals.ts`
 - Modify: `apps/life-console/src/supabase/reviews.ts`
 - Modify: `apps/life-console/src/supabase/backups.ts`
+- Modify: `apps/life-console/supabase/migrations/20260819161427_life_console_250.sql`
+- Modify: `apps/life-console/local_agent/backup_store.py`
+- Modify: `tools/life_console_backup_agent.py`
+- Modify: `tools/verify_life_console_cloud_backup.py`
 - Test: `apps/life-console/tests/supabase/life-console-250-repositories.test.ts`
 - Test: `apps/life-console/tests/supabase/backups-v3.test.ts`
 
@@ -101,7 +105,7 @@ git commit -m "feat(life-console): add 2.5 owner data model"
 - Produces: `TodoRepositoryPort`、`DashboardMessageRepositoryPort`、`HealthRepositoryPort`、`DailyNewsClient` 和 v2/v3 backup reader。
 - Consumes: Task 1 RPC 返回行。
 
-- [ ] **Step 1: 写领域类型与 Repository API 红灯**
+- [x] **Step 1: 写领域类型与 Repository API 红灯**
 
 ```ts
 export type TodoPriority = "P0" | "P1" | "P2";
@@ -117,16 +121,16 @@ export interface TodoRepositoryPort {
 }
 ```
 
-- [ ] **Step 2: 运行红灯**
+- [x] **Step 2: 运行红灯**
 
 Run: `npx vitest run tests/supabase/life-console-250-repositories.test.ts`
 Expected: FAIL，模块或方法不存在。
 
-- [ ] **Step 3: 实现 Repository 映射与 journal/review 扩展**
+- [x] **Step 3: 实现 Repository 映射与 journal/review 扩展**
 
 普通日记查询固定 `.is("deleted_at", null)`；已删除查询固定 `.not("deleted_at", "is", null)`；软删除/恢复只调用 RPC。Review 映射保留 `structured_data` 原对象。
 
-- [ ] **Step 4: 写 backup v3 红灯并实现双版本 reader**
+- [x] **Step 4: 写 backup v3 红灯并实现双版本 reader**
 
 ```ts
 export const BACKUP_FORMAT_VERSION = "life-console-backup/3";
@@ -139,7 +143,7 @@ export const READABLE_BACKUP_FORMATS = [
 Run: `npx vitest run tests/supabase/backups-v3.test.ts tests/supabase/backups.test.ts`
 Expected: PASS；v2 新资源为空，v3 round-trip 包含 Todo/事件/寄语且不含新闻。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add apps/life-console/src/domain apps/life-console/src/supabase apps/life-console/tests/supabase

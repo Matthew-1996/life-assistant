@@ -87,6 +87,7 @@ function createRepository(
       items: journals,
       nextCursor: null,
     })),
+    listDeleted: vi.fn(async () => ({ items: [], nextCursor: null })),
     get: vi.fn(async () => journals[0] ?? null),
     revisions: vi.fn(async () => [syntheticRevision]),
     create: vi.fn(async (_key, input) => ({
@@ -105,6 +106,12 @@ function createRepository(
       content: input.content ?? syntheticJournal.content,
       tags: input.tags ?? syntheticJournal.tags,
     })),
+    softDelete: vi.fn(async () => ({
+      ...syntheticJournal,
+      deleted_at: "2030-03-01T09:00:00.000Z",
+      revision: 2,
+    })),
+    restore: vi.fn(async () => syntheticJournal),
   };
 }
 

@@ -45,13 +45,14 @@ afterEach(cleanup);
 
 const weekly: WeeklyReview = {
   id: 51, user_id: "synthetic-owner", week_start: "2030-04-01",
-  content: "Synthetic weekly", revision: 1, deleted_at: null,
+  content: "Synthetic weekly", structured_data: {}, revision: 1, deleted_at: null,
   created_at: "2030-04-07T08:00:00.000Z",
   updated_at: "2030-04-07T08:00:00.000Z",
 };
 const phase: PhaseReview = {
   id: 61, user_id: "synthetic-owner", period_start: "2030-04-01",
   period_end: "2030-04-30", content: "Synthetic phase", revision: 1,
+  structured_data: {},
   deleted_at: null, created_at: "2030-05-01T08:00:00.000Z",
   updated_at: "2030-05-01T08:00:00.000Z",
 };

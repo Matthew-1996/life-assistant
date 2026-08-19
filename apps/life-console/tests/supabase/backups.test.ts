@@ -23,7 +23,7 @@ import {
 
 function syntheticSnapshot(): LifeConsoleSnapshot {
   return {
-    schema_version: 2,
+    schema_version: 3,
     exported_at: "2030-01-02T03:04:05Z",
     profiles: [{ user_id: "synthetic-owner" }],
     goals: [{ id: 1, title: "Synthetic goal" }],
@@ -34,6 +34,9 @@ function syntheticSnapshot(): LifeConsoleSnapshot {
     phase_reviews: [{ id: 6, content: "Synthetic phase" }],
     health_days: [{ id: 7, steps: 1234 }],
     health_segments: [{ id: 8, kind: "sleep" }],
+    todo_items: [{ id: 10, title: "Synthetic Todo" }],
+    todo_status_events: [{ id: 11, todo_id: 10 }],
+    dashboard_messages: [{ id: 12, message: "Synthetic message" }],
     backup_runs: [{ id: 9, status: "completed" }],
   };
 }
@@ -46,7 +49,7 @@ function clientWithRpc(
 
 function emptySnapshot(): LifeConsoleSnapshot {
   return Object.fromEntries([
-    ["schema_version", 2],
+    ["schema_version", 3],
     ["exported_at", "2030-01-02T03:04:05Z"],
     ...BACKUP_RESOURCE_NAMES.map((name) => [name, []]),
   ]) as LifeConsoleSnapshot;
@@ -123,6 +126,9 @@ describe("synthetic backup snapshots", () => {
       "phase_reviews",
       "health_days",
       "health_segments",
+      "todo_items",
+      "todo_status_events",
+      "dashboard_messages",
     ]);
   });
 
@@ -181,14 +187,14 @@ describe("synthetic backup snapshots", () => {
   });
 });
 
-describe("life-console-backup/2 packaging", () => {
+describe("life-console-backup/3 packaging", () => {
   const options = {
     exportId: "synthetic-export-0001",
-    sourceProductVersion: "2.3.0",
-    sourceSchemaVersion: "supabase/2",
+    sourceProductVersion: "2.5.0",
+    sourceSchemaVersion: "supabase/3",
   };
 
-  it("packages exactly eight empty NDJSON resources and one manifest", async () => {
+  it("packages exactly eleven empty NDJSON resources and one manifest", async () => {
     const result = await createBackupArchive(emptySnapshot(), options);
     const files = unzipSync(result.bytes);
     const expectedPaths = [
@@ -207,8 +213,8 @@ describe("life-console-backup/2 packaging", () => {
     }
     expect(result.manifest).toMatchObject({
       format_version: BACKUP_FORMAT_VERSION,
-      source_product_version: "2.3.0",
-      source_schema_version: "supabase/2",
+      source_product_version: "2.5.0",
+      source_schema_version: "supabase/3",
       export_id: "synthetic-export-0001",
       exported_at: "2030-01-02T03:04:05Z",
     });
