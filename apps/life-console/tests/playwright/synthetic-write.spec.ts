@@ -90,18 +90,15 @@ test("keeps the 2.5 workbench in-screen and stacks columns below 1180px content 
   }
 });
 
-test("creates a goal through the synthetic Sites Worker", async ({ page }) => {
+test("keeps the retired Sites goal writer out of the 2.5 progress page", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("region", { name: "本周寄语" })).toBeVisible();
 
   await page.getByRole("button", { name: "进展" }).click();
-  await page.getByLabel("目标名称").fill("Playwright synthetic goal");
-  await page.getByRole("button", { name: "保存目标" }).click();
-
-  await expect(page.getByText("已保存到云端 · revision #1")).toBeVisible();
-  await page.reload();
-  await page.getByRole("button", { name: "进展" }).click();
-  await expect(page.getByText("Playwright synthetic goal")).toBeVisible();
+  await expect(page.getByRole("region", { exact: true, name: "目标" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "14 天趋势" })).toBeVisible();
+  await expect(page.getByLabel("目标名称")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "保存目标" })).toHaveCount(0);
 });
 
 test("runs conflict and deletion-plan workflow in the browser", async ({ page }) => {

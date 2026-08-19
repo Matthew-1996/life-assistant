@@ -397,7 +397,7 @@ git commit -m "feat(life-console): add cached daily news"
 - Consumes: Tasks 4–7 UI。
 - Produces: 390px/1440px 稳定布局和关闭 favicon 404 的 Production 资产。
 
-- [ ] **Step 1: 写移动/桌面溢出与关键区块 Playwright 红灯**
+- [x] **Step 1: 写移动/桌面溢出与关键区块 Playwright 红灯**
 
 ```ts
 expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(
@@ -405,16 +405,16 @@ expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(
 );
 ```
 
-- [ ] **Step 2: 拆分样式并运行组件测试**
+- [x] **Step 2: 拆分样式并运行组件测试**
 
 Run: `npx vitest run tests/ui`
 
-- [ ] **Step 3: 运行 Playwright 两种 viewport、删除弹窗、甘特和降级态**
+- [x] **Step 3: 运行 Playwright 两种 viewport、删除弹窗、甘特和降级态**
 
 Run: `npm run test:e2e:synthetic`
 Expected: 全部通过，无 `unsafe-eval`、错误覆盖层或应用 console error。
 
-- [ ] **Step 4: 运行完整门禁**
+- [x] **Step 4: 运行完整门禁**
 
 Run: `tools/setup_git_collaboration.sh`
 Run: `tools/check_git_privacy.sh`
@@ -422,7 +422,7 @@ Run: `npm test`
 Run: `npm run build:supabase-production`
 Run: `git diff --check origin/main...HEAD`
 
-- [ ] **Step 5: 更新工程验收并提交**
+- [x] **Step 5: 更新工程验收并提交**
 
 ```bash
 git add apps/life-console/src/styles apps/life-console/src/styles.css apps/life-console/public/favicon.svg apps/life-console/tests/playwright docs/knowledge-base/生活助手-LifeConsole-2.5.0

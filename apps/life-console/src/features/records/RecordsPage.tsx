@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import type { LifeConsoleClient } from "../../api/client";
 import type { Dashboard } from "../../data/dashboard";
+import { journalNormalizationFields } from "../../journal/normalization-contract";
 import type { DailyCheckinRepositoryPort } from "../../supabase/daily-checkins";
 import { ConversationRecordPanel } from "./ConversationRecordPanel";
 
@@ -34,7 +35,10 @@ export function RecordsPage({
       : mode === "sites" ? "云端真相源" : "iCloud";
 
   return (
-    <section aria-labelledby="records-title">
+    <section
+      aria-labelledby="records-title"
+      data-journal-normalization-fields={journalNormalizationFields.length}
+    >
       <header className="hero capture-hero">
         <div>
           <p className="eyebrow">记录，不打断生活</p>

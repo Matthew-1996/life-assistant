@@ -2,8 +2,8 @@
 
 ## 1. 当前状态
 
-- 主阶段：Gate 2 v2 已通过，进入 TDD 开发。
-- 生产功能：从 Owner 数据模型与原子 RPC 开始；远程 migration 尚未执行。
+- 主阶段：Tasks 1–8 本地 TDD 实现与合成验收完成，准备合成 Preview。
+- 生产功能：代码、测试和构建已收口；远程 migration、Owner Preview、自动化与 Production 均未执行。
 - 基线：PR #56 已 squash merge；本地 `main` 与 `origin/main` 一致。
 - Production 只读复验：HTTP 200、严格 `script-src 'self'`、页面有内容、无错误覆盖层、无 page error/`unsafe-eval`。`/favicon.ico` 404 为非阻断项，纳入 2.5.0。
 
@@ -42,6 +42,26 @@
 | 安全 | 401、Secret 隔离、外部文本不可信、严格 CSP、隐私/历史隐私 |
 | 响应式 | 390px/1440px 无页面横向溢出，键盘和 Reduced Motion |
 
-## 5. 阶段证据记录规则
+## 5. 本地合成验收证据
+
+验收基线：提交 `008c765` 之后完成 Task 8；所有外部服务继续使用公开合成 fixture 或注入式响应，没有读取或写入真实 Owner 数据。
+
+| 门禁 | 结果 |
+|---|---|
+| 需求/设计/技术治理 | 通过；PO 规范原文与 Gate 2 v2 状态一致 |
+| Git 协作与隐私 | hooks、当前差异与凭据检查通过 |
+| Vitest | 72 文件 / 534 项通过 |
+| Python | 75 + 7 + 10 + 1 = 93 项通过 |
+| Supabase Production build | 通过；严格 CSP 不含 `unsafe-eval` |
+| Playwright | 8/8 通过；真实 Chrome 无错误覆盖层、console error 或 page error |
+| 响应式 | 390/1024/1280/1440 根页面无横向溢出；不足 1180px 自动单列 |
+| 内部滚动 | 仅 Todo 甘特与 7 天睡眠表在窄屏内部横向滚动 |
+| 日记删除/恢复 | React 组件级确认弹窗、取消、软删除与恢复通过；Owner 浏览器写验收等待独立门禁 |
+| 新闻 | 401、白名单、24 小时窗口、去重配比、模型 Schema、体积/超时、单飞缓存与陈旧降级通过 |
+| favicon | 本地 SVG 已进入构建产物，浏览器返回 `image/svg+xml` |
+
+`tools/validate_project.py` 在隔离 worktree 中仍会报告 Git 排除的私人真相源/派生文件缺失，以及一个既有失效研究链接；未复制私人数据来伪造通过。新增代码导致的日记契约绑定与 Secret 误报已修复。
+
+## 6. 阶段证据记录规则
 
 每次验收只记录去敏结论、合成 fixture、命令、计数和提交，不记录真实日记、健康值、Owner 标识、项目 ID、部署 ID、Secret 或自动化内部凭据。

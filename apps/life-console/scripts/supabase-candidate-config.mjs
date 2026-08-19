@@ -36,8 +36,11 @@ function validateCronEnvironment(environment) {
     throw new Error("Deployments may define only CRON_SECRET");
   }
   if (Object.prototype.hasOwnProperty.call(environment, "CRON_SECRET")) {
-    const secret = environment.CRON_SECRET;
-    if (typeof secret !== "string" || [...secret.trim()].length < 16) {
+    const cronCredential = environment.CRON_SECRET;
+    if (
+      typeof cronCredential !== "string"
+      || [...cronCredential.trim()].length < 16
+    ) {
       throw new Error("CRON_SECRET must contain at least 16 characters");
     }
   }
