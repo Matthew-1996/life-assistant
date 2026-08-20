@@ -2,8 +2,8 @@
 
 ## 1. 当前状态
 
-- 主阶段：PO 记录页反馈、全量门禁与更新后的受保护合成 Preview 均已通过；Draft PR #58 的公共依赖安装已由 GitHub Runner 验证，Runner UTC 导致的三个 Todo 测试环境差异已在本地修复并复验。Owner Preview 写入仍等待独立确认。
-- 生产功能：Supabase 日记契约未变；纯合成 Preview 新增内存日记演示。远程 migration、Owner Preview、自动化与 Production 均未执行。
+- 主阶段：PO 记录页反馈、全量门禁与更新后的受保护合成 Preview 均已通过；Draft PR #58 的 privacy、Python、Node 三项 CI 已全绿。Supabase 已切换到与 Life Console Production URL 匹配的健康项目，PO 当次确认的 2.5.0 migration 已应用并通过后验验证；Owner Preview 仍未执行。
+- 生产功能：Supabase 日记契约未变；纯合成 Preview 新增内存日记演示。Production 数据库仅应用加法 schema/RPC/权限变更，未写 Owner 业务记录；自动化、PR 合并与 Vercel Production 均未执行。
 - 基线：PR #56 已 squash merge；本地 `main` 与 `origin/main` 一致。
 - Production 只读复验：HTTP 200、严格 `script-src 'self'`、页面有内容、无错误覆盖层、无 page error/`unsafe-eval`。`/favicon.ico` 404 为非阻断项，纳入 2.5.0。
 
@@ -51,12 +51,13 @@
 | 需求/设计/技术治理 | 通过；PO 规范原文与 Gate 2 v2 状态一致 |
 | Git 协作与隐私 | hooks、当前差异与凭据检查通过 |
 | 公共 Registry 空缓存安装 | Node 24 `npm ci` 通过；未使用本机旧缓存，0 个已知漏洞 |
-| Vitest | 74 文件 / 539 项通过；新增锁文件 tarball host 防回归测试 |
+| Vitest | 74 文件 / 540 项通过；新增锁文件 tarball host 与寄语同-key事务锁防回归测试 |
 | Python | 75 + 7 + 10 + 1 = 93 项通过 |
 | Supabase Production build | 通过；严格 CSP 不含 `unsafe-eval` |
 | Playwright | 8/8 通过；真实 Chrome 无错误覆盖层、console error 或 page error |
 | npm audit | 0 info / low / moderate / high / critical |
-| UTC Runner 等价复验 | 外层 `TZ=UTC` 下定向 Todo 13/13、全量 Vitest 74/539、Python 93 和默认 build 通过；Vitest 内明确使用 `Asia/Shanghai` |
+| UTC Runner 等价复验 | 外层 `TZ=UTC` 下定向 Todo 13/13、当时全量 Vitest 74/539、Python 93 和默认 build 通过；Vitest 内明确使用 `Asia/Shanghai` |
+| GitHub Actions | privacy、Python、Node 三项通过；Node 包含公共 `npm ci`、生成契约、完整测试和 build |
 | 响应式 | 390/1024/1280/1440 根页面无横向溢出；不足 1180px 自动单列 |
 | 内部滚动 | 仅 Todo 甘特与 7 天睡眠表在窄屏内部横向滚动 |
 | 日记删除/恢复 | React 组件级确认弹窗、取消、软删除与恢复通过；Owner 浏览器写验收等待独立门禁 |
@@ -83,8 +84,22 @@
 
 发布前 HTTP 验收曾发现 SPA fallback 会抢先把 `/api/*` 返回为首页 200；已增加受版本控制的合成 Preview 配置和回归测试，将 API 404 路由置于 fallback 前。最终制品逐文件匹配本地静态构建，包含 4 个静态文件、0 个 Functions、0 个 Cron；远端 `/` 与 `/favicon.svg` 为 200，`/api/daily-news` 为 404，严格 CSP 仍为 `connect-src 'none'` 且不含 `unsafe-eval`。
 
-远端 CI 中 privacy 与 Python 已通过；原 Node 安装失败在锁文件修复推送后已越过，证明 25 个公共包 tarball 地址规范化有效。Node 随后在三个 Todo 用例失败：Runner 默认 UTC 将“今日”和 `datetime-local` fixture 按 UTC 解释，而产品与测试期望为上海自然日。本地以 `TZ=UTC` 精确复现相同三项失败后，仅在 Vitest 配置固定 `Asia/Shanghai`；同一 UTC 外层环境下定向 13/13、完整 Vitest 74/539、Python 93 和默认 build 均通过。远端 CI 仍须在该补丁推送后重跑通过才可记为全绿。
+远端 CI 首轮曾因 25 个 tarball 指向本机镜像而无法安装；公共 Registry 规范化与回归测试推送后，GitHub Runner 的 `npm ci` 已通过。Node 随后暴露 Runner 默认 UTC 与上海自然日 fixture 的差异；本地以 `TZ=UTC` 精确复现相同三项失败后，仅在 Vitest 配置固定 `Asia/Shanghai`。最终 GitHub Actions 的 privacy、Python、Node 三项均通过，Node 完成公共安装、生成契约、完整测试和 build。上游 actions 的 Node 20 弃用注解为非阻断警告。
 
-## 7. 阶段证据记录规则
+Supabase 首次上线前只读核对曾因账号不匹配而失败关闭；重新连接后，唯一健康东京项目的 API URL 与 Life Console Production 本地绑定精确匹配。Vercel 拉取文件对敏感 publishable key 使用遮罩，因此未尝试输出或比对密钥明文；项目身份以 URL 与插件可见项目状态复核，Owner 鉴权链路留在受保护 Preview 门禁验证。
+
+## 7. Production Supabase migration 证据
+
+- PO 于 2026-08-20 明确确认执行本次 migration；该确认不跨 Owner Preview、自动化、PR 合并或 Vercel Production 门禁复用。
+- 应用前独立审查发现 `upsert_dashboard_message` 对既有周寄语的同-key并发重试可能先触发 revision 冲突。先以失败测试复现缺少事务锁，再按 Owner UUID + 幂等键增加 transaction-scoped advisory lock；定向数据库测试 13/13 通过。
+- 专门的 migration 测试从完整 2.4 schema 应用 2.5 migration并重复执行；Vitest worker 固定为 3 后，在不放宽原 5/10 秒超时的情况下全量 74 文件 / 540 项、Python 93 项通过。
+- migration 通过正式 Supabase migration runner 应用一次。后验 catalog 核对确认 3 张目标表启用 RLS，恰有 3 条 authenticated Owner SELECT 策略；anon 无 SELECT，authenticated 有 SELECT 但无直接 INSERT/UPDATE/DELETE。
+- 六个写 RPC 均为 `SECURITY DEFINER`、空 `search_path`、authenticated 可执行、public/anon 不可执行；backup v3 导出继续为 `SECURITY INVOKER`。函数定义中事务锁先于幂等键读取。
+- 两个独立数据库调用以只读事务竞争同一 advisory lock：等待方仅在持锁方事务结束后返回，两次调用无错误，结束后 advisory lock 计数为 0。该验证不调用业务 RPC、不写 Owner 记录。
+- Security Advisor 新增的 6 条提示只对应上述 authenticated `SECURITY DEFINER` RPC，已逐个审查 `auth.uid()`、Owner 条件、空 `search_path` 与 execute grants；目标表没有意外安全提示。[Supabase Database Functions](https://supabase.com/docs/guides/database/functions)、[RLS](https://supabase.com/docs/guides/database/postgres/row-level-security)
+- Performance Advisor 对新索引的未使用提示发生在空表阶段，保留至 Owner Preview 后观察；未因提示删除 Owner/FK/查询路径索引。
+- 全程未读取真实记录内容、未输出 Owner 标识、项目 ID、Secret 或数据库资源 ID。
+
+## 8. 阶段证据记录规则
 
 每次验收只记录去敏结论、合成 fixture、命令、计数和提交，不记录真实日记、健康值、Owner 标识、项目 ID、部署 ID、Secret 或自动化内部凭据。

@@ -22,6 +22,12 @@ async function applyCurrentSchema(database: PGlite) {
     "../../supabase/migrations/0003_cover_health_segment_foreign_key.sql",
     "../../supabase/migrations/0005_migration_tracking.sql",
     "../../supabase/migrations/20260815165912_life_console_230_online_primary.sql",
+    "../../supabase/migrations/20260816111000_owner_backup_request.sql",
+    "../../supabase/migrations/20260816113000_controlled_online_primary_cutover.sql",
+    "../../supabase/migrations/20260816170000_unified_journal_normalization.sql",
+    "../../supabase/migrations/20260816171759_retry_failed_journal_normalization.sql",
+    "../../supabase/migrations/20260816220627_preserve_completed_journal_normalization.sql",
+    "../../supabase/migrations/20260817022619_enforce_agent_normalization_priority.sql",
   ]) {
     await database.exec(await readFile(new URL(file, import.meta.url), "utf8"));
   }

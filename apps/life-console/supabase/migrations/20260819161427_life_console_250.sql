@@ -392,6 +392,10 @@ begin
     raise exception using errcode = '22023', message = 'Invalid image metadata';
   end if;
 
+  perform pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended(v_user_id::text || ':' || p_idempotency_key, 0)
+  );
+
   v_fingerprint := md5(jsonb_build_object(
     'week_start', p_week_start,
     'expected_revision', p_expected_revision,

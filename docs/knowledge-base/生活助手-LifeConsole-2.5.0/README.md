@@ -13,4 +13,4 @@
 - [项目管理](项目管理-生活助手-LifeConsole-2.5.0.md)
 - [上线证据](上线证据-生活助手-LifeConsole-2.5.0.md)
 
-当前状态：Gate 1 范围和 Gate 2 v2 正式视觉、设计与技术方案均已由 PO 确认，[Draft PR #58](https://github.com/Matthew-1996/life-assistant/pull/58) 已完成功能实现、本地全量门禁和受保护合成 Preview。GitHub Runner 已通过公共依赖安装；后续 UTC 与上海自然日测试环境差异已在本地修复并通过 UTC 等价全量复验，待更新 PR 后再次运行远端 CI。Supabase 远程 migration、Owner Preview、自动化与 Production 仍未执行，继续遵守各自门禁。
+当前状态：Gate 1 范围和 Gate 2 v2 正式视觉、设计与技术方案均已由 PO 确认，[Draft PR #58](https://github.com/Matthew-1996/life-assistant/pull/58) 已完成功能实现、本地全量门禁、受保护合成 Preview，且 privacy、Python、Node 三项远端 CI 全绿。Supabase 已切换到与 Life Console Production URL 匹配的健康项目；PO 当次确认后，2.5.0 migration 已应用并通过迁移历史、RLS、权限、RPC、Advisor 与双会话事务锁的去敏验证。Owner Preview、自动化、PR 合并和 Vercel Production 仍未执行，继续遵守各自门禁。

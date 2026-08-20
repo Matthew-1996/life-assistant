@@ -351,6 +351,58 @@ describe("Life Console 2.5.0 owner data behavior", () => {
     ).rejects.toThrow(/revision/i);
   });
 
+  it("holds one transaction lock for same-key dashboard update retries", async () => {
+    const weekStart = "2026-08-31";
+    const seeded = await queryAs<{ revision: number }>(
+      "authenticated",
+      ownerA,
+      "select revision from public.upsert_dashboard_message($1, $2, $3, $4, $5, $6, $7)",
+      [
+        "synthetic-message-lock-seed-0001",
+        weekStart,
+        null,
+        "Message before the retry",
+        null,
+        {},
+        "dawn",
+      ],
+    );
+    const retryParams = [
+      "synthetic-message-lock-retry-0001",
+      weekStart,
+      seeded.rows[0].revision,
+      "Message after the retry",
+      null,
+      {},
+      "twilight",
+    ];
+
+    await db.query("select set_config('request.jwt.claim.sub', $1, false)", [ownerA]);
+    await db.exec("begin");
+    try {
+      await db.exec("set local role authenticated");
+      const first = await db.query<{ id: number; revision: number }>(
+        "select id, revision from public.upsert_dashboard_message($1, $2, $3, $4, $5, $6, $7)",
+        retryParams,
+      );
+      const repeated = await db.query<{ id: number; revision: number }>(
+        "select id, revision from public.upsert_dashboard_message($1, $2, $3, $4, $5, $6, $7)",
+        retryParams,
+      );
+      const locks = await db.query<{ count: number }>(
+        `select count(*)::int as count
+         from pg_catalog.pg_locks
+         where locktype = 'advisory' and granted`,
+      );
+
+      expect(repeated.rows).toEqual(first.rows);
+      expect(locks.rows).toEqual([{ count: 1 }]);
+    } finally {
+      await db.exec("rollback");
+      await db.exec("reset role");
+    }
+  });
+
   it("soft-deletes and restores only the owner's journal with idempotent repeats", async () => {
     await db.query(
       `insert into public.journals (user_id, event_date, title, content)
