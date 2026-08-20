@@ -122,3 +122,11 @@ Supabase 首次上线前只读核对曾因账号不匹配而失败关闭；重�
 正式站点横幅快速维护已验收：Production 模式不渲染“线上唯一真相源”状态组件及其两段内部治理文案；`Life Console · Online` 顶部品牌状态与系统页数据治理说明保留。组件测试在旧实现上失败、最小移除后通过；完整 Vitest 543/543、应用 Python 93 项、根工具 Python 369 项（1 项跳过）、Production build、Playwright 9/9、Preview 与 Production 1440px/390px、严格 CSP、main CI 与运行日志均通过。本次未改数据库 schema、RLS、Owner 数据或寄语自动化。
 
 每次验收只记录去敏结论、合成 fixture、命令、计数和提交，不记录真实日记、健康值、Owner 标识、项目 ID、部署 ID、Secret 或自动化内部凭据。
+
+## 11. 内容自动化收口证据
+
+- DeepSeek Production Owner 合成健康探针返回 `HTTP 200 / provider_ok / no-store`；请求只含代码内置合成日记，不读写任何日记表，响应不含模型正文。
+- GDELT 三分类公开探针稳定复现上游 429，并返回“每 5 秒最多一次”的节流要求；原实现同时开始三类请求，是本项目可修复的直接原因。回归测试在旧实现上得到三个相同起始时刻，修复后为 0/5/10 秒。
+- 两个新闻重建 Function 的 60 秒上限符合 Vercel 当前配置范围；定向新闻/配置测试 3 文件 / 17 项通过。共享出口仍被上游限制时继续返回最近成功缓存或可重试空态，不返回半成品。
+- Owner-scoped 每周寄语工具以失败测试起步，验证最小四次读取、P0/P1/active/deleted 过滤、周复盘只选 `structured_data`、当周 revision 和去敏写入收据；定向 Python 测试通过。
+- 私有规范 Prompt、注册表 SHA-256 与运行实例 Prompt 完全一致；实例状态 ACTIVE，RRULE 为每周一 12:00 上海本地时间，调度库的下一次运行换算为周一 12:01:43 上海 / 04:01:43 UTC，在 300 秒允许抖动内。未记录自动化 ID、目标线程 ID 或 Owner 数据。

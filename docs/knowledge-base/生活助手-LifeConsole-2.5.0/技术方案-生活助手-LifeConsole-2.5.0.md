@@ -87,9 +87,10 @@ Owner Agent (Monday 12:00 Asia/Shanghai)
 - `GET /api/cron/daily-news`：要求 `Authorization: Bearer <CRON_SECRET>`；成功或已存在返回 200，鉴权失败 401。
 - `GET /api/daily-news`：校验 Supabase Owner JWT；命中缓存直接返回，缺失时通过单飞锁允许一次受控重建。
 - 两个端点固定同一 Vercel Production 区域；缓存键为 `daily-news:v1:YYYY-MM-DD`，最近成功指针为 `daily-news:v1:last-success`，保留 7 天。
-- GDELT 响应设超时、最大体积和条目上限；URL 规范化后按 canonical URL 和标题指纹去重，再执行域名、分类与国内/国际配比。
+- GDELT 响应设超时、最大体积和条目上限；三个分类请求按上游公开限制顺序执行，相邻请求至少间隔 5 秒；URL 规范化后按 canonical URL 和标题指纹去重，再执行域名、分类与国内/国际配比。
 - DeepSeek 使用独立新闻 Schema；公开输入按不可信数据包裹，输出逐字段校验，摘要超过 160 字拒绝而非截断补义。
 - 全链路失败返回最近成功缓存；没有缓存返回结构化 `empty`，不得返回半成品候选。
+- Owner 与 Cron 两个可能触发重建的 Function 最长执行时间为 60 秒，仍保持同一 Production 区域；该上限只覆盖节流等待、三次有界发现和一次有界摘要，不允许无限重试。
 
 ## 7. 每周寄语 Agent
 
@@ -97,6 +98,7 @@ Owner Agent (Monday 12:00 Asia/Shanghai)
 - 读取仅限活跃目标、未完成 P0/P1 Todo、最近周复盘；生成完成后调用 `upsert_dashboard_message`。
 - Unsplash Key 只从 macOS Keychain 读取；查询词使用通用主题，不含目标、Todo 或复盘文本。
 - 自动化创建前核对规范 Prompt、RRULE、`next_run` 和上海本地时间；该动作需要独立 PO 确认。
+- 自动化使用 Owner Keychain 会话调用 `life_console_cloud.py` 的最小投影读取与 revision-safe 寄语 RPC；成功只返回去敏保存收据，不把上下文写入 Supabase、iCloud 或 Git。
 
 ## 8. 前端与 CSP
 

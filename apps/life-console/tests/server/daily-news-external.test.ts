@@ -24,6 +24,24 @@ const selected: PublicNewsCandidate[] = Array.from({ length: 5 }, (_, index) => 
 }));
 
 describe("GDELT discovery client", () => {
+  it("starts category requests at least five seconds apart", async () => {
+    let elapsedMs = 0;
+    const starts: number[] = [];
+    const fetch = vi.fn(async () => {
+      starts.push(elapsedMs);
+      return Response.json({ articles: [] });
+    });
+
+    await discoverGdeltCandidates({
+      fetch,
+      wait: async (milliseconds) => {
+        elapsedMs += milliseconds;
+      },
+    });
+
+    expect(starts).toEqual([0, 5_000, 10_000]);
+  });
+
   it("uses bounded 24-hour category queries and projects only public candidate fields", async () => {
     const urls: URL[] = [];
     const fetch = vi.fn(async (input: string | URL | Request) => {
@@ -57,6 +75,7 @@ describe("GDELT discovery client", () => {
       fetch,
       now: () => new Date("2030-05-14T02:00:00.000Z"),
       timeoutMs: 100,
+      wait: async () => undefined,
     });
 
     expect(urls).toHaveLength(3);
@@ -80,6 +99,7 @@ describe("GDELT discovery client", () => {
     await expect(discoverGdeltCandidates({
       fetch: oversized,
       maxResponseBytes: 1024,
+      wait: async () => undefined,
     })).rejects.toThrowError(new GdeltClientError("gdelt_response_too_large"));
 
     const stalled = vi.fn((_input: string | URL | Request, init?: RequestInit) => (
@@ -92,6 +112,7 @@ describe("GDELT discovery client", () => {
     await expect(discoverGdeltCandidates({
       fetch: stalled as typeof fetch,
       timeoutMs: 5,
+      wait: async () => undefined,
     })).rejects.toThrowError(new GdeltClientError("gdelt_timeout"));
   });
 });

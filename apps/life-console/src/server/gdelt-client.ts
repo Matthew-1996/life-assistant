@@ -22,6 +22,7 @@ export interface GdeltClientDependencies {
   timeoutMs?: number;
   maxResponseBytes?: number;
   now?: () => Date;
+  wait?: (milliseconds: number) => Promise<void>;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -167,8 +168,13 @@ export async function discoverGdeltCandidates(
   dependencies: GdeltClientDependencies,
 ): Promise<PublicNewsCandidate[]> {
   const categories: DailyNewsCategory[] = ["technology", "finance", "politics"];
-  const results = await Promise.all(categories.map((category) => (
-    discoverCategory(category, dependencies)
-  )));
+  const wait = dependencies.wait ?? (async (milliseconds: number) => {
+    await new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
+  });
+  const results: PublicNewsCandidate[][] = [];
+  for (const [index, category] of categories.entries()) {
+    if (index > 0) await wait(5_000);
+    results.push(await discoverCategory(category, dependencies));
+  }
   return results.flat();
 }

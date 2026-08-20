@@ -116,11 +116,11 @@ export function createSupabaseCandidateVercelConfig(environment) {
     outputDirectory: "dist/supabase-candidate",
     functions: {
       "api/daily-news.ts": {
-        maxDuration: 30,
+        maxDuration: 60,
         regions: ["hkg1"],
       },
       "api/cron/daily-news.ts": {
-        maxDuration: 30,
+        maxDuration: 60,
         regions: ["hkg1"],
       },
     },
