@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type {
   CreateTodoInput,
+  DeleteTodoInput,
   TodoItem,
   TodoPriority,
   TodoRepositoryPort,
@@ -101,14 +102,16 @@ export class TodoRepository implements TodoRepositoryPort {
     ].join(",");
     return await this.repository.executeRead<TodoItem[]>(async () =>
       await ordered(
-        this.client.from("todo_items").select("*").or(filter),
+        this.client.from("todo_items").select("*").is("deleted_at", null).or(filter),
       ) as SupabaseResult<TodoItem[]>
     ) ?? [];
   }
 
   async listAll(): Promise<TodoItem[]> {
     return await this.repository.executeRead<TodoItem[]>(async () =>
-      await ordered(this.client.from("todo_items").select("*")) as SupabaseResult<TodoItem[]>
+      await ordered(
+        this.client.from("todo_items").select("*").is("deleted_at", null),
+      ) as SupabaseResult<TodoItem[]>
     ) ?? [];
   }
 
@@ -177,5 +180,18 @@ export class TodoRepository implements TodoRepositoryPort {
       }) as SupabaseResult<TodoItem[]>
     );
     return requireResult(rows, "empty_todo_transition_result");
+  }
+
+  async delete(input: DeleteTodoInput): Promise<TodoItem> {
+    const rows = await this.repository.executeWrite<TodoItem[]>(async () =>
+      await this.client.rpc("soft_delete_todo", {
+        p_id: positiveInteger(input.id, "Todo id"),
+        p_expected_revision: positiveInteger(
+          input.expectedRevision,
+          "Expected revision",
+        ),
+      }) as SupabaseResult<TodoItem[]>
+    );
+    return requireResult(rows, "empty_todo_delete_result");
   }
 }

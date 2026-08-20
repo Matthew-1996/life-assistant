@@ -589,9 +589,8 @@ describe("Supabase candidate product application", () => {
         name: "把重要的事情放在看得见的地方，给今天留出一段真正能完成的时间。",
       }),
     ).toBeTruthy();
-    expect(screen.getByLabelText("私有候选边界").textContent).toContain(
-      "生产环境",
-    );
+    expect(screen.queryByLabelText("私有候选边界")).toBeNull();
+    expect(screen.queryByText("Life Console · 数据已迁移 · 生产环境")).toBeNull();
     expect(screen.getByRole("region", { name: "Todo" })).toBeTruthy();
     expect(screen.getByText("当前预览未连接 Todo 数据源。")).toBeTruthy();
     expect(screen.getByRole("region", { name: "每日新闻" })).toBeTruthy();

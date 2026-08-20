@@ -27,10 +27,12 @@ const todos: TodoRepositoryPort = {
     due_at: input.dueAt,
     actual_started_at: null,
     completed_at: null,
+    deleted_at: null,
     revision: 1,
     created_at: "2030-01-08T01:00:00.000Z",
     updated_at: "2030-01-08T01:00:00.000Z",
   })),
+  delete: vi.fn(async () => { throw new Error("not used"); }),
   update: vi.fn(async () => { throw new Error("not used"); }),
   transition: vi.fn(async () => { throw new Error("not used"); }),
 };
@@ -77,4 +79,5 @@ describe("Life Console 2.5 workbench", () => {
       expect(child.classList.contains("workbench-primary__item")).toBe(true);
     }
   });
+
 });

@@ -57,13 +57,14 @@ const todo: TodoItem = {
   due_at: "2030-05-02T01:00:00.000Z",
   actual_started_at: null,
   completed_at: null,
+  deleted_at: null,
   revision: 1,
   created_at: "2030-05-01T00:00:00.000Z",
   updated_at: "2030-05-01T00:00:00.000Z",
 };
 
 describe("Life Console 2.5.0 repositories", () => {
-  it("maps Todo reads and all three write RPCs without client-authored status time", async () => {
+  it("maps Todo reads and all four write RPCs without client-authored status time", async () => {
     const updated = { ...todo, title: "Updated Todo", revision: 2 };
     const completed = {
       ...updated,
@@ -79,6 +80,7 @@ describe("Life Console 2.5.0 repositories", () => {
       { status: 200, body: [todo] },
       { status: 200, body: [updated] },
       { status: 200, body: [completed] },
+      { status: 200, body: [{ ...completed, revision: 4, deleted_at: "2030-05-01T09:00:00.000Z" }] },
     ]);
     const repository = new TodoRepository(client);
 
@@ -103,14 +105,20 @@ describe("Life Console 2.5.0 repositories", () => {
       expectedRevision: 2,
       status: "completed",
     })).resolves.toEqual(completed);
+    await expect(repository.delete({
+      id: todo.id,
+      expectedRevision: 3,
+    })).resolves.toMatchObject({ deleted_at: "2030-05-01T09:00:00.000Z" });
 
     const todayUrl = new URL(requests[0].url);
     expect(todayUrl.pathname).toBe("/rest/v1/todo_items");
     expect(todayUrl.searchParams.get("or")).toContain("planned_start_at.lte.2030-05-01T12:00:00.000Z");
     expect(todayUrl.searchParams.get("or")).toContain("completed_at.gte.2030-04-30T16:00:00.000Z");
+    expect(todayUrl.searchParams.get("deleted_at")).toBe("is.null");
     expect(new URL(requests[1].url).searchParams.get("order")).toBe(
       "priority.asc,due_at.asc,created_at.asc,id.asc",
     );
+    expect(new URL(requests[1].url).searchParams.get("deleted_at")).toBe("is.null");
     expect(new URL(requests[2].url).searchParams.get("todo_id")).toBe("eq.71");
     expect(JSON.parse(await requests[3].text())).toEqual({
       p_due_at: todo.due_at,
@@ -135,6 +143,11 @@ describe("Life Console 2.5.0 repositories", () => {
     });
     expect(transitionBody).not.toContain("actual_started_at");
     expect(transitionBody).not.toContain("completed_at");
+    expect(new URL(requests[6].url).pathname).toBe("/rest/v1/rpc/soft_delete_todo");
+    expect(JSON.parse(await requests[6].text())).toEqual({
+      p_expected_revision: 3,
+      p_id: 71,
+    });
   });
 
   it("fails Todo input closed and maps SQL revision conflicts", async () => {

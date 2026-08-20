@@ -18,6 +18,7 @@ function todo(overrides: Partial<TodoItem>): TodoItem {
     due_at: "2030-05-02T01:00:00.000Z",
     actual_started_at: null,
     completed_at: null,
+    deleted_at: null,
     revision: 1,
     created_at: "2030-05-01T00:00:00.000Z",
     updated_at: "2030-05-01T00:00:00.000Z",

@@ -25,6 +25,7 @@ function todo(overrides: Partial<TodoItem> = {}): TodoItem {
     due_at: "2030-01-09T01:00:00.000Z",
     actual_started_at: null,
     completed_at: null,
+    deleted_at: null,
     revision: 1,
     created_at: "2030-01-08T01:00:00.000Z",
     updated_at: "2030-01-08T01:00:00.000Z",
@@ -34,6 +35,7 @@ function todo(overrides: Partial<TodoItem> = {}): TodoItem {
 
 function repository(items: TodoItem[] = []): TodoRepositoryPort & {
   create: ReturnType<typeof vi.fn>;
+  delete: ReturnType<typeof vi.fn>;
   transition: ReturnType<typeof vi.fn>;
   update: ReturnType<typeof vi.fn>;
 } {
@@ -47,6 +49,10 @@ function repository(items: TodoItem[] = []): TodoRepositoryPort & {
       priority: input.priority ?? "P1",
       planned_start_at: input.plannedStartAt ?? now.toISOString(),
       due_at: input.dueAt,
+    })),
+    delete: vi.fn(async (input) => todo({
+      id: input.id,
+      revision: input.expectedRevision + 1,
     })),
     update: vi.fn(async (input) => todo({
       id: input.id,
@@ -121,6 +127,31 @@ describe("Life Console 2.5 Todo panel", () => {
       id: 1,
       status: "in_progress",
     }));
+  });
+
+  it("asks before deleting and removes only the confirmed Todo", async () => {
+    const user = userEvent.setup();
+    const repo = repository([todo()]);
+    render(<TodoPanel now={now} repository={repo} />);
+
+    const row = await screen.findByRole("article", { name: "Todo 01 合成验收任务" });
+    await user.click(within(row).getByRole("button", { name: "删除合成验收任务" }));
+    const dialog = screen.getByRole("dialog", { name: "删除 Todo" });
+    await user.click(within(dialog).getByRole("button", { name: "取消" }));
+    expect(repo.delete).not.toHaveBeenCalled();
+    expect(screen.getByRole("article", { name: "Todo 01 合成验收任务" })).toBeTruthy();
+
+    await user.click(within(row).getByRole("button", { name: "删除合成验收任务" }));
+    await user.click(within(screen.getByRole("dialog", { name: "删除 Todo" }))
+      .getByRole("button", { name: "确认删除" }));
+
+    await waitFor(() => expect(repo.delete).toHaveBeenCalledWith({
+      expectedRevision: 1,
+      id: 1,
+    }));
+    await waitFor(() => expect(screen.queryByRole("article", {
+      name: "Todo 01 合成验收任务",
+    })).toBeNull());
   });
 
   it("renders exactly fourteen natural-day columns inside the Gantt region", async () => {

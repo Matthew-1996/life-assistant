@@ -8,6 +8,7 @@ import type {
   UpdateTodoInput,
 } from "../../domain/todos";
 import { isOverdue, sortTodos } from "./todo-projections";
+import { TodoDeleteDialog } from "./TodoDeleteDialog";
 import { TodoEditorSheet, toDateTimeInput } from "./TodoEditorSheet";
 import { TodoGantt } from "./TodoGantt";
 
@@ -47,6 +48,7 @@ export function TodoPanel({ now, repository }: TodoPanelProps) {
   const [plannedStart, setPlannedStart] = useState(() => toDateTimeInput(currentNow));
   const [due, setDue] = useState("");
   const [editing, setEditing] = useState<TodoItem | null>(null);
+  const [deleting, setDeleting] = useState<TodoItem | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<string | null>(null);
 
@@ -143,6 +145,26 @@ export function TodoPanel({ now, repository }: TodoPanelProps) {
     }
   }
 
+  async function deleteTodo() {
+    if (!repository || !deleting || busy) return;
+    const target = deleting;
+    setBusy(true);
+    setError(null);
+    try {
+      await repository.delete({
+        expectedRevision: target.revision,
+        id: target.id,
+      });
+      setItems((current) => current.filter((candidate) => candidate.id !== target.id));
+      setDeleting(null);
+      setReceipt(`“${target.title}”已删除。`);
+    } catch {
+      setError("Todo 删除失败，可能已有更新；请重新读取后再试。");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <section aria-label="Todo" className="card pad todo-panel" role="region">
       <div className="section-head todo-panel__head">
@@ -208,12 +230,27 @@ export function TodoPanel({ now, repository }: TodoPanelProps) {
               <option value="completed">已完成</option>
             </select>
             <button className="secondary-button" disabled={busy} onClick={() => setEditing(item)} type="button">编辑</button>
+            <button
+              aria-label={`删除${item.title}`}
+              className="secondary-button danger"
+              disabled={busy}
+              onClick={() => setDeleting(item)}
+              type="button"
+            >
+              删除
+            </button>
           </article>
         ))}
       </div>
 
       <TodoGantt now={currentNow} todos={items} />
       <TodoEditorSheet busy={busy} onClose={() => setEditing(null)} onSave={updateTodo} todo={editing} />
+      <TodoDeleteDialog
+        busy={busy}
+        onCancel={() => setDeleting(null)}
+        onConfirm={() => void deleteTodo()}
+        todo={deleting}
+      />
     </section>
   );
 }

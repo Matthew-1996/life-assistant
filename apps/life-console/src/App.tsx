@@ -289,15 +289,6 @@ export function App({
           {stageAPocEnabled && <StageAPocPanel />}
         </>
       )}
-      {mode === "supabase-candidate" && (
-        <div
-          aria-label="私有候选边界"
-          className="service-banner service-banner--candidate"
-          role="status"
-        >
-          Life Console · 数据已迁移 · 生产环境
-        </div>
-      )}
       {mode === "supabase-production" && (
         <div
           aria-label="线上唯一真相源"

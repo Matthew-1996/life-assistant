@@ -11,6 +11,7 @@ export interface TodoItem {
   due_at: string;
   actual_started_at: string | null;
   completed_at: string | null;
+  deleted_at: string | null;
   revision: number;
   created_at: string;
   updated_at: string;
@@ -49,10 +50,16 @@ export interface TransitionTodoInput {
   status: TodoStatus;
 }
 
+export interface DeleteTodoInput {
+  id: number;
+  expectedRevision: number;
+}
+
 export interface TodoRepositoryPort {
   listToday(now: Date): Promise<TodoItem[]>;
   listAll(): Promise<TodoItem[]>;
   create(input: CreateTodoInput): Promise<TodoItem>;
+  delete(input: DeleteTodoInput): Promise<TodoItem>;
   update(input: UpdateTodoInput): Promise<TodoItem>;
   transition(input: TransitionTodoInput): Promise<TodoItem>;
   listStatusEvents(todoId: number): Promise<TodoStatusEvent[]>;
