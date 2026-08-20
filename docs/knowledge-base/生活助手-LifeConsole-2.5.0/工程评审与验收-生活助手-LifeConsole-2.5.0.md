@@ -2,10 +2,10 @@
 
 ## 1. 当前状态
 
-- 主阶段：PO 记录页反馈、全量门禁、受保护合成 Preview 与 Owner Preview 合成写入均已通过；Draft PR #58 的 privacy、Python、Node 三项 CI 已全绿。Supabase 2.5.0 主 migration 与 Todo 软删除增量 migration 已分别按当次确认应用并通过后验验证。
-- 生产功能：Supabase 日记契约未变；Todo 新增 revision-safe 软删除。Production 数据库只新增 schema/RPC/权限，并写入明确合成标记的 Owner 验收记录；自动化、PR 合并与 Vercel Production 均未执行。
-- 基线：PR #56 已 squash merge；本地 `main` 与 `origin/main` 一致。
-- Production 只读复验：HTTP 200、严格 `script-src 'self'`、页面有内容、无错误覆盖层、无 page error/`unsafe-eval`。`/favicon.ico` 404 为非阻断项，纳入 2.5.0。
+- 主阶段：PR #58、Supabase migration 与 Owner Preview 已完成；首轮 2.5.0 Production 因记录页横向溢出阻断而回滚，当前待热修复 Preview/CI 和 PO 重新上线确认。
+- 生产功能：Supabase 日记契约未变；Todo 为 revision-safe 软删除。回滚只恢复 Vercel Production，不删除用户数据或回滚加法数据库对象。
+- 基线：上一健康 Production 已恢复并经浏览器确认可用。
+- 热修复：实际溢出节点为无结构化投影时的 review-reading__raw；长不可断行合成原文在修复前稳定失败，补充 overflow-wrap 后通过。
 
 ## 2. 已有基线证据
 
@@ -109,6 +109,13 @@ Supabase 首次上线前只读核对曾因账号不匹配而失败关闭；重�
 - 增量提交后的 Node CI 连续两次只在同一 NodeNext 类型检查触发默认 5 秒超时；最近成功基线该测试已耗时 4.919 秒，新增 PGlite 文件并行后升至约 5.95 秒，其余 542 项通过。将 Vitest worker 从 3 降为 2、保持原超时后，本地 UTC 完整套件 75 文件 / 543 项通过，该类型检查约 1.0 秒；最新远端 privacy、Python、Node 三项均已通过。
 - 临时寄语验收控件只存在于该 Preview 制品，未提交至 Draft PR；验收后本地工作树已恢复到正式提交并清理预览环境缓存。
 
-## 9. 阶段证据记录规则
+## 9. Production 尝试与热修复验证
+
+- 首轮 2.5.0 Production 远端构建 READY，首页 200、两个新闻端点无鉴权 401、严格 CSP 正常。
+- 1440px 登录后实测记录页产生根页面横向溢出；尺寸诊断只采集元素类名和宽度，未输出真实内容。
+- 回滚至上一健康 Production 后浏览器确认旧版工作台恢复；新闻 Cron 未触发、寄语自动化未创建。
+- 热修复回归测试修复前失败、修复后通过；完整 Playwright 9/9、Vitest 75 文件 / 543 项、应用 Python 93 项、根工具 Python 369 项（1 项跳过）与 Production build 均通过，治理与当前差异隐私检查通过。远端 CI 仍待本分支复验。
+
+## 10. 阶段证据记录规则
 
 每次验收只记录去敏结论、合成 fixture、命令、计数和提交，不记录真实日记、健康值、Owner 标识、项目 ID、部署 ID、Secret 或自动化内部凭据。
