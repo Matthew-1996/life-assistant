@@ -2,9 +2,9 @@
 
 ## 1. 当前状态
 
-- 主阶段：已上线。PR #58、Supabase migration、Owner Preview、PR #59 记录页溢出热修复与 2.5.0 Production 重新发布均已完成。
+- 主阶段：已上线；内容自动化收口中。PR #58、Supabase migration、Owner Preview、PR #59 记录页溢出热修复与 2.5.0 Production 重新发布均已完成。
 - 子状态：正式站点快速维护已完成。PR #60 与合并后 main CI 全绿；新 Production READY，稳定正式别名、1440px/390px 四页、严格 CSP、鉴权端点和运行日志均已复验。
-- 分支：仅剩去敏上线证据分支；合并后清理活动 worktree/分支。
+- 分支：`agent/life-console-news-automation` 处理 GDELT 上游限流兼容、Owner-scoped 寄语工具和去敏证据；完成 PR 与 Production 验证后清理。
 - PR：PR #60 已 squash 合并；上线证据单独收口，不含寄语自动化。
 - 数据库：两个加法 migration 保持已应用，不回滚或删除用户数据；本次不改 Supabase schema 或 Owner 数据。
 
@@ -28,13 +28,14 @@
 | 正式视觉/设计/技术 | approved | PO 于 2026-08-20 明确确认 Gate 2 v2 通过 |
 | Supabase migration | completed | PO 于 2026-08-20 当次确认；Production URL 绑定、迁移历史、RLS、权限、RPC、Advisor 与事务锁均已验证 |
 | Owner Preview 写入 | completed | PO 已授权；Todo、日记与远期寄语仅用合成标记记录完成验收 |
-| 寄语自动化创建 | pending | Preview 通过，PO 确认 Prompt、RRULE 和权限 |
+| 寄语自动化创建 | completed | PO 于 2026-08-20 明确要求创建；规范 Prompt/私有注册表/运行实例一致，ACTIVE，下一次运行落在周一 12:00 上海时间允许抖动内 |
 | 2.5.0 PR #58 合并 | completed | PO 已确认并 squash merge 到 main |
 | Production | completed | PR #60、密钥轮换、重新部署、正式别名切换、手动 Cron 触发与浏览器验收均已完成；GDELT 超时按方案保留可重试空态 |
 
 ## 4. 开放风险
 
 - 新闻源可用性和 GDELT 结果质量不稳定：白名单、动态配比、最近成功缓存降级。
+- GDELT DOC API 的共享出口限流可能继续返回 429；当前客户端已消除自身三并发违规并按每 5 秒一次顺序请求。共享出口仍被上游限制时保持最近成功/可重试空态，不绕过白名单或改发私人数据。
 - Runtime Cache 区域一致性：两个端点固定同区并测试缓存命中。
 - Unsplash Key 可能不存在：Preview 使用合成元数据，Production 使用渐变。
 - 当前 bundle 大于 500 kB：样式/组件拆分时观察，不为追求指标引入无关架构。
@@ -81,4 +82,7 @@
 | 2026-08-20 | 正式站点移除“Supabase 唯一真相源 / iCloud 单向备份”横幅 | PO 明确反馈；与 PRD 既有减法一致，按快速维护通道 TDD 实施；PO 同次确认轮换 `CRON_SECRET`、重新部署并触发新闻 Cron |
 | 2026-08-20 | 横幅快速维护 Draft PR #60 与合成 Preview | Preview READY；1440px/390px 均无目标组件或文案、无根页面横向溢出，首页 200、未知 API 404，严格 CSP 通过；未连接 Owner 数据或修改 Production |
 | 2026-08-20 | PR #60 合并、Production 重新发布与新闻 Cron | PR 与 main CI 全绿；正式站点四页桌面/移动复验通过，目标横幅为 0；Secret 首次交互输入发生回显后立即以第二个未回显随机值覆盖，最终值保持 Sensitive 且未留存；Cron 两次鉴权触发均因 GDELT 8 秒超时返回可重试空态，UI 降级正常 |
+| 2026-08-20 | DeepSeek Production 纯合成复验 | Owner 健康探针返回 `HTTP 200 / provider_ok / no-store`；只发送内置合成文本，未读取或写入真实日记 |
+| 2026-08-20 | GDELT 503 根因与兼容修复 | 公开探针证实 DOC API 要求每 5 秒最多一次请求；原三分类并发会共同触发 429。TDD 改为至少间隔 5 秒的顺序请求，并将两个重建 Function 上限调整为 60 秒 |
+| 2026-08-20 | Life Console 每周寄语自动化 | PO 明确要求创建；Owner 最小投影与 revision-safe 写入工具完成 TDD，私有规范 Prompt/注册表/运行实例一致，下一次运行已核对上海与 UTC 时间 |
 | 2026-08-19 | 视觉、设计、技术确认前不写生产功能 | Gate 2 v2 后已满足 |

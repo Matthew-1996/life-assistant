@@ -143,6 +143,8 @@ describe("daily news Vercel configuration", () => {
     ]);
     expect(config.functions["api/daily-news.ts"].regions).toEqual(["hkg1"]);
     expect(config.functions["api/cron/daily-news.ts"].regions).toEqual(["hkg1"]);
+    expect(config.functions["api/daily-news.ts"].maxDuration).toBe(60);
+    expect(config.functions["api/cron/daily-news.ts"].maxDuration).toBe(60);
     expect(JSON.stringify(config)).not.toContain(productionEnvironment.CRON_SECRET);
     expect(JSON.stringify(config)).not.toContain(productionEnvironment.DEEPSEEK_API_KEY);
   });

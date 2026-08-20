@@ -1,11 +1,13 @@
 import io
 import json
 import unittest
+from unittest import mock
 
 from life_console_cloud import (
     CloudClient,
     CloudWriteError,
     authenticate_owner,
+    main,
     session_token_provider,
 )
 
@@ -373,6 +375,115 @@ class LifeConsoleCloudTest(unittest.TestCase):
             transport.calls[0][0:3],
             ("POST", "/rest/v1/rpc/request_life_console_backup", {}),
         )
+
+    def test_weekly_message_context_reads_only_the_approved_owner_projection(self):
+        transport = FakeTransport([
+            [{"title": "Synthetic goal", "domain": "life", "target_date": None}],
+            [{
+                "title": "Synthetic todo",
+                "priority": "P0",
+                "status": "in_progress",
+                "due_at": "2030-01-08T04:00:00Z",
+            }],
+            [{"week_start": "2029-12-31", "structured_data": {"experiment": "Synthetic"}}],
+            [{"revision": 3}],
+        ])
+        client = CloudClient(transport, token_provider=lambda: "synthetic-token")
+
+        context = client.weekly_message_context("2030-01-07")
+
+        self.assertEqual(context, {
+            "week_start": "2030-01-07",
+            "active_goals": [{
+                "title": "Synthetic goal", "domain": "life", "target_date": None,
+            }],
+            "open_priority_todos": [{
+                "title": "Synthetic todo",
+                "priority": "P0",
+                "status": "in_progress",
+                "due_at": "2030-01-08T04:00:00Z",
+            }],
+            "latest_weekly_review": {
+                "week_start": "2029-12-31",
+                "structured_data": {"experiment": "Synthetic"},
+            },
+            "current_message_revision": 3,
+        })
+        paths = [call[1] for call in transport.calls]
+        self.assertIn("status=eq.active", paths[0])
+        self.assertIn("deleted_at=is.null", paths[0])
+        self.assertIn("priority=in.%28P0%2CP1%29", paths[1])
+        self.assertIn("status=neq.completed", paths[1])
+        self.assertIn("select=week_start%2Cstructured_data", paths[2])
+        self.assertNotIn("content", paths[2])
+        self.assertIn("week_start=eq.2030-01-07", paths[3])
+
+    def test_weekly_message_write_uses_revision_safe_rpc_and_redacted_receipt(self):
+        transport = FakeTransport([[{
+            "id": 8,
+            "revision": 4,
+            "message": "Synthetic private weekly message",
+        }]])
+        client = CloudClient(transport, token_provider=lambda: "synthetic-token")
+
+        receipt = client.upsert_dashboard_message({
+            "week_start": "2030-01-07",
+            "expected_revision": 3,
+            "message": "Synthetic private weekly message",
+            "quote_source": None,
+            "image_metadata": {},
+            "fallback_theme": "twilight",
+        })
+
+        self.assertEqual(receipt, {
+            "status": "saved",
+            "resource": "dashboard_message",
+            "revision": 4,
+        })
+        self.assertNotIn("Synthetic private weekly message", json.dumps(receipt))
+        method, path, body, bearer_used = transport.calls[0]
+        self.assertEqual((method, path, bearer_used), (
+            "POST", "/rest/v1/rpc/upsert_dashboard_message", "synthetic-token",
+        ))
+        self.assertEqual(body["p_idempotency_key"], "weekly-message:2030-01-07")
+        self.assertEqual(body["p_expected_revision"], 3)
+        self.assertEqual(body["p_fallback_theme"], "twilight")
+
+    def test_weekly_message_cli_exposes_context_and_redacted_write_receipt(self):
+        client = mock.Mock()
+        client.weekly_message_context.return_value = {
+            "week_start": "2030-01-07",
+            "active_goals": [],
+            "open_priority_todos": [],
+            "latest_weekly_review": None,
+            "current_message_revision": None,
+        }
+        client.upsert_dashboard_message.return_value = {
+            "status": "saved", "resource": "dashboard_message", "revision": 1,
+        }
+
+        with mock.patch("life_console_cloud._load_client", return_value=client):
+            output = io.StringIO()
+            with mock.patch("sys.stdout", output):
+                self.assertEqual(main([
+                    "weekly-message-context", "--week-start", "2030-01-07",
+                ]), 0)
+            self.assertEqual(json.loads(output.getvalue())["week_start"], "2030-01-07")
+
+            output = io.StringIO()
+            payload = json.dumps({
+                "week_start": "2030-01-07",
+                "expected_revision": None,
+                "message": "Synthetic private weekly message",
+            })
+            with mock.patch("sys.stdin", io.StringIO(payload)):
+                with mock.patch("sys.stdout", output):
+                    self.assertEqual(main(["dashboard-message", "--input", "-"]), 0)
+            self.assertEqual(json.loads(output.getvalue()), {
+                "resource": "dashboard_message", "revision": 1, "status": "saved",
+            })
+        client.weekly_message_context.assert_called_once_with("2030-01-07")
+        client.upsert_dashboard_message.assert_called_once()
 
     def test_cutover_uses_single_rpc_and_returns_only_redacted_result(self):
         transport = FakeTransport([{

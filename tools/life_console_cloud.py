@@ -97,6 +97,18 @@ def _first_row(value: Any) -> dict[str, Any]:
     return value[0]
 
 
+def _monday_date(value: Any) -> str:
+    if not isinstance(value, str):
+        raise ValueError("week_start must be a Monday ISO date")
+    try:
+        parsed = datetime.strptime(value, "%Y-%m-%d").date()
+    except ValueError as exc:
+        raise ValueError("week_start must be a Monday ISO date") from exc
+    if parsed.weekday() != 0:
+        raise ValueError("week_start must be a Monday ISO date")
+    return value
+
+
 class CloudClient:
     """Owner-scoped repository adapter used by conversations and automations."""
 
@@ -413,6 +425,90 @@ class CloudClient:
             ))
         return self._receipt("daily_checkin", created)
 
+    def weekly_message_context(self, week_start: str) -> dict[str, Any]:
+        week_start = _monday_date(week_start)
+        goals = self._request(
+            "GET",
+            "/rest/v1/goals?" + parse.urlencode({
+                "select": "title,domain,target_date",
+                "status": "eq.active",
+                "deleted_at": "is.null",
+                "order": "priority.asc.nullslast,created_at.asc",
+                "limit": "10",
+            }),
+        )
+        todos = self._request(
+            "GET",
+            "/rest/v1/todo_items?" + parse.urlencode({
+                "select": "title,priority,status,due_at",
+                "priority": "in.(P0,P1)",
+                "status": "neq.completed",
+                "deleted_at": "is.null",
+                "order": "priority.asc,due_at.asc",
+                "limit": "20",
+            }),
+        )
+        reviews = self._request(
+            "GET",
+            "/rest/v1/weekly_reviews?" + parse.urlencode({
+                "select": "week_start,structured_data",
+                "deleted_at": "is.null",
+                "order": "week_start.desc",
+                "limit": "1",
+            }),
+        )
+        current = self._request(
+            "GET",
+            "/rest/v1/dashboard_messages?" + parse.urlencode({
+                "select": "revision",
+                "week_start": f"eq.{week_start}",
+                "limit": "1",
+            }),
+        )
+        if not all(isinstance(value, list) for value in (goals, todos, reviews, current)):
+            raise CloudWriteError("unavailable")
+        revision = current[0].get("revision") if current else None
+        if revision is not None and not isinstance(revision, int):
+            raise CloudWriteError("unavailable")
+        return {
+            "week_start": week_start,
+            "active_goals": goals,
+            "open_priority_todos": todos,
+            "latest_weekly_review": reviews[0] if reviews else None,
+            "current_message_revision": revision,
+        }
+
+    def upsert_dashboard_message(self, record: dict[str, Any]) -> dict[str, Any]:
+        week_start = _monday_date(record.get("week_start"))
+        message = record.get("message")
+        fallback_theme = record.get("fallback_theme", "twilight")
+        expected_revision = record.get("expected_revision")
+        image_metadata = record.get("image_metadata", {})
+        if not isinstance(message, str) or not 1 <= len(message.strip()) <= 1000:
+            raise ValueError("message must contain 1 through 1000 characters")
+        if not isinstance(fallback_theme, str) or not fallback_theme.strip():
+            raise ValueError("fallback_theme is required")
+        if expected_revision is not None and (
+            not isinstance(expected_revision, int) or expected_revision < 1
+        ):
+            raise ValueError("expected_revision must be a positive integer or null")
+        if not isinstance(image_metadata, dict):
+            raise ValueError("image_metadata must be an object")
+        row = _first_row(self._request(
+            "POST",
+            "/rest/v1/rpc/upsert_dashboard_message",
+            body={
+                "p_idempotency_key": f"weekly-message:{week_start}",
+                "p_week_start": week_start,
+                "p_expected_revision": expected_revision,
+                "p_message": message.strip(),
+                "p_quote_source": record.get("quote_source"),
+                "p_image_metadata": image_metadata,
+                "p_fallback_theme": fallback_theme.strip(),
+            },
+        ))
+        return self._receipt("dashboard_message", row)
+
     def pending_backup(self) -> dict[str, Any] | None:
         rows = self._request(
             "GET",
@@ -619,9 +715,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("auth")
-    for command in ("journal", "normalize-journal", "daily-checkin"):
+    for command in (
+        "journal", "normalize-journal", "daily-checkin", "dashboard-message",
+    ):
         child = subparsers.add_parser(command)
         child.add_argument("--input", default="-", help="JSON file or - for stdin")
+    weekly_context = subparsers.add_parser("weekly-message-context")
+    weekly_context.add_argument("--week-start", required=True)
     args = parser.parse_args(argv)
     try:
         if args.command == "auth":
@@ -638,15 +738,21 @@ def main(argv: list[str] | None = None) -> int:
             )
             print(json.dumps(receipt, ensure_ascii=False, sort_keys=True))
             return 0
+        client = _load_client(args.config)
+        if args.command == "weekly-message-context":
+            receipt = client.weekly_message_context(args.week_start)
+            print(json.dumps(receipt, ensure_ascii=False, sort_keys=True))
+            return 0
         raw = sys.stdin.read() if args.input == "-" else Path(args.input).read_text(encoding="utf-8")
         payload = json.loads(raw)
-        client = _load_client(args.config)
         if args.command == "journal":
             receipt = client.create_journal(payload)
         elif args.command == "normalize-journal":
             receipt = client.normalize_journal(payload)
-        else:
+        elif args.command == "daily-checkin":
             receipt = client.upsert_daily_checkin(payload)
+        else:
+            receipt = client.upsert_dashboard_message(payload)
     except (CloudWriteError, OSError, json.JSONDecodeError, ValueError) as exc:
         code = str(exc) if isinstance(exc, CloudWriteError) else "unavailable"
         print(json.dumps({"status": code}, ensure_ascii=False), file=sys.stderr)
