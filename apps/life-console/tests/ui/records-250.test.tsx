@@ -30,5 +30,7 @@ describe("Life Console 2.5 records information architecture", () => {
     expect(screen.queryByText("简洁表单兜底")).toBeNull();
     expect(screen.queryByText("已录入与上下文")).toBeNull();
     expect(screen.queryByText("保存结果明确可见，失败时不丢草稿")).toBeNull();
+    expect(screen.queryByText("写入语义")).toBeNull();
+    expect(screen.queryByRole("heading", { name: "草稿不会自动生效" })).toBeNull();
   });
 });

@@ -292,6 +292,13 @@ git add apps/life-console/src/features/records apps/life-console/src/features/jo
 git commit -m "feat(life-console): simplify records and restore journals"
 ```
 
+#### PO 验收反馈修正（2026-08-20）
+
+- [x] 写入并观察记录页语义卡与纯合成 Preview 日记缺失的失败测试。
+- [x] 删除语义卡，将 hero 改为单栏；在对话式记录下复用现有日记组件。
+- [x] 向纯合成 Preview 注入只存活于页面内存的 `JournalRepositoryPort`，通过组件测试覆盖编辑、二次确认软删除、恢复与重新挂载重置。
+- [x] 运行全量 Vitest、build 及 1440px/390px 浏览器验收，然后更新纯合成 Preview；同时以回归测试锁定 `/api/*` 必须在 SPA fallback 前返回 404。
+
 ### Task 6: 进展页与 14/7 天视图
 
 **Files:**
@@ -440,7 +447,7 @@ git commit -m "test(life-console): complete 2.5 synthetic acceptance"
 - Consumes: 完整功能分支和所有阶段门禁。
 - Produces: 去敏 Preview/Production 证据和可回滚的上线状态。
 
-- [ ] **Step 1: 部署合成 Preview 并完成只读浏览器验收**
+- [x] **Step 1: 部署合成 Preview 并完成只读浏览器验收**
 
 不得配置真实 Secret 或写 Owner 数据；记录页面、CSP、console 和合成 fixture 结论。
 

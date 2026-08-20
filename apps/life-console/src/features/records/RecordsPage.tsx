@@ -49,26 +49,8 @@ export function RecordsPage({
               : supabaseMode
                 ? "记录页只保留对话记录、日记与修订、周复盘和阶段复盘。"
                 : "用一句话留下原始记录；日记整理与修订按需展开，不重复录入状态。"}
-          </p>
+            </p>
         </div>
-        <aside className="card hero-card">
-          <span className="status blue">写入语义</span>
-          <h2>草稿不会自动生效</h2>
-          <p className="quiet">
-            {production
-              ? "只有明确点击保存且线上返回成功才算已记录；冲突或失败时输入继续保留。"
-              : supabaseMode
-                ? "只有明确点击保存才写入独立测试库；冲突或失败时输入继续保留。"
-                : mode === "candidate-preview"
-                  ? "当前只展示合成数据；写入不会触达任何私人真相源。"
-                  : `只有保存成功才算写入${saveTarget}。`}
-          </p>
-          <div className="pill-row">
-            <span className="pill">草稿</span>
-            <span className="pill">明确保存</span>
-            <span className="pill">{supabaseMode ? "Owner-only" : "私人记录"}</span>
-          </div>
-        </aside>
       </header>
 
       <section className="records-composer" aria-label="记录输入">
@@ -82,18 +64,30 @@ export function RecordsPage({
         />
       </section>
 
-      {supabaseMode && supabasePanels && (
+      {supabasePanels && (
         <section
           className="section supabase-records-workspace"
-          aria-label={production ? "线上记录工作区" : "候选记录工作区"}
+          aria-label={production
+            ? "线上记录工作区"
+            : mode === "candidate-preview"
+              ? "合成记录工作区"
+              : "候选记录工作区"}
         >
           <div className="section-head">
             <div>
-              <p className="eyebrow">OWNER WORKSPACE</p>
-              <h2>{production ? "线上记录与修订" : "已开放的候选记录"}</h2>
-              <p className="quiet">日记与复盘分别保留真实空态、修订和失败反馈。</p>
+              <p className="eyebrow">{mode === "candidate-preview" ? "SYNTHETIC JOURNALS" : "OWNER WORKSPACE"}</p>
+              <h2>{production
+                ? "线上记录与修订"
+                : mode === "candidate-preview"
+                  ? "日记记录"
+                  : "已开放的候选记录"}</h2>
+              <p className="quiet">{mode === "candidate-preview"
+                ? "展示公开合成日记；编辑、删除与恢复只在当前页面内存中生效，刷新后重置，不触达私人数据。"
+                : "日记与复盘分别保留真实空态、修订和失败反馈。"}</p>
             </div>
-            <span className="status blue">{production ? "线上唯一真相源" : "纯合成数据"}</span>
+            <span className="status blue">{production
+              ? "线上唯一真相源"
+              : "纯合成数据"}</span>
           </div>
           {supabasePanels}
         </section>

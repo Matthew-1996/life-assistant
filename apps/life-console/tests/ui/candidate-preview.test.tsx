@@ -44,6 +44,76 @@ describe("Life Console candidate preview", () => {
     expect(screen.getByText("mode=CANDIDATE_PREVIEW · 合成数据")).toBeTruthy();
   });
 
+  it("shows the synthetic journal title and original text below conversation capture", async () => {
+    const user = userEvent.setup();
+    render(
+      <App initialDashboard={syntheticDashboard} mode="candidate-preview" />,
+    );
+
+    await user.click(navigationButton("记录"));
+
+    const conversation = screen.getByRole("region", { name: "对话式记录面板" });
+    const journal = await screen.findByRole("article", { name: "周末散步" });
+    expect(within(journal).getByText("在附近公园散步，感觉节奏比较放松。")).toBeTruthy();
+    expect(
+      conversation.compareDocumentPosition(journal) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("edits a synthetic journal in memory and resets it after remount", async () => {
+    const user = userEvent.setup();
+    const first = render(
+      <App initialDashboard={syntheticDashboard} mode="candidate-preview" />,
+    );
+    await user.click(navigationButton("记录"));
+
+    const journal = await screen.findByRole("article", { name: "周末散步" });
+    await user.click(within(journal).getByRole("button", { name: "编辑 周末散步" }));
+    const title = screen.getByLabelText("编辑日记标题");
+    const content = screen.getByLabelText("编辑日记正文");
+    await user.clear(title);
+    await user.type(title, "合成散步修订");
+    await user.clear(content);
+    await user.type(content, "这是只在当前页面生效的合成原文。");
+    await user.click(screen.getByRole("button", { name: "保存修改" }));
+
+    const updated = await screen.findByRole("article", { name: "合成散步修订" });
+    expect(within(updated).getByText("这是只在当前页面生效的合成原文。")).toBeTruthy();
+    first.unmount();
+
+    render(
+      <App initialDashboard={syntheticDashboard} mode="candidate-preview" />,
+    );
+    await user.click(navigationButton("记录"));
+    expect(await screen.findByRole("article", { name: "周末散步" })).toBeTruthy();
+    expect(screen.queryByRole("article", { name: "合成散步修订" })).toBeNull();
+  });
+
+  it("soft deletes and restores a synthetic journal without permanent delete", async () => {
+    const user = userEvent.setup();
+    render(
+      <App initialDashboard={syntheticDashboard} mode="candidate-preview" />,
+    );
+    await user.click(navigationButton("记录"));
+
+    const journal = await screen.findByRole("article", { name: "周末散步" });
+    await user.click(within(journal).getByRole("button", { name: "删除日记" }));
+    const dialog = screen.getByRole("dialog", { name: "移到已删除" });
+    expect(within(dialog).getByText(/不会永久删除/)).toBeTruthy();
+    await user.click(within(dialog).getByRole("button", { name: "确认移到已删除" }));
+
+    expect(await screen.findByText("日记已移到已删除，可随时恢复。")).toBeTruthy();
+    expect(screen.queryByRole("article", { name: "周末散步" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "查看已删除 (1)" }));
+    const deleted = screen.getByRole("region", { name: "已删除日记" });
+    expect(within(deleted).getByText("周末散步")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "永久删除" })).toBeNull();
+    await user.click(within(deleted).getByRole("button", { name: "恢复日记" }));
+
+    expect(await screen.findByRole("article", { name: "周末散步" })).toBeTruthy();
+    expect(screen.getByText("日记已恢复。")).toBeTruthy();
+  });
+
   it("only exposes the Stage A POC controls in the dedicated build", () => {
     render(
       <App

@@ -2,8 +2,8 @@
 
 ## 1. 当前状态
 
-- 主阶段：本地功能与合成验收完成，准备合成 Preview。
-- 子状态：Tasks 1–8 已通过本地全量门禁；本地实现不代表远程 migration、Owner 写入或发布获批。
+- 主阶段：PO 记录页反馈已完成本地与受保护合成 Preview 验收；下一门禁为 Owner Preview 合成写入确认。
+- 子状态：语义卡已移除；对话记录下已恢复日记标题、原文、编辑、软删除与恢复；全量 73 个 Vitest 文件 / 538 项、Python 93 项及 Preview HTTP/浏览器门禁通过。
 - 分支：`agent/life-console-250`，独立 worktree。
 - PR：[Draft PR #58](https://github.com/Matthew-1996/life-assistant/pull/58)，保持 Draft 至全量验收与合并门禁。
 - 数据库、Owner Preview、自动化与 Production：均未变更。
@@ -18,7 +18,7 @@
 4. 数据能力：migration 文件、RLS、RPC、Repository、backup v3。已完成本地实现与测试。
 5. 页面与算法：工作台、记录、进展、样式拆分。已完成本地实现与测试。
 6. 内容服务：寄语展示、新闻 API、Runtime Cache、降级。已完成本地实现与测试。
-7. 测试与 Preview：本地合成门禁已完成；合成 Preview 待部署，再经确认做 Owner Preview。
+7. 测试与 Preview：记录页反馈与更新后的纯静态合成 Preview 已完成；远端 Node 安装问题仍作为独立 CI 收口项。
 8. 上线：经逐项确认后 migration、自动化、PR 合并和 Production。
 
 ## 3. 门禁与恢复条件
@@ -39,6 +39,7 @@
 - Unsplash Key 可能不存在：Preview 使用合成元数据，Production 使用渐变。
 - 当前 bundle 大于 500 kB：样式/组件拆分时观察，不为追求指标引入无关架构。
 - iCloud worktree 偶发 interrupted syscall：每次创建后验证对象、HEAD 和工作树完整性。
+- 本机 npm 镜像会把下载地址写入锁文件：公共包地址必须规范化并由 GitHub Runner 的 `npm ci` 复验。
 
 ## 5. 决策日志
 
@@ -53,5 +54,9 @@
 | 2026-08-20 | 固定 1440px 评审画板按可用宽度缩放；实际双栏在不足 1180px 时转单栏 | PO 反馈，draft.2 已修订 |
 | 2026-08-20 | 今日锚点复用 2.4.0 四项、四状态、进展与修改链路 | PO 反馈，draft.2 已修订 |
 | 2026-08-20 | Gate 2 v2 正式视觉、设计与技术方案 | PO 已确认，进入 TDD 开发 |
-| 2026-08-20 | Tasks 1–8 本地实现、390/1440 响应式与全量合成门禁 | 已通过，尚未部署 Preview |
+| 2026-08-20 | Tasks 1–8 本地实现、390/1440 响应式与全量合成门禁 | 已通过 |
+| 2026-08-20 | 独立纯静态合成 Preview、严格 CSP、未知 API 404 与 390/1440 四页验收 | 已通过；未触达 Owner 数据或 Production |
+| 2026-08-20 | Draft PR 远端 privacy/Python 通过，Node 安装被锁文件内网镜像地址阻断 | 待规范化锁文件并重跑 |
+| 2026-08-20 | 记录页移除语义卡，对话记录下恢复日记标题/原文及编辑、软删除、恢复 | PO 已确认设计并进入开发 |
+| 2026-08-20 | 更新纯静态合成 Preview，并将 `/api/*` 404 置于 SPA fallback 前 | 已通过；0 Functions、0 Cron，未触达 Owner 数据或 Production |
 | 2026-08-19 | 视觉、设计、技术确认前不写生产功能 | Gate 2 v2 后已满足 |

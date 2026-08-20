@@ -5,6 +5,10 @@
   margin-top: 20px;
 }
 
+.capture-hero {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .records-composer > *,
 .journal-card-250,
 .journal-card-250 > *,

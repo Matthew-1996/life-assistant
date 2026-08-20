@@ -2,6 +2,7 @@ import {
   type FormEvent,
   type MouseEvent,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -15,6 +16,7 @@ import { AppShell, type PageId } from "./components/shell/AppShell";
 import { syntheticDashboard, type Dashboard } from "./data/dashboard";
 import { ProgressPage } from "./features/progress/ProgressPage";
 import { RecordsPage } from "./features/records/RecordsPage";
+import { createCandidateJournalRepository } from "./features/journals/candidate-journal-repository";
 import { SupabaseJournalsPanel } from "./features/journals/SupabaseJournalsPanel";
 import { SupabaseReviewsPanel } from "./features/reviews/SupabaseReviewsPanel";
 import { StageAPocPanel } from "./features/system/StageAPocPanel";
@@ -80,6 +82,14 @@ export function App({
   const [sitesStatus, setSitesStatus] = useState<SitesSystemStatus | null>(null);
   const [error, setError] = useState(false);
   const [candidateNotice, setCandidateNotice] = useState(false);
+  const candidateJournals = useMemo(
+    () => mode === "candidate-preview"
+      ? createCandidateJournalRepository(
+        (initialDashboard ?? syntheticDashboard).records.recent_journals,
+      )
+      : null,
+    [initialDashboard, mode],
+  );
   const refreshGeneration = useRef(0);
   const latestRefresh = useRef<{
     generation: number;
@@ -160,6 +170,7 @@ export function App({
   ) {
     if (mode !== "candidate-preview") return;
     const target = event.target as HTMLElement;
+    if (target.closest("[data-candidate-local-write]")) return;
     const writeControl = target.closest(
       "form button[type='submit'], button.danger, [data-write-control]",
     );
@@ -216,7 +227,18 @@ export function App({
         mode={mode}
         onSaved={refreshAfterWrite}
         draftScope={supabase?.session.userId}
-        supabasePanels={supabaseMode && supabase ? (
+        supabasePanels={mode === "candidate-preview" ? (
+          <div
+            className="supabase-candidate-stack"
+            data-candidate-local-write
+          >
+            <SupabaseJournalsPanel
+              draftScope="synthetic-preview"
+              repository={candidateJournals!}
+              showCreate={false}
+            />
+          </div>
+        ) : supabaseMode && supabase ? (
           <div className="supabase-candidate-stack">
             <SupabaseJournalsPanel
               draftScope={supabase.session.userId}

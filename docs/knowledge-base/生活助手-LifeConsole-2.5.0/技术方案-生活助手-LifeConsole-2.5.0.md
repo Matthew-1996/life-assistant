@@ -100,6 +100,8 @@ Owner Agent (Monday 12:00 Asia/Shanghai)
 ## 8. 前端与 CSP
 
 - Today、Records、Progress 拆为页面容器和聚焦组件；Repository 注入继续由 `App` 统一装配。
+- Records 头部使用单栏 hero，对话式记录之后直接装配现有 `SupabaseJournalsPanel`，Supabase 模式继续注入 Owner-scoped `JournalRepositoryPort`，不修改线上读写契约。
+- `candidate-preview` 仅根据公开 dashboard fixture 创建页面生命周期内的内存 `JournalRepositoryPort`；其更新、软删除和恢复只修改内存数组，重新挂载即重置。全局候选写入拦截仅对该本地演示区域放行，区域内不持有 client、JWT 或外部存储引用。
 - 今日锚点继续读取 `daily_checkins.anchors` 并复用现有 check-in 更新与 revision 冲突链路；填写进展为四个 key 中非空值的派生计数，不新增存储字段。
 - 内容区达到 1180px 才使用 Todo/新闻、记录/复盘和趋势双栏；不足时转为上下布局。所有 Grid 子项使用 `minmax(0, …)`，长文本允许换行；只有甘特和睡眠表允许卡片内部滚动，页面根节点不得横向滚动。
 - 样式拆为 token、共享组件、页面样式；禁止在浏览器引入运行时 Schema 编译。
