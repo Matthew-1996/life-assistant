@@ -114,7 +114,7 @@ Supabase 首次上线前只读核对曾因账号不匹配而失败关闭；重�
 - 首轮 2.5.0 Production 远端构建 READY，首页 200、两个新闻端点无鉴权 401、严格 CSP 正常。
 - 1440px 登录后实测记录页产生根页面横向溢出；尺寸诊断只采集元素类名和宽度，未输出真实内容。
 - 回滚至上一健康 Production 后浏览器确认旧版工作台恢复；新闻 Cron 未触发、寄语自动化未创建。
-- 热修复回归测试修复前失败、修复后通过；完整 Playwright 9/9、Vitest 75 文件 / 543 项、应用 Python 93 项、根工具 Python 369 项（1 项跳过）与 Production build 均通过，治理与当前/历史隐私检查通过。Draft PR #59 的远端 CI 仍待复验。
+- 热修复回归测试修复前失败、修复后通过；完整 Playwright 9/9、Vitest 75 文件 / 543 项、应用 Python 93 项、根工具 Python 369 项（1 项跳过）与 Production build 均通过，治理与当前/历史隐私检查通过。Draft PR #59 的远端 privacy、Python、Node CI 全绿。
 - 独立合成 Preview READY；真实浏览器在 1440px 与 390px 下验证工作台、记录、进展、系统均无根页面横向溢出，console error 为 0。受保护请求首页 200、未知 API 404，严格 CSP 不含 unsafe-eval。
 
 ## 10. 阶段证据记录规则

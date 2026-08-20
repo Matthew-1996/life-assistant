@@ -65,7 +65,7 @@
 - 按既定回滚方案将正式别名恢复到上一健康 Production，浏览器确认旧版工作台重新可用。2.5.0 数据库表保持休眠，未删除用户数据；新闻 Cron 未手动触发，寄语自动化未创建。
 - 热修复按 TDD 增加长不可断行原文浏览器用例：修复前 body 宽度 13724px、视口 1440px；为原始复盘回退分支补充断行规则后同一用例通过，完整 Playwright 9/9 通过。
 - 热修复分支本地全量门禁通过：Vitest 75 文件 / 543 项、应用 Python 75 + 7 + 10 + 1 = 93 项、根工具 Python 369 项（1 项跳过）、Production build、治理与当前差异隐私检查；Miniflare 在受限沙箱内无法初始化，经允许在沙箱外专项复跑 26/26 并随完整套件通过。
-- 热修复 Draft PR #59 已创建；独立合成 Preview READY。真实浏览器在 1440px 与 390px 下验证四页均无根页面横向溢出，console error 为 0；受保护首页 200、未知 API 404，严格 CSP 通过。Preview 不连接 Owner 数据且未变更任何 Production 别名。
+- 热修复 Draft PR #59 已创建；独立合成 Preview READY。真实浏览器在 1440px 与 390px 下验证四页均无根页面横向溢出，console error 为 0；受保护首页 200、未知 API 404，严格 CSP 通过。Preview 不连接 Owner 数据且未变更任何 Production 别名；远端 privacy、Python、Node CI 全绿。
 
 ## 9. 待重新上线后补齐
 
