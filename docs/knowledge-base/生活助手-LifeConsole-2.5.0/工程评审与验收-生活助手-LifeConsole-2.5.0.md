@@ -2,7 +2,7 @@
 
 ## 1. 当前状态
 
-- 主阶段：PO 记录页反馈、全量门禁与更新后的受保护合成 Preview 均已通过；Draft PR #58 的 Node CI 锁文件可移植性已在本地修复并完成 Node 24 复验，Owner Preview 写入仍等待独立确认。
+- 主阶段：PO 记录页反馈、全量门禁与更新后的受保护合成 Preview 均已通过；Draft PR #58 的公共依赖安装已由 GitHub Runner 验证，Runner UTC 导致的三个 Todo 测试环境差异已在本地修复并复验。Owner Preview 写入仍等待独立确认。
 - 生产功能：Supabase 日记契约未变；纯合成 Preview 新增内存日记演示。远程 migration、Owner Preview、自动化与 Production 均未执行。
 - 基线：PR #56 已 squash merge；本地 `main` 与 `origin/main` 一致。
 - Production 只读复验：HTTP 200、严格 `script-src 'self'`、页面有内容、无错误覆盖层、无 page error/`unsafe-eval`。`/favicon.ico` 404 为非阻断项，纳入 2.5.0。
@@ -56,6 +56,7 @@
 | Supabase Production build | 通过；严格 CSP 不含 `unsafe-eval` |
 | Playwright | 8/8 通过；真实 Chrome 无错误覆盖层、console error 或 page error |
 | npm audit | 0 info / low / moderate / high / critical |
+| UTC Runner 等价复验 | 外层 `TZ=UTC` 下定向 Todo 13/13、全量 Vitest 74/539、Python 93 和默认 build 通过；Vitest 内明确使用 `Asia/Shanghai` |
 | 响应式 | 390/1024/1280/1440 根页面无横向溢出；不足 1180px 自动单列 |
 | 内部滚动 | 仅 Todo 甘特与 7 天睡眠表在窄屏内部横向滚动 |
 | 日记删除/恢复 | React 组件级确认弹窗、取消、软删除与恢复通过；Owner 浏览器写验收等待独立门禁 |
@@ -82,7 +83,7 @@
 
 发布前 HTTP 验收曾发现 SPA fallback 会抢先把 `/api/*` 返回为首页 200；已增加受版本控制的合成 Preview 配置和回归测试，将 API 404 路由置于 fallback 前。最终制品逐文件匹配本地静态构建，包含 4 个静态文件、0 个 Functions、0 个 Cron；远端 `/` 与 `/favicon.svg` 为 200，`/api/daily-news` 为 404，严格 CSP 仍为 `connect-src 'none'` 且不含 `unsafe-eval`。
 
-远端 CI 中 privacy 与 Python 已通过；原 Node job 在 `npm ci` 阶段因锁文件内 25 个 tarball 指向仅本机可访问的镜像而失败，尚未执行 Vitest/build。现已将这些地址规范化为公共 npm Registry，并增加解析真实 `package-lock.json` 的可移植性测试；同时把存在已知高危可用性漏洞的传递依赖 `nanoid` 从 3.3.17 升至修复版 3.3.18。Node 24 公共源空缓存 `npm ci`、完整测试、Production build、Playwright 与 0 漏洞审计均已通过，但远端 CI 只有在改动推送后重跑通过才可记为全绿。
+远端 CI 中 privacy 与 Python 已通过；原 Node 安装失败在锁文件修复推送后已越过，证明 25 个公共包 tarball 地址规范化有效。Node 随后在三个 Todo 用例失败：Runner 默认 UTC 将“今日”和 `datetime-local` fixture 按 UTC 解释，而产品与测试期望为上海自然日。本地以 `TZ=UTC` 精确复现相同三项失败后，仅在 Vitest 配置固定 `Asia/Shanghai`；同一 UTC 外层环境下定向 13/13、完整 Vitest 74/539、Python 93 和默认 build 均通过。远端 CI 仍须在该补丁推送后重跑通过才可记为全绿。
 
 ## 7. 阶段证据记录规则
 

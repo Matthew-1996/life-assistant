@@ -8,6 +8,9 @@ export default defineConfig({
     emptyOutDir: true,
   },
   test: {
+    env: {
+      TZ: "Asia/Shanghai",
+    },
     environment: "node",
     exclude: ["tests/playwright/**", "node_modules/**", "dist/**"],
     environmentOptions: {

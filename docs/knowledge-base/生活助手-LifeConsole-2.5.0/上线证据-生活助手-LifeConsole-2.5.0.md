@@ -29,7 +29,7 @@
 - 记录页语义卡已移除，日记标题/原文与编辑、删除、恢复入口可见；编辑只在页面内存生效，刷新后恢复公开合成 fixture。
 - 最终 Preview 的桌面/移动记录页无根页面横向溢出，console error 为 0；本地 1440px/390px 全四页 Playwright 为 8/8。
 - `/api/*` 404 已由受版本控制的路由配置与回归测试锁定在 SPA fallback 前；首次发现的错误 200 制品没有晋升 Production。
-- Draft PR privacy/Python 已通过；原 Node 安装失败已在本地完成锁文件可移植性修复和 Node 24 全量复验，待推送并重跑远端 CI 后才能记为全绿。
+- Draft PR privacy/Python 已通过，Node 的公共依赖安装也已通过；随后三个 Todo 用例因 Runner 默认 UTC 与上海自然日 fixture 不一致而失败。该环境差异已在本地 `TZ=UTC` 下复现并修复，定向 13/13、完整 74/539、Python 93 和 build 通过；待补丁推送并重跑远端 CI 后才能记为全绿。
 
 ## 5. 正式发布门禁
 

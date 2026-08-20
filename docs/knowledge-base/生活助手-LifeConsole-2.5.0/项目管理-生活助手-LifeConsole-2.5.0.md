@@ -2,7 +2,7 @@
 
 ## 1. 当前状态
 
-- 主阶段：PO 记录页反馈已完成本地与受保护合成 Preview 验收，并确认继续开发；当前先收口 Draft PR #58 的 Node CI 可移植性，下一外部写入门禁仍为 Supabase migration 与 Owner Preview 合成写入的分别确认。
+- 主阶段：PO 记录页反馈已完成本地与受保护合成 Preview 验收，并确认继续开发；Draft PR #58 已越过公共依赖安装，当前收口 GitHub Runner UTC 与上海自然日测试语义的环境差异。下一外部写入门禁仍为 Supabase migration 与 Owner Preview 合成写入的分别确认。
 - 子状态：语义卡已移除；对话记录下已恢复日记标题、原文、编辑、软删除与恢复；Node 24 下全量 74 个 Vitest 文件 / 539 项、Python 93 项、Production build、Playwright 8/8 及 npm 0 漏洞审计通过。
 - 分支：`agent/life-console-250`，独立 worktree。
 - PR：[Draft PR #58](https://github.com/Matthew-1996/life-assistant/pull/58)，保持 Draft 至全量验收与合并门禁。
@@ -18,7 +18,7 @@
 4. 数据能力：migration 文件、RLS、RPC、Repository、backup v3。已完成本地实现与测试。
 5. 页面与算法：工作台、记录、进展、样式拆分。已完成本地实现与测试。
 6. 内容服务：寄语展示、新闻 API、Runtime Cache、降级。已完成本地实现与测试。
-7. 测试与 Preview：记录页反馈与更新后的纯静态合成 Preview 已完成；锁文件私有镜像地址已在本地修复并由防回归测试、公共 Registry 空缓存 `npm ci` 和 Node 24 全量门禁验证，待更新 Draft PR 后重跑远端 CI。
+7. 测试与 Preview：记录页反馈与更新后的纯静态合成 Preview 已完成；锁文件私有镜像修复已由 GitHub Runner 的 `npm ci` 证明有效。后续 Node 测试暴露 Runner 默认 UTC 与上海自然日 fixture 不一致；已在 Vitest 配置固定 `Asia/Shanghai`，并在 UTC 外层环境下完成定向 13/13、全量 74/539、Python 93 和 build 复验，待更新 PR 后再次远端验证。
 8. 上线：经逐项确认后 migration、自动化、PR 合并和 Production。
 
 ## 3. 门禁与恢复条件
@@ -39,7 +39,7 @@
 - Unsplash Key 可能不存在：Preview 使用合成元数据，Production 使用渐变。
 - 当前 bundle 大于 500 kB：样式/组件拆分时观察，不为追求指标引入无关架构。
 - iCloud worktree 偶发 interrupted syscall：每次创建后验证对象、HEAD 和工作树完整性。
-- 本机 npm 镜像可能把下载地址写入锁文件：已加入只允许 `registry.npmjs.org` tarball 的回归测试；仍需由 GitHub Runner 的 `npm ci` 复验本次修复。
+- GitHub Runner 默认 UTC，而 Todo“今日”测试按上海自然日定义：已在 Vitest 配置固定 `Asia/Shanghai`，避免测试结果依赖执行机器时区；待远端复验。
 
 ## 5. 决策日志
 
@@ -60,5 +60,6 @@
 | 2026-08-20 | 记录页移除语义卡，对话记录下恢复日记标题/原文及编辑、软删除、恢复 | PO 已确认设计并进入开发 |
 | 2026-08-20 | 更新纯静态合成 Preview，并将 `/api/*` 404 置于 SPA fallback 前 | 已通过；0 Functions、0 Cron，未触达 Owner 数据或 Production |
 | 2026-08-20 | PO 确认继续开发 | 用于收口 CI 并准备下一阶段；不替代 Supabase migration 或 Owner Preview 写入的独立确认 |
-| 2026-08-20 | 将 25 个私有镜像 tarball 地址规范化到公共 npm Registry，并增加真实锁文件可移植性测试 | Node 24 公共源空缓存安装、74/539 Vitest、Python 93、build、Playwright 8/8、npm audit 0 漏洞均通过；待推送后重跑远端 CI |
+| 2026-08-20 | 将 25 个私有镜像 tarball 地址规范化到公共 npm Registry，并增加真实锁文件可移植性测试 | GitHub Runner `npm ci` 已通过；安装根因已关闭 |
+| 2026-08-20 | GitHub Runner UTC 下三个 Todo 测试暴露隐式本机时区依赖 | 已用 `TZ=UTC` 本地精确复现；Vitest 固定 `Asia/Shanghai` 后定向 13/13、全量 74/539、Python 93 和 build 通过，待推送复验 |
 | 2026-08-19 | 视觉、设计、技术确认前不写生产功能 | Gate 2 v2 后已满足 |
