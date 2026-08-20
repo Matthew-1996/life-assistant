@@ -9,7 +9,15 @@ export interface CandidateEnvironment {
 
 export interface CandidateVercelConfig {
   buildCommand: string;
+  crons?: Array<{
+    path: string;
+    schedule: string;
+  }>;
   framework: string;
+  functions: Record<string, {
+    maxDuration: number;
+    regions: string[];
+  }>;
   installCommand: string;
   outputDirectory: string;
   headers: Array<{

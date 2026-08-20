@@ -11,7 +11,7 @@ import tempfile
 from typing import Any
 from zipfile import ZipFile
 
-from life_console_backup_agent import RESOURCE_NAMES
+from life_console_backup_agent import LEGACY_RESOURCE_NAMES, RESOURCE_NAMES
 
 
 def verify_isolated_restore(archive_path: Path) -> dict[str, Any]:
@@ -19,18 +19,27 @@ def verify_isolated_restore(archive_path: Path) -> dict[str, Any]:
         target = Path(directory)
         with ZipFile(archive_path) as archive:
             names = set(archive.namelist())
+            manifest = json.loads(archive.read("manifest.json"))
+            format_version = manifest.get("format_version")
+            if format_version not in (
+                "life-console-backup/2",
+                "life-console-backup/3",
+            ):
+                raise ValueError("backup_format_invalid")
+            resource_names = (
+                LEGACY_RESOURCE_NAMES
+                if format_version == "life-console-backup/2"
+                else RESOURCE_NAMES
+            )
             expected = {"manifest.json"} | {
-                f"data/{name}.ndjson" for name in RESOURCE_NAMES
+                f"data/{name}.ndjson" for name in resource_names
             }
             if names != expected:
                 raise ValueError("backup_paths_invalid")
-            manifest = json.loads(archive.read("manifest.json"))
-            if manifest.get("format_version") != "life-console-backup/2":
-                raise ValueError("backup_format_invalid")
             archive.extractall(target)
 
         counts: dict[str, int] = {}
-        for name in RESOURCE_NAMES:
+        for name in resource_names:
             metadata = manifest.get("resources", {}).get(name)
             if not isinstance(metadata, dict):
                 raise ValueError("backup_manifest_invalid")

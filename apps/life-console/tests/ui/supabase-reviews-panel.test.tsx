@@ -45,13 +45,14 @@ afterEach(cleanup);
 
 const weekly: WeeklyReview = {
   id: 51, user_id: "synthetic-owner", week_start: "2030-04-01",
-  content: "Synthetic weekly", revision: 1, deleted_at: null,
+  content: "Synthetic weekly", structured_data: {}, revision: 1, deleted_at: null,
   created_at: "2030-04-07T08:00:00.000Z",
   updated_at: "2030-04-07T08:00:00.000Z",
 };
 const phase: PhaseReview = {
   id: 61, user_id: "synthetic-owner", period_start: "2030-04-01",
   period_end: "2030-04-30", content: "Synthetic phase", revision: 1,
+  structured_data: {},
   deleted_at: null, created_at: "2030-05-01T08:00:00.000Z",
   updated_at: "2030-05-01T08:00:00.000Z",
 };
@@ -192,6 +193,31 @@ describe("Supabase Reviews panel", () => {
     );
     expect(screen.getByText("Earlier phase note")).toBeTruthy();
     expect(screen.queryByText("Synthetic phase")).toBeNull();
+  });
+
+  it("projects known structured fields in Chinese and safely wraps unknown data", async () => {
+    const structuredWeekly: WeeklyReview = {
+      ...weekly,
+      structured_data: {
+        answers: {
+          better_summary: "节奏更稳定",
+          next_track: "adjust",
+        },
+        future_schema: {
+          note: "这是一段尚未识别的长字段内容",
+        },
+      },
+    };
+    const { container } = render(
+      <SupabaseReviewsPanel repository={repository([structuredWeekly])} />,
+    );
+
+    expect(await screen.findByText("变好的地方")).toBeTruthy();
+    expect(screen.getByText("节奏更稳定")).toBeTruthy();
+    expect(screen.getByText("下一方向")).toBeTruthy();
+    expect(screen.getByText("调整")).toBeTruthy();
+    expect(screen.getByText(/future_schema/)).toBeTruthy();
+    expect(container.querySelector(".review-reading pre")).toBeTruthy();
   });
 
   it("creates weekly and phase reviews through separate inputs", async () => {

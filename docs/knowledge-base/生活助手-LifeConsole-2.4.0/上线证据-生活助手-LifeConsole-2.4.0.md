@@ -45,5 +45,5 @@ Life Console 2.4.0 已于 2026-08-17 正式上线。功能 PR [#54](https://gith
 - TDD 先在真实 Chromium + Production CSP 下精确观察 `unsafe-eval` 红灯，再以同一回归确认修复后全局导航可见。
 - 本地门禁：Vitest 54 文件 / 464 项、Life Console Python 92 项、仓库工具 369 项（1 跳过）、Production build 和 Playwright 4/4 通过；隐私、历史隐私、治理与差异检查通过。
 - Vercel Production 为 `READY`，正式 alias 指向当前热修复提交；首页 200，严格 CSP 和 `nosniff` 保持，未登录 POST 健康门禁为 401。
-- 全新浏览器会话已渲染全局导航与 Online 工作台，新会话控制台无 error/warn。Draft PR #56 保持 Draft，未合并。
+- 全新浏览器会话已渲染全局导航与 Online 工作台。PR #56 于 2026-08-19 squash merge；合并后 Production 严格 CSP、页面内容和错误覆盖层均通过只读复验。
 - 本轮只发布通用代码与去敏证据；未写入日记或数据库，未调用模型，未处理其他记录。

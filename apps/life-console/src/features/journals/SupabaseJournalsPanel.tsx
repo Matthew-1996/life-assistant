@@ -18,7 +18,9 @@ import {
   RepositoryError,
   type Cursor,
 } from "../../supabase/repository";
-import { JournalStructuredView } from "./JournalStructuredView";
+import { DeleteJournalDialog } from "./DeleteJournalDialog";
+import { DeletedJournalsPanel } from "./DeletedJournalsPanel";
+import { JournalCard } from "./JournalCard";
 
 export interface SupabaseJournalsPanelProps {
   repository: JournalRepositoryPort;
@@ -175,6 +177,9 @@ export function SupabaseJournalsPanel({
   const [historyLoading, setHistoryLoading] = useState(false);
   const [pending, setPending] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
+  const [deleting, setDeleting] = useState<Journal | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deletedReloadToken, setDeletedReloadToken] = useState(0);
   const conflict = draft.conflict ?? null;
 
   function setConflict(
@@ -462,6 +467,26 @@ export function SupabaseJournalsPanel({
     }
   }
 
+  async function softDeleteJournal(): Promise<void> {
+    if (!deleting || pending !== null) return;
+    setPending(`delete:${deleting.id}`);
+    setDeleteError(null);
+    try {
+      await repository.softDelete(deleting.id, deleting.revision);
+      setJournals((current) => current.filter((journal) => journal.id !== deleting.id));
+      setDeleting(null);
+      setDeletedReloadToken((value) => value + 1);
+      setNotice({ kind: "success", message: "日记已移到已删除，可随时恢复。" });
+      await notifySaved();
+    } catch (error) {
+      setDeleteError(error instanceof RepositoryError && error.kind === "conflict"
+        ? "日记已在其他位置更新；请刷新后核对最新版本。"
+        : "尚未删除；请稍后重试。");
+    } finally {
+      setPending(null);
+    }
+  }
+
   return (
     <section
       aria-labelledby="supabase-journals-title"
@@ -474,7 +499,7 @@ export function SupabaseJournalsPanel({
             {showCreate ? "日记" : "日记管理与修订"}
           </h2>
           <p className="quiet">
-            当前只开放创建、读取和修订；撤回留待后续评审。
+            日记默认只显示用户原话；助手整理和修订按需展开，删除后可恢复。
           </p>
         </div>
         <span className="status blue">Owner-only</span>
@@ -678,7 +703,6 @@ export function SupabaseJournalsPanel({
             </div>
           ) : <ul className="supabase-journal-list">
           {visibleJournals.map((journal) => {
-            const displayTitle = journal.title || "无标题日记";
             return (
               <li key={journal.id}>
                 {draft.editingId === journal.id ? (
@@ -764,49 +788,18 @@ export function SupabaseJournalsPanel({
                     </div>
                   </form>
                 ) : (
-                  <>
-                    <JournalStructuredView journal={journal} />
-                    <div className="button-row">
-                      <button
-                        aria-label={`编辑 ${displayTitle}`}
-                        className="secondary-button"
-                        disabled={conflict !== null || pending !== null}
-                        onClick={() => beginEdit(journal)}
-                        type="button"
-                      >
-                        编辑
-                      </button>
-                      <button
-                        aria-label={`查看 ${displayTitle} 修订`}
-                        className="secondary-button"
-                        disabled={conflict !== null
-                          || historyLoading
-                          || pending !== null}
-                        onClick={() => void showRevisions(journal)}
-                        type="button"
-                      >
-                        修订历史
-                      </button>
-                    </div>
-                    {historyId === journal.id ? (
-                      <div className="supabase-journal-revisions">
-                        {historyLoading ? (
-                          <p className="quiet">正在读取修订历史…</p>
-                        ) : revisions.length === 0 ? (
-                          <p className="quiet">没有修订历史。</p>
-                        ) : (
-                          <ul>
-                            {revisions.map((revision) => (
-                              <li key={revision.id}>
-                                revision #{revision.revision} ·{" "}
-                                {revision.reason ?? "update"}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-                    ) : null}
-                  </>
+                  <JournalCard
+                    busy={conflict !== null || pending !== null}
+                    journal={journal}
+                    onDelete={() => {
+                      setDeleteError(null);
+                      setDeleting(journal);
+                    }}
+                    onEdit={() => beginEdit(journal)}
+                    onLoadRevisions={() => void showRevisions(journal)}
+                    revisions={historyId === journal.id ? revisions : []}
+                    revisionsLoading={historyId === journal.id && historyLoading}
+                  />
                 )}
               </li>
             );
@@ -829,6 +822,26 @@ export function SupabaseJournalsPanel({
           ) : null}
         </>
       )}
+      <DeletedJournalsPanel
+        onRestored={(journal) => {
+          setJournals((current) => [journal, ...current.filter((item) => item.id !== journal.id)]);
+          setNotice({ kind: "success", message: "日记已恢复。" });
+        }}
+        reloadToken={deletedReloadToken}
+        repository={repository}
+      />
+      <DeleteJournalDialog
+        busy={deleting ? pending === `delete:${deleting.id}` : false}
+        error={deleteError}
+        journal={deleting}
+        onCancel={() => {
+          if (pending === null) {
+            setDeleting(null);
+            setDeleteError(null);
+          }
+        }}
+        onConfirm={() => void softDeleteJournal()}
+      />
     </section>
   );
 }

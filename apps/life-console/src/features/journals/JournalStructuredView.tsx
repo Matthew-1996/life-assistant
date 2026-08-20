@@ -59,13 +59,38 @@ function evidenceList(
 
 export function JournalStructuredView({
   journal,
+  assistantOnly = false,
 }: {
   journal: Journal;
+  assistantOnly?: boolean;
 }): ReactElement {
   const metadata = normalizedMetadata(journal);
   const displayTitle = journal.title || metadata?.title || "无标题日记";
   const status = journal.normalization_status ?? "legacy";
   const people = metadata?.people ?? [];
+
+  const assistantSections = (
+    <div aria-label="助手整理" className="journal-normalized-sections">
+      {section(fieldLabels.summary, <p>{metadata?.summary || "未记录"}</p>)}
+      {section(fieldLabels.facts, evidenceList(metadata?.facts ?? []))}
+      {section(fieldLabels.feelings, evidenceList(metadata?.feelings ?? []))}
+      {section(fieldLabels.people, people.length === 0 ? <p className="quiet">未记录</p> : (
+        <ul>{people.map((person) => (
+          <li key={`${person.text}:${person.evidence}`}>
+            {person.text}{person.relation ? `（${person.relation}）` : ""}
+            {person.basis === "confirmed_profile" ? " · 关系来自已确认个人档案" : ""}
+          </li>
+        ))}</ul>
+      ))}
+      {section(fieldLabels.places, evidenceList(metadata?.places ?? []))}
+      {section(fieldLabels.themes, textList(metadata?.themes ?? []))}
+      {section(fieldLabels.planning_clues, evidenceList(metadata?.planning_clues ?? []))}
+      {section(fieldLabels.inferences, evidenceList(metadata?.inferences ?? []))}
+      {section(fieldLabels.tags, textList(metadata?.tags ?? journal.tags ?? []))}
+    </div>
+  );
+
+  if (assistantOnly) return assistantSections;
 
   return (
     <article aria-label={displayTitle} className="journal-structured-view">
@@ -81,33 +106,7 @@ export function JournalStructuredView({
       {section("用户原话", (
         <p className="journal-raw-text">{journal.content}</p>
       ))}
-      <div aria-label="助手整理" className="journal-normalized-sections">
-        {section(fieldLabels.summary, (
-          <p>{metadata?.summary || "未记录"}</p>
-        ))}
-        {section(fieldLabels.facts, evidenceList(metadata?.facts ?? []))}
-        {section(fieldLabels.feelings, evidenceList(metadata?.feelings ?? []))}
-        {section(fieldLabels.people, people.length === 0 ? (
-          <p className="quiet">未记录</p>
-        ) : (
-          <ul>
-            {people.map((person) => (
-              <li key={`${person.text}:${person.evidence}`}>
-                {person.text}
-                {person.relation ? `（${person.relation}）` : ""}
-                {person.basis === "confirmed_profile"
-                  ? " · 关系来自已确认个人档案"
-                  : ""}
-              </li>
-            ))}
-          </ul>
-        ))}
-        {section(fieldLabels.places, evidenceList(metadata?.places ?? []))}
-        {section(fieldLabels.themes, textList(metadata?.themes ?? []))}
-        {section(fieldLabels.planning_clues, evidenceList(metadata?.planning_clues ?? []))}
-        {section(fieldLabels.inferences, evidenceList(metadata?.inferences ?? []))}
-        {section(fieldLabels.tags, textList(metadata?.tags ?? journal.tags ?? []))}
-      </div>
+      {assistantSections}
     </article>
   );
 }

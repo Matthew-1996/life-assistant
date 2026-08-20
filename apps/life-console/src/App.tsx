@@ -2,6 +2,7 @@ import {
   type FormEvent,
   type MouseEvent,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -15,23 +16,31 @@ import { AppShell, type PageId } from "./components/shell/AppShell";
 import { syntheticDashboard, type Dashboard } from "./data/dashboard";
 import { ProgressPage } from "./features/progress/ProgressPage";
 import { RecordsPage } from "./features/records/RecordsPage";
+import { createCandidateJournalRepository } from "./features/journals/candidate-journal-repository";
 import { SupabaseJournalsPanel } from "./features/journals/SupabaseJournalsPanel";
 import { SupabaseReviewsPanel } from "./features/reviews/SupabaseReviewsPanel";
 import { StageAPocPanel } from "./features/system/StageAPocPanel";
 import { SystemPage } from "./features/system/SystemPage";
 import { TodayPage } from "./features/today/TodayPage";
+import type { DailyNewsClient } from "./domain/daily-news";
+import type { TodoRepositoryPort } from "./domain/todos";
 import type { AuthSession } from "./supabase/auth";
 import type { BackupRepository } from "./supabase/backups";
+import type { DashboardMessageRepositoryPort } from "./supabase/dashboard-messages";
 import type { DailyCheckinRepositoryPort } from "./supabase/daily-checkins";
 import type { GoalRepositoryPort } from "./supabase/goals";
+import type { HealthRepositoryPort } from "./supabase/health";
 import type { JournalRepositoryPort } from "./supabase/journals";
 import type { ReviewRepositoryPort } from "./supabase/reviews";
 
 export interface SupabaseProductContext {
   dailyCheckins: DailyCheckinRepositoryPort;
   goals: GoalRepositoryPort;
+  health?: HealthRepositoryPort;
   journals: JournalRepositoryPort;
   reviews: ReviewRepositoryPort;
+  dashboardMessages?: DashboardMessageRepositoryPort;
+  todos?: TodoRepositoryPort;
   session: AuthSession;
   signOut(): Promise<void>;
   backups?: BackupRepository;
@@ -50,6 +59,9 @@ interface AppProps {
   mode?: "local" | "sites" | "candidate-preview" | "supabase-candidate" | "supabase-production";
   stageAPocEnabled?: boolean;
   supabase?: SupabaseProductContext;
+  dailyNews?: DailyNewsClient;
+  dashboardMessages?: DashboardMessageRepositoryPort;
+  todos?: TodoRepositoryPort;
 }
 
 export function App({
@@ -58,6 +70,9 @@ export function App({
   mode = "local",
   stageAPocEnabled = false,
   supabase,
+  dailyNews,
+  dashboardMessages,
+  todos,
 }: AppProps) {
   const supabaseMode = mode === "supabase-candidate" || mode === "supabase-production";
   const [activePage, setActivePage] = useState<PageId>("today");
@@ -67,6 +82,14 @@ export function App({
   const [sitesStatus, setSitesStatus] = useState<SitesSystemStatus | null>(null);
   const [error, setError] = useState(false);
   const [candidateNotice, setCandidateNotice] = useState(false);
+  const candidateJournals = useMemo(
+    () => mode === "candidate-preview"
+      ? createCandidateJournalRepository(
+        (initialDashboard ?? syntheticDashboard).records.recent_journals,
+      )
+      : null,
+    [initialDashboard, mode],
+  );
   const refreshGeneration = useRef(0);
   const latestRefresh = useRef<{
     generation: number;
@@ -147,6 +170,7 @@ export function App({
   ) {
     if (mode !== "candidate-preview") return;
     const target = event.target as HTMLElement;
+    if (target.closest("[data-candidate-local-write]")) return;
     const writeControl = target.closest(
       "form button[type='submit'], button.danger, [data-write-control]",
     );
@@ -177,16 +201,19 @@ export function App({
         client={mode === "candidate-preview" ? undefined : client}
         mode={mode}
         draftScope={supabase?.session.userId}
+        dailyNews={dailyNews}
+        dashboardMessages={dashboardMessages ?? supabase?.dashboardMessages}
         onNavigate={setActivePage}
         onSaved={refreshAfterWrite}
         sourceTruth={sitesStatus?.source_truth}
+        todos={todos ?? supabase?.todos}
       />
     ),
     progress: (
       <ProgressPage
-        client={mode === "sites" ? client as SitesLifeConsoleClient : undefined}
         dashboard={dashboard}
         goals={supabase?.goals}
+        health={supabase?.health}
         mode={mode}
         onSaved={refreshAfterWrite}
         draftScope={supabase?.session.userId}
@@ -200,7 +227,18 @@ export function App({
         mode={mode}
         onSaved={refreshAfterWrite}
         draftScope={supabase?.session.userId}
-        supabasePanels={supabaseMode && supabase ? (
+        supabasePanels={mode === "candidate-preview" ? (
+          <div
+            className="supabase-candidate-stack"
+            data-candidate-local-write
+          >
+            <SupabaseJournalsPanel
+              draftScope="synthetic-preview"
+              repository={candidateJournals!}
+              showCreate={false}
+            />
+          </div>
+        ) : supabaseMode && supabase ? (
           <div className="supabase-candidate-stack">
             <SupabaseJournalsPanel
               draftScope={supabase.session.userId}
@@ -250,15 +288,6 @@ export function App({
           </div>
           {stageAPocEnabled && <StageAPocPanel />}
         </>
-      )}
-      {mode === "supabase-candidate" && (
-        <div
-          aria-label="私有候选边界"
-          className="service-banner service-banner--candidate"
-          role="status"
-        >
-          Life Console · 数据已迁移 · 生产环境
-        </div>
       )}
       {mode === "supabase-production" && (
         <div

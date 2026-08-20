@@ -110,12 +110,14 @@ not portable source files, and must not be committed.
 `npm run build:vercel-preview` creates a static, read-only candidate in
 `dist/vercel-preview`. It contains only committed synthetic fixtures and does
 not include the Stage A Worker POC, Sites authentication, D1, R2, KEK, iCloud,
-or any personal record. `vercel.json` configures this build and fail-closed
-browser security headers.
+or any personal record. `vercel.synthetic.json` configures this build, puts the
+fail-closed `/api` route ahead of the SPA fallback, and supplies strict browser
+security headers.
 
-Use a pinned Vercel CLI and link the directory to the intended project before
-deployment. `.vercel/` and `.env*` are local runtime state and must never be
-committed. Verify a deployment with an unauthenticated HTTP request and a
+Use a pinned Vercel CLI with `--local-config vercel.synthetic.json` and link the
+directory to the intended project before deployment. `.vercel/` and `.env*`
+are local runtime state and must never be committed. Verify a deployment with
+an unauthenticated HTTP request, an explicit `/api/*` 404 assertion, and a
 browser walk through Workbench, Records, Progress, and System before handing
 out its stable alias.
 

@@ -2,6 +2,7 @@
 
 from .backup_store import (
     BACKUP_FORMAT_VERSION,
+    READABLE_BACKUP_FORMATS,
     BackupAgentError,
     BackupReceipt,
     BackupStore,
@@ -11,6 +12,7 @@ from .backup_store import (
 
 __all__ = [
     "BACKUP_FORMAT_VERSION",
+    "READABLE_BACKUP_FORMATS",
     "BackupAgentError",
     "BackupReceipt",
     "BackupStore",

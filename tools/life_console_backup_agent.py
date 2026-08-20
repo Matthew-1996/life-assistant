@@ -22,7 +22,7 @@ from backup_store import BackupStore, content_digest_for_resources  # noqa: E402
 from life_console_cloud import CloudClient, CloudWriteError, _load_client, DEFAULT_CONFIG  # noqa: E402
 
 
-RESOURCE_NAMES = (
+LEGACY_RESOURCE_NAMES = (
     "goals",
     "journals",
     "journal_revisions",
@@ -31,6 +31,11 @@ RESOURCE_NAMES = (
     "phase_reviews",
     "health_days",
     "health_segments",
+)
+RESOURCE_NAMES = LEGACY_RESOURCE_NAMES + (
+    "todo_items",
+    "todo_status_events",
+    "dashboard_messages",
 )
 
 
@@ -44,13 +49,14 @@ def _canonical(value: Any) -> bytes:
 
 
 def build_archive(snapshot: dict[str, Any], export_id: str) -> tuple[bytes, dict[str, int], str]:
-    if snapshot.get("schema_version") != 2 or not snapshot.get("exported_at"):
+    schema_version = snapshot.get("schema_version")
+    if schema_version not in (2, 3) or not snapshot.get("exported_at"):
         raise CloudWriteError("unavailable")
     payloads: dict[str, bytes] = {}
     resources: dict[str, dict[str, object]] = {}
     counts: dict[str, int] = {}
     for name in RESOURCE_NAMES:
-        rows = snapshot.get(name)
+        rows = snapshot.get(name, []) if schema_version == 2 and name not in LEGACY_RESOURCE_NAMES else snapshot.get(name)
         if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
             raise CloudWriteError("unavailable")
         payload = b"".join(_canonical(row) + b"\n" for row in rows)
@@ -64,9 +70,9 @@ def build_archive(snapshot: dict[str, Any], export_id: str) -> tuple[bytes, dict
         }
     digest = content_digest_for_resources(resources)
     manifest = {
-        "format_version": "life-console-backup/2",
-        "source_product_version": "2.3.0",
-        "source_schema_version": "supabase/2",
+        "format_version": "life-console-backup/3",
+        "source_product_version": "2.5.0",
+        "source_schema_version": "supabase/3",
         "export_id": export_id,
         "exported_at": snapshot["exported_at"],
         "resources": resources,

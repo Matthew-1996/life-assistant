@@ -14,6 +14,7 @@ export type ListPageOptions =
   | {
     table: "journals";
     sortColumn: "event_date";
+    deletedOnly?: boolean;
     pageSize?: number;
     cursor?: Cursor;
   }
@@ -118,7 +119,7 @@ function normalizedError(
   if (status === 403) {
     return new RepositoryError("forbidden", status, code, error.message);
   }
-  if (status === 409 || code === "23505") {
+  if (status === 409 || code === "23505" || code === "40001") {
     return new RepositoryError("conflict", 409, code, error.message);
   }
   if (
@@ -233,7 +234,12 @@ export class LifeConsoleRepository {
       }
       if (
         options.table === "journals"
-        || options.table === "weekly_reviews"
+      ) {
+        query = options.deletedOnly
+          ? query.not("deleted_at", "is", null)
+          : query.is("deleted_at", null);
+      } else if (
+        options.table === "weekly_reviews"
         || options.table === "phase_reviews"
         || (
           options.table === "goals"
@@ -312,6 +318,24 @@ export class LifeConsoleRepository {
       );
     }
     const result = await operation(key);
+    if (result.error) {
+      throw normalizedError(result.error, result.status);
+    }
+    if (result.data === null) {
+      throw new RepositoryError(
+        "unknown",
+        result.status,
+        "empty_write_result",
+        "The write completed without a result",
+      );
+    }
+    return result.data;
+  }
+
+  async executeWrite<T>(
+    operation: () => Promise<SupabaseResult<T>>,
+  ): Promise<T> {
+    const result = await operation();
     if (result.error) {
       throw normalizedError(result.error, result.status);
     }
