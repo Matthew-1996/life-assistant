@@ -44,7 +44,7 @@ Owner Agent (Monday 12:00 Asia/Shanghai)
 
 ### `todo_status_events`
 
-保存 `user_id`、`todo_id`、`from_status`、`to_status`、`todo_revision`、`occurred_at`。只允许数据库 RPC 追加；Todo 删除不在 2.5.0 范围。
+保存 `user_id`、`todo_id`、`from_status`、`to_status`、`todo_revision`、`occurred_at`。只允许数据库 RPC 追加；Todo 软删除另写 `audit_events`，不伪造状态转换事件。
 
 ### `dashboard_messages`
 
@@ -57,6 +57,7 @@ Owner Agent (Monday 12:00 Asia/Shanghai)
 - `create_todo(p_idempotency_key, p_title, p_priority, p_planned_start_at, p_due_at)`：复用 `idempotency_keys`，同 key 同请求返回原结果，不同请求拒绝。
 - `update_todo(p_id, p_expected_revision, p_title, p_priority, p_planned_start_at, p_due_at)`：不改变状态和实际时间；revision 冲突返回可识别错误。
 - `transition_todo(p_id, p_expected_revision, p_status)`：事务内更新状态/实际时间、revision 并写入事件。未开始直接完成时开始/完成时间相同；completed → in_progress 保留开始并清空完成；退回 not_started 清空两者；同状态请求原样返回且不追加事件。
+- `soft_delete_todo(p_id, p_expected_revision)`：锁定 Owner Todo，revision 匹配后设置 `deleted_at`、revision +1 并追加不含正文的 `SOFT_DELETE` 审计事件；重复删除幂等返回原结果。
 - `upsert_dashboard_message(p_idempotency_key, p_week_start, p_expected_revision, p_message, p_quote_source, p_image_metadata, p_fallback_theme)`：首次插入要求 expected revision 为空；覆盖同周内容必须匹配当前 revision；同幂等请求返回原结果。
 - `soft_delete_journal(p_journal_id, p_expected_revision)`：只设置 `deleted_at` 并增加 revision；重复删除幂等。
 - `restore_journal(p_journal_id, p_expected_revision)`：清空 `deleted_at` 并增加 revision；未删除记录幂等。
@@ -65,7 +66,7 @@ Owner Agent (Monday 12:00 Asia/Shanghai)
 
 ## 4. Repository 与领域类型
 
-- `TodoRepositoryPort`：`listToday`、`listAll`、`create`、`update`、`transition`、`listStatusEvents`。
+- `TodoRepositoryPort`：`listToday`、`listAll`、`create`、`update`、`transition`、`delete`、`listStatusEvents`；两个列表固定过滤 `deleted_at is null`。
 - `DashboardMessageRepositoryPort`：`getCurrentWeek`、`upsert`。
 - `HealthRepositoryPort`：读取 14 天日级指标及 7 天睡眠时刻。
 - `DailyNewsClient`：`getDigest({ allowRebuild })`，返回成功、陈旧降级或空态的判别联合类型。

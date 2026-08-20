@@ -2,8 +2,8 @@
 
 ## 1. 当前状态
 
-- 主阶段：PO 记录页反馈、全量门禁与更新后的受保护合成 Preview 均已通过；Draft PR #58 的 privacy、Python、Node 三项 CI 已全绿。Supabase 已切换到与 Life Console Production URL 匹配的健康项目，PO 当次确认的 2.5.0 migration 已应用并通过后验验证；Owner Preview 仍未执行。
-- 生产功能：Supabase 日记契约未变；纯合成 Preview 新增内存日记演示。Production 数据库仅应用加法 schema/RPC/权限变更，未写 Owner 业务记录；自动化、PR 合并与 Vercel Production 均未执行。
+- 主阶段：PO 记录页反馈、全量门禁、受保护合成 Preview 与 Owner Preview 合成写入均已通过；Draft PR #58 的 privacy、Python、Node 三项 CI 已全绿。Supabase 2.5.0 主 migration 与 Todo 软删除增量 migration 已分别按当次确认应用并通过后验验证。
+- 生产功能：Supabase 日记契约未变；Todo 新增 revision-safe 软删除。Production 数据库只新增 schema/RPC/权限，并写入明确合成标记的 Owner 验收记录；自动化、PR 合并与 Vercel Production 均未执行。
 - 基线：PR #56 已 squash merge；本地 `main` 与 `origin/main` 一致。
 - Production 只读复验：HTTP 200、严格 `script-src 'self'`、页面有内容、无错误覆盖层、无 page error/`unsafe-eval`。`/favicon.ico` 404 为非阻断项，纳入 2.5.0。
 
@@ -36,7 +36,7 @@
 | 域 | 必须通过 |
 |---|---|
 | 数据 | 双 Owner RLS、幂等、revision、原子时间、软删除/恢复、v2/v3 备份 |
-| 工作台 | Todo 全链路、甘特、新闻、寄语、今日锚点、移除旧区块 |
+| 工作台 | Todo 创建/编辑/状态/软删除全链路、甘特、新闻、寄语、今日锚点、移除旧区块与顶部环境提示 |
 | 记录 | 无语义卡；对话式记录下显示日记标题/原文；编辑、折叠、删除确认、恢复、复盘长文本 |
 | 进展 | 14 天趋势、样本不足、4 个健康指标、7 天睡眠时刻 |
 | 安全 | 401、Secret 隔离、外部文本不可信、严格 CSP、隐私/历史隐私 |
@@ -88,18 +88,26 @@
 
 Supabase 首次上线前只读核对曾因账号不匹配而失败关闭；重新连接后，唯一健康东京项目的 API URL 与 Life Console Production 本地绑定精确匹配。Vercel 拉取文件对敏感 publishable key 使用遮罩，因此未尝试输出或比对密钥明文；项目身份以 URL 与插件可见项目状态复核，Owner 鉴权链路留在受保护 Preview 门禁验证。
 
-## 7. Production Supabase migration 证据
+## 7. Production Supabase 主 migration 证据
 
 - PO 于 2026-08-20 明确确认执行本次 migration；该确认不跨 Owner Preview、自动化、PR 合并或 Vercel Production 门禁复用。
 - 应用前独立审查发现 `upsert_dashboard_message` 对既有周寄语的同-key并发重试可能先触发 revision 冲突。先以失败测试复现缺少事务锁，再按 Owner UUID + 幂等键增加 transaction-scoped advisory lock；定向数据库测试 13/13 通过。
 - 专门的 migration 测试从完整 2.4 schema 应用 2.5 migration并重复执行；Vitest worker 固定为 3 后，在不放宽原 5/10 秒超时的情况下全量 74 文件 / 540 项、Python 93 项通过。
 - migration 通过正式 Supabase migration runner 应用一次。后验 catalog 核对确认 3 张目标表启用 RLS，恰有 3 条 authenticated Owner SELECT 策略；anon 无 SELECT，authenticated 有 SELECT 但无直接 INSERT/UPDATE/DELETE。
-- 六个写 RPC 均为 `SECURITY DEFINER`、空 `search_path`、authenticated 可执行、public/anon 不可执行；backup v3 导出继续为 `SECURITY INVOKER`。函数定义中事务锁先于幂等键读取。
+- 主 migration 的六个写 RPC 均为 `SECURITY DEFINER`、空 `search_path`、authenticated 可执行、public/anon 不可执行；backup v3 导出继续为 `SECURITY INVOKER`。函数定义中事务锁先于幂等键读取。Todo 软删除第七个写 RPC 的增量验证记录在下一节。
 - 两个独立数据库调用以只读事务竞争同一 advisory lock：等待方仅在持锁方事务结束后返回，两次调用无错误，结束后 advisory lock 计数为 0。该验证不调用业务 RPC、不写 Owner 记录。
 - Security Advisor 新增的 6 条提示只对应上述 authenticated `SECURITY DEFINER` RPC，已逐个审查 `auth.uid()`、Owner 条件、空 `search_path` 与 execute grants；目标表没有意外安全提示。[Supabase Database Functions](https://supabase.com/docs/guides/database/functions)、[RLS](https://supabase.com/docs/guides/database/postgres/row-level-security)
 - Performance Advisor 对新索引的未使用提示发生在空表阶段，保留至 Owner Preview 后观察；未因提示删除 Owner/FK/查询路径索引。
 - 全程未读取真实记录内容、未输出 Owner 标识、项目 ID、Secret 或数据库资源 ID。
 
-## 8. 阶段证据记录规则
+## 8. Owner Preview 验收
+
+- 受保护 Preview 以 Owner 会话完成合成 Todo 创建、状态流转与完成；另建一条明确标记的错误 Todo，经二次确认调用 `soft_delete_todo` 后同时从活动列表和甘特移除，既有完成 Todo 保留。
+- 合成日记完成创建、软删除、恢复与最终软删除；远期寄语仅写入 2099 测试周，不覆盖当前周内容。
+- 去敏数据库聚合复核确认：远期寄语 1、错误 Todo 软删除 1、活动错误 Todo 0、保留完成 Todo 1、目标删除审计 1。
+- 增量改动的本地门禁为非集成 Vitest 71 文件 / 517 项、Miniflare 4 文件 / 26 项、Python 92 项、Candidate/Production build、治理与 Git 隐私/历史隐私全部通过。
+- 临时寄语验收控件只存在于该 Preview 制品，未提交至 Draft PR；验收后本地工作树已恢复到正式提交并清理预览环境缓存。
+
+## 9. 阶段证据记录规则
 
 每次验收只记录去敏结论、合成 fixture、命令、计数和提交，不记录真实日记、健康值、Owner 标识、项目 ID、部署 ID、Secret 或自动化内部凭据。

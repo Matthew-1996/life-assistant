@@ -2,11 +2,11 @@
 
 ## 1. 当前状态
 
-- 主阶段：PO 记录页反馈已完成本地与受保护合成 Preview 验收，并确认继续开发；Draft PR #58 的 privacy、Python、Node 三项 CI 已全绿。Supabase 账号已切换并与 Life Console Production URL 精确匹配，PO 当次确认的 2.5.0 migration 已应用并通过去敏后验验证；当前等待 Owner Preview 独立写入门禁。
-- 子状态：语义卡已移除；对话记录下已恢复日记标题、原文、编辑、软删除与恢复；并发寄语更新增加 Owner+幂等键事务锁。Node 24 下全量 74 个 Vitest 文件 / 540 项、Python 93 项、Production build、Playwright 8/8 及 npm 0 漏洞审计通过。
+- 主阶段：PO 记录页反馈、本地/合成 Preview 与受保护 Owner Preview 合成写入均已通过；Draft PR #58 的 privacy、Python、Node 三项 CI 已全绿。Supabase 2.5.0 主 migration 与 Todo 软删除增量 migration 已分别按确认应用并完成去敏后验验证。
+- 子状态：语义卡与顶部环境提示已移除；对话记录下已恢复日记标题、原文、编辑、软删除与恢复；Todo 新增二次确认软删除；并发寄语更新增加 Owner+幂等键事务锁。
 - 分支：`agent/life-console-250`，独立 worktree。
 - PR：[Draft PR #58](https://github.com/Matthew-1996/life-assistant/pull/58)，保持 Draft 至全量验收与合并门禁。
-- 数据库：2.5.0 加法 migration 已应用；未写 Owner 业务记录。Owner Preview、自动化、PR 合并与 Vercel Production 均未变更。
+- 数据库：2.5.0 两个加法 migration 已应用；只写入明确合成标记的 Owner 验收记录。自动化、PR 合并与 Vercel Production 均未变更。
 
 ## 2. 阶段计划
 
@@ -19,7 +19,7 @@
 5. 页面与算法：工作台、记录、进展、样式拆分。已完成本地实现与测试。
 6. 内容服务：寄语展示、新闻 API、Runtime Cache、降级。已完成本地实现与测试。
 7. 测试与 Preview：记录页反馈与更新后的纯静态合成 Preview 已完成；锁文件可移植性和 Runner UTC 时区确定性补丁均已由 GitHub Actions 复验，privacy、Python、Node 三项全绿。
-8. 上线：migration 已按独立确认完成；Owner Preview、自动化、PR 合并和 Production 继续逐项确认。
+8. 上线：migration 与 Owner Preview 已按独立确认完成；自动化、PR 合并和 Production 继续逐项确认。
 
 ## 3. 门禁与恢复条件
 
@@ -27,7 +27,7 @@
 |---|---|---|
 | 正式视觉/设计/技术 | approved | PO 于 2026-08-20 明确确认 Gate 2 v2 通过 |
 | Supabase migration | completed | PO 于 2026-08-20 当次确认；Production URL 绑定、迁移历史、RLS、权限、RPC、Advisor 与事务锁均已验证 |
-| Owner Preview 写入 | pending | 合成 Preview 通过，PO 确认合成写入范围 |
+| Owner Preview 写入 | completed | PO 已授权；Todo、日记与远期寄语仅用合成标记记录完成验收 |
 | 寄语自动化创建 | pending | Preview 通过，PO 确认 Prompt、RRULE 和权限 |
 | 2.5.0 PR 合并 | pending | 全量 CI、独立复审、PO 验收通过并确认 |
 | Production | pending | 账号/项目绑定复核、回滚方案和 PO 上线确认 |
@@ -71,4 +71,6 @@
 | 2026-08-20 | 应用前独立审查发现寄语同-key并发 revision 竞态 | TDD 增加 Owner+幂等键事务锁，完整 2.4→2.5 migration 测试与双会话只读锁验证通过 |
 | 2026-08-20 | 2.5.0 Production Supabase migration | 已应用一次；3 表、3 Owner 策略、6 写 RPC、backup v3 导出和权限矩阵后验通过，未写 Owner 记录 |
 | 2026-08-20 | 全量测试资源竞争 | 保留原 5/10 秒超时，Vitest worker 固定为 3；全量 74 文件 / 540 项和 Python 93 项通过 |
+| 2026-08-20 | Todo 误建删除与顶部环境提示移除 | PO 已确认设计；Todo 使用 revision-safe 软删除和二次确认，不提供永久删除或恢复界面；顶部候选环境提示已移除 |
+| 2026-08-20 | Todo 软删除增量 migration 与 Owner Preview | migration 已应用；受保护 Preview 中合成错误 Todo 删除、既有完成 Todo 保留、日记删除/恢复和远期寄语写入均通过；未触碰真实记录 |
 | 2026-08-19 | 视觉、设计、技术确认前不写生产功能 | Gate 2 v2 后已满足 |
