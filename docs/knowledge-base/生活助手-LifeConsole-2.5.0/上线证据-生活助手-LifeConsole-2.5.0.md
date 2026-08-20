@@ -2,7 +2,7 @@
 
 ## 1. 当前结论
 
-2.5.0 尚未完整上线。PR #58 已合并，Production Supabase 与 Owner Preview 验收已完成。PO 确认后曾创建 READY 的 2.5.0 Production 并切换正式别名，但真实浏览器发现记录页宽度阻断后已立即回滚至上一健康 Production；未删除用户数据或回滚加法数据库对象。本文只记录已验证事实，不用构建成功冒充上线完成。
+2.5.0 已上线。PR #58 与记录页溢出热修复 PR #59 均已合并，Production Supabase 与 Owner Preview 验收完成；重新发布后的正式站点已通过 1440px/390px 四页、Todo 删除、记录编辑/删除/恢复、严格 CSP 与 console 复验。PO 随后指出正式站点仍展示内部数据治理横幅，当前按已确认 PRD 的顶部减法执行独立快速维护；本文不提前把本次热修复或新闻 Cron 记为完成。
 
 ## 2. 已验证基线
 
@@ -67,6 +67,19 @@
 - 热修复分支本地全量门禁通过：Vitest 75 文件 / 543 项、应用 Python 75 + 7 + 10 + 1 = 93 项、根工具 Python 369 项（1 项跳过）、Production build、治理与当前差异隐私检查；Miniflare 在受限沙箱内无法初始化，经允许在沙箱外专项复跑 26/26 并随完整套件通过。
 - 热修复 Draft PR #59 已创建；独立合成 Preview READY。真实浏览器在 1440px 与 390px 下验证四页均无根页面横向溢出，console error 为 0；受保护首页 200、未知 API 404，严格 CSP 通过。Preview 不连接 Owner 数据且未变更任何 Production 别名；远端 privacy、Python、Node CI 全绿。
 
-## 9. 待重新上线后补齐
+## 9. PR #59 重新上线证据
+
+- PO 当次确认合并 PR #59 与重新发布 Production；`main` 合并后 privacy、Python、Node CI 全绿。
+- Production 构建 READY 并切换正式别名；首页 200，两个新闻端点无鉴权 401，严格 CSP 不含 `unsafe-eval` 且保留 Unsplash 图片域。
+- Owner 登录后以 1440px/390px 复验工作台、记录、进展、系统四页，根页面均无横向溢出；记录原始回退内容断行正常，console error 与可见错误提示均为 0。
+- Todo 删除入口、日记编辑/删除/已删除列表/恢复入口可用；顶部旧“数据已迁移”提示不再展示。验证只输出控件计数与布尔结果，未记录真实内容。
+
+## 10. 正式站点横幅快速维护
+
+- PO 明确要求正式站点不展示“Supabase 唯一真相源 / iCloud 单向备份”状态组件，并确认轮换 `CRON_SECRET`、重新部署与手动触发新闻 Cron。
+- 该改动与 PRD 已确认的全局顶部减法一致；TDD 回归测试在旧实现上明确失败，最小移除 Production 渲染分支后通过。
+- TDD 后完整本地门禁通过：Vitest 75 文件 / 543 项、应用 Python 93 项、根工具 Python 369 项（1 项跳过）、Production build、Playwright 9/9、治理、当前差异隐私与 `git diff --check`。受限沙箱内回环监听被权限拒绝；沙箱外原套件通过，没有放宽超时或测试口径。
+- Draft PR #60 已创建。独立合成 Preview READY；1440px/390px 均未渲染目标状态组件或文案，根页面无横向溢出、无错误覆盖层；首页 200、未知新闻 API 404，严格 CSP 使用 `connect-src 'none'` 且不含 `unsafe-eval`。该 Preview 不连接 Owner 数据、不含 Functions/Cron、不修改 Production。
+- 发布证据待补：PR CI、Production 新部署、密钥轮换、Cron 鉴权触发、新闻缓存/降级和真实浏览器结果。不得记录 Secret 或部署资源 ID。
 
 只记录去敏的 merge commit、CI 计数、Production 状态、Cron/自动化上海时间、桌面/移动浏览器结果、CSP/console 结论和回滚可用性。不得写入真实记录内容、Owner 标识、资源 ID 或 Secret。

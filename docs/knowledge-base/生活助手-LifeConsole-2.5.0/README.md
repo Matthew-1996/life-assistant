@@ -13,4 +13,4 @@
 - [项目管理](项目管理-生活助手-LifeConsole-2.5.0.md)
 - [上线证据](上线证据-生活助手-LifeConsole-2.5.0.md)
 
-当前状态：Gate 1 与 Gate 2 v2 已确认，[PR #58](https://github.com/Matthew-1996/life-assistant/pull/58) 已合并，Supabase 两条 2.5.0 migration 与 Owner Preview 合成验收均已完成。PO 确认 Production 后曾发布 2.5.0，但上线后以真实浏览器发现记录页原始复盘回退分支在 1440px 产生横向溢出，已立即回滚至上一健康 Production；数据库加法对象与用户数据未回滚或删除。当前在独立热修复分支以 TDD 修复，重新发布与寄语自动化仍待独立门禁。
+当前状态：Gate 1 与 Gate 2 v2 已确认，[PR #58](https://github.com/Matthew-1996/life-assistant/pull/58) 与记录页溢出热修复 [PR #59](https://github.com/Matthew-1996/life-assistant/pull/59) 已合并，2.5.0 Production 已重新发布并通过 1440px/390px 四页真实浏览器复验。PO 进一步指出正式站点仍展示内部数据治理横幅；该行为与已确认 PRD 的全局顶部减法不一致，当前通过快速维护分支以 TDD 移除，并在发布时轮换 `CRON_SECRET`、触发新闻 Cron。寄语自动化仍待独立门禁。

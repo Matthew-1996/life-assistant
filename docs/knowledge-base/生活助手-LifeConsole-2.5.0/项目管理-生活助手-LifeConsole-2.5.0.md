@@ -2,11 +2,11 @@
 
 ## 1. 当前状态
 
-- 主阶段：待上线。PR #58、Supabase migration 与 Owner Preview 已完成；首轮 2.5.0 Production 因记录页真实内容横向溢出而回滚，上一健康 Production 已恢复。
-- 子状态：热修复已以失败浏览器用例复现 review-reading__raw 不可断行内容撑宽页面，最小 CSS 修复后 Playwright 9/9、Vitest 543/543、应用 Python 93/93、根工具 Python 369 项（1 项跳过）与 Production build 通过。
-- 分支：agent/life-console-250-records-overflow，独立 worktree。
-- PR：热修复 Draft PR #59 已创建；合成 Preview 与远端 privacy、Python、Node CI 已通过，等待 PO 确认合并、重新发布。
-- 数据库：两个加法 migration 保持已应用，不回滚或删除用户数据；新闻 Cron 未手动触发，寄语自动化未创建。
+- 主阶段：已上线。PR #58、Supabase migration、Owner Preview、PR #59 记录页溢出热修复与 2.5.0 Production 重新发布均已完成。
+- 子状态：正式站点快速维护进行中。PO 指出全局顶部仍展示内部数据治理横幅；PRD 已明确要求删除，因此以失败组件测试复现并从 Production 渲染树移除。本地全量门禁与 1440px/390px 合成 Preview 已通过，待 PR #60 CI、发布与新闻 Cron 验证。
+- 分支：agent/life-console-250-remove-service-banner，独立 worktree。
+- PR：Draft PR #60；只含横幅移除、回归测试和去敏知识库证据，不含寄语自动化。
+- 数据库：两个加法 migration 保持已应用，不回滚或删除用户数据；本次不改 Supabase schema 或 Owner 数据。
 
 ## 2. 阶段计划
 
@@ -30,7 +30,7 @@
 | Owner Preview 写入 | completed | PO 已授权；Todo、日记与远期寄语仅用合成标记记录完成验收 |
 | 寄语自动化创建 | pending | Preview 通过，PO 确认 Prompt、RRULE 和权限 |
 | 2.5.0 PR #58 合并 | completed | PO 已确认并 squash merge 到 main |
-| Production | pending | 首轮发布已回滚；热修复 Preview/CI 通过后由 PO 确认热修复合并与重新发布 |
+| Production | completed / maintenance | PR #59 重新发布已由 PO 确认并完成；本次横幅移除与 `CRON_SECRET` 轮换、重新部署、手动触发新闻 Cron 已获 PO 当次确认，仍须先通过 Preview/CI |
 
 ## 4. 开放风险
 
@@ -77,4 +77,7 @@
 | 2026-08-20 | PR #58 合并与首次 Production 发布 | PO 分别确认；Production READY 后 1440px 登录实测发现记录页横向溢出，立即回滚至上一健康版本 |
 | 2026-08-20 | 记录页 Production 溢出根因 | 原始复盘回退分支缺少不可断行文本换行规则；TDD 红灯复现并以最小 CSS 修复，未读取或输出真实复盘内容 |
 | 2026-08-20 | 热修复 Draft PR #59 与合成 Preview | Preview READY；1440px/390px 四页无根页面横向溢出、console error 0、首页 200、未知 API 404、严格 CSP 与远端 privacy、Python、Node CI 通过 |
+| 2026-08-20 | PR #59 合并与 2.5.0 Production 重新发布 | PO 已确认并完成；正式别名指向新部署，四页桌面/移动、Todo 删除、日记编辑/删除/恢复、严格 CSP 与 console 已复验 |
+| 2026-08-20 | 正式站点移除“Supabase 唯一真相源 / iCloud 单向备份”横幅 | PO 明确反馈；与 PRD 既有减法一致，按快速维护通道 TDD 实施；PO 同次确认轮换 `CRON_SECRET`、重新部署并触发新闻 Cron |
+| 2026-08-20 | 横幅快速维护 Draft PR #60 与合成 Preview | Preview READY；1440px/390px 均无目标组件或文案、无根页面横向溢出，首页 200、未知 API 404，严格 CSP 通过；未连接 Owner 数据或修改 Production |
 | 2026-08-19 | 视觉、设计、技术确认前不写生产功能 | Gate 2 v2 后已满足 |
