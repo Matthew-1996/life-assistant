@@ -3,9 +3,9 @@
 ## 1. 当前状态
 
 - 主阶段：已上线。PR #58、Supabase migration、Owner Preview、PR #59 记录页溢出热修复与 2.5.0 Production 重新发布均已完成。
-- 子状态：正式站点快速维护进行中。PO 指出全局顶部仍展示内部数据治理横幅；PRD 已明确要求删除，因此以失败组件测试复现并从 Production 渲染树移除。本地 Vitest 543/543、应用 Python 93/93、根工具 Python 369 项（1 项跳过）、Production build、Playwright 9/9、治理与隐私检查通过，待 Preview/CI、发布与新闻 Cron 验证。
+- 子状态：正式站点快速维护进行中。PO 指出全局顶部仍展示内部数据治理横幅；PRD 已明确要求删除，因此以失败组件测试复现并从 Production 渲染树移除。本地全量门禁与 1440px/390px 合成 Preview 已通过，待 PR #60 CI、发布与新闻 Cron 验证。
 - 分支：agent/life-console-250-remove-service-banner，独立 worktree。
-- PR：待创建单一 Draft PR；不得混入寄语自动化。
+- PR：Draft PR #60；只含横幅移除、回归测试和去敏知识库证据，不含寄语自动化。
 - 数据库：两个加法 migration 保持已应用，不回滚或删除用户数据；本次不改 Supabase schema 或 Owner 数据。
 
 ## 2. 阶段计划
@@ -79,4 +79,5 @@
 | 2026-08-20 | 热修复 Draft PR #59 与合成 Preview | Preview READY；1440px/390px 四页无根页面横向溢出、console error 0、首页 200、未知 API 404、严格 CSP 与远端 privacy、Python、Node CI 通过 |
 | 2026-08-20 | PR #59 合并与 2.5.0 Production 重新发布 | PO 已确认并完成；正式别名指向新部署，四页桌面/移动、Todo 删除、日记编辑/删除/恢复、严格 CSP 与 console 已复验 |
 | 2026-08-20 | 正式站点移除“Supabase 唯一真相源 / iCloud 单向备份”横幅 | PO 明确反馈；与 PRD 既有减法一致，按快速维护通道 TDD 实施；PO 同次确认轮换 `CRON_SECRET`、重新部署并触发新闻 Cron |
+| 2026-08-20 | 横幅快速维护 Draft PR #60 与合成 Preview | Preview READY；1440px/390px 均无目标组件或文案、无根页面横向溢出，首页 200、未知 API 404，严格 CSP 通过；未连接 Owner 数据或修改 Production |
 | 2026-08-19 | 视觉、设计、技术确认前不写生产功能 | Gate 2 v2 后已满足 |

@@ -79,6 +79,7 @@
 - PO 明确要求正式站点不展示“Supabase 唯一真相源 / iCloud 单向备份”状态组件，并确认轮换 `CRON_SECRET`、重新部署与手动触发新闻 Cron。
 - 该改动与 PRD 已确认的全局顶部减法一致；TDD 回归测试在旧实现上明确失败，最小移除 Production 渲染分支后通过。
 - TDD 后完整本地门禁通过：Vitest 75 文件 / 543 项、应用 Python 93 项、根工具 Python 369 项（1 项跳过）、Production build、Playwright 9/9、治理、当前差异隐私与 `git diff --check`。受限沙箱内回环监听被权限拒绝；沙箱外原套件通过，没有放宽超时或测试口径。
-- 发布证据待补：Draft PR/CI、合成 Preview、Production 新部署、密钥轮换、Cron 鉴权触发、新闻缓存/降级和真实浏览器结果。不得记录 Secret 或部署资源 ID。
+- Draft PR #60 已创建。独立合成 Preview READY；1440px/390px 均未渲染目标状态组件或文案，根页面无横向溢出、无错误覆盖层；首页 200、未知新闻 API 404，严格 CSP 使用 `connect-src 'none'` 且不含 `unsafe-eval`。该 Preview 不连接 Owner 数据、不含 Functions/Cron、不修改 Production。
+- 发布证据待补：PR CI、Production 新部署、密钥轮换、Cron 鉴权触发、新闻缓存/降级和真实浏览器结果。不得记录 Secret 或部署资源 ID。
 
 只记录去敏的 merge commit、CI 计数、Production 状态、Cron/自动化上海时间、桌面/移动浏览器结果、CSP/console 结论和回滚可用性。不得写入真实记录内容、Owner 标识、资源 ID 或 Secret。
