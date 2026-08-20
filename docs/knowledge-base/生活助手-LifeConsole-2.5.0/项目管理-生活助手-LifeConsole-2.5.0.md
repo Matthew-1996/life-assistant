@@ -73,5 +73,5 @@
 | 2026-08-20 | 全量测试资源竞争 | 保留原 5/10 秒超时，Vitest worker 固定为 3；全量 74 文件 / 540 项和 Python 93 项通过 |
 | 2026-08-20 | Todo 误建删除与顶部环境提示移除 | PO 已确认设计；Todo 使用 revision-safe 软删除和二次确认，不提供永久删除或恢复界面；顶部候选环境提示已移除 |
 | 2026-08-20 | Todo 软删除增量 migration 与 Owner Preview | migration 已应用；受保护 Preview 中合成错误 Todo 删除、既有完成 Todo 保留、日记删除/恢复和远期寄语写入均通过；未触碰真实记录 |
-| 2026-08-20 | 增量 PGlite 测试后 NodeNext 类型检查连续两次超过默认 5 秒 | 根因是 3 worker 下 Runner 资源竞争；不放宽测试超时，将 Vitest worker 降为 2，本地 UTC 全量 75 文件 / 543 项通过，等待远端复验 |
+| 2026-08-20 | 增量 PGlite 测试后 NodeNext 类型检查连续两次超过默认 5 秒 | 根因是 3 worker 下 Runner 资源竞争；不放宽测试超时，将 Vitest worker 降为 2，本地 UTC 全量 75 文件 / 543 项通过，远端 privacy、Python、Node 三项复验全绿 |
 | 2026-08-19 | 视觉、设计、技术确认前不写生产功能 | Gate 2 v2 后已满足 |
