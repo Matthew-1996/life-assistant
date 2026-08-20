@@ -13,4 +13,4 @@
 - [项目管理](项目管理-生活助手-LifeConsole-2.5.0.md)
 - [上线证据](上线证据-生活助手-LifeConsole-2.5.0.md)
 
-当前状态：Gate 1 范围和 Gate 2 v2 正式视觉、设计与技术方案均已由 PO 确认，[Draft PR #58](https://github.com/Matthew-1996/life-assistant/pull/58) 已进入 TDD 开发。Supabase 远程 migration、Owner Preview、自动化与 Production 仍未执行，继续遵守各自门禁。
+当前状态：Gate 1 范围和 Gate 2 v2 正式视觉、设计与技术方案均已由 PO 确认，[Draft PR #58](https://github.com/Matthew-1996/life-assistant/pull/58) 已完成功能实现、本地全量门禁和受保护合成 Preview。Node CI 锁文件可移植性已在本地修复并通过 Node 24 公共源复验，待更新 PR 后重跑远端 CI；Supabase 远程 migration、Owner Preview、自动化与 Production 仍未执行，继续遵守各自门禁。

@@ -12,7 +12,8 @@
 
 ## 3. 2.5.0 本地分支证据
 
-- Vitest 73 文件 / 538 项、Python 93 项、Playwright 8 项通过。
+- Node 24 使用公共 npm Registry 和空缓存执行 `npm ci` 通过；Vitest 74 文件 / 539 项、Python 93 项、Playwright 8 项通过。
+- 锁文件 tarball 全部来自 `registry.npmjs.org`，回归测试会拒绝非公共 host；`npm audit` 为 0 个已知漏洞。
 - Supabase Production 构建通过；严格 CSP 保持 `script-src 'self'`，只新增 `images.unsplash.com` 图片域。
 - 390/1024/1280/1440 四页无根页面横向溢出；甘特和睡眠表保持内部滚动。
 - 每日新闻使用公开合成 fixture 验证 401、可信来源、24 小时窗口、固定 Schema、Runtime Cache 与降级；未调用真实外部服务。
@@ -28,14 +29,14 @@
 - 记录页语义卡已移除，日记标题/原文与编辑、删除、恢复入口可见；编辑只在页面内存生效，刷新后恢复公开合成 fixture。
 - 最终 Preview 的桌面/移动记录页无根页面横向溢出，console error 为 0；本地 1440px/390px 全四页 Playwright 为 8/8。
 - `/api/*` 404 已由受版本控制的路由配置与回归测试锁定在 SPA fallback 前；首次发现的错误 200 制品没有晋升 Production。
-- Draft PR privacy/Python 已通过；Node 因锁文件指向本机镜像而在 `npm ci` 失败，远端全绿尚未成立。
+- Draft PR privacy/Python 已通过；原 Node 安装失败已在本地完成锁文件可移植性修复和 Node 24 全量复验，待推送并重跑远端 CI 后才能记为全绿。
 
 ## 5. 正式发布门禁
 
 - 正式视觉、设计和技术已由 PO 确认。
 - migration、Repository、UI、内容服务、备份和降级测试完成。
 - 合成 Preview 已完成；经授权 Owner Preview 待执行。
-- GitHub、Vercel、Supabase 账号与项目绑定已重新核对。
+- GitHub、Vercel、Supabase 账号与项目绑定须在获批正式发布前重新核对。
 - PO 明确确认 migration、自动化、PR 合并和 Production。
 
 ## 6. 待上线后补齐

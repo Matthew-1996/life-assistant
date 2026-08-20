@@ -451,6 +451,8 @@ git commit -m "test(life-console): complete 2.5 synthetic acceptance"
 
 不得配置真实 Secret 或写 Owner 数据；记录页面、CSP、console 和合成 fixture 结论。
 
+补充收口：Draft PR #58 首次 Node CI 暴露锁文件内私有镜像 tarball 地址；已按 TDD 增加真实锁文件 host 回归测试，将公共包地址规范化到公共 npm Registry，并在 Node 24 下以空缓存完成 `npm ci`、全量测试、Production build、Playwright 和 0 漏洞审计。该结论仍需推送后由 GitHub Runner 复验。
+
 - [ ] **Step 2: 取得 Owner Preview 写入确认后执行合成记录验收**
 
 只创建带合成标记的 Todo、寄语和日记；验证软删除/恢复后记录去敏结果。

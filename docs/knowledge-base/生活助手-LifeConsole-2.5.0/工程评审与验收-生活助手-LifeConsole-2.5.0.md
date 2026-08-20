@@ -2,7 +2,7 @@
 
 ## 1. 当前状态
 
-- 主阶段：PO 记录页反馈、全量门禁与更新后的受保护合成 Preview 均已通过；Owner Preview 写入仍等待独立确认。
+- 主阶段：PO 记录页反馈、全量门禁与更新后的受保护合成 Preview 均已通过；Draft PR #58 的 Node CI 锁文件可移植性已在本地修复并完成 Node 24 复验，Owner Preview 写入仍等待独立确认。
 - 生产功能：Supabase 日记契约未变；纯合成 Preview 新增内存日记演示。远程 migration、Owner Preview、自动化与 Production 均未执行。
 - 基线：PR #56 已 squash merge；本地 `main` 与 `origin/main` 一致。
 - Production 只读复验：HTTP 200、严格 `script-src 'self'`、页面有内容、无错误覆盖层、无 page error/`unsafe-eval`。`/favicon.ico` 404 为非阻断项，纳入 2.5.0。
@@ -50,10 +50,12 @@
 |---|---|
 | 需求/设计/技术治理 | 通过；PO 规范原文与 Gate 2 v2 状态一致 |
 | Git 协作与隐私 | hooks、当前差异与凭据检查通过 |
-| Vitest | 73 文件 / 538 项通过 |
+| 公共 Registry 空缓存安装 | Node 24 `npm ci` 通过；未使用本机旧缓存，0 个已知漏洞 |
+| Vitest | 74 文件 / 539 项通过；新增锁文件 tarball host 防回归测试 |
 | Python | 75 + 7 + 10 + 1 = 93 项通过 |
 | Supabase Production build | 通过；严格 CSP 不含 `unsafe-eval` |
 | Playwright | 8/8 通过；真实 Chrome 无错误覆盖层、console error 或 page error |
+| npm audit | 0 info / low / moderate / high / critical |
 | 响应式 | 390/1024/1280/1440 根页面无横向溢出；不足 1180px 自动单列 |
 | 内部滚动 | 仅 Todo 甘特与 7 天睡眠表在窄屏内部横向滚动 |
 | 日记删除/恢复 | React 组件级确认弹窗、取消、软删除与恢复通过；Owner 浏览器写验收等待独立门禁 |
@@ -76,11 +78,11 @@
 | 浏览器 | 无 Vite 错误覆盖层，console error 为 0 |
 | 数据与发布 | 未调用 API、未写 Owner 数据、未执行 migration、未修改 Production |
 
-记录页更新后的专项验收：定向 4 个文件 / 24 项通过；全量 Vitest 为 73 个文件 / 538 项，Python 为 93 项。受保护 Preview 中语义卡计数为 0，合成日记标题与原文可见，编辑只在当前页面内存生效且刷新重置，删除/恢复入口可见；远端桌面与移动布局无页面横向溢出，console error 为 0。软删除、二次确认和恢复的实际状态变化已由本地真实浏览器与组件测试覆盖，远端未写任何数据。
+记录页更新后的专项验收：定向 4 个文件 / 24 项通过；本次 CI 可移植性修复后的全量 Vitest 为 74 个文件 / 539 项，Python 为 93 项。受保护 Preview 中语义卡计数为 0，合成日记标题与原文可见，编辑只在当前页面内存生效且刷新重置，删除/恢复入口可见；远端桌面与移动布局无页面横向溢出，console error 为 0。软删除、二次确认和恢复的实际状态变化已由本地真实浏览器与组件测试覆盖，远端未写任何数据。
 
 发布前 HTTP 验收曾发现 SPA fallback 会抢先把 `/api/*` 返回为首页 200；已增加受版本控制的合成 Preview 配置和回归测试，将 API 404 路由置于 fallback 前。最终制品逐文件匹配本地静态构建，包含 4 个静态文件、0 个 Functions、0 个 Cron；远端 `/` 与 `/favicon.svg` 为 200，`/api/daily-news` 为 404，严格 CSP 仍为 `connect-src 'none'` 且不含 `unsafe-eval`。
 
-远端 CI 中 privacy 与 Python 已通过；Node job 在 `npm ci` 阶段因锁文件包含仅本机可访问的镜像下载地址而失败，尚未执行 Vitest/build。该失败不得记为代码测试失败或全绿；修复需把公共包地址恢复为可移植公共 registry 后重新验证。
+远端 CI 中 privacy 与 Python 已通过；原 Node job 在 `npm ci` 阶段因锁文件内 25 个 tarball 指向仅本机可访问的镜像而失败，尚未执行 Vitest/build。现已将这些地址规范化为公共 npm Registry，并增加解析真实 `package-lock.json` 的可移植性测试；同时把存在已知高危可用性漏洞的传递依赖 `nanoid` 从 3.3.17 升至修复版 3.3.18。Node 24 公共源空缓存 `npm ci`、完整测试、Production build、Playwright 与 0 漏洞审计均已通过，但远端 CI 只有在改动推送后重跑通过才可记为全绿。
 
 ## 7. 阶段证据记录规则
 
