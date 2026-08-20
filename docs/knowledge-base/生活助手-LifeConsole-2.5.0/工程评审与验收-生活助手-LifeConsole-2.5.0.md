@@ -64,7 +64,7 @@
 
 ## 6. 合成 Preview 验收证据
 
-更新后的验收制品来自当前 `candidate-preview` 静态构建；使用既有独立合成项目，只创建 Preview deployment，不变更 Production 别名。提交号在本次分支提交后补齐。
+更新后的验收制品来自本次记录页反馈提交的 `candidate-preview` 静态构建；使用既有独立合成项目，只创建 Preview deployment，不变更 Production 别名。
 
 | 项目 | 结果 |
 |---|---|
