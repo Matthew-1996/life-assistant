@@ -13,4 +13,4 @@
 - [项目管理](项目管理-生活助手-LifeConsole-2.5.0.md)
 - [上线证据](上线证据-生活助手-LifeConsole-2.5.0.md)
 
-当前状态：Gate 1 范围和 Gate 2 v2 正式视觉、设计与技术方案均已由 PO 确认，[Draft PR #58](https://github.com/Matthew-1996/life-assistant/pull/58) 已完成功能实现、本地全量门禁、受保护合成 Preview，且 privacy、Python、Node 三项远端 CI 全绿。Supabase 已切换到与 Life Console Production URL 匹配的健康项目；2.5.0 主 migration 与 Todo 软删除增量 migration 均经当次确认后应用并通过去敏验证。受保护 Owner Preview 已完成 Todo、日记和远期寄语的合成写入验收；自动化、PR 合并和 Vercel Production 仍未执行，继续遵守各自门禁。
+当前状态：Gate 1 与 Gate 2 v2 已确认，[PR #58](https://github.com/Matthew-1996/life-assistant/pull/58) 已合并，Supabase 两条 2.5.0 migration 与 Owner Preview 合成验收均已完成。PO 确认 Production 后曾发布 2.5.0，但上线后以真实浏览器发现记录页原始复盘回退分支在 1440px 产生横向溢出，已立即回滚至上一健康 Production；数据库加法对象与用户数据未回滚或删除。当前在独立热修复分支以 TDD 修复，重新发布与寄语自动化仍待独立门禁。

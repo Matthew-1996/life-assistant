@@ -84,6 +84,26 @@ for (const viewport of [
   });
 }
 
+test("keeps a long unbroken raw review inside the records page", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/");
+  await page.getByRole("button", { exact: true, name: "记录" }).click();
+
+  await page.evaluate(() => {
+    const workspace = document.querySelector<HTMLElement>("main");
+    if (!workspace) throw new Error("Records page is missing");
+    const columns = document.createElement("div");
+    columns.className = "supabase-review-columns";
+    columns.innerHTML = `
+      <section><p>周复盘</p></section>
+      <section><p class="review-reading__raw">${"SyntheticReviewToken".repeat(80)}</p></section>
+    `;
+    workspace.append(columns);
+  });
+
+  await expectNoPageOverflow(page, "desktop: long raw review");
+});
+
 test("serves a local SVG favicon instead of the app shell fallback", async ({ request }) => {
   const response = await request.get("/favicon.svg");
   expect(response.status()).toBe(200);

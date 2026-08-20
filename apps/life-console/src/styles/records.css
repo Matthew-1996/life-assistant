@@ -45,7 +45,8 @@
 .journal-card-250__head strong,
 .journal-card-250__raw p,
 .review-reading p,
-.review-reading pre {
+.review-reading pre,
+.review-reading__raw {
   overflow-wrap: anywhere;
 }
 

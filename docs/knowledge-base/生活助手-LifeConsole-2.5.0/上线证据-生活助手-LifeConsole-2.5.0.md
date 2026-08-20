@@ -2,7 +2,7 @@
 
 ## 1. 当前结论
 
-2.5.0 尚未完整上线。Production Supabase 已应用 2.5.0 主 migration 与 Todo 软删除增量 migration，受保护 Owner Preview 已完成合成写入验收；自动化、PR 合并和 Vercel Production 尚未执行。本文只记录已验证事实，不使用计划、数据库 schema 或 Preview 冒充完整 Production 证据。
+2.5.0 尚未完整上线。PR #58 已合并，Production Supabase 与 Owner Preview 验收已完成。PO 确认后曾创建 READY 的 2.5.0 Production 并切换正式别名，但真实浏览器发现记录页宽度阻断后已立即回滚至上一健康 Production；未删除用户数据或回滚加法数据库对象。本文只记录已验证事实，不用构建成功冒充上线完成。
 
 ## 2. 已验证基线
 
@@ -57,6 +57,16 @@
 - Todo 软删除增量 migration 后验确认 `deleted_at`、活动项部分索引、空 `search_path` 与 Owner-scoped RPC 就绪；authenticated 可调用，anon/public 不可调用。Security Advisor 的 authenticated `SECURITY DEFINER` 警告属于已评审的预期调用面；新索引未使用为刚创建阶段的 INFO。
 - Owner Preview 为受保护 Preview target，状态 READY；没有更新 Production alias。仅用于远期寄语的临时验收控件未进入正式提交，并在验收后从工作区移除。
 
-## 8. 待上线后补齐
+## 8. Production 尝试、阻断与回滚
+
+- 上线前重新核对 GitHub、Vercel、Supabase 账号与项目绑定；main、CI、迁移历史和 Production 环境变量名称符合方案。缺失的 CRON_SECRET 以随机高强度 Sensitive 变量补齐，值未落盘、未输出、未进入 Git。
+- Production 远端构建成功并达到 READY；正式首页 200，新闻 Owner/Cron 端点无鉴权均为 401，严格 CSP 不含 unsafe-eval。
+- 1440px 登录后四页实测中，工作台、进展、系统无根页面溢出；记录页文档宽度超出视口。尺寸扫描仅记录标签与 CSS 类名，定位到无结构化投影时的 review-reading__raw 原文撑开复盘列表；未输出真实复盘内容。
+- 按既定回滚方案将正式别名恢复到上一健康 Production，浏览器确认旧版工作台重新可用。2.5.0 数据库表保持休眠，未删除用户数据；新闻 Cron 未手动触发，寄语自动化未创建。
+- 热修复按 TDD 增加长不可断行原文浏览器用例：修复前 body 宽度 13724px、视口 1440px；为原始复盘回退分支补充断行规则后同一用例通过，完整 Playwright 9/9 通过。
+- 热修复分支本地全量门禁通过：Vitest 75 文件 / 543 项、应用 Python 75 + 7 + 10 + 1 = 93 项、根工具 Python 369 项（1 项跳过）、Production build、治理与当前差异隐私检查；Miniflare 在受限沙箱内无法初始化，经允许在沙箱外专项复跑 26/26 并随完整套件通过。
+- 热修复 Draft PR #59 已创建；独立合成 Preview READY。真实浏览器在 1440px 与 390px 下验证四页均无根页面横向溢出，console error 为 0；受保护首页 200、未知 API 404，严格 CSP 通过。Preview 不连接 Owner 数据且未变更任何 Production 别名；远端 privacy、Python、Node CI 全绿。
+
+## 9. 待重新上线后补齐
 
 只记录去敏的 merge commit、CI 计数、Production 状态、Cron/自动化上海时间、桌面/移动浏览器结果、CSP/console 结论和回滚可用性。不得写入真实记录内容、Owner 标识、资源 ID 或 Secret。

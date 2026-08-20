@@ -2,11 +2,11 @@
 
 ## 1. 当前状态
 
-- 主阶段：PO 记录页反馈、本地/合成 Preview 与受保护 Owner Preview 合成写入均已通过；Draft PR #58 的 privacy、Python、Node 三项 CI 已全绿。Supabase 2.5.0 主 migration 与 Todo 软删除增量 migration 已分别按确认应用并完成去敏后验验证。
-- 子状态：语义卡与顶部环境提示已移除；对话记录下已恢复日记标题、原文、编辑、软删除与恢复；Todo 新增二次确认软删除；并发寄语更新增加 Owner+幂等键事务锁。
-- 分支：`agent/life-console-250`，独立 worktree。
-- PR：[Draft PR #58](https://github.com/Matthew-1996/life-assistant/pull/58)，保持 Draft 至全量验收与合并门禁。
-- 数据库：2.5.0 两个加法 migration 已应用；只写入明确合成标记的 Owner 验收记录。自动化、PR 合并与 Vercel Production 均未变更。
+- 主阶段：待上线。PR #58、Supabase migration 与 Owner Preview 已完成；首轮 2.5.0 Production 因记录页真实内容横向溢出而回滚，上一健康 Production 已恢复。
+- 子状态：热修复已以失败浏览器用例复现 review-reading__raw 不可断行内容撑宽页面，最小 CSS 修复后 Playwright 9/9、Vitest 543/543、应用 Python 93/93、根工具 Python 369 项（1 项跳过）与 Production build 通过。
+- 分支：agent/life-console-250-records-overflow，独立 worktree。
+- PR：热修复 Draft PR #59 已创建；合成 Preview 与远端 privacy、Python、Node CI 已通过，等待 PO 确认合并、重新发布。
+- 数据库：两个加法 migration 保持已应用，不回滚或删除用户数据；新闻 Cron 未手动触发，寄语自动化未创建。
 
 ## 2. 阶段计划
 
@@ -29,8 +29,8 @@
 | Supabase migration | completed | PO 于 2026-08-20 当次确认；Production URL 绑定、迁移历史、RLS、权限、RPC、Advisor 与事务锁均已验证 |
 | Owner Preview 写入 | completed | PO 已授权；Todo、日记与远期寄语仅用合成标记记录完成验收 |
 | 寄语自动化创建 | pending | Preview 通过，PO 确认 Prompt、RRULE 和权限 |
-| 2.5.0 PR 合并 | pending | 全量 CI、独立复审、PO 验收通过并确认 |
-| Production | pending | 账号/项目绑定复核、回滚方案和 PO 上线确认 |
+| 2.5.0 PR #58 合并 | completed | PO 已确认并 squash merge 到 main |
+| Production | pending | 首轮发布已回滚；热修复 Preview/CI 通过后由 PO 确认热修复合并与重新发布 |
 
 ## 4. 开放风险
 
@@ -74,4 +74,7 @@
 | 2026-08-20 | Todo 误建删除与顶部环境提示移除 | PO 已确认设计；Todo 使用 revision-safe 软删除和二次确认，不提供永久删除或恢复界面；顶部候选环境提示已移除 |
 | 2026-08-20 | Todo 软删除增量 migration 与 Owner Preview | migration 已应用；受保护 Preview 中合成错误 Todo 删除、既有完成 Todo 保留、日记删除/恢复和远期寄语写入均通过；未触碰真实记录 |
 | 2026-08-20 | 增量 PGlite 测试后 NodeNext 类型检查连续两次超过默认 5 秒 | 根因是 3 worker 下 Runner 资源竞争；不放宽测试超时，将 Vitest worker 降为 2，本地 UTC 全量 75 文件 / 543 项通过，远端 privacy、Python、Node 三项复验全绿 |
+| 2026-08-20 | PR #58 合并与首次 Production 发布 | PO 分别确认；Production READY 后 1440px 登录实测发现记录页横向溢出，立即回滚至上一健康版本 |
+| 2026-08-20 | 记录页 Production 溢出根因 | 原始复盘回退分支缺少不可断行文本换行规则；TDD 红灯复现并以最小 CSS 修复，未读取或输出真实复盘内容 |
+| 2026-08-20 | 热修复 Draft PR #59 与合成 Preview | Preview READY；1440px/390px 四页无根页面横向溢出、console error 0、首页 200、未知 API 404、严格 CSP 与远端 privacy、Python、Node CI 通过 |
 | 2026-08-19 | 视觉、设计、技术确认前不写生产功能 | Gate 2 v2 后已满足 |
