@@ -2,13 +2,13 @@
 
 ## 1. 当前结论
 
-2.5.0 已上线。PR #58 与记录页溢出热修复 PR #59 均已合并，Production Supabase 与 Owner Preview 验收完成；重新发布后的正式站点已通过 1440px/390px 四页、Todo 删除、记录编辑/删除/恢复、严格 CSP 与 console 复验。PO 随后指出正式站点仍展示内部数据治理横幅，当前按已确认 PRD 的顶部减法执行独立快速维护；本文不提前把本次热修复或新闻 Cron 记为完成。
+2.5.0 已上线并完成内容自动化收口。PR #58、PR #59、PR #60 与 PR #62 均已合并；Production Supabase、Owner Preview、桌面/移动页面、严格 CSP、DeepSeek 合成健康探针、每日新闻 Cron 与每周寄语运行实例均已验收。GDELT 共享出口限流时继续使用最近成功缓存或可重试空态，不生成未经来源支持的摘要。
 
 ## 2. 已验证基线
 
 - PR #56 已合并，`main` 严格 CSP 与真实浏览器启动正常。
 - 2.5.0 分支创建时 Vitest 464 项、Python 92 项与 Git 隐私检查通过。
-- Production 当前基线曾有缺失 favicon；2.5.0 分支已提供本地 SVG，尚待 Preview/Production 验证。
+- Production favicon、四页渲染、严格 CSP、鉴权端点与稳定正式别名均已完成验证。
 
 ## 3. 2.5.0 本地分支证据
 
@@ -46,8 +46,8 @@
 - 正式视觉、设计和技术已由 PO 确认。
 - migration 已应用并验证；Repository、UI、内容服务、备份和降级测试完成。
 - 合成 Preview 与经授权的受保护 Owner Preview 均已完成。
-- Supabase 账号和 Production URL 绑定已复核；GitHub/Vercel 绑定仍须在正式发布前复核。
-- PO 仍需分别确认自动化、PR 合并和 Production。
+- Supabase、GitHub 与 Vercel 的 Production 账号/项目绑定已在发布前复核。
+- migration、Owner Preview、自动化创建、PR 合并与 Production 的逐项门禁均已取得并执行。
 
 ## 7. Owner Preview 合成写入证据
 
@@ -87,3 +87,13 @@
 - 回滚锚点在发布前私下记录并在发布成功后清除；未删除用户数据或数据库对象。不得在 Git 中记录 Secret、Owner 标识或精确部署资源 ID。
 
 只记录去敏的 merge commit、CI 计数、Production 状态、Cron/自动化上海时间、桌面/移动浏览器结果、CSP/console 结论和回滚可用性。不得写入真实记录内容、Owner 标识、资源 ID 或 Secret。
+
+## 11. 内容自动化最终上线证据
+
+- DeepSeek Production Owner 合成健康探针返回 `HTTP 200 / provider_ok / no-store`；请求只含代码内置合成文本，不读取或写入真实日记，不记录模型正文。
+- PR #62 修复项目自身对 GDELT 的三并发违规，改为三类请求至少间隔 5 秒，并将两个重建 Function 上限调整为 60 秒。完整本地门禁与远端 privacy、Python、Node CI 均通过。
+- 合并后的 Production 构建达到 READY，随后按 staged 发布流程提升并切换稳定正式别名；首页 200，稳定域名与验收部署资产一致，严格 CSP 不含 `unsafe-eval`。
+- Vercel Cron Jobs 显示任务 Enabled，路径为 `/api/cron/daily-news`，计划为 `23:00 UTC` 日运行，对应上海次日名义 07:00；当前 Hobby 调度允许在 07:00–07:59 内弹性触发。未带凭据请求返回 `401 / no-store`，请求落在预定区域。
+- 控制台 Run 首跑通过鉴权并进入新部署函数，最终为 `503 / retryable empty`；这是 GDELT 共享出口持续限流下的已设计降级。没有持续重试、没有绕过白名单，也没有伪造摘要。
+- 每周寄语私有规范 Prompt、注册表摘要与运行实例一致；实例状态 ACTIVE，每周一 12:00 上海时间运行，最近一次只读核对的下一次运行落在允许抖动内。未手动触发当前周写入，未读取或记录 Owner 内容。
+- 回滚点保留为上一健康 Production；如内容服务异常，可恢复上一部署并停用两项自动化。加法数据库对象继续保留，不删除用户数据。

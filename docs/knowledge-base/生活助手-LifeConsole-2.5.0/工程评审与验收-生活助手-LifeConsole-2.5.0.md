@@ -130,3 +130,5 @@ Supabase 首次上线前只读核对曾因账号不匹配而失败关闭；重�
 - 两个新闻重建 Function 的 60 秒上限符合 Vercel 当前配置范围；定向新闻/配置测试 3 文件 / 17 项通过。共享出口仍被上游限制时继续返回最近成功缓存或可重试空态，不返回半成品。
 - Owner-scoped 每周寄语工具以失败测试起步，验证最小四次读取、P0/P1/active/deleted 过滤、周复盘只选 `structured_data`、当周 revision 和去敏写入收据；定向 Python 测试通过。
 - 私有规范 Prompt、注册表 SHA-256 与运行实例 Prompt 完全一致；实例状态 ACTIVE，RRULE 为每周一 12:00 上海本地时间，调度库的下一次运行换算为周一 12:01:43 上海 / 04:01:43 UTC，在 300 秒允许抖动内。未记录自动化 ID、目标线程 ID 或 Owner 数据。
+- PR #62 已 squash 合并，privacy、Python、Node 三项远端 CI 全绿。合并后的 Production 制品构建为 READY 并完成稳定正式别名切换；稳定域名与验收部署使用相同 JS/CSS 资产，首页 200，严格 CSP 保持 `script-src 'self'` 且不含 `unsafe-eval`。
+- 每日新闻 Cron 在 Vercel 设置中为 Enabled，路径与 `23:00 UTC` 日计划匹配上海次日名义 07:00；当前 Hobby 调度允许在该小时内弹性触发。未带凭据请求返回 `401 / no-store`，函数请求落在预定区域。控制台 Run 首跑通过鉴权并进入函数，因 GDELT 共享出口限流返回 `503 / retryable empty`，没有半成品或伪造摘要。

@@ -2,10 +2,10 @@
 
 ## 1. 当前状态
 
-- 主阶段：已上线；内容自动化收口中。PR #58、Supabase migration、Owner Preview、PR #59 记录页溢出热修复与 2.5.0 Production 重新发布均已完成。
-- 子状态：正式站点快速维护已完成。PR #60 与合并后 main CI 全绿；新 Production READY，稳定正式别名、1440px/390px 四页、严格 CSP、鉴权端点和运行日志均已复验。
-- 分支：`agent/life-console-news-automation` 处理 GDELT 上游限流兼容、Owner-scoped 寄语工具和去敏证据；完成 PR 与 Production 验证后清理。
-- PR：PR #60 已 squash 合并；上线证据单独收口，不含寄语自动化。
+- 主阶段：已上线；内容自动化已收口。PR #58、Supabase migration、Owner Preview、两次界面热修复、PR #62 与 Production 发布均已完成。
+- 子状态：DeepSeek 纯合成健康探针为 `provider_ok`；每日新闻 Cron 已启用并鉴权首跑；每周寄语规范 Prompt、私有注册表与 ACTIVE 运行实例一致。
+- 分支：PR #62 的开发分支/worktree 已在合并后清理；仅保留去敏上线证据分支，合并后立即清理。
+- PR：PR #62 已 squash 合并且 privacy、Python、Node 三项远端 CI 全绿；本分支只补充不含凭据或资源 ID 的最终证据。
 - 数据库：两个加法 migration 保持已应用，不回滚或删除用户数据；本次不改 Supabase schema 或 Owner 数据。
 
 ## 2. 阶段计划
@@ -19,7 +19,7 @@
 5. 页面与算法：工作台、记录、进展、样式拆分。已完成本地实现与测试。
 6. 内容服务：寄语展示、新闻 API、Runtime Cache、降级。已完成本地实现与测试。
 7. 测试与 Preview：记录页反馈与更新后的纯静态合成 Preview 已完成；锁文件可移植性和 Runner UTC 时区确定性补丁均已由 GitHub Actions 复验，privacy、Python、Node 三项全绿。
-8. 上线：migration 与 Owner Preview 已按独立确认完成；自动化、PR 合并和 Production 继续逐项确认。
+8. 上线：migration、Owner Preview、自动化、PR 合并、Production 发布与首跑验收均已完成。
 
 ## 3. 门禁与恢复条件
 
@@ -30,7 +30,7 @@
 | Owner Preview 写入 | completed | PO 已授权；Todo、日记与远期寄语仅用合成标记记录完成验收 |
 | 寄语自动化创建 | completed | PO 于 2026-08-20 明确要求创建；规范 Prompt/私有注册表/运行实例一致，ACTIVE，下一次运行落在周一 12:00 上海时间允许抖动内 |
 | 2.5.0 PR #58 合并 | completed | PO 已确认并 squash merge 到 main |
-| Production | completed | PR #60、密钥轮换、重新部署、正式别名切换、手动 Cron 触发与浏览器验收均已完成；GDELT 超时按方案保留可重试空态 |
+| Production | completed | PR #62 合并后新制品 READY 并完成稳定正式别名切换；严格 CSP、Cron 401 门禁、预定区域、任务启用状态与鉴权首跑均已复验；GDELT 限流时按方案保留可重试空态 |
 
 ## 4. 开放风险
 
