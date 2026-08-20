@@ -2,9 +2,9 @@
 
 ## 1. 当前状态
 
-- 主阶段：PR #58、Supabase migration 与 Owner Preview 已完成；首轮 2.5.0 Production 因记录页横向溢出阻断而回滚，当前待热修复 Preview/CI 和 PO 重新上线确认。
+- 主阶段：PR #58、Supabase migration、Owner Preview、PR #59 热修复与 2.5.0 Production 重新发布已完成；当前执行 PRD 既有顶部减法的快速维护。
 - 生产功能：Supabase 日记契约未变；Todo 为 revision-safe 软删除。回滚只恢复 Vercel Production，不删除用户数据或回滚加法数据库对象。
-- 基线：上一健康 Production 已恢复并经浏览器确认可用。
+- 基线：2.5.0 Production 已经 1440px/390px 四页、严格 CSP 与 console 复验。
 - 热修复：实际溢出节点为无结构化投影时的 review-reading__raw；长不可断行合成原文在修复前稳定失败，补充 overflow-wrap 后通过。
 
 ## 2. 已有基线证据
@@ -118,5 +118,7 @@ Supabase 首次上线前只读核对曾因账号不匹配而失败关闭；重�
 - 独立合成 Preview READY；真实浏览器在 1440px 与 390px 下验证工作台、记录、进展、系统均无根页面横向溢出，console error 为 0。受保护请求首页 200、未知 API 404，严格 CSP 不含 unsafe-eval。
 
 ## 10. 阶段证据记录规则
+
+正式站点横幅快速维护验收项：Production 模式不渲染“线上唯一真相源”状态组件及其两段内部治理文案；`Life Console · Online` 顶部品牌状态与系统页数据治理说明保留。组件测试必须先在旧实现上失败、最小移除后通过；完整 Vitest、Python、build、Playwright、Preview 1440px/390px、严格 CSP 与 console 仍为发布门禁。本次不改数据库 schema、RLS、Owner 数据或寄语自动化。
 
 每次验收只记录去敏结论、合成 fixture、命令、计数和提交，不记录真实日记、健康值、Owner 标识、项目 ID、部署 ID、Secret 或自动化内部凭据。

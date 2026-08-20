@@ -600,17 +600,14 @@ describe("Supabase candidate product application", () => {
     expect(screen.queryByText(/publishable key/i)).toBeNull();
   });
 
-  it("presents Production as the online truth source instead of a synthetic candidate", async () => {
+  it("keeps Production free of internal data-governance banners", async () => {
     const user = userEvent.setup();
     renderCandidate("supabase-production");
 
     expect(screen.getByText("Life Console · Online")).toBeTruthy();
-    expect(screen.getByLabelText("线上唯一真相源").textContent).toContain(
-      "Supabase 唯一真相源",
-    );
-    expect(screen.getByLabelText("线上唯一真相源").textContent).toContain(
-      "iCloud 单向备份",
-    );
+    expect(screen.queryByLabelText("线上唯一真相源")).toBeNull();
+    expect(screen.queryByText(/Supabase 唯一真相源/)).toBeNull();
+    expect(screen.queryByText(/iCloud 单向备份/)).toBeNull();
     expect(screen.queryByText(/Supabase Candidate/)).toBeNull();
     expect(screen.queryByText(/纯合成测试数据/)).toBeNull();
     expect(screen.queryByText(/ICLOUD_PRIMARY/)).toBeNull();

@@ -289,15 +289,6 @@ export function App({
           {stageAPocEnabled && <StageAPocPanel />}
         </>
       )}
-      {mode === "supabase-production" && (
-        <div
-          aria-label="线上唯一真相源"
-          className="service-banner"
-          role="status"
-        >
-          Life Console · Supabase 唯一真相源 · iCloud 单向备份
-        </div>
-      )}
       <div
         className={mode === "candidate-preview" ? "candidate-preview" : undefined}
         onClickCapture={blockCandidateWrite}
