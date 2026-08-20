@@ -8,7 +8,7 @@ export default defineConfig({
     emptyOutDir: true,
   },
   test: {
-    maxWorkers: 3,
+    maxWorkers: 2,
     env: {
       TZ: "Asia/Shanghai",
     },
