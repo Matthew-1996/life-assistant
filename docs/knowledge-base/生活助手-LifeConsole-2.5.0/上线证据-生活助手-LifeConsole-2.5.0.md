@@ -80,6 +80,10 @@
 - 该改动与 PRD 已确认的全局顶部减法一致；TDD 回归测试在旧实现上明确失败，最小移除 Production 渲染分支后通过。
 - TDD 后完整本地门禁通过：Vitest 75 文件 / 543 项、应用 Python 93 项、根工具 Python 369 项（1 项跳过）、Production build、Playwright 9/9、治理、当前差异隐私与 `git diff --check`。受限沙箱内回环监听被权限拒绝；沙箱外原套件通过，没有放宽超时或测试口径。
 - Draft PR #60 已创建。独立合成 Preview READY；1440px/390px 均未渲染目标状态组件或文案，根页面无横向溢出、无错误覆盖层；首页 200、未知新闻 API 404，严格 CSP 使用 `connect-src 'none'` 且不含 `unsafe-eval`。该 Preview 不连接 Owner 数据、不含 Functions/Cron、不修改 Production。
-- 发布证据待补：PR CI、Production 新部署、密钥轮换、Cron 鉴权触发、新闻缓存/降级和真实浏览器结果。不得记录 Secret 或部署资源 ID。
+- PR #60 与合并后 `main` 的 privacy、Python、Node CI 全绿。Production 远端构建 READY，稳定正式别名已确认指向新部署；首页 200，Owner 新闻与 Cron 端点无鉴权均为 401，严格 CSP 不含 `unsafe-eval`。
+- `CRON_SECRET` 首次交互式轮换发生终端逐字符回显，因此该值立即视为泄露并被第二个全新随机值覆盖；第二次使用关闭回显的内存输入，Vercel 只读确认最终变量仍为 Sensitive。两个值均未写入文件、Git 或证据，运行后内存引用已清除。
+- 使用最终密钥手动触发 Cron 两次，均通过鉴权并返回 `503 / empty / retryable`；公开只读探测确认 GDELT 三类查询均在产品规定的 8 秒窗口内超时。没有持续重试、没有伪造摘要；正式 UI 显示“暂时没有可用摘要”和重试入口，符合无缓存降级方案。
+- Owner 登录后的正式站点在 1440px/390px 逐页复验工作台、记录、进展、系统：目标横幅与文案计数均为 0，根页面横向溢出为 0，可见错误提示为 0；品牌状态、四页导航与新闻区域保留。最近 15 分钟 Production error 级别日志为 0。
+- 回滚锚点在发布前私下记录并在发布成功后清除；未删除用户数据或数据库对象。不得在 Git 中记录 Secret、Owner 标识或精确部署资源 ID。
 
 只记录去敏的 merge commit、CI 计数、Production 状态、Cron/自动化上海时间、桌面/移动浏览器结果、CSP/console 结论和回滚可用性。不得写入真实记录内容、Owner 标识、资源 ID 或 Secret。

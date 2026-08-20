@@ -3,9 +3,9 @@
 ## 1. 当前状态
 
 - 主阶段：已上线。PR #58、Supabase migration、Owner Preview、PR #59 记录页溢出热修复与 2.5.0 Production 重新发布均已完成。
-- 子状态：正式站点快速维护进行中。PO 指出全局顶部仍展示内部数据治理横幅；PRD 已明确要求删除，因此以失败组件测试复现并从 Production 渲染树移除。本地全量门禁与 1440px/390px 合成 Preview 已通过，待 PR #60 CI、发布与新闻 Cron 验证。
-- 分支：agent/life-console-250-remove-service-banner，独立 worktree。
-- PR：Draft PR #60；只含横幅移除、回归测试和去敏知识库证据，不含寄语自动化。
+- 子状态：正式站点快速维护已完成。PR #60 与合并后 main CI 全绿；新 Production READY，稳定正式别名、1440px/390px 四页、严格 CSP、鉴权端点和运行日志均已复验。
+- 分支：仅剩去敏上线证据分支；合并后清理活动 worktree/分支。
+- PR：PR #60 已 squash 合并；上线证据单独收口，不含寄语自动化。
 - 数据库：两个加法 migration 保持已应用，不回滚或删除用户数据；本次不改 Supabase schema 或 Owner 数据。
 
 ## 2. 阶段计划
@@ -30,7 +30,7 @@
 | Owner Preview 写入 | completed | PO 已授权；Todo、日记与远期寄语仅用合成标记记录完成验收 |
 | 寄语自动化创建 | pending | Preview 通过，PO 确认 Prompt、RRULE 和权限 |
 | 2.5.0 PR #58 合并 | completed | PO 已确认并 squash merge 到 main |
-| Production | completed / maintenance | PR #59 重新发布已由 PO 确认并完成；本次横幅移除与 `CRON_SECRET` 轮换、重新部署、手动触发新闻 Cron 已获 PO 当次确认，仍须先通过 Preview/CI |
+| Production | completed | PR #60、密钥轮换、重新部署、正式别名切换、手动 Cron 触发与浏览器验收均已完成；GDELT 超时按方案保留可重试空态 |
 
 ## 4. 开放风险
 
@@ -80,4 +80,5 @@
 | 2026-08-20 | PR #59 合并与 2.5.0 Production 重新发布 | PO 已确认并完成；正式别名指向新部署，四页桌面/移动、Todo 删除、日记编辑/删除/恢复、严格 CSP 与 console 已复验 |
 | 2026-08-20 | 正式站点移除“Supabase 唯一真相源 / iCloud 单向备份”横幅 | PO 明确反馈；与 PRD 既有减法一致，按快速维护通道 TDD 实施；PO 同次确认轮换 `CRON_SECRET`、重新部署并触发新闻 Cron |
 | 2026-08-20 | 横幅快速维护 Draft PR #60 与合成 Preview | Preview READY；1440px/390px 均无目标组件或文案、无根页面横向溢出，首页 200、未知 API 404，严格 CSP 通过；未连接 Owner 数据或修改 Production |
+| 2026-08-20 | PR #60 合并、Production 重新发布与新闻 Cron | PR 与 main CI 全绿；正式站点四页桌面/移动复验通过，目标横幅为 0；Secret 首次交互输入发生回显后立即以第二个未回显随机值覆盖，最终值保持 Sensitive 且未留存；Cron 两次鉴权触发均因 GDELT 8 秒超时返回可重试空态，UI 降级正常 |
 | 2026-08-19 | 视觉、设计、技术确认前不写生产功能 | Gate 2 v2 后已满足 |
