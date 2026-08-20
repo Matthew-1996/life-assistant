@@ -5,7 +5,7 @@
 - 主阶段：待上线。PR #58、Supabase migration 与 Owner Preview 已完成；首轮 2.5.0 Production 因记录页真实内容横向溢出而回滚，上一健康 Production 已恢复。
 - 子状态：热修复已以失败浏览器用例复现 review-reading__raw 不可断行内容撑宽页面，最小 CSS 修复后 Playwright 9/9、Vitest 543/543、应用 Python 93/93、根工具 Python 369 项（1 项跳过）与 Production build 通过。
 - 分支：agent/life-console-250-records-overflow，独立 worktree。
-- PR：热修复 Draft PR 待创建；通过 Preview 与 CI 后等待 PO 确认合并、重新发布。
+- PR：热修复 Draft PR #59 已创建；合成 Preview 已通过，等待远端 CI 后由 PO 确认合并、重新发布。
 - 数据库：两个加法 migration 保持已应用，不回滚或删除用户数据；新闻 Cron 未手动触发，寄语自动化未创建。
 
 ## 2. 阶段计划
@@ -76,4 +76,5 @@
 | 2026-08-20 | 增量 PGlite 测试后 NodeNext 类型检查连续两次超过默认 5 秒 | 根因是 3 worker 下 Runner 资源竞争；不放宽测试超时，将 Vitest worker 降为 2，本地 UTC 全量 75 文件 / 543 项通过，远端 privacy、Python、Node 三项复验全绿 |
 | 2026-08-20 | PR #58 合并与首次 Production 发布 | PO 分别确认；Production READY 后 1440px 登录实测发现记录页横向溢出，立即回滚至上一健康版本 |
 | 2026-08-20 | 记录页 Production 溢出根因 | 原始复盘回退分支缺少不可断行文本换行规则；TDD 红灯复现并以最小 CSS 修复，未读取或输出真实复盘内容 |
+| 2026-08-20 | 热修复 Draft PR #59 与合成 Preview | Preview READY；1440px/390px 四页无根页面横向溢出、console error 0、首页 200、未知 API 404、严格 CSP 通过，等待远端 CI |
 | 2026-08-19 | 视觉、设计、技术确认前不写生产功能 | Gate 2 v2 后已满足 |
