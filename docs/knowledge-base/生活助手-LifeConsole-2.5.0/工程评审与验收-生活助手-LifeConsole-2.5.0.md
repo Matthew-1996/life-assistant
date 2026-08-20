@@ -119,6 +119,6 @@ Supabase 首次上线前只读核对曾因账号不匹配而失败关闭；重�
 
 ## 10. 阶段证据记录规则
 
-正式站点横幅快速维护验收项：Production 模式不渲染“线上唯一真相源”状态组件及其两段内部治理文案；`Life Console · Online` 顶部品牌状态与系统页数据治理说明保留。组件测试必须先在旧实现上失败、最小移除后通过；完整 Vitest、Python、build、Playwright、Preview 1440px/390px、严格 CSP 与 console 仍为发布门禁。本次不改数据库 schema、RLS、Owner 数据或寄语自动化。
+正式站点横幅快速维护已验收：Production 模式不渲染“线上唯一真相源”状态组件及其两段内部治理文案；`Life Console · Online` 顶部品牌状态与系统页数据治理说明保留。组件测试在旧实现上失败、最小移除后通过；完整 Vitest 543/543、应用 Python 93 项、根工具 Python 369 项（1 项跳过）、Production build、Playwright 9/9、Preview 与 Production 1440px/390px、严格 CSP、main CI 与运行日志均通过。本次未改数据库 schema、RLS、Owner 数据或寄语自动化。
 
 每次验收只记录去敏结论、合成 fixture、命令、计数和提交，不记录真实日记、健康值、Owner 标识、项目 ID、部署 ID、Secret 或自动化内部凭据。
