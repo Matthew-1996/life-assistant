@@ -477,6 +477,379 @@ git commit -m "docs(life-console): record 2.5 release evidence"
 
 ## Self-review
 
-- 需求覆盖：工作台、Todo、甘特、日记删除/恢复、复盘、趋势、睡眠、寄语、新闻、备份、CSP 和上线均有对应任务。
+- 需求覆盖：工作台、Todo、甘特、日记删除/恢复、复盘、趋势、睡眠、寄语、新闻、备份、CSP 和上线均有对应任务；2026-08-21 新闻可靠性补充由 Tasks 10–13 覆盖。
 - 占位扫描：计划不含未定义接口；所有外部写入均有明确门禁。
 - 类型一致性：Todo 枚举、Repository 方法、RPC 名称和 backup 版本与技术方案一致。
+
+## 2026-08-21 每日新闻可靠性补充实施计划
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** GDELT 不可用或候选配比不足时由新华网/BBC 官方公开源生成完整 Top 5，并保存最近 7 天可由 Owner 查询的去敏 Cron 运行记录。
+
+**Architecture:** 保留 GDELT 主源；新增独立 Publisher discovery adapter，只有主源失败或无法通过 `selectTopFive` 时才读取固定新华网频道和 BBC RSS。新闻摘要仍只在完整候选校验后调用 DeepSeek；Cron 通过独立 Runtime Cache store 写运行收据，Owner 状态端点只读去敏记录。
+
+**Tech Stack:** Node.js 22、TypeScript 5.9、Cheerio 1.2.0、Vitest 3、Vercel Functions 3.9 Runtime Cache。
+
+**Spec:** `docs/knowledge-base/生活助手-LifeConsole-2.5.0/技术方案-生活助手-LifeConsole-2.5.0.md`
+
+### Global Constraints
+
+- 新闻正文、Owner 数据、模型完整请求/响应、环境变量和 Secret 不进入运行收据、Git 或测试 fixture。
+- 固定可信 HTTPS 入口；外部响应必须有 8 秒超时、1 MB 体积上限和条目上限。
+- 候选必须在最近 24 小时内，并同时满足科技/财经/政治与国内/国际配比；不足时整体失败。
+- Runtime Cache 记录保留 7 天、可被平台逐出，不声明永久审计能力，也不新增 Supabase schema 或服务器级 Supabase 密钥。
+- Production 合并、发布和手动 Cron 触发必须在 Preview/PO 验收后取得当次确认。
+
+---
+
+### Task 10: 新华网/BBC 官方备用源解析
+
+**Files:**
+- Create: `apps/life-console/src/server/publisher-news-client.ts`
+- Create: `apps/life-console/tests/server/publisher-news-client.test.ts`
+- Modify: `apps/life-console/package.json`
+- Modify: `apps/life-console/package-lock.json`
+
+**Interfaces:**
+- Consumes: `PublicNewsCandidate`、`DailyNewsCategory`、`DailyNewsScope`。
+- Produces: `discoverPublisherNewsCandidates(dependencies): Promise<PublicNewsCandidate[]>`；`PublisherNewsClientError` 只暴露稳定错误码。
+
+- [ ] **Step 1: 为 BBC RSS 写红灯**
+
+```ts
+const candidates = await discoverPublisherNewsCandidates({
+  fetch: fixtureFetch({
+    "https://feeds.bbci.co.uk/news/technology/rss.xml": bbcTechnologyRss,
+    "https://feeds.bbci.co.uk/news/business/rss.xml": bbcBusinessRss,
+    "https://feeds.bbci.co.uk/news/world/rss.xml": bbcWorldRss,
+  }),
+  now: () => new Date("2030-05-14T02:00:00.000Z"),
+});
+expect(candidates).toEqual(expect.arrayContaining([
+  expect.objectContaining({ category: "technology", scope: "international" }),
+  expect.objectContaining({ category: "finance", scope: "international" }),
+  expect.objectContaining({ category: "politics", scope: "international" }),
+]));
+```
+
+`fixtureFetch` 是本测试文件内的严格 URL→完整 `Response` 映射；未声明 URL 直接抛错，避免宽松 mock 掩盖错误入口。
+
+Run: `npx vitest run tests/server/publisher-news-client.test.ts`
+Expected: FAIL because `publisher-news-client.ts` does not exist.
+
+- [ ] **Step 2: 安装并锁定服务器端解析依赖**
+
+Run: `npm install --save-exact cheerio@1.2.0`
+Expected: `package.json` 和公共 npm registry lockfile 只增加 Cheerio 及其传递依赖；浏览器 bundle 不导入该模块。
+
+- [ ] **Step 3: 实现 BBC RSS 最小解析器并转绿**
+
+```ts
+export interface PublisherNewsClientDependencies {
+  fetch: typeof globalThis.fetch;
+  now?: () => Date;
+  timeoutMs?: number;
+  maxResponseBytes?: number;
+}
+
+export async function discoverPublisherNewsCandidates(
+  dependencies: PublisherNewsClientDependencies,
+): Promise<PublicNewsCandidate[]>;
+```
+
+固定读取三个 BBC HTTPS Feed；使用 Cheerio XML mode 解析 `item > title/link/pubDate/description`，只接收 `bbc.co.uk`/`bbc.com` HTTPS 文章并在 24 小时窗口内映射分类。
+
+Run: `npx vitest run tests/server/publisher-news-client.test.ts`
+Expected: BBC 三分类用例 PASS。
+
+- [ ] **Step 4: 为新华网当前频道与文章元数据写红灯**
+
+```ts
+expect(candidates).toEqual(expect.arrayContaining([
+  expect.objectContaining({
+    category: "technology",
+    scope: "domestic",
+    publishedAt: "2030-05-14T01:15:00.000Z",
+    url: "https://www.news.cn/tech/20300514/synthetic/c.html",
+  }),
+]));
+expect(requestedUrls).not.toContain("https://www.news.cn/tech/news_tech.xml");
+```
+
+Run: `npx vitest run tests/server/publisher-news-client.test.ts`
+Expected: FAIL because Xinhua channel/article discovery is absent.
+
+- [ ] **Step 5: 实现新华网当前页面解析、失败隔离和边界保护**
+
+固定读取科技、财经、时政当前频道；每类最多解析 6 个可信文章链接、最多抓取 2 篇文章元数据。文章页从公开标题、精确时间、description 和 source 投影候选；单个频道、Feed 或文章失败不得中断其他入口。畸形 XML/HTML、超时、响应过大、HTTP 链接、非可信域名、过期或未来时间全部丢弃。
+
+Run: `npx vitest run tests/server/publisher-news-client.test.ts`
+Expected: 正常、单入口失败、过期、恶意链接、超时和响应体上限全部 PASS。
+
+- [ ] **Step 6: 提交备用源解析器**
+
+```bash
+git add apps/life-console/src/server/publisher-news-client.ts apps/life-console/tests/server/publisher-news-client.test.ts apps/life-console/package.json apps/life-console/package-lock.json
+git commit -m "feat(life-console): add trusted publisher news fallback"
+```
+
+### Task 11: 主备候选编排与诊断结果
+
+**Files:**
+- Create: `apps/life-console/src/server/daily-news-discovery.ts`
+- Create: `apps/life-console/tests/server/daily-news-discovery.test.ts`
+- Modify: `apps/life-console/src/server/daily-news-service.ts`
+- Modify: `apps/life-console/tests/server/daily-news-service.test.ts`
+
+**Interfaces:**
+- Consumes: `discoverGdeltCandidates`、`discoverPublisherNewsCandidates`、`selectTopFive`。
+- Produces: `DailyNewsDiscoveryResult = { candidates: PublicNewsCandidate[]; source: "gdelt" | "publisher_fallback" | "gdelt_plus_publisher_fallback" }`；`DailyNewsExecution = { result: DailyNewsResult; diagnostics: DailyNewsExecutionDiagnostics }`，其中 diagnostics 精确字段为 `discoverySource: "cache" | DailyNewsDiscoverySource | "none"`、`failureStage: "discovery" | "selection" | "summarization" | "cache_write" | null`、`errorCode: string | null`。
+
+- [ ] **Step 1: 写主源健康时不调用备用源红灯**
+
+```ts
+await expect(discoverDailyNewsCandidates({ primary, fallback })).resolves.toEqual({
+  candidates: primaryMix,
+  source: "gdelt",
+});
+expect(fallback).not.toHaveBeenCalled();
+```
+
+Run: `npx vitest run tests/server/daily-news-discovery.test.ts`
+Expected: FAIL because the orchestrator does not exist.
+
+- [ ] **Step 2: 写主源异常和配比不足的备用源红灯**
+
+```ts
+await expect(discoverDailyNewsCandidates({
+  primary: async () => { throw new GdeltClientError("gdelt_timeout"); },
+  fallback: async () => fallbackMix,
+})).resolves.toMatchObject({ source: "publisher_fallback" });
+
+await expect(discoverDailyNewsCandidates({
+  primary: async () => incompletePrimary,
+  fallback: async () => complementaryFallback,
+})).resolves.toMatchObject({ source: "gdelt_plus_publisher_fallback" });
+```
+
+Run: `npx vitest run tests/server/daily-news-discovery.test.ts`
+Expected: both cases FAIL for missing fallback behavior.
+
+- [ ] **Step 3: 实现最小主备编排并转绿**
+
+```ts
+export type DailyNewsDiscoverySource =
+  | "gdelt"
+  | "publisher_fallback"
+  | "gdelt_plus_publisher_fallback";
+
+export async function discoverDailyNewsCandidates(
+  dependencies: {
+    primary(): Promise<PublicNewsCandidate[]>;
+    fallback(): Promise<PublicNewsCandidate[]>;
+  },
+): Promise<DailyNewsDiscoveryResult>;
+```
+
+主源结果先用 `selectTopFive` 验证；失败才调用备用源。主源抛错时只使用备用源；主源仅配比不足时合并主备候选再验证。所有失败转为稳定 discovery code，不泄露外部响应文本。
+
+Run: `npx vitest run tests/server/daily-news-discovery.test.ts`
+Expected: all PASS。
+
+- [ ] **Step 4: 为服务级诊断写红灯**
+
+```ts
+await expect(service.getDigestWithDiagnostics({ allowRebuild: true })).resolves.toEqual({
+  result: { state: "success", digest: expectedDigest },
+  diagnostics: {
+    discoverySource: "publisher_fallback",
+    failureStage: null,
+    errorCode: null,
+  },
+});
+```
+
+另写 discovery、selection、summarization、cache write 失败用例；最近成功降级必须保留原始稳定错误码。
+
+Run: `npx vitest run tests/server/daily-news-service.test.ts`
+Expected: FAIL because the service exposes no diagnostics method.
+
+- [ ] **Step 5: 实现诊断接口并保持 Owner API body 不变**
+
+```ts
+export interface DailyNewsServicePort {
+  getDigest(options: { allowRebuild: boolean }): Promise<DailyNewsResult>;
+  getDigestWithDiagnostics(
+    options: { allowRebuild: boolean },
+  ): Promise<DailyNewsExecution>;
+}
+```
+
+`getDigest` 只返回 execution.result；Owner 浏览器契约不增加字段。Runtime factory 注入主备编排器，缓存命中诊断来源为 `cache`，失败只保存稳定 code。
+
+Run: `npx vitest run tests/server/daily-news-discovery.test.ts tests/server/daily-news-service.test.ts tests/server/daily-news-external.test.ts`
+Expected: all PASS。
+
+- [ ] **Step 6: 提交主备编排**
+
+```bash
+git add apps/life-console/src/server/daily-news-discovery.ts apps/life-console/src/server/daily-news-service.ts apps/life-console/tests/server/daily-news-discovery.test.ts apps/life-console/tests/server/daily-news-service.test.ts
+git commit -m "feat(life-console): fall back from gdelt discovery"
+```
+
+### Task 12: Cron 运行收据与 Owner 状态接口
+
+**Files:**
+- Create: `apps/life-console/src/server/daily-news-runs.ts`
+- Create: `apps/life-console/api/daily-news-runs.ts`
+- Create: `apps/life-console/tests/server/daily-news-runs.test.ts`
+- Modify: `apps/life-console/src/server/daily-news-service.ts`
+- Modify: `apps/life-console/src/server/daily-news-cache.ts`
+- Modify: `apps/life-console/api/cron/daily-news.ts`
+- Modify: `apps/life-console/scripts/supabase-candidate-config.mjs`
+- Modify: `apps/life-console/tests/vercel/daily-news-handlers.test.ts`
+
+**Interfaces:**
+- Consumes: `DailyNewsExecution` 和现有 Owner JWT verifier。
+- Produces: `DailyNewsRunStorePort`、`createRuntimeDailyNewsRunStore`、`dailyNewsRunsOwnerRequest`、`GET /api/daily-news-runs`。
+
+- [ ] **Step 1: 写收据 schema、7 天 TTL 与去敏验证红灯**
+
+```ts
+await store.start({ runId: "run-synthetic", startedAt });
+await store.finish("run-synthetic", {
+  state: "empty",
+  finishedAt,
+  discoverySource: "publisher_fallback",
+  failureStage: "selection",
+  errorCode: "candidate_mix_unavailable",
+  digestDate: null,
+  digestGeneratedAt: null,
+});
+expect(await store.listRecent()).toEqual([expect.objectContaining({
+  runId: "run-synthetic",
+  state: "empty",
+})]);
+expect(JSON.stringify(await store.listRecent())).not.toContain("synthetic-secret");
+```
+
+Run: `npx vitest run tests/server/daily-news-runs.test.ts`
+Expected: FAIL because the run store does not exist.
+
+- [ ] **Step 2: 实现 Runtime Cache 收据 store**
+
+```ts
+export interface DailyNewsRunStorePort {
+  start(receipt: DailyNewsRunningReceipt): Promise<void>;
+  finish(runId: string, completion: DailyNewsRunCompletion): Promise<void>;
+  listRecent(): Promise<DailyNewsRunReceipt[]>;
+}
+```
+
+固定 schema version 1、最多 32 条、按 `startedAt` 倒序、TTL `604800` 秒。解析时 exact-key 校验；畸形、过期或逐出值视为空列表。运行中与完成收据只允许设计文档列出的字段。
+
+Run: `npx vitest run tests/server/daily-news-runs.test.ts`
+Expected: schema、TTL、排序、逐出和去敏用例 PASS。
+
+- [ ] **Step 3: 写 Cron 开始/完成/失败收据红灯**
+
+```ts
+const response = await dailyNewsCronRequest(authorizedRequest, environment, {
+  service,
+  runs,
+  now: deterministicClock,
+  randomId: () => "run-synthetic",
+});
+expect(runs.start.mock.invocationCallOrder[0]).toBeLessThan(
+  runs.finish.mock.invocationCallOrder[0],
+);
+expect(response.headers.get("x-life-console-run-id")).toBe("run-synthetic");
+```
+
+未鉴权请求不得写收据；收据写失败仍返回真实新闻结果，并设置 `x-life-console-run-receipt: unavailable`；未捕获服务错误要尝试完成 `failed` 收据并返回去敏 503。
+
+Run: `npx vitest run tests/vercel/daily-news-handlers.test.ts`
+Expected: FAIL because Cron does not use the run store.
+
+- [ ] **Step 4: 实现 Cron 收据生命周期并转绿**
+
+Cron 鉴权后立即开始收据，再调用 `getDigestWithDiagnostics`；按 `success | stale | empty | failed` 完成。Body 继续保持现有 `DailyNewsResult`，运行 id 和 store 状态只进入响应 header，避免影响现有客户端契约。
+
+Run: `npx vitest run tests/vercel/daily-news-handlers.test.ts`
+Expected: auth、生命周期、错误和 header 用例 PASS。
+
+- [ ] **Step 5: 写并实现 Owner 状态端点红灯/绿灯**
+
+```ts
+const response = await dailyNewsRunsOwnerRequest(ownerRequest, ownerEnvironment, {
+  runs,
+  verifyBearer: async () => true,
+});
+expect(response.status).toBe(200);
+await expect(response.json()).resolves.toEqual({ runs: recentReceipts });
+```
+
+无/错误 JWT 为 401，认证服务失败为 503，非 GET 为 405；响应 `Cache-Control: no-store`。Production config 将 `api/daily-news-runs.ts` 固定在 `hkg1`，不新增 Cron 或浏览器 Secret。
+
+Run: `npx vitest run tests/server/daily-news-runs.test.ts tests/vercel/daily-news-handlers.test.ts`
+Expected: all PASS。
+
+- [ ] **Step 6: 提交运行记录与接口**
+
+```bash
+git add apps/life-console/src/server/daily-news-runs.ts apps/life-console/src/server/daily-news-service.ts apps/life-console/src/server/daily-news-cache.ts apps/life-console/api/cron/daily-news.ts apps/life-console/api/daily-news-runs.ts apps/life-console/scripts/supabase-candidate-config.mjs apps/life-console/tests/server/daily-news-runs.test.ts apps/life-console/tests/vercel/daily-news-handlers.test.ts
+git commit -m "feat(life-console): persist daily news cron receipts"
+```
+
+### Task 13: 全量验证、Preview 与发布门禁
+
+**Files:**
+- Modify: `docs/knowledge-base/生活助手-LifeConsole-2.5.0/工程评审与验收-生活助手-LifeConsole-2.5.0.md`
+- Modify: `docs/knowledge-base/生活助手-LifeConsole-2.5.0/项目管理-生活助手-LifeConsole-2.5.0.md`
+- Modify: `docs/knowledge-base/生活助手-LifeConsole-2.5.0/上线证据-生活助手-LifeConsole-2.5.0.md`
+
+**Interfaces:**
+- Consumes: Tasks 10–12 和既有 2.5.0 门禁。
+- Produces: 可审阅 Draft PR、合成 Preview、Owner 状态接口证据和独立 Production 门禁。
+
+- [ ] **Step 1: 运行精确内容服务测试**
+
+Run: `npx vitest run tests/server/publisher-news-client.test.ts tests/server/daily-news-discovery.test.ts tests/server/daily-news-service.test.ts tests/server/daily-news-runs.test.ts tests/server/daily-news-external.test.ts tests/vercel/daily-news-handlers.test.ts`
+Expected: all PASS, no warning or unhandled rejection。
+
+- [ ] **Step 2: 运行完整本地门禁**
+
+Run: `python3 tools/check_project_governance.py`
+Run: `tools/check_git_privacy.sh`
+Run: `git diff --check origin/main...HEAD`
+Run: `python3 -m unittest discover -s tools -p 'test_*.py'`
+Run: `npm test`
+Run: `npm run build:supabase-production`
+Run: `npm run test:e2e:synthetic`
+Expected: 全绿；严格 CSP 不增加域名或 `unsafe-eval`，浏览器 bundle 不含 Cheerio、Feed URL、运行收据或 Secret。
+
+- [ ] **Step 3: 更新 Draft PR #63 并等待远端 CI**
+
+PR 标题调整为每日新闻可靠性修复，说明 GDELT 主源、新华网/BBC 备用源、7 天运维收据、无 Supabase migration、无私人数据。推送前运行 `tools/check_git_privacy.sh --history origin/main..HEAD`。
+
+- [ ] **Step 4: 部署合成 Preview 并验收**
+
+使用公开合成 RSS/HTML fixture 验证主源成功不触发备用源、主源失败生成完整 Top 5、运行收据查询 401/200、CSP 和 console；不得调用真实 DeepSeek、写 Owner 数据或配置 Production Secret。
+
+- [ ] **Step 5: 取得 PO 验收及 Production 当次确认**
+
+在用户确认前保持 Draft，不合并 PR、不切换正式别名、不手动触发 Production Cron。
+
+- [ ] **Step 6: 发布后手动生成今日新闻并核验**
+
+核对 GitHub/Vercel 账号与项目绑定；合并并发布后使用 Vercel Cron 的最终 Sensitive Secret 触发一次。验收 HTTP 状态、运行收据、Owner 页面 Top 5、更新时间、来源链接、CSP 和 console；不读取或记录 Owner 私人数据。
+
+- [ ] **Step 7: 提交去敏证据并清理**
+
+```bash
+git add docs/knowledge-base/生活助手-LifeConsole-2.5.0
+git commit -m "docs(life-console): record news fallback release evidence"
+```
+
+合并证据后删除活动分支/worktree；Runtime Cache 可自然过期，不执行数据库回滚或个人数据操作。
