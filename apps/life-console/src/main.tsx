@@ -13,7 +13,6 @@ import {
   createLifeConsoleSupabaseClient,
   resolveSupabaseConfig,
 } from "./supabase/client";
-import { createSupabaseAccessTokenProvider } from "./supabase/auth-token";
 import { DailyCheckinRepository } from "./supabase/daily-checkins";
 import { DashboardMessageRepository } from "./supabase/dashboard-messages";
 import { GoalRepository } from "./supabase/goals";
@@ -68,10 +67,9 @@ if (supabaseMode) {
   const todos = new TodoRepository(supabase);
   const backups = new BackupRepository(supabase);
   const auth = createSupabaseAuthService(supabase.auth);
-  const accessTokens = createSupabaseAccessTokenProvider(supabase.auth);
   const dailyNews = createDailyNewsApiClient({
     fetch: globalThis.fetch,
-    getAccessToken: accessTokens.getAccessToken,
+    getAccessToken: auth.getAccessToken,
   });
   const dashboardClient = createSupabaseDashboardClient({
     dateProvider: shanghaiDate,

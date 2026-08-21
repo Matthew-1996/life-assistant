@@ -64,6 +64,16 @@ describe("Supabase Auth service", () => {
     expect(JSON.stringify(session)).not.toContain("synthetic-refresh-token");
   });
 
+  it("reuses the token from the session that authenticated the Owner UI", async () => {
+    const port = createAuthPort();
+    const auth = createSupabaseAuthService(port);
+
+    await auth.session();
+
+    await expect(auth.getAccessToken()).resolves.toBe("synthetic-access-token");
+    expect(port.getSession).toHaveBeenCalledOnce();
+  });
+
   it("signs in with a trimmed email and provider password flow", async () => {
     const port = createAuthPort();
     const auth = createSupabaseAuthService(port);
@@ -80,6 +90,8 @@ describe("Supabase Auth service", () => {
       email: "owner@example.invalid",
       password: "test-pw",
     });
+    await expect(auth.getAccessToken()).resolves.toBe("synthetic-access-token");
+    expect(port.getSession).not.toHaveBeenCalled();
   });
 
   it("sends a password reset to the supplied redirect", async () => {
@@ -163,6 +175,43 @@ describe("Supabase Auth service", () => {
     await expect(
       updateAuth.updatePassword("test-pw"),
     ).rejects.toBe(authError);
+  });
+
+  it("reuses the token from the auth event that authenticated the Owner UI", async () => {
+    let authStateListener:
+      | ((event: string, session: typeof syntheticSession | null) => void)
+      | undefined;
+    const port = createAuthPort({
+      getSession: vi.fn(async () => ({ data: { session: null }, error: null })),
+      onAuthStateChange: vi.fn((listener) => {
+        authStateListener = listener;
+        return {
+          data: {
+            subscription: { unsubscribe: vi.fn() },
+          },
+        };
+      }),
+    });
+    const auth = createSupabaseAuthService(port);
+
+    auth.subscribe(vi.fn());
+    authStateListener?.("SIGNED_IN", syntheticSession);
+
+    await expect(auth.getAccessToken()).resolves.toBe("synthetic-access-token");
+    expect(port.getSession).not.toHaveBeenCalled();
+  });
+
+  it("does not retain the Owner token after sign-out", async () => {
+    const getSession = vi.fn()
+      .mockResolvedValueOnce({ data: { session: syntheticSession }, error: null })
+      .mockResolvedValueOnce({ data: { session: null }, error: null });
+    const auth = createSupabaseAuthService(createAuthPort({ getSession }));
+
+    await auth.session();
+    await auth.signOut();
+
+    await expect(auth.getAccessToken()).resolves.toBeNull();
+    expect(getSession).toHaveBeenCalledTimes(2);
   });
 
   it("signs out and releases the Supabase subscription", async () => {

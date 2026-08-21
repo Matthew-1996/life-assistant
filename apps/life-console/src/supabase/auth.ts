@@ -4,6 +4,7 @@ interface SupabaseUserLike {
 }
 
 interface SupabaseSessionLike {
+  access_token?: string;
   user: SupabaseUserLike;
   expires_at?: number;
 }
@@ -49,6 +50,7 @@ export interface AuthSession {
 
 export interface LifeConsoleAuthService {
   session(): Promise<AuthSession | null>;
+  getAccessToken(): Promise<string | null>;
   signIn(email: string, password: string): Promise<AuthSession>;
   requestPasswordReset(email: string, redirectTo: string): Promise<void>;
   updatePassword(password: string): Promise<void>;
@@ -69,6 +71,11 @@ function mapSession(
   };
 }
 
+function accessToken(session: SupabaseSessionLike | null): string | null {
+  const value = session?.access_token;
+  return typeof value === "string" && value ? value : null;
+}
+
 function normalizedEmail(email: string): string {
   return email.trim();
 }
@@ -76,11 +83,28 @@ function normalizedEmail(email: string): string {
 export function createSupabaseAuthService(
   auth: SupabaseAuthPort,
 ): LifeConsoleAuthService {
+  let currentAccessToken: string | null = null;
+
+  function captureSession(
+    session: SupabaseSessionLike | null,
+  ): AuthSession | null {
+    currentAccessToken = accessToken(session);
+    return mapSession(session);
+  }
+
   return {
     async session() {
       const { data, error } = await auth.getSession();
       if (error) throw error;
-      return mapSession(data.session);
+      return captureSession(data.session);
+    },
+
+    async getAccessToken() {
+      if (currentAccessToken) return currentAccessToken;
+      const { data, error } = await auth.getSession();
+      if (error) throw error;
+      currentAccessToken = accessToken(data.session);
+      return currentAccessToken;
     },
 
     async signIn(email, password) {
@@ -89,7 +113,7 @@ export function createSupabaseAuthService(
         password,
       });
       if (error) throw error;
-      const session = mapSession(data.session);
+      const session = captureSession(data.session);
       if (!session) {
         throw new Error("Password sign-in did not create a session");
       }
@@ -112,11 +136,12 @@ export function createSupabaseAuthService(
     async signOut() {
       const { error } = await auth.signOut();
       if (error) throw error;
+      currentAccessToken = null;
     },
 
     subscribe(listener) {
       const { data } = auth.onAuthStateChange((_event, session) => {
-        listener(mapSession(session));
+        listener(captureSession(session));
       });
       return () => data.subscription.unsubscribe();
     },

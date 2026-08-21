@@ -38,6 +38,7 @@ function createAuthService(
     emit(nextSession: AuthSession | null): void;
   } = {
     session: vi.fn(async () => initialSession),
+    getAccessToken: vi.fn(async () => null),
     signIn: vi.fn(async () => syntheticSession),
     requestPasswordReset: vi.fn(async () => undefined),
     updatePassword: vi.fn(async () => {

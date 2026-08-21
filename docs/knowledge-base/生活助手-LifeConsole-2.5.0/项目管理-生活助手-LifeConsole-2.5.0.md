@@ -2,10 +2,10 @@
 
 ## 1. 当前状态
 
-- 主阶段：已上线；每日新闻可靠性后端已发布，Owner 页面启动竞态热修复待独立验收。PR #58、Supabase migration、Owner Preview、界面热修复、PR #62、PR #63 与对应 Production 发布均已完成。
-- 子状态：2026-08-21 PR #63 已按 PO 当次确认合并发布；手动 Cron 已成功生成当日 5 条摘要并写入去敏运行收据。Production 浏览器随后发现登录恢复时未发起新闻请求，已按 TDD 完成最小 token provider 修复，全量门禁通过。
-- 分支：`agent/life-console-news-auth-token` 独立 worktree；只处理 Supabase 登录启动竞态和去敏发布证据，不改新闻生成、数据库或 Owner 数据。
-- PR：Draft PR #64 已创建，纯合成 Preview READY 并完成桌面/移动只读验收；在 PO 新的当次确认前不合并、不重新发布 Production。
+- 主阶段：已上线；每日新闻后端可用，Owner 页面展示认证生命周期修复开发中。PR #58、Supabase migration、Owner Preview、界面热修复、PR #62、PR #63、PR #64 与对应 Production 发布均已完成。
+- 子状态：PR #64 已按 PO 当次确认合并发布；Production 控制面、Cron、匿名鉴权和 Owner 新闻接口只读复验通过，但真实浏览器仍未发出 `/api/daily-news` 请求。PO 已确认进入 PR #65 开发，当前按 TDD 统一 AuthGate 与新闻客户端的 Token 生命周期。
+- 分支：`agent/life-console-news-auth-lifecycle` 独立 worktree；只处理前端 Owner 认证生命周期和去敏证据，不改新闻生成、数据库、Cron 或 Owner 数据。
+- PR：PR #65 开发中；仅可创建 Draft PR 和合成 Preview。在新的当次确认前不得合并或重新发布 Production。
 - 数据库：两个加法 migration 保持已应用，不回滚或删除用户数据；本次不改 Supabase schema 或 Owner 数据。
 
 ## 2. 阶段计划
@@ -21,7 +21,8 @@
 7. 测试与 Preview：记录页反馈与更新后的纯静态合成 Preview 已完成；锁文件可移植性和 Runner UTC 时区确定性补丁均已由 GitHub Actions 复验，privacy、Python、Node 三项全绿。
 8. 上线：原 2.5.0 migration、Owner Preview、自动化、PR 合并、Production 发布与首跑验收均已完成。
 9. 新闻可靠性快速维护：正式设计补充、TDD、独立代码评审、全量门禁、PR #63、Production 与手动生成今日新闻均已完成；服务端结果和运行收据成功。
-10. 新闻展示启动竞态热修复：TDD、独立代码评审、Production build、Playwright、全量门禁、Draft PR #64 与纯合成 Preview 已完成；等待 PO 合并/发布门禁。
+10. 新闻展示启动竞态热修复：PR #64 已合并发布；后端和控制面复验通过，但真实 Owner 浏览器仍为空态，第一版修复未覆盖实际认证时序。
+11. 认证生命周期统一：PO 已确认进入 PR #65 开发；TDD 红灯覆盖 Session 恢复、认证事件、显式登录和退出清理，最小实现、全量门禁与 Production build 已通过；Draft PR 和合成 Preview 进行中。
 
 ## 3. 门禁与恢复条件
 
@@ -35,7 +36,8 @@
 | 新闻可靠性设计补充 | approved | PO 于 2026-08-21 确认官方备用源与 Runtime Cache 7 天运维记录方向；不新增 Supabase 表或密钥 |
 | 新闻可靠性 Preview/验收 | completed | PO 于 2026-08-21 当次确认验收 PR #63 |
 | 新闻可靠性 Production | completed | PR #63 已合并，Production READY；Cron 已手动触发并成功生成 2026-08-21 摘要及运行收据 |
-| Owner 新闻展示热修复 | awaiting_po | 登录恢复启动竞态的 TDD 修复、独立评审、Draft PR #64 与纯合成 Preview 已通过；需 PO 新的当次确认才可合并并重新发布 |
+| Owner 新闻展示 PR #64 | completed_with_followup | PO 已确认合并和发布；Production 后端今日摘要成功，但浏览器没有发起新闻请求，需 PR #65 收口 |
+| Owner 认证生命周期 PR #65 | in_progress | PO 已确认进入开发；完成全量门禁、Draft PR 与合成 Preview 后等待新的验收/Production 门禁 |
 
 ## 4. 开放风险
 
@@ -43,7 +45,7 @@
 - 新华网当前频道 HTML 结构可能变化，BBC RSS 也可能单入口异常：解析器固定入口、体积/超时、严格字段和失败隔离；任何不足不得放宽可信域名或伪造时间。
 - Runtime Cache 运行记录可跨部署但属于可逐出的 7 天运维状态；若未来要求永久审计，再单独评审 Supabase 表与服务器凭据，不在本次静默扩展。
 - Runtime Cache 区域一致性：两个端点固定同区并测试缓存命中。
-- Owner 登录恢复与页面数据请求时序：应用级 token provider 在 AuthGate 挂载前订阅 Supabase 认证事件，并保留 `getSession()` 兼容回退；热修复发布前继续以单元测试、Preview 与正式浏览器请求证据验收。
+- Owner 登录恢复与页面数据请求时序：PR #64 的第二套 token provider 在真实启动中与 AuthGate 生命周期分叉。PR #65 改为由同一个认证服务在 Session、认证事件和显式登录时更新内存 Token；正式发布前仍需 Preview，发布后必须看到 Owner 浏览器实际请求和新闻渲染。
 - Unsplash Key 可能不存在：Preview 使用合成元数据，Production 使用渐变。
 - 当前 bundle 大于 500 kB：样式/组件拆分时观察，不为追求指标引入无关架构。
 - iCloud worktree 偶发 interrupted syscall：每次创建后验证对象、HEAD 和工作树完整性。
@@ -96,4 +98,6 @@
 | 2026-08-21 | PR #63 合并、Production 发布与今日新闻手动 Cron | PO 当次确认并完成；合并后 main CI 全绿，Cron Enabled 且手动运行 HTTP 200，当日运行收据成功并生成 5 条满足分类/地域最低配比的摘要 |
 | 2026-08-21 | Owner 页面新闻未展示根因 | 服务端与正式客户端解析均成功，但浏览器登录恢复后没有发出 `/api/daily-news` 请求；定位为 `getSession()` 启动竞态，按 TDD 改为先订阅认证事件提供内存 token，等待新 Draft PR 和独立发布门禁 |
 | 2026-08-21 | Draft PR #64 与认证热修复 Preview | 独立评审无 Critical/Important；纯合成 Preview READY，1440px/390px 四页无横向溢出、严格 CSP、runtime error 0，新闻 API 为 404；未连接 Owner 数据、Functions、Cron 或 Production Secret |
+| 2026-08-21 | PR #64 合并、Production 发布与只读复验 | PO 当次确认并完成；发布、Cron、鉴权和 Owner API 当日 5 条摘要通过，但已登录浏览器未发出新闻请求，UI 仍为空态，未宣称新闻展示完成 |
+| 2026-08-21 | PR #65 认证生命周期统一 | PO 已确认进入开发；删除独立 token provider，由 AuthGate 使用的认证服务持有内存 Token，TDD 覆盖 Session、认证事件、显式登录与退出清理；不改数据库、Cron 或新闻生成 |
 | 2026-08-19 | 视觉、设计、技术确认前不写生产功能 | Gate 2 v2 后已满足 |
