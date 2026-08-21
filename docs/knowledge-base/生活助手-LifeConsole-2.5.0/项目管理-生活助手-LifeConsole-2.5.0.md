@@ -20,7 +20,7 @@
 6. 内容服务：寄语展示、新闻 API、Runtime Cache、降级。已完成本地实现与测试。
 7. 测试与 Preview：记录页反馈与更新后的纯静态合成 Preview 已完成；锁文件可移植性和 Runner UTC 时区确定性补丁均已由 GitHub Actions 复验，privacy、Python、Node 三项全绿。
 8. 上线：原 2.5.0 migration、Owner Preview、自动化、PR 合并、Production 发布与首跑验收均已完成。
-9. 新闻可靠性快速维护：正式设计补充已确认；TDD、合成 Preview、Owner 鉴权状态接口、PR 合并、Production 和手动生成今日新闻待执行。
+9. 新闻可靠性快速维护：正式设计补充、TDD、独立代码评审、全量门禁、远端 CI 与纯静态合成 Preview 已完成；等待 PO 验收，PR 合并、Production 和手动生成今日新闻尚未执行。
 
 ## 3. 门禁与恢复条件
 
@@ -32,7 +32,7 @@
 | 寄语自动化创建 | completed | PO 于 2026-08-20 明确要求创建；规范 Prompt/私有注册表/运行实例一致，ACTIVE，下一次运行落在周一 12:00 上海时间允许抖动内 |
 | 2.5.0 PR #58 合并 | completed | PO 已确认并 squash merge 到 main |
 | 新闻可靠性设计补充 | approved | PO 于 2026-08-21 确认官方备用源与 Runtime Cache 7 天运维记录方向；不新增 Supabase 表或密钥 |
-| 新闻可靠性 Preview/验收 | pending | TDD、全量门禁、合成 Preview 和 Owner 鉴权运行记录接口通过后交由 PO 验收 |
+| 新闻可靠性 Preview/验收 | awaiting_po | TDD、全量门禁、远端 CI、合成 Preview 和 Owner 鉴权运行记录接口测试已通过，等待 PO 当次验收 |
 | 新闻可靠性 Production | pending | PO 验收并当次确认 PR 合并/Production 后发布；随后手动触发一次生成今日新闻 |
 
 ## 4. 开放风险

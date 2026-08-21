@@ -97,3 +97,12 @@
 - 控制台 Run 首跑通过鉴权并进入新部署函数，最终为 `503 / retryable empty`；这是 GDELT 共享出口持续限流下的已设计降级。没有持续重试、没有绕过白名单，也没有伪造摘要。
 - 每周寄语私有规范 Prompt、注册表摘要与运行实例一致；实例状态 ACTIVE，每周一 12:00 上海时间运行，最近一次只读核对的下一次运行落在允许抖动内。未手动触发当前周写入，未读取或记录 Owner 内容。
 - 回滚点保留为上一健康 Production；如内容服务异常，可恢复上一部署并停用两项自动化。加法数据库对象继续保留，不删除用户数据。
+
+## 12. 新闻可靠性发布前证据
+
+- 已实现 GDELT 主源失败或候选不足时切换新华网/BBC 官方公开源，并保留可信域名、24 小时、去重与分类配比门槛；各外部请求具备流式响应体上限和贯穿完整读取阶段的超时控制，总外部等待预算低于 Function 上限。
+- 每次 Cron 使用独立 Runtime Cache key 写入去敏运行收据，并维护最近 7 天索引；即使索引更新失败，单次收据仍可按运行 ID 查询。Owner 鉴权运行记录接口、401/200、并发实例和部分缓存故障均有合成回归测试。
+- 精确内容服务测试 6 文件 / 55 项，全量 Vitest 78 文件 / 582 项、应用 Python 93 项、根工具 Python 372 项（1 项跳过）、Production build、Playwright 9/9、治理与隐私门禁均通过；独立代码评审无 Critical 或 Important 阻断项。
+- Draft PR #63 的 privacy、Python、Node 三项远端 CI 全绿，PR 仍为 Draft。纯静态合成 Preview READY：首页 200、新闻 API 404、严格 CSP `connect-src 'none'` 且不含 `unsafe-eval`，制品含 0 个 Functions、0 个 Cron、无 Owner 连接或 Production Secret。
+- 1440px/390px 四页均有有效内容、无根页面横向溢出或错误覆盖层。唯一 console 异常来自 Vercel Preview Protection 工具栏对 `vercel.com/api/jwt` 的 403 及其 Google Provider/FedCM 提示，不属于应用自身请求。
+- 当前仍未合并 PR #63、未重新发布 Production、未手动触发今日新闻 Cron。需 PO 完成本阶段验收并另行当次确认 Production 后才执行。

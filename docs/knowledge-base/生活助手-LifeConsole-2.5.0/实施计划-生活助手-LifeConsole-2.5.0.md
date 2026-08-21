@@ -830,11 +830,11 @@ Run: `npm run build:supabase-production`
 Run: `npm run test:e2e:synthetic`
 Expected: 全绿；严格 CSP 不增加域名或 `unsafe-eval`，浏览器 bundle 不含 Cheerio、Feed URL、运行收据或 Secret。
 
-- [ ] **Step 3: 更新 Draft PR #63 并等待远端 CI**
+- [x] **Step 3: 更新 Draft PR #63 并等待远端 CI**
 
 PR 标题调整为每日新闻可靠性修复，说明 GDELT 主源、新华网/BBC 备用源、7 天运维收据、无 Supabase migration、无私人数据。推送前运行 `tools/check_git_privacy.sh --history origin/main..HEAD`。
 
-- [ ] **Step 4: 部署合成 Preview 并验收**
+- [x] **Step 4: 部署合成 Preview 并验收**
 
 使用公开合成 RSS/HTML fixture 验证主源成功不触发备用源、主源失败生成完整 Top 5、运行收据查询 401/200、CSP 和 console；不得调用真实 DeepSeek、写 Owner 数据或配置 Production Secret。
 

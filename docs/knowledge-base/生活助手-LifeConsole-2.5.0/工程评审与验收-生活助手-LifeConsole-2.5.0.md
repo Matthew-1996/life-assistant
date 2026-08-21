@@ -119,6 +119,15 @@ Supabase 首次上线前只读核对曾因账号不匹配而失败关闭；重�
 
 ## 10. 阶段证据记录规则
 
+### 新闻可靠性补充验收（2026-08-21）
+
+- GDELT 失败/结果不足时切换新华网与 BBC 官方公开源、逐次 Cron 运行收据及 Owner 鉴权查询接口已按 TDD 完成；独立代码评审最终未发现 Critical 或 Important 阻断项。
+- 精确内容服务测试为 6 文件 / 55 项；全量 Vitest 78 文件 / 582 项、应用 Python 93 项、根工具 Python 372 项（1 项跳过）、Production build 与 Playwright 9/9 均通过。治理、当前/历史隐私、差异和浏览器 bundle 泄漏检查通过。
+- Draft PR #63 保持 Draft，privacy、Python、Node 三项远端 CI 全绿；尚未合并或发布 Production。
+- 受保护纯静态合成 Preview 状态 READY：首页 200，两个新闻 API 均为 404，CSP 使用 `connect-src 'none'` 且不含 `unsafe-eval`；制品含 0 个 Functions、0 个 Cron，不含 Production Secret、Owner 连接或私人数据。
+- 真实浏览器在 1440px 与 390px 下验证工作台、记录、进展、系统均有有效内容、无根页面横向溢出、无错误覆盖层。console 仅出现 Vercel Preview Protection 工具栏请求 `vercel.com/api/jwt` 的 403 及其 Google Provider/FedCM 提示，不是应用自身资源或业务请求失败。
+- Owner 鉴权接口的 401/200、运行收据写入/索引异常降级和跨实例查询由受版本控制的 handler/store 合成测试验证；静态 Preview 刻意不部署 Functions。浏览器验收临时保护 Cookie 已删除。
+
 正式站点横幅快速维护已验收：Production 模式不渲染“线上唯一真相源”状态组件及其两段内部治理文案；`Life Console · Online` 顶部品牌状态与系统页数据治理说明保留。组件测试在旧实现上失败、最小移除后通过；完整 Vitest 543/543、应用 Python 93 项、根工具 Python 369 项（1 项跳过）、Production build、Playwright 9/9、Preview 与 Production 1440px/390px、严格 CSP、main CI 与运行日志均通过。本次未改数据库 schema、RLS、Owner 数据或寄语自动化。
 
 每次验收只记录去敏结论、合成 fixture、命令、计数和提交，不记录真实日记、健康值、Owner 标识、项目 ID、部署 ID、Secret 或自动化内部凭据。
