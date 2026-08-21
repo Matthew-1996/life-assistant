@@ -115,6 +115,35 @@ describe("GDELT discovery client", () => {
       wait: async () => undefined,
     })).rejects.toThrowError(new GdeltClientError("gdelt_timeout"));
   });
+
+  it("applies the GDELT timeout and size cap while reading a chunked body", async () => {
+    const stalledBody = vi.fn((_input: string | URL | Request, init?: RequestInit) => {
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          init?.signal?.addEventListener("abort", () => {
+            controller.error(new DOMException("aborted", "AbortError"));
+          });
+        },
+      });
+      return Promise.resolve(new Response(stream));
+    }) as typeof fetch;
+    await expect(discoverGdeltCandidates({
+      fetch: stalledBody,
+      timeoutMs: 5,
+      wait: async () => undefined,
+    })).rejects.toThrowError(new GdeltClientError("gdelt_timeout"));
+
+    const chunked = vi.fn(async () => new Response(new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new Uint8Array(1_025));
+      },
+    }))) as typeof fetch;
+    await expect(discoverGdeltCandidates({
+      fetch: chunked,
+      maxResponseBytes: 1_024,
+      wait: async () => undefined,
+    })).rejects.toThrowError(new GdeltClientError("gdelt_response_too_large"));
+  });
 });
 
 describe("DeepSeek daily news summarizer", () => {
@@ -176,6 +205,35 @@ describe("DeepSeek daily news summarizer", () => {
       credential: "synthetic-server-key",
       fetch: oversized,
       maxResponseBytes: 1024,
+    })).rejects.toThrow(/provider_response_too_large/);
+  });
+
+  it("applies the DeepSeek timeout and size cap while reading a chunked body", async () => {
+    const stalledBody = vi.fn((_input: string | URL | Request, init?: RequestInit) => {
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          init?.signal?.addEventListener("abort", () => {
+            controller.error(new DOMException("aborted", "AbortError"));
+          });
+        },
+      });
+      return Promise.resolve(new Response(stream));
+    }) as typeof fetch;
+    await expect(requestDeepSeekNewsSummaries(selected, {
+      credential: "synthetic-server-key",
+      fetch: stalledBody,
+      timeoutMs: 5,
+    })).rejects.toThrow(/provider_timeout/);
+
+    const chunked = vi.fn(async () => new Response(new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new Uint8Array(1_025));
+      },
+    }))) as typeof fetch;
+    await expect(requestDeepSeekNewsSummaries(selected, {
+      credential: "synthetic-server-key",
+      fetch: chunked,
+      maxResponseBytes: 1_024,
     })).rejects.toThrow(/provider_response_too_large/);
   });
 });

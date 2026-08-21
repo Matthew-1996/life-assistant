@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { DailyNewsDigest } from "../../src/domain/daily-news";
 import {
   createDailyNewsService,
+  DAILY_NEWS_RUNTIME_LIMITS,
   DailyNewsServiceError,
   type DailyNewsCachePort,
 } from "../../src/server/daily-news-service";
@@ -63,6 +64,16 @@ function memoryCache(initial?: { current?: DailyNewsDigest; last?: DailyNewsDige
 }
 
 describe("daily news service", () => {
+  it("keeps the worst external-call budget below the 60-second Function limit", () => {
+    const worstExternalMilliseconds =
+      DAILY_NEWS_RUNTIME_LIMITS.gdeltRequestMs * 3
+      + DAILY_NEWS_RUNTIME_LIMITS.gdeltSpacingMs * 2
+      + DAILY_NEWS_RUNTIME_LIMITS.publisherRequestMs * 2
+      + DAILY_NEWS_RUNTIME_LIMITS.deepSeekRequestMs;
+
+    expect(worstExternalMilliseconds).toBeLessThanOrEqual(50_000);
+  });
+
   it("returns a valid current cache without calling external services", async () => {
     const cache = memoryCache({ current: digest() });
     const discover = vi.fn(async () => candidates);

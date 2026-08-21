@@ -10,10 +10,12 @@ const startedAt = "2030-05-14T01:30:00.000Z";
 const finishedAt = "2030-05-14T01:31:00.000Z";
 
 function runtimeCache(initial?: unknown) {
-  let value = initial;
-  const runtime: RuntimeCacheLike = {
-    get: vi.fn(async () => value ?? null),
-    set: vi.fn(async (_key, next) => { value = next; }),
+  const values = new Map<string, unknown>();
+  if (initial !== undefined) values.set("daily-news:v1:cron-runs", initial);
+  const runtime: RuntimeCacheLike & { values: Map<string, unknown> } = {
+    values,
+    get: vi.fn(async (key) => values.get(key) ?? null),
+    set: vi.fn(async (key, next) => { values.set(key, next); }),
   };
   return runtime;
 }
@@ -104,5 +106,97 @@ describe("daily news Cron run store", () => {
       digestDate: null,
       digestGeneratedAt: null,
     })).rejects.toThrow("run_receipt_invalid");
+  });
+
+  it("serializes concurrent starts and keeps each receipt under its own key", async () => {
+    const runtime = runtimeCache();
+    const store = createRuntimeDailyNewsRunStore(runtime, () => now);
+
+    await Promise.all([
+      store.start({ runId: "run-concurrent-a", startedAt }),
+      store.start({
+        runId: "run-concurrent-b",
+        startedAt: "2030-05-14T01:30:01.000Z",
+      }),
+    ]);
+
+    await expect(store.listRecent()).resolves.toEqual([
+      expect.objectContaining({ runId: "run-concurrent-b" }),
+      expect.objectContaining({ runId: "run-concurrent-a" }),
+    ]);
+    expect(runtime.values.get("daily-news:v1:cron-run:run-concurrent-a"))
+      .toEqual(expect.objectContaining({ state: "running" }));
+    expect(runtime.values.get("daily-news:v1:cron-run:run-concurrent-b"))
+      .toEqual(expect.objectContaining({ state: "running" }));
+  });
+
+  it("finishes the per-run receipt even when the recent-run index was evicted", async () => {
+    const runtime = runtimeCache();
+    const store = createRuntimeDailyNewsRunStore(runtime, () => now);
+    await store.start({ runId: "run-synthetic", startedAt });
+    runtime.values.delete("daily-news:v1:cron-runs");
+
+    await expect(store.finish("run-synthetic", {
+      state: "failed",
+      finishedAt,
+      discoverySource: "none",
+      failureStage: null,
+      errorCode: "news_service_unavailable",
+      digestDate: null,
+      digestGeneratedAt: null,
+    })).resolves.toEqual({ indexed: true });
+    expect(runtime.values.get("daily-news:v1:cron-run:run-synthetic"))
+      .toEqual(expect.objectContaining({ state: "failed" }));
+    await expect(store.listRecent()).resolves.toEqual([
+      expect.objectContaining({ runId: "run-synthetic", state: "failed" }),
+    ]);
+  });
+
+  it("keeps both per-run receipts queryable across competing store instances", async () => {
+    const runtime = runtimeCache();
+    const first = createRuntimeDailyNewsRunStore(runtime, () => now);
+    const second = createRuntimeDailyNewsRunStore(runtime, () => now);
+
+    await Promise.all([
+      first.start({ runId: "run-instance-a", startedAt }),
+      second.start({
+        runId: "run-instance-b",
+        startedAt: "2030-05-14T01:30:01.000Z",
+      }),
+    ]);
+
+    await expect(first.get("run-instance-a")).resolves.toEqual(
+      expect.objectContaining({ runId: "run-instance-a", state: "running" }),
+    );
+    await expect(second.get("run-instance-b")).resolves.toEqual(
+      expect.objectContaining({ runId: "run-instance-b", state: "running" }),
+    );
+  });
+
+  it("completes the per-run receipt when only the recent index is unavailable", async () => {
+    const runtime = runtimeCache();
+    const originalSet = runtime.set;
+    runtime.set = vi.fn(async (key, value, options) => {
+      if (key === "daily-news:v1:cron-runs") {
+        throw new Error("synthetic index outage");
+      }
+      await originalSet(key, value, options);
+    });
+    const store = createRuntimeDailyNewsRunStore(runtime, () => now);
+
+    await expect(store.start({ runId: "run-synthetic", startedAt }))
+      .resolves.toEqual({ indexed: false });
+    await expect(store.finish("run-synthetic", {
+      state: "empty",
+      finishedAt,
+      discoverySource: "publisher_fallback",
+      failureStage: "selection",
+      errorCode: "candidate_mix_unavailable",
+      digestDate: null,
+      digestGeneratedAt: null,
+    })).resolves.toEqual({ indexed: false });
+    await expect(store.get("run-synthetic")).resolves.toEqual(
+      expect.objectContaining({ runId: "run-synthetic", state: "empty" }),
+    );
   });
 });

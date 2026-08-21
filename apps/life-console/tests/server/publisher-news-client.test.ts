@@ -261,6 +261,41 @@ describe("trusted publisher news fallback", () => {
     ]);
   });
 
+  it("sorts every bounded channel link before choosing current Xinhua articles", async () => {
+    const staleUrls = Array.from({ length: 60 }, (_, index) => (
+      `https://www.news.cn/tech/20300512/stale-${index}/c.html`
+    ));
+    const current = "https://www.news.cn/tech/20300514/current-after-heroes/c.html";
+    const fixtures: Record<string, string> = {
+      "https://feeds.bbci.co.uk/news/technology/rss.xml": emptyRss,
+      "https://feeds.bbci.co.uk/news/business/rss.xml": emptyRss,
+      "https://feeds.bbci.co.uk/news/world/rss.xml": emptyRss,
+      "https://www.news.cn/tech/index.html": xinhuaChannel([
+        ...staleUrls.map((url, index) => ({ title: `Stale ${index}`, url })),
+        { title: "Current after heroes", url: current },
+      ]),
+      [current]: xinhuaArticle({
+        title: "Current after heroes",
+        publishedAt: "2030-05-14 09:00:00",
+        description: "Current public description",
+      }),
+    };
+    for (const [index, url] of staleUrls.entries()) {
+      fixtures[url] = xinhuaArticle({
+        title: `Stale ${index}`,
+        publishedAt: "2030-05-12 09:00:00",
+        description: `Stale ${index}`,
+      });
+    }
+
+    await expect(discoverPublisherNewsCandidates({
+      fetch: fixtureFetch(fixtures),
+      now: () => now,
+    })).resolves.toEqual([
+      expect.objectContaining({ title: "Current after heroes", url: current }),
+    ]);
+  });
+
   it("filters untrusted, stale, and future items before returning public candidates", async () => {
     const fetch = fixtureFetch({
       "https://feeds.bbci.co.uk/news/technology/rss.xml": rss([
@@ -310,5 +345,42 @@ describe("trusted publisher news fallback", () => {
       maxResponseBytes: 1_024,
       now: () => now,
     })).rejects.toThrowError(new PublisherNewsClientError("publisher_sources_unavailable"));
+  });
+
+  it("aborts stalled response bodies and caps chunked bodies without Content-Length", async () => {
+    let aborts = 0;
+    const stalledBody = vi.fn((_input: string | URL | Request, init?: RequestInit) => {
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          init?.signal?.addEventListener("abort", () => {
+            aborts += 1;
+            controller.error(new DOMException("aborted", "AbortError"));
+          });
+        },
+      });
+      return Promise.resolve(new Response(stream));
+    }) as typeof globalThis.fetch;
+    await expect(discoverPublisherNewsCandidates({
+      fetch: stalledBody,
+      timeoutMs: 5,
+      now: () => now,
+    })).rejects.toThrowError(new PublisherNewsClientError("publisher_sources_unavailable"));
+    expect(aborts).toBe(6);
+
+    let cancellations = 0;
+    const chunked = vi.fn(async () => new Response(new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new Uint8Array(1_025));
+      },
+      cancel() {
+        cancellations += 1;
+      },
+    }))) as typeof globalThis.fetch;
+    await expect(discoverPublisherNewsCandidates({
+      fetch: chunked,
+      maxResponseBytes: 1_024,
+      now: () => now,
+    })).rejects.toThrowError(new PublisherNewsClientError("publisher_sources_unavailable"));
+    expect(cancellations).toBe(6);
   });
 });

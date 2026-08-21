@@ -43,9 +43,17 @@ export type DailyNewsRunReceipt = ({
 } & DailyNewsRunCompletion);
 
 export interface DailyNewsRunStorePort {
-  start(receipt: DailyNewsRunningReceipt): Promise<void>;
-  finish(runId: string, completion: DailyNewsRunCompletion): Promise<void>;
+  start(receipt: DailyNewsRunningReceipt): Promise<DailyNewsRunWriteResult>;
+  finish(
+    runId: string,
+    completion: DailyNewsRunCompletion,
+  ): Promise<DailyNewsRunWriteResult>;
+  get(runId: string): Promise<DailyNewsRunReceipt | undefined>;
   listRecent(): Promise<DailyNewsRunReceipt[]>;
+}
+
+export interface DailyNewsRunWriteResult {
+  indexed: boolean;
 }
 
 interface DailyNewsRunsOwnerDependencies {
@@ -141,6 +149,10 @@ function validateCompletion(value: DailyNewsRunCompletion): DailyNewsRunCompleti
   return value;
 }
 
+function runKey(runId: string): string {
+  return `daily-news:v1:cron-run:${runId}`;
+}
+
 export function createRuntimeDailyNewsRunStore(
   runtime: RuntimeCacheLike = getCache(),
   now: () => Date = () => new Date(),
@@ -150,43 +162,75 @@ export function createRuntimeDailyNewsRunStore(
     tags: ["daily-news-runs"],
     ttl: RUNS_TTL_SECONDS,
   };
+  let indexMutation = Promise.resolve();
 
-  async function read(): Promise<DailyNewsRunReceipt[]> {
+  async function readIndex(): Promise<string[]> {
     const value = await runtime.get(RUNS_KEY);
     if (value === null || value === undefined) return [];
-    if (!Array.isArray(value) || value.length > MAX_RECEIPTS) return [];
-    const parsed = value.map(parseReceipt);
-    if (parsed.some((receipt) => receipt === null)) return [];
+    if (
+      !Array.isArray(value)
+      || value.length > MAX_RECEIPTS
+      || value.some((runId) => !validRunId(runId))
+      || new Set(value).size !== value.length
+    ) return [];
+    return value as string[];
+  }
+
+  async function readReceipt(runId: string): Promise<DailyNewsRunReceipt | null> {
+    return parseReceipt(await runtime.get(runKey(runId)));
+  }
+
+  function withinRetention(receipt: DailyNewsRunReceipt): boolean {
     const earliest = now().getTime() - RUNS_TTL_SECONDS * 1_000;
     const latest = now().getTime() + MAX_FUTURE_MS;
-    return (parsed as DailyNewsRunReceipt[])
-      .filter((receipt) => {
-        const timestamp = Date.parse(receipt.startedAt);
-        return timestamp >= earliest && timestamp <= latest;
-      })
+    const timestamp = Date.parse(receipt.startedAt);
+    return timestamp >= earliest && timestamp <= latest;
+  }
+
+  async function read(): Promise<DailyNewsRunReceipt[]> {
+    const receipts = await Promise.all((await readIndex()).map(readReceipt));
+    return receipts
+      .filter((receipt): receipt is DailyNewsRunReceipt => (
+        receipt !== null && withinRetention(receipt)
+      ))
       .sort((left, right) => right.startedAt.localeCompare(left.startedAt))
       .slice(0, MAX_RECEIPTS);
   }
 
-  async function write(receipts: DailyNewsRunReceipt[]): Promise<void> {
-    await runtime.set(RUNS_KEY, receipts
-      .sort((left, right) => right.startedAt.localeCompare(left.startedAt))
-      .slice(0, MAX_RECEIPTS), options);
+  async function writeReceipt(receipt: DailyNewsRunReceipt): Promise<void> {
+    await runtime.set(runKey(receipt.runId), receipt, options);
+  }
+
+  async function index(receipt: DailyNewsRunReceipt): Promise<void> {
+    const mutation = indexMutation.then(async () => {
+      const existing = await read();
+      const runIds = [receipt, ...existing.filter((item) => item.runId !== receipt.runId)]
+        .sort((left, right) => right.startedAt.localeCompare(left.startedAt))
+        .slice(0, MAX_RECEIPTS)
+        .map((item) => item.runId);
+      await runtime.set(RUNS_KEY, runIds, options);
+    });
+    indexMutation = mutation.catch(() => undefined);
+    await mutation;
   }
 
   return {
     async start(receipt) {
       const parsed = parseReceipt({ schemaVersion: 1, state: "running", ...receipt });
       if (!parsed) throw new DailyNewsRunStoreError("run_receipt_invalid");
-      const existing = (await read()).filter((item) => item.runId !== receipt.runId);
-      await write([parsed, ...existing]);
+      await writeReceipt(parsed);
+      try {
+        await index(parsed);
+        return { indexed: true };
+      } catch {
+        return { indexed: false };
+      }
     },
 
     async finish(runId, completion) {
       if (!validRunId(runId)) throw new DailyNewsRunStoreError("run_receipt_invalid");
       validateCompletion(completion);
-      const existing = await read();
-      const running = existing.find((item) => item.runId === runId);
+      const running = await readReceipt(runId);
       if (!running) throw new DailyNewsRunStoreError("run_receipt_not_found");
       const completed = parseReceipt({
         schemaVersion: 1,
@@ -195,7 +239,19 @@ export function createRuntimeDailyNewsRunStore(
         ...completion,
       });
       if (!completed) throw new DailyNewsRunStoreError("run_receipt_invalid");
-      await write([completed, ...existing.filter((item) => item.runId !== runId)]);
+      await writeReceipt(completed);
+      try {
+        await index(completed);
+        return { indexed: true };
+      } catch {
+        return { indexed: false };
+      }
+    },
+
+    async get(runId) {
+      if (!validRunId(runId)) throw new DailyNewsRunStoreError("run_receipt_invalid");
+      const receipt = await readReceipt(runId);
+      return receipt && withinRetention(receipt) ? receipt : undefined;
     },
 
     listRecent: read,
@@ -233,6 +289,12 @@ export async function dailyNewsRunsOwnerRequest(
     return ownerJsonResponse(503, { status: "auth_unavailable" });
   }
   try {
+    const requestedRunId = new URL(request.url).searchParams.get("runId");
+    if (requestedRunId !== null) {
+      return ownerJsonResponse(200, {
+        run: await dependencies.runs.get(requestedRunId) ?? null,
+      });
+    }
     return ownerJsonResponse(200, { runs: await dependencies.runs.listRecent() });
   } catch {
     return ownerJsonResponse(503, { status: "runs_unavailable" });

@@ -2,6 +2,7 @@ import { load } from "cheerio";
 
 import type { DailyNewsCategory } from "../domain/daily-news.js";
 import type { PublicNewsCandidate } from "./daily-news-validator.js";
+import { readBoundedResponseText } from "./bounded-response.js";
 
 const BBC_FEEDS: ReadonlyArray<{
   category: DailyNewsCategory;
@@ -97,18 +98,6 @@ function candidateId(category: DailyNewsCategory, url: string): string {
   return `publisher:${category}:${hash.toString(16).padStart(16, "0")}`;
 }
 
-async function responseText(response: Response, maximum: number): Promise<string> {
-  const declared = Number(response.headers.get("content-length"));
-  if (Number.isFinite(declared) && declared > maximum) {
-    throw new PublisherNewsClientError("publisher_response_too_large");
-  }
-  const buffer = await response.arrayBuffer();
-  if (buffer.byteLength > maximum) {
-    throw new PublisherNewsClientError("publisher_response_too_large");
-  }
-  return new TextDecoder().decode(buffer);
-}
-
 async function fetchText(
   url: string,
   dependencies: PublisherNewsClientDependencies,
@@ -118,10 +107,18 @@ async function fetchText(
     () => controller.abort(),
     dependencies.timeoutMs ?? 8_000,
   );
-  let response: Response;
   try {
-    response = await dependencies.fetch(url, { signal: controller.signal });
+    const response = await dependencies.fetch(url, { signal: controller.signal });
+    if (!response.ok) {
+      throw new PublisherNewsClientError(`publisher_http_${response.status}`);
+    }
+    return await readBoundedResponseText(
+      response,
+      dependencies.maxResponseBytes ?? 1_000_000,
+      () => new PublisherNewsClientError("publisher_response_too_large"),
+    );
   } catch (error) {
+    if (error instanceof PublisherNewsClientError) throw error;
     if ((error as { name?: unknown })?.name === "AbortError") {
       throw new PublisherNewsClientError("publisher_timeout");
     }
@@ -129,13 +126,6 @@ async function fetchText(
   } finally {
     clearTimeout(timeout);
   }
-  if (!response.ok) {
-    throw new PublisherNewsClientError(`publisher_http_${response.status}`);
-  }
-  return await responseText(
-    response,
-    dependencies.maxResponseBytes ?? 1_000_000,
-  );
 }
 
 async function discoverBbcFeed(
@@ -243,7 +233,6 @@ async function discoverXinhuaChannel(
   const urls: URL[] = [];
   const seen = new Set<string>();
   $("a[href]").each((_index, element) => {
-    if (urls.length >= 6) return;
     const url = trustedXinhuaArticleUrl($(element).attr("href") ?? "", channel.url);
     if (!url || seen.has(url.toString())) return;
     seen.add(url.toString());

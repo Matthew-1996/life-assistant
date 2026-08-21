@@ -37,8 +37,9 @@ const service = {
 
 function runStore(): DailyNewsRunStorePort {
   return {
-    start: vi.fn(async () => undefined),
-    finish: vi.fn(async () => undefined),
+    start: vi.fn(async () => ({ indexed: true })),
+    finish: vi.fn(async () => ({ indexed: true })),
+    get: vi.fn(async () => undefined),
     listRecent: vi.fn(async () => []),
   };
 }
@@ -174,6 +175,28 @@ describe("daily news Vercel requests", () => {
     await expect(response.json()).resolves.toEqual(empty);
   });
 
+  it("finishes the exact receipt when only the recent-run index is unavailable", async () => {
+    const runs = runStore();
+    vi.mocked(runs.start).mockResolvedValueOnce({ indexed: false });
+    vi.mocked(runs.finish).mockResolvedValueOnce({ indexed: false });
+    const response = await dailyNewsCronRequest(
+      new Request("https://life-console.invalid/api/cron/daily-news", {
+        headers: { authorization: "Bearer synthetic-cron-secret-at-least-16" },
+      }),
+      { cronSecret: "synthetic-cron-secret-at-least-16" },
+      {
+        service,
+        runs,
+        now: () => new Date("2030-05-14T01:30:00.000Z"),
+        randomId: () => "run-synthetic",
+      },
+    );
+
+    expect(runs.finish).toHaveBeenCalledOnce();
+    expect(response.headers.get("x-life-console-run-receipt")).toBe("unavailable");
+    await expect(response.json()).resolves.toEqual(empty);
+  });
+
   it("finishes a failed receipt and returns a sanitized 503 on an uncaught service error", async () => {
     const runs = runStore();
     const failingService = {
@@ -274,6 +297,26 @@ describe("daily news Vercel requests", () => {
         startedAt: "2030-05-14T01:30:00.000Z",
         state: "running",
       }],
+    });
+
+    vi.mocked(runs.get).mockResolvedValueOnce({
+      schemaVersion: 1,
+      runId: "run-synthetic",
+      startedAt: "2030-05-14T01:30:00.000Z",
+      state: "running",
+    });
+    const exact = await dailyNewsRunsOwnerRequest(
+      new Request("https://life-console.invalid/api/daily-news-runs?runId=run-synthetic", {
+        headers: { authorization: "Bearer synthetic-owner-jwt" },
+      }),
+      {
+        supabasePublishableKey: "sb_publishable_synthetic_only",
+        supabaseUrl: "https://synthetic-project.supabase.co",
+      },
+      { runs, verifyBearer: vi.fn(async () => true) },
+    );
+    await expect(exact.json()).resolves.toEqual({
+      run: expect.objectContaining({ runId: "run-synthetic" }),
     });
   });
 

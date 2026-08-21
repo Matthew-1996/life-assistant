@@ -582,7 +582,7 @@ Expected: FAIL because Xinhua channel/article discovery is absent.
 
 - [x] **Step 5: 实现新华网当前页面解析、失败隔离和边界保护**
 
-固定读取科技、财经、时政当前频道；每类最多解析 6 个可信文章链接、最多抓取 2 篇文章元数据。文章页从公开标题、精确时间、description 和 source 投影候选；单个频道、Feed 或文章失败不得中断其他入口。畸形 XML/HTML、超时、响应过大、HTTP 链接、非可信域名、过期或未来时间全部丢弃。
+固定读取科技、财经、时政当前频道；在 1 MB 页面上限内先收集全部可信去重文章链接，再按 URL 日期排序并最多抓取 2 篇最新文章元数据。文章页从公开标题、精确时间、description 和 source 投影候选；单个频道、Feed 或文章失败不得中断其他入口。畸形 XML/HTML、超时、响应过大、HTTP 链接、非可信域名、过期或未来时间全部丢弃。
 
 Run: `npx vitest run tests/server/publisher-news-client.test.ts`
 Expected: 正常、单入口失败、过期、恶意链接、超时和响应体上限全部 PASS。
@@ -691,7 +691,7 @@ export interface DailyNewsServicePort {
 Run: `npx vitest run tests/server/daily-news-discovery.test.ts tests/server/daily-news-service.test.ts tests/server/daily-news-external.test.ts`
 Expected: all PASS。
 
-- [ ] **Step 6: 提交主备编排**
+- [x] **Step 6: 提交主备编排**
 
 ```bash
 git add apps/life-console/src/server/daily-news-discovery.ts apps/life-console/src/server/daily-news-service.ts apps/life-console/tests/server/daily-news-discovery.test.ts apps/life-console/tests/server/daily-news-service.test.ts
@@ -741,13 +741,14 @@ Expected: FAIL because the run store does not exist.
 
 ```ts
 export interface DailyNewsRunStorePort {
-  start(receipt: DailyNewsRunningReceipt): Promise<void>;
-  finish(runId: string, completion: DailyNewsRunCompletion): Promise<void>;
+  start(receipt: DailyNewsRunningReceipt): Promise<{ indexed: boolean }>;
+  finish(runId: string, completion: DailyNewsRunCompletion): Promise<{ indexed: boolean }>;
+  get(runId: string): Promise<DailyNewsRunReceipt | undefined>;
   listRecent(): Promise<DailyNewsRunReceipt[]>;
 }
 ```
 
-固定 schema version 1、最多 32 条、按 `startedAt` 倒序、TTL `604800` 秒。解析时 exact-key 校验；畸形、过期或逐出值视为空列表。运行中与完成收据只允许设计文档列出的字段。
+固定 schema version 1、最多 32 条、按 `startedAt` 倒序、TTL `604800` 秒。每个 run id 使用独立收据键，最近列表只保存 run id 索引；单实例索引变更串行化，`finish` 和 Owner 精确查询都直接读取独立收据。索引写入失败只返回 `indexed: false`，不中断已成功开始的独立收据完成更新；Cron 响应头标记可观测性降级。解析时 exact-key 校验；畸形、过期或逐出值视为空列表。运行中与完成收据只允许设计文档列出的字段。
 
 Run: `npx vitest run tests/server/daily-news-runs.test.ts`
 Expected: schema、TTL、排序、逐出和去敏用例 PASS。
@@ -795,7 +796,7 @@ await expect(response.json()).resolves.toEqual({ runs: recentReceipts });
 Run: `npx vitest run tests/server/daily-news-runs.test.ts tests/vercel/daily-news-handlers.test.ts`
 Expected: all PASS。
 
-- [ ] **Step 6: 提交运行记录与接口**
+- [x] **Step 6: 提交运行记录与接口**
 
 ```bash
 git add apps/life-console/src/server/daily-news-runs.ts apps/life-console/src/server/daily-news-service.ts apps/life-console/src/server/daily-news-cache.ts apps/life-console/api/cron/daily-news.ts apps/life-console/api/daily-news-runs.ts apps/life-console/scripts/supabase-candidate-config.mjs apps/life-console/tests/server/daily-news-runs.test.ts apps/life-console/tests/vercel/daily-news-handlers.test.ts
@@ -813,12 +814,12 @@ git commit -m "feat(life-console): persist daily news cron receipts"
 - Consumes: Tasks 10–12 和既有 2.5.0 门禁。
 - Produces: 可审阅 Draft PR、合成 Preview、Owner 状态接口证据和独立 Production 门禁。
 
-- [ ] **Step 1: 运行精确内容服务测试**
+- [x] **Step 1: 运行精确内容服务测试**
 
 Run: `npx vitest run tests/server/publisher-news-client.test.ts tests/server/daily-news-discovery.test.ts tests/server/daily-news-service.test.ts tests/server/daily-news-runs.test.ts tests/server/daily-news-external.test.ts tests/vercel/daily-news-handlers.test.ts`
 Expected: all PASS, no warning or unhandled rejection。
 
-- [ ] **Step 2: 运行完整本地门禁**
+- [x] **Step 2: 运行完整本地门禁**
 
 Run: `python3 tools/check_project_governance.py`
 Run: `tools/check_git_privacy.sh`

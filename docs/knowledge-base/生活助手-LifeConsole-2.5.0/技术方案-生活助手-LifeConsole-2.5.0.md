@@ -89,16 +89,16 @@ Owner Agent (Monday 12:00 Asia/Shanghai)
 
 - `GET /api/cron/daily-news`：要求 `Authorization: Bearer <CRON_SECRET>`；成功或已存在返回 200，鉴权失败 401。
 - `GET /api/daily-news`：校验 Supabase Owner JWT；命中缓存直接返回，缺失时通过单飞锁允许一次受控重建。
-- `GET /api/daily-news-runs`：复用 Owner JWT 鉴权，只返回最近 7 天的去敏 Cron 运行记录；不提供匿名、浏览器缓存或写入能力。
-- 三个端点固定同一 Vercel Production 区域；摘要缓存键为 `daily-news:v1:YYYY-MM-DD`，最近成功指针为 `daily-news:v1:last-success`。运行记录使用独立的 `daily-news:v1:cron-runs` 命名空间，摘要和记录均保留 7 天。
+- `GET /api/daily-news-runs`：复用 Owner JWT 鉴权，默认返回最近 7 天的去敏 Cron 运行记录；传入响应头中的 `runId` 可直接读取对应独立收据，不依赖最近索引。不提供匿名、浏览器缓存或写入能力。
+- 三个端点固定同一 Vercel Production 区域；摘要缓存键为 `daily-news:v1:YYYY-MM-DD`，最近成功指针为 `daily-news:v1:last-success`。每次运行收据按随机 run id 单独写入 `daily-news:v1:cron-run:<run-id>`，`daily-news:v1:cron-runs` 只保留最近 32 条的去敏索引；单 Function 实例内并发索引变更串行化，索引逐出不影响已写入的独立收据完成。摘要、收据和索引均保留 7 天。
 - GDELT 响应设超时、最大体积和条目上限；三个分类请求按上游公开限制顺序执行，相邻请求至少间隔 5 秒。GDELT 抛错或返回集合无法通过 Top 5 配比校验时，才启动备用发现，不在健康主源请求旁并发浪费外部流量。
 - 备用发现只访问固定 HTTPS 入口：新华网科技、财经、时政当前频道页面，以及 BBC Technology、Business、World RSS。每个入口独立超时和体积限制；新华网页面只解析可信文章链接，并以文章公开元数据补齐精确发布时间与描述；BBC 只解析标准 RSS item。新华网旧 RSS 经验证已停更，固定拒绝进入配置。
-- 备用入口按来源失败隔离；合并后的 URL 仍执行 HTTPS、可信域名、24 小时窗口、canonical URL、标题指纹、分类和国内/国际配比校验。若不足 5 条或缺少任一必需分类/范围，整体失败，不向 DeepSeek 发送半成品。
+- 备用入口按来源失败隔离；新华频道在已受 1 MB 响应上限保护的页面中收集全部可信去重文章链接，再按 URL 日期选取最新 2 条，避免首屏旧稿遮挡当日稿件。合并后的 URL 仍执行 HTTPS、可信域名、24 小时窗口、canonical URL、标题指纹、分类和国内/国际配比校验。若不足 5 条或缺少任一必需分类/范围，整体失败，不向 DeepSeek 发送半成品。
 - DeepSeek 使用独立新闻 Schema；公开输入按不可信数据包裹，输出逐字段校验，摘要超过 160 字拒绝而非截断补义。
 - 全链路失败返回最近成功缓存；没有缓存返回结构化 `empty`，不得返回半成品候选。
 - Cron 在鉴权成功后先写 `running` 收据，随后更新为 `success | stale | empty | failed`。字段固定为随机 run id、开始/结束时间、结果状态、候选来源、失败阶段、稳定错误码、摘要日期和生成时间；禁止保存标题、URL、片段、模型请求/响应、环境变量、Owner 标识或 Secret。若 Function 在结束前被硬终止，`running` 收据保留以显示未正常收口。
 - `DailyNewsRunStorePort` 封装 Runtime Cache 的开始、完成和最近记录读取；写收据失败不得改变新闻结果，但 Cron 响应必须用稳定的 `run_receipt_unavailable` 标记可观测性降级。Runtime Cache 是运维级、可逐出的 7 天记录，不声明审计级永久持久化，也不进入个人备份。
-- Owner 与 Cron 两个可能触发重建的 Function 最长执行时间为 60 秒，仍保持同一 Production 区域；该上限只覆盖主源有界尝试、备用源有界抓取和一次有界摘要，不允许无限重试。
+- Owner 与 Cron 两个可能触发重建的 Function 最长执行时间为 60 秒，仍保持同一 Production 区域。Runtime 固定 GDELT 单请求 5 秒、分类间隔 5 秒、发布方单请求 4 秒、DeepSeek 12 秒，主源三分类、备用两阶段与摘要的最坏外部等待预算为 45 秒，为解析、缓存和收据收口预留时间。超时从请求开始覆盖到流式 body 读取完成，响应体在读取时逐块校验上限；不允许无限重试。
 
 ## 7. 每周寄语 Agent
 
