@@ -36,6 +36,7 @@
   "dependencies": {
     "@supabase/supabase-js": "2.112.3",
     "@vercel/functions": "3.9.2",
+    "cheerio": "1.2.0",
     "fflate": "0.8.2",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"

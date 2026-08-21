@@ -119,6 +119,10 @@ export function createSupabaseCandidateVercelConfig(environment) {
         maxDuration: 60,
         regions: ["hkg1"],
       },
+      "api/daily-news-runs.ts": {
+        maxDuration: 60,
+        regions: ["hkg1"],
+      },
       "api/cron/daily-news.ts": {
         maxDuration: 60,
         regions: ["hkg1"],

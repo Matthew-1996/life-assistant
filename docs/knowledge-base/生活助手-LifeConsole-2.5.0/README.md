@@ -13,4 +13,4 @@
 - [项目管理](项目管理-生活助手-LifeConsole-2.5.0.md)
 - [上线证据](上线证据-生活助手-LifeConsole-2.5.0.md)
 
-当前状态：Gate 1 与 Gate 2 v2 已确认，[PR #58](https://github.com/Matthew-1996/life-assistant/pull/58)、记录页溢出热修复 [PR #59](https://github.com/Matthew-1996/life-assistant/pull/59) 与顶部横幅热修复 [PR #60](https://github.com/Matthew-1996/life-assistant/pull/60) 已合并。2.5.0 Production 已重新发布；1440px/390px 四页无根页面横向溢出，正式站点不再展示内部数据治理横幅。`CRON_SECRET` 已安全轮换，新闻 Cron 已鉴权触发；GDELT 在受控重试中持续超时，因此当前按设计显示可重试空态，未伪造摘要。寄语自动化仍待独立门禁。
+当前状态：Gate 1 与 Gate 2 v2 已确认，[PR #58](https://github.com/Matthew-1996/life-assistant/pull/58)、记录页溢出热修复 [PR #59](https://github.com/Matthew-1996/life-assistant/pull/59)、顶部横幅热修复 [PR #60](https://github.com/Matthew-1996/life-assistant/pull/60) 与内容自动化收口 [PR #62](https://github.com/Matthew-1996/life-assistant/pull/62) 已合并。2.5.0 Production 已发布并复验；DeepSeek 纯合成健康探针可用，每日新闻 Cron 已启用，每周寄语实例为 ACTIVE。2026-08-21 PO 已确认每日新闻可靠性补强方向：GDELT 失败时切换新华网/BBC 公开源，并在同区域 Runtime Cache 保存最近 7 天的去敏 Cron 运行记录；当前处于 TDD 实施前设计收口，Production 变更尚未发布。

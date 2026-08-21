@@ -1,7 +1,9 @@
 import type { DailyNewsCategory, DailyNewsScope } from "../domain/daily-news.js";
 import type { PublicNewsCandidate } from "./daily-news-validator.js";
+import { readBoundedResponseText } from "./bounded-response.js";
 
 const GDELT_ENDPOINT = "https://api.gdeltproject.org/api/v2/doc/doc";
+export const GDELT_REQUEST_SPACING_MS = 5_000;
 const CATEGORY_QUERIES: Record<DailyNewsCategory, string> = {
   technology: "(technology OR artificial intelligence OR semiconductor)",
   finance: "(finance OR economy OR central bank OR markets)",
@@ -71,21 +73,6 @@ function candidateId(category: DailyNewsCategory, url: string): string {
   return `${category}:${hash.toString(16).padStart(16, "0")}`;
 }
 
-async function responseText(
-  response: Response,
-  maximum: number,
-): Promise<string> {
-  const declared = Number(response.headers.get("content-length"));
-  if (Number.isFinite(declared) && declared > maximum) {
-    throw new GdeltClientError("gdelt_response_too_large");
-  }
-  const buffer = await response.arrayBuffer();
-  if (buffer.byteLength > maximum) {
-    throw new GdeltClientError("gdelt_response_too_large");
-  }
-  return new TextDecoder().decode(buffer);
-}
-
 async function discoverCategory(
   category: DailyNewsCategory,
   dependencies: GdeltClientDependencies,
@@ -104,10 +91,17 @@ async function discoverCategory(
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), dependencies.timeoutMs ?? 8_000);
-  let response: Response;
+  let responseBody: string;
   try {
-    response = await dependencies.fetch(url, { signal: controller.signal });
+    const response = await dependencies.fetch(url, { signal: controller.signal });
+    if (!response.ok) throw new GdeltClientError(`gdelt_http_${response.status}`);
+    responseBody = await readBoundedResponseText(
+      response,
+      dependencies.maxResponseBytes ?? 1_000_000,
+      () => new GdeltClientError("gdelt_response_too_large"),
+    );
   } catch (error) {
+    if (error instanceof GdeltClientError) throw error;
     if ((error as { name?: unknown })?.name === "AbortError") {
       throw new GdeltClientError("gdelt_timeout");
     }
@@ -115,14 +109,10 @@ async function discoverCategory(
   } finally {
     clearTimeout(timeout);
   }
-  if (!response.ok) throw new GdeltClientError(`gdelt_http_${response.status}`);
 
   let payload: unknown;
   try {
-    payload = JSON.parse(await responseText(
-      response,
-      dependencies.maxResponseBytes ?? 1_000_000,
-    )) as unknown;
+    payload = JSON.parse(responseBody) as unknown;
   } catch (error) {
     if (error instanceof GdeltClientError) throw error;
     throw new GdeltClientError("gdelt_invalid_json");
@@ -173,7 +163,7 @@ export async function discoverGdeltCandidates(
   });
   const results: PublicNewsCandidate[][] = [];
   for (const [index, category] of categories.entries()) {
-    if (index > 0) await wait(5_000);
+    if (index > 0) await wait(GDELT_REQUEST_SPACING_MS);
     results.push(await discoverCategory(category, dependencies));
   }
   return results.flat();

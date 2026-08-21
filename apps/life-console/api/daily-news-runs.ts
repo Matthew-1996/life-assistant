@@ -1,12 +1,8 @@
 import {
-  createRuntimeDailyNewsService,
-  dailyNewsCronRequest,
-  type DailyNewsServicePort,
-} from "../../src/server/daily-news-service.js";
-import {
   createRuntimeDailyNewsRunStore,
+  dailyNewsRunsOwnerRequest,
   type DailyNewsRunStorePort,
-} from "../../src/server/daily-news-runs.js";
+} from "../src/server/daily-news-runs.js";
 
 interface VercelRequest {
   method?: string;
@@ -20,15 +16,7 @@ interface VercelResponse {
   end(body?: string): void;
 }
 
-let service: DailyNewsServicePort | undefined;
 let runs: DailyNewsRunStorePort | undefined;
-
-function runtimeService(): DailyNewsServicePort {
-  service ??= createRuntimeDailyNewsService({
-    deepSeekApiKey: process.env.DEEPSEEK_API_KEY ?? "",
-  });
-  return service;
-}
 
 function runtimeRuns(): DailyNewsRunStorePort {
   runs ??= createRuntimeDailyNewsRunStore();
@@ -45,7 +33,7 @@ function toWebRequest(request: VercelRequest): Request {
     }
   }
   const url = new URL(
-    request.url ?? "/api/cron/daily-news",
+    request.url ?? "/api/daily-news-runs",
     "https://life-console.invalid",
   );
   return new Request(url, { method: request.method ?? "GET", headers });
@@ -55,10 +43,13 @@ export default async function handler(
   request: VercelRequest,
   response: VercelResponse,
 ): Promise<void> {
-  const result = await dailyNewsCronRequest(
+  const result = await dailyNewsRunsOwnerRequest(
     toWebRequest(request),
-    { cronSecret: process.env.CRON_SECRET ?? "" },
-    { service: runtimeService, runs: runtimeRuns() },
+    {
+      supabaseUrl: process.env.VITE_SUPABASE_URL ?? "",
+      supabasePublishableKey: process.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "",
+    },
+    { runs: runtimeRuns() },
   );
   response.statusCode = result.status;
   result.headers.forEach((value, name) => response.setHeader(name, value));
