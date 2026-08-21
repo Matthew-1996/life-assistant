@@ -133,3 +133,11 @@
 - 去敏分层探针确认本机 Keychain 中的 DeepSeek Key 对官方接口返回 200；在正确 TLS 信任条件下，GDELT 于产品 5 秒窗口超时，官方发布方备用源仍得到 47 条候选，最终五条覆盖三类与国内/国际，DeepSeek 返回五条有效摘要。探针未输出标题、摘要、Key 或 Owner 数据，临时测试文件已删除。
 - 为定位 Production Secret、出站来源和 Runtime Cache 之间的真实失败边界，独立热修复按 TDD 增加单条 Cron 完成日志。字段使用闭集白名单：事件、运行 ID、状态、发现来源、失败阶段、稳定错误码、摘要日期/时间和收据可用性；未知诊断统一降级，不记录正文、URL、JWT、Secret 或供应商响应体。该热修复尚未合并或发布。
 - 最终完成门槛保持不变：PO 当次确认后轮换为已验证的 Production DeepSeek Key、合并诊断 PR、重新发布、手动触发；只在运行结果为 success、Runtime Cache 可读且 Owner 页面显示五条新闻后关闭缺陷。
+
+## 16. PR #69 Production 诊断与 Owner 读取恢复
+
+- PO 当次确认后，Production `DEEPSEEK_API_KEY` 已由 Keychain 中经过纯合成官方接口探针的值覆盖，Vercel 确认变量继续为 Sensitive；值未输出、落盘或进入 Git。PR #69 三项 CI 全绿并完成 squash merge，发布制品来自准确 `main`，Production 达到 READY。
+- Vercel 控制面确认 Cron 仍按 `0 23 * * *` 注册。手动触发后，闭集去敏日志返回 `HTTP 200 / success / cache / receipt available`，当日摘要日期有效；无失败阶段或错误码。该证据不包含新闻标题、摘要、Owner 标识、资源 ID 或 Secret。
+- 已登录 Owner 页面刷新和点击重试后仍显示空态；同期 Production 请求日志没有 `/api/daily-news`，证明浏览器在 fetch 前失败。结合认证端口允许 access token 缺省的契约，复现出 AuthGate 可由用户字段保持已认证，而旧 `getAccessToken()` 因已有认证状态直接返回 null、不再重读存储 Session。
+- 新热修复按 TDD 先得到 `expected access token / received null` 红灯，再将快速返回限制为“已有 token 或明确无 Owner Session”；已认证 Session 但 token 缺失时继续使用既有 revision-safe Session 回退。服务层及 AuthGate→DailyNewsClient 组合测试均通过，明确退出仍不重读或复活会话。
+- 最终验收仍需独立复审、Draft PR/CI、PO 当次合并发布确认，以及发布后真实浏览器产生 Owner 新闻请求并渲染五条摘要。

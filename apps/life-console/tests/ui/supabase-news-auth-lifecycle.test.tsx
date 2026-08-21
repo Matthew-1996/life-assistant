@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createDailyNewsApiClient } from "../../src/api/daily-news-client";
@@ -98,5 +98,47 @@ describe("Owner news authentication lifecycle", () => {
     expect(requestedPath).toBe("/api/daily-news?rebuild=1");
     expect(new Headers(requestedInit?.headers).get("authorization"))
       .toBe("Bearer synthetic-owner-access");
+  });
+
+  it("recovers a stored token before news fetch when the UI event omits it", async () => {
+    let authStateListener:
+      | Parameters<SupabaseAuthPort["onAuthStateChange"]>[0]
+      | undefined;
+    const getSession = vi.fn(async () => ({
+      data: { session: syntheticSession },
+      error: null,
+    }));
+    const port = {
+      ...authPort(),
+      getSession,
+      onAuthStateChange: vi.fn((listener) => {
+        authStateListener = listener;
+        return {
+          data: { subscription: { unsubscribe: vi.fn() } },
+        };
+      }),
+    } satisfies SupabaseAuthPort;
+    const auth = createSupabaseAuthService(port);
+    const fetch = vi.fn(async () => Response.json({ digest, state: "success" }));
+    const news = createDailyNewsApiClient({
+      fetch,
+      getAccessToken: auth.getAccessToken,
+    });
+
+    render(
+      <SupabaseAuthGate auth={auth}>
+        <DailyNewsPanel client={news} />
+      </SupabaseAuthGate>,
+    );
+    await act(async () => {
+      authStateListener?.("SIGNED_IN", {
+        ...syntheticSession,
+        access_token: undefined,
+      });
+    });
+
+    expect(await screen.findByRole("heading", { name: "Title a" })).toBeTruthy();
+    await waitFor(() => expect(fetch).toHaveBeenCalledOnce());
+    expect(getSession).toHaveBeenCalled();
   });
 });

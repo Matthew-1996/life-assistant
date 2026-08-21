@@ -2,10 +2,10 @@
 
 ## 1. 当前状态
 
-- 主阶段：2.5.0 已上线；PR #68 已合并并以项目根 `vercel.json` 重新发布，Vercel Cron 已注册、Enabled 且手动调用进入 Production。Owner 页面仍显示每日新闻可重试空态，因此上线验收未完成。
-- 子状态：分层公开探针确认 GDELT 在 5 秒窗口内超时，但 BBC/新华网备用源可发现 47 条候选，五条配比筛选与 DeepSeek 摘要均成功；Production 现有空态缺少去敏失败阶段日志，无法区分 Production Secret、出站源或 Runtime Cache 边界。
-- 分支：`agent/life-console-news-production-diagnostics` 独立 worktree；只增加 Cron 完成事件的闭集去敏诊断与回归测试，不改数据库、Owner 数据、新闻正文、来源白名单、配比或缓存契约。
-- PR：诊断热修复正在本地门禁和独立审查；提交 Draft PR 后仍需 PO 当次确认才能轮换 `DEEPSEEK_API_KEY`、合并和重新发布 Production。
+- 主阶段：2.5.0 已上线；PR #69 已合并并重新发布，Production DeepSeek Key 已轮换为本机纯合成探针验证过的 Key。Cron 手动运行返回 `success`，当日 Runtime Cache 与运行收据可用，但 Owner 页面仍未发出 `/api/daily-news` 请求，因此上线验收未完成。
+- 子状态：去敏完成日志已排除新闻发现、DeepSeek、摘要校验和缓存写入失败；真实浏览器把故障继续收窄到“AuthGate 已渲染 Owner UI，但认证事件缺少 access token 时，新闻客户端直接得到 null 且不重读存储 Session”。
+- 分支：`agent/life-console-news-owner-fetch-recovery` 独立 worktree；只在已认证 UI 缺少内存 token 时重新读取 Supabase Session，并补充服务层与 AuthGate→新闻请求组合回归测试。
+- PR：Owner 读取恢复热修复正在本地门禁和独立审查；Draft PR 与 CI 完成后，仍需 PO 当次确认才能合并和重新发布 Production。
 - 数据库：两个加法 migration 保持已应用，不回滚或删除用户数据；本次不改 Supabase schema 或 Owner 数据。
 
 ## 2. 阶段计划
@@ -24,6 +24,7 @@
 10. 新闻展示启动竞态热修复：PR #64 已合并发布；后端和控制面复验通过，但真实 Owner 浏览器仍为空态，第一版修复未覆盖实际认证时序。
 11. 认证生命周期统一：PO 已确认进入 PR #65 开发；TDD、全量门禁、独立复审与 Draft PR 已完成。PO 确认合成 Preview 应展示新闻上线效果，并授权 Agent 代替手工验收；Production 发布仍保持独立门禁。
 12. Cron 注册与 Production 诊断：PR #68 已合并发布并关闭“Cron 未注册”；Owner 页面仍为空后，按 TDD 增加闭集去敏完成日志，准备以已验证 Key 轮换、手动触发和 Owner 页面五条摘要作为最终验收。
+13. Production 诊断与 Owner token 恢复：PR #69 已合并发布，Key 轮换与手动 Cron 证明后端当日缓存成功；TDD 修复“已认证 Session 缺少内存 access token 时不再回读”的客户端恢复缺口，等待独立 PR 与发布门禁。
 
 ## 3. 门禁与恢复条件
 
@@ -40,7 +41,8 @@
 | Owner 新闻展示 PR #64 | completed_with_followup | PO 已确认合并和发布；Production 后端今日摘要成功，但浏览器没有发起新闻请求，需 PR #65 收口 |
 | Owner 认证生命周期 PR #65 | agent_acceptance_in_progress | PO 已授权 Agent 代替用户手工验收；必须完成合成新闻 Preview、远程 CI 和去敏浏览器验收。Production 合并发布仍需当次确认 |
 | Cron 注册 PR #68 | completed | PR 已合并；Production 重新发布后控制面存在且启用 `/api/cron/daily-news`，手动调用进入函数；该结果不替代摘要成功和 Owner 页面可见性 |
-| Production 新闻诊断热修复 | implementation_in_progress | 去敏日志、完整相关测试、独立审查与 Draft PR 完成后，由 PO 当次确认 Secret 轮换、合并、重新发布和手动触发 |
+| Production 新闻诊断热修复 PR #69 | completed | PO 已确认 Key 轮换、合并、重新发布与手动触发；去敏日志为 success/cache，收据可用，未输出新闻正文或凭据 |
+| Owner 新闻 token 恢复热修复 | implementation_in_progress | TDD、完整门禁、独立复审与 Draft PR 完成后，由 PO 当次确认合并和重新发布；最终必须看到浏览器实际请求与五条摘要 |
 
 ## 4. 开放风险
 
@@ -50,6 +52,7 @@
 - Runtime Cache 区域一致性：两个端点固定同区并测试缓存命中。
 - Owner 登录恢复与页面数据请求时序：PR #64 的第二套 token provider 在真实启动中与 AuthGate 生命周期分叉。PR #65 改为由同一个认证服务在 Session、认证事件和显式登录时更新内存 Token；正式发布前仍需 Preview，发布后必须看到 Owner 浏览器实际请求和新闻渲染。
 - Production 内容链路可观测性：HTTP 空态会吞掉真实失败阶段。快速维护只允许记录闭集状态、来源、失败阶段、稳定错误码、摘要日期和收据可用性；未知字符串统一降级，不记录标题、摘要、URL、JWT、Secret 或供应商响应体。
+- 已认证事件缺少 access token：AuthGate 可凭用户字段渲染 Owner UI，但旧 `getAccessToken()` 因 `hasAuthState` 直接返回 null。恢复只允许在 `currentSession` 非空且 token 缺失时重读存储 Session；明确退出仍保持 null，不得复活旧会话。
 - Unsplash Key 可能不存在：Preview 使用合成元数据，Production 使用渐变。
 - 当前 bundle 大于 500 kB：样式/组件拆分时观察，不为追求指标引入无关架构。
 - iCloud worktree 偶发 interrupted syscall：每次创建后验证对象、HEAD 和工作树完整性。
