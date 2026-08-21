@@ -153,4 +153,5 @@
 
 - PR #71 已合并发布；Owner 随后完成退出和重新登录，Production 页面仍为空，近期函数请求中仍没有 `/api/daily-news`。该复验只证明连续内存 token 状态机热修复未关闭真实链路，不证明服务端摘要或缓存失败。
 - PO 已确认进入 PR #72 架构修复。范围固定为删除浏览器应用级 token cache，以 Supabase provider 当前 Session 作为唯一认证真相源，并为新闻面板增加去敏闭集加载状态；不改 Supabase schema、Owner 数据、Cron、Secrets、DeepSeek 或新闻生成。
-- 本地 TDD 和完整工程门禁已经通过，详细计数见工程评审文档。本节不提前记录 Draft PR、Preview、Production 发布或 Owner 页面新闻展示成功；这些状态只在对应门禁实际完成后追加。
+- 本地 TDD 和完整工程门禁已经通过，详细计数见工程评审文档。Draft PR #72 保持 Draft，三项 CI 与纯静态 Preview 已通过；Preview 为 READY、0 Functions、0 Cron、新闻 API 404、严格 CSP，未连接 Owner 或 Production Secret。首个误带 Functions 的源码制品未交付并已删除。
+- 本节不提前记录 Production 发布或 Owner 页面新闻展示成功；合并、发布与上线后只读复验只在 PO 新的当次确认后执行。

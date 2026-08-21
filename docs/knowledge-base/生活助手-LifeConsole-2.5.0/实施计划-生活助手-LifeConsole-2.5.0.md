@@ -970,9 +970,11 @@ PR #71 发布且 Owner 完成退出/重新登录后，页面仍无新闻，Produ
 
 实际结果：旧实现先出现 3 个预期红灯，分别证明第二次请求复用旧 token、认证错误没有闭集状态、普通错误没有闭集状态。最小实现后定向 4 文件 / 31 项通过；认证测试由 24 个旧状态机用例改为 12 个 provider 真相源、失败关闭、认证事件去敏投影、登录/退出/密码流程用例，未保留已删除架构的缓存语义。
 
-- [ ] **Step 5: 全量门禁、Draft PR #72 与合成 Preview**
+- [x] **Step 5: 全量门禁、Draft PR #72 与合成 Preview**
 
 运行定向测试、Vitest、Python、Production build、Playwright、治理与当前/历史隐私检查。Preview 继续为 0 Functions、0 Cron 的纯合成制品；最终需远程 CI 全绿。PR 合并和 Production 发布必须取得新的当次确认。
+
+实际结果：Draft PR #72 已创建并保持 Draft，privacy、Python、Node 三项远程 CI 全绿。合格 Preview 使用本地 Build Output API 静态制品，READY、0 Functions、0 Cron；首页 200、新闻 API 404、`connect-src 'none'` 且不含 `unsafe-eval`。首个源码部署仍被 Vercel 自动发现 5 个 API Functions，检查后未交付并已删除；临时 OIDC、项目链接与 Build Output 目录已清理。
 
 - [ ] **Step 6: 发布后 Owner 只读最终复验**
 

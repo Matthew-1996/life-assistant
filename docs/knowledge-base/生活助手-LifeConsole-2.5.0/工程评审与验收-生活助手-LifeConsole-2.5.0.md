@@ -139,7 +139,8 @@ Supabase 首次上线前只读核对曾因账号不匹配而失败关闭；重�
 - 最小实现删除 `currentAccessToken`、`authRevision`、`tokenWaiters`、`hasAuthState` 与 `commitSession`。`session()` 与 `getAccessToken()` 每次读取 Supabase provider 当前 Session；认证事件只投影去敏用户字段。新闻面板只保存闭集状态，不保存异常对象或正文，显式重试可从认证不可用恢复为成功。
 - 定向 4 文件 / 31 项、全量 Vitest 80 文件 / 597 项、应用 Python 93 项、根工具 Python 372 项（1 项跳过）、默认/Production/候选 Preview build 与 Playwright 9/9 通过；治理和 Git 隐私检查通过。根工具测试在沙箱内仅因 4 项 loopback bind `EPERM` 失败，沙箱外同一套 372 项通过。
 - `validate_project.py` 在独立 worktree 会因刻意不检出私人真相源而失败，在私人根目录也存在本 PR 之前的绝对路径、私有职业资料和本地制品告警；本 PR 未修改这些范围。可提交边界继续由 `check_project_governance.py`、`check_git_privacy.sh`、差异与历史扫描负责。
-- 当前仅完成本地开发证据；Draft PR、远程 CI、纯合成 Preview、PO 合并发布确认及 Production Owner 只读复验仍是独立门禁。
+- Draft PR #72 已创建并保持 Draft，privacy、Python、Node 三项远程 CI 全绿。合格纯静态 Preview 为 READY、0 Functions、0 Cron；首页 200、新闻 API 404，CSP 为 `connect-src 'none'` 且不含 `unsafe-eval`，远端资产与本地 Playwright 9/9 验证的候选构建一致。
+- 首个源码 Preview 仍被 Vercel 自动发现并打包 5 个 API Functions，发现后未交付且已精确删除；随后改用本地 Build Output API。临时 OIDC 文件、项目链接和 Build Output 目录已清理。PO 合并发布确认及 Production Owner 只读复验仍是独立门禁。
 
 ## 11. 内容自动化收口证据
 

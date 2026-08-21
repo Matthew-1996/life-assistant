@@ -5,7 +5,7 @@
 - 主阶段：2.5.0 已上线；PR #71 已合并并重新发布，Production READY，但 Owner 完成退出和重新登录后仍未发出 `/api/daily-news` 请求。后端 Cron、当日 Runtime Cache 与运行收据继续为成功，故新闻上线验收仍未完成。
 - 子状态：连续 token 状态机热修复没有关闭真实链路。PO 已确认进入 PR #72 架构修复：删除应用级 token cache，以 Supabase provider 当前 Session 作为唯一认证真相源，并为新闻面板增加去敏闭集加载状态。
 - 分支：`agent/life-console-news-auth-single-source` 独立 worktree；基线全量 Vitest 606/606、Python 93/93 已通过。
-- PR：PR #72 本地 TDD 与完整门禁已完成，正在提交 Draft PR 与纯合成 Preview；远程 CI/Preview 完成后，仍需 PO 新的当次确认才能合并和重新发布 Production。
+- PR：Draft PR #72、本地完整门禁、三项远程 CI 与纯静态合成 Preview 均已通过；PR 保持 Draft，等待 PO 新的当次确认后才能合并和重新发布 Production。
 - 数据库：两个加法 migration 保持已应用，不回滚或删除用户数据；本次不改 Supabase schema 或 Owner 数据。
 
 ## 2. 阶段计划
@@ -46,7 +46,7 @@
 | Production 新闻诊断热修复 PR #69 | completed | PO 已确认 Key 轮换、合并、重新发布与手动触发；去敏日志为 success/cache，收据可用，未输出新闻正文或凭据 |
 | Owner 新闻 token 恢复热修复 PR #70 | completed_with_followup | PR 已合并发布且 Production READY；真实浏览器仍无 API 请求，继续由同 Owner token 保留热修复收口 |
 | Owner 有效 token 保留热修复 | implementation_in_progress | 同一 Owner tokenless 事件、跨用户与退出测试及完整门禁通过后进入 Draft PR；Production 合并发布需新的当次确认 |
-| Owner 认证单一真相源 PR #72 | draft_pr_in_progress | provider 当前 Session、无隐藏 token cache、去敏闭集状态与本地全量门禁已通过；Draft PR、远程 CI 与合成 Preview通过后再申请 Production 当次确认 |
+| Owner 认证单一真相源 PR #72 | ready_for_po_release_gate | provider 当前 Session、无隐藏 token cache、去敏闭集状态、本地/远程门禁与纯静态 Preview 已通过；合并和 Production 发布需新的当次确认 |
 
 ## 4. 开放风险
 
@@ -120,4 +120,5 @@
 | 2026-08-21 | Production 新闻空态分层诊断 | Keychain DeepSeek 纯合成连通测试 200；正确 TLS 条件下备用源 47 条、五条配比与五条摘要通过，GDELT 超时按设计降级。新增闭集去敏 Cron 完成日志，不改 Owner 数据或新闻正文 |
 | 2026-08-22 | PR #72 认证单一真相源架构 | PR #71 发布及 Owner 退出重登后浏览器仍无新闻 API 请求；PO 确认删除内存 token 状态机，以 Supabase provider 当前 Session 为唯一真相源，并增加去敏闭集新闻加载状态；不改数据库、Cron 或新闻生成 |
 | 2026-08-22 | PR #72 本地 TDD 与门禁 | 旧实现 3 个预期红灯后完成最小重构；定向 31 项、Vitest 597 项、应用 Python 93 项、根工具 Python 372 项（1 项跳过）、默认/Production/Preview build、Playwright 9/9、治理与 Git 隐私通过；全仓便携性脚本仍有既存私人文件/制品告警，不由本 PR 修改 |
+| 2026-08-22 | Draft PR #72 与纯静态 Preview | PR 已创建并保持 Draft，privacy/Python/Node CI 全绿；合格 Preview READY、0 Functions、0 Cron、首页 200、新闻 API 404、严格 CSP。误带 5 个 Functions 的首次源码制品未交付并已删除，本地 OIDC 与项目链接已清理 |
 | 2026-08-19 | 视觉、设计、技术确认前不写生产功能 | Gate 2 v2 后已满足 |
