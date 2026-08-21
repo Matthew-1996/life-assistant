@@ -714,7 +714,7 @@ git commit -m "feat(life-console): fall back from gdelt discovery"
 - Consumes: `DailyNewsExecution` 和现有 Owner JWT verifier。
 - Produces: `DailyNewsRunStorePort`、`createRuntimeDailyNewsRunStore`、`dailyNewsRunsOwnerRequest`、`GET /api/daily-news-runs`。
 
-- [ ] **Step 1: 写收据 schema、7 天 TTL 与去敏验证红灯**
+- [x] **Step 1: 写收据 schema、7 天 TTL 与去敏验证红灯**
 
 ```ts
 await store.start({ runId: "run-synthetic", startedAt });
@@ -737,7 +737,7 @@ expect(JSON.stringify(await store.listRecent())).not.toContain("synthetic-secret
 Run: `npx vitest run tests/server/daily-news-runs.test.ts`
 Expected: FAIL because the run store does not exist.
 
-- [ ] **Step 2: 实现 Runtime Cache 收据 store**
+- [x] **Step 2: 实现 Runtime Cache 收据 store**
 
 ```ts
 export interface DailyNewsRunStorePort {
@@ -752,7 +752,7 @@ export interface DailyNewsRunStorePort {
 Run: `npx vitest run tests/server/daily-news-runs.test.ts`
 Expected: schema、TTL、排序、逐出和去敏用例 PASS。
 
-- [ ] **Step 3: 写 Cron 开始/完成/失败收据红灯**
+- [x] **Step 3: 写 Cron 开始/完成/失败收据红灯**
 
 ```ts
 const response = await dailyNewsCronRequest(authorizedRequest, environment, {
@@ -772,14 +772,14 @@ expect(response.headers.get("x-life-console-run-id")).toBe("run-synthetic");
 Run: `npx vitest run tests/vercel/daily-news-handlers.test.ts`
 Expected: FAIL because Cron does not use the run store.
 
-- [ ] **Step 4: 实现 Cron 收据生命周期并转绿**
+- [x] **Step 4: 实现 Cron 收据生命周期并转绿**
 
 Cron 鉴权后立即开始收据，再调用 `getDigestWithDiagnostics`；按 `success | stale | empty | failed` 完成。Body 继续保持现有 `DailyNewsResult`，运行 id 和 store 状态只进入响应 header，避免影响现有客户端契约。
 
 Run: `npx vitest run tests/vercel/daily-news-handlers.test.ts`
 Expected: auth、生命周期、错误和 header 用例 PASS。
 
-- [ ] **Step 5: 写并实现 Owner 状态端点红灯/绿灯**
+- [x] **Step 5: 写并实现 Owner 状态端点红灯/绿灯**
 
 ```ts
 const response = await dailyNewsRunsOwnerRequest(ownerRequest, ownerEnvironment, {

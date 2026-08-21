@@ -20,6 +20,10 @@ import {
 } from "./daily-news-discovery.js";
 import { discoverGdeltCandidates } from "./gdelt-client.js";
 import { discoverPublisherNewsCandidates } from "./publisher-news-client.js";
+import type {
+  DailyNewsRunCompletion,
+  DailyNewsRunStorePort,
+} from "./daily-news-runs.js";
 
 const DEEPSEEK_ENDPOINT = "https://api.deepseek.com/chat/completions";
 const NEWS_SYSTEM_PROMPT = [
@@ -133,6 +137,9 @@ interface OwnerRequestDependencies {
 
 interface CronRequestDependencies {
   service: DailyNewsServicePort | (() => DailyNewsServicePort);
+  runs?: DailyNewsRunStorePort;
+  now?: () => Date;
+  randomId?: () => string;
 }
 
 function requestService(
@@ -459,10 +466,14 @@ export function createRuntimeDailyNewsService(
   });
 }
 
-function jsonResponse(status: number, value: unknown): Response {
+function jsonResponse(
+  status: number,
+  value: unknown,
+  headers?: Record<string, string>,
+): Response {
   return Response.json(value, {
     status,
-    headers: { "Cache-Control": "no-store" },
+    headers: { "Cache-Control": "no-store", ...headers },
   });
 }
 
@@ -471,7 +482,7 @@ function bearerToken(request: Request): string | null {
   return match?.[1] ?? null;
 }
 
-async function defaultVerifyBearer(
+export async function verifyDailyNewsOwnerBearer(
   bearer: string,
   environment: DailyNewsOwnerEnvironment,
 ): Promise<boolean> {
@@ -500,7 +511,7 @@ export async function dailyNewsOwnerRequest(
   const bearer = bearerToken(request);
   if (!bearer) return jsonResponse(401, { status: "unauthenticated" });
   try {
-    const verify = dependencies.verifyBearer ?? defaultVerifyBearer;
+    const verify = dependencies.verifyBearer ?? verifyDailyNewsOwnerBearer;
     if (!await verify(bearer, environment)) {
       return jsonResponse(401, { status: "unauthenticated" });
     }
@@ -523,6 +534,67 @@ export async function dailyNewsCronRequest(
   if (!expected || request.headers.get("authorization") !== expected) {
     return jsonResponse(401, { status: "unauthenticated" });
   }
-  const result = await requestService(dependencies.service).getDigest({ allowRebuild: true });
-  return jsonResponse(result.state === "empty" ? 503 : 200, result);
+  const now = dependencies.now ?? (() => new Date());
+  const runId = (dependencies.randomId ?? (() => crypto.randomUUID()))();
+  const startedAt = now().toISOString();
+  let receiptAvailable = Boolean(dependencies.runs);
+  if (dependencies.runs) {
+    try {
+      await dependencies.runs.start({ runId, startedAt });
+    } catch {
+      receiptAvailable = false;
+    }
+  }
+
+  const responseHeaders = () => ({
+    "X-Life-Console-Run-Id": runId,
+    "X-Life-Console-Run-Receipt": receiptAvailable ? "stored" : "unavailable",
+  });
+
+  async function finish(completion: DailyNewsRunCompletion): Promise<void> {
+    if (!receiptAvailable || !dependencies.runs) return;
+    try {
+      await dependencies.runs.finish(runId, completion);
+    } catch {
+      receiptAvailable = false;
+    }
+  }
+
+  try {
+    const execution = await requestService(dependencies.service)
+      .getDigestWithDiagnostics({ allowRebuild: true });
+    const result = execution.result;
+    const digest = result.state === "success" || result.state === "stale"
+      ? result.digest
+      : null;
+    await finish({
+      state: result.state,
+      finishedAt: now().toISOString(),
+      discoverySource: execution.diagnostics.discoverySource,
+      failureStage: execution.diagnostics.failureStage,
+      errorCode: execution.diagnostics.errorCode,
+      digestDate: digest?.date ?? null,
+      digestGeneratedAt: digest?.generatedAt ?? null,
+    });
+    return jsonResponse(
+      result.state === "empty" ? 503 : 200,
+      result,
+      responseHeaders(),
+    );
+  } catch {
+    await finish({
+      state: "failed",
+      finishedAt: now().toISOString(),
+      discoverySource: "none",
+      failureStage: null,
+      errorCode: "news_service_unavailable",
+      digestDate: null,
+      digestGeneratedAt: null,
+    });
+    return jsonResponse(
+      503,
+      { state: "empty", retryable: true },
+      responseHeaders(),
+    );
+  }
 }
