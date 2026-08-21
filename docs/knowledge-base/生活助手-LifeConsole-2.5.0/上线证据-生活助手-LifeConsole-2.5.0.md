@@ -155,3 +155,12 @@
 - PO 已确认进入 PR #72 架构修复。范围固定为删除浏览器应用级 token cache，以 Supabase provider 当前 Session 作为唯一认证真相源，并为新闻面板增加去敏闭集加载状态；不改 Supabase schema、Owner 数据、Cron、Secrets、DeepSeek 或新闻生成。
 - 本地 TDD 和完整工程门禁已经通过，详细计数见工程评审文档。Draft PR #72 保持 Draft，三项 CI 与纯静态 Preview 已通过；Preview 为 READY、0 Functions、0 Cron、新闻 API 404、严格 CSP，未连接 Owner 或 Production Secret。首个误带 Functions 的源码制品未交付并已删除。
 - 本节不提前记录 Production 发布或 Owner 页面新闻展示成功；合并、发布与上线后只读复验只在 PO 新的当次确认后执行。
+
+## 19. PR #72 最终发布、失败验收与搁置
+
+- PO 于 2026-08-22 明确确认 PR #72 合并、Production 重新发布和 Owner 只读复验，并指定：若仍失败，停止该部分修复并完整留存历史排查与定位信息。
+- PR #72 已 squash merge；本地 `main` 与 `origin/main` 一致。发布前本轮补充门禁为非回环 Vitest 571 项、Miniflare 26 项、应用 Python 93 项及 Production build，均通过。
+- Production 从准确 `main` 构建并达到 READY，稳定正式域名已切换。资源页确认三个新闻 Functions 在预定区域；Cron 控制面显示 Enabled、路径 `/api/cron/daily-news`、计划 `0 23 * * *`。
+- Owner 正式页面刷新后，新闻面板为 `error`、条目数 0、存在重试入口；没有登录表单，console error/warning 为 0。同期最近 15 分钟没有 `/api/daily-news` 请求，也没有该路由运行错误。
+- 最终验收未通过。按 PO 边界，不再触发 Cron、DeepSeek 或 Runtime Cache 写入，不再创建新闻热修复；前端展示标记为 shelved。完整接力记录见“每日新闻搁置与接力”。
+- 本节未记录新闻标题、摘要、Owner 标识、项目/部署资源 ID、JWT、Secret、环境变量值或真实个人记录。

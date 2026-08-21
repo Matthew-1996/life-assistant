@@ -2,10 +2,10 @@
 
 ## 1. 当前状态
 
-- 主阶段：2.5.0 已上线；PR #71 已合并并重新发布，Production READY，但 Owner 完成退出和重新登录后仍未发出 `/api/daily-news` 请求。后端 Cron、当日 Runtime Cache 与运行收据继续为成功，故新闻上线验收仍未完成。
-- 子状态：连续 token 状态机热修复没有关闭真实链路。PO 已确认进入 PR #72 架构修复：删除应用级 token cache，以 Supabase provider 当前 Session 作为唯一认证真相源，并为新闻面板增加去敏闭集加载状态。
-- 分支：`agent/life-console-news-auth-single-source` 独立 worktree；基线全量 Vitest 606/606、Python 93/93 已通过。
-- PR：Draft PR #72、本地完整门禁、三项远程 CI 与纯静态合成 Preview 均已通过；PR 保持 Draft，等待 PO 新的当次确认后才能合并和重新发布 Production。
+- 主阶段：2.5.0 已上线；PR #72 已合并并从准确 `main` 重新发布，Production READY，三个新闻 Functions 与每日 Cron 均正常。
+- 子状态：最终 Owner 只读复验仍为 `error`、0 条，且同期 `/api/daily-news` 请求计数为 0。按 PO 明确边界，每日新闻前端展示已搁置，不再继续热修复。
+- 分支：仅保留文档接力分支 `agent/life-console-news-shelved-handoff` 完成去敏留档；不包含生产代码修改。
+- PR：PR #72 已 squash merge；本轮 571 + 26 项 Vitest、Python 93 项、Production build 与发布后控制面核对通过。最终失败和恢复门禁见“每日新闻搁置与接力”。
 - 数据库：两个加法 migration 保持已应用，不回滚或删除用户数据；本次不改 Supabase schema 或 Owner 数据。
 
 ## 2. 阶段计划
@@ -27,6 +27,7 @@
 13. Production 诊断与 Owner token 恢复：PR #69 已合并发布，Key 轮换与手动 Cron 证明后端当日缓存成功；TDD 修复“已认证 Session 缺少内存 access token 时不再回读”的客户端恢复缺口，等待独立 PR 与发布门禁。
 14. Owner 有效 token 保留：PR #70 已合并发布但页面仍无 API 请求；TDD 修复同一 Owner tokenless 事件清空既有有效 token，退出和用户切换继续失败关闭。
 15. 认证单一真相源架构修复：PR #71 发布和 Owner 重新登录仍未触发新闻 API；PO 已确认进入 PR #72，按 provider Session 真相源、请求时取 token、闭集加载状态和全量门禁执行。
+16. 最终复验与搁置：PR #72 已合并发布；Owner 页面闭集状态为 `error` 且 Function 请求计数为 0。PO 已决定停止本轮新闻修复，转为完整接力留档。
 
 ## 3. 门禁与恢复条件
 
@@ -41,12 +42,13 @@
 | 新闻可靠性 Preview/验收 | completed | PO 于 2026-08-21 当次确认验收 PR #63 |
 | 新闻可靠性 Production | completed | PR #63 已合并，Production READY；Cron 已手动触发并成功生成 2026-08-21 摘要及运行收据 |
 | Owner 新闻展示 PR #64 | completed_with_followup | PO 已确认合并和发布；Production 后端今日摘要成功，但浏览器没有发起新闻请求，需 PR #65 收口 |
-| Owner 认证生命周期 PR #65 | agent_acceptance_in_progress | PO 已授权 Agent 代替用户手工验收；必须完成合成新闻 Preview、远程 CI 和去敏浏览器验收。Production 合并发布仍需当次确认 |
+| Owner 认证生命周期 PR #65 | completed_with_followup | 合成 Preview、远程 CI、合并发布已完成；真实 Owner 链路未关闭，后续由 #66–#72 继续定位 |
 | Cron 注册 PR #68 | completed | PR 已合并；Production 重新发布后控制面存在且启用 `/api/cron/daily-news`，手动调用进入函数；该结果不替代摘要成功和 Owner 页面可见性 |
 | Production 新闻诊断热修复 PR #69 | completed | PO 已确认 Key 轮换、合并、重新发布与手动触发；去敏日志为 success/cache，收据可用，未输出新闻正文或凭据 |
 | Owner 新闻 token 恢复热修复 PR #70 | completed_with_followup | PR 已合并发布且 Production READY；真实浏览器仍无 API 请求，继续由同 Owner token 保留热修复收口 |
-| Owner 有效 token 保留热修复 | implementation_in_progress | 同一 Owner tokenless 事件、跨用户与退出测试及完整门禁通过后进入 Draft PR；Production 合并发布需新的当次确认 |
-| Owner 认证单一真相源 PR #72 | ready_for_po_release_gate | provider 当前 Session、无隐藏 token cache、去敏闭集状态、本地/远程门禁与纯静态 Preview 已通过；合并和 Production 发布需新的当次确认 |
+| Owner 有效 token 保留热修复 | completed_with_followup | PR #71 已合并发布且 Owner 退出重登复验失败；该内存 token 方案由 PR #72 的 provider Session 单一真相源取代 |
+| Owner 认证单一真相源 PR #72 | completed_failed_acceptance | PR 已合并并重新发布；Functions/Cron 正常，但最终 Owner 页面为 `error`、0 条且未发出 API 请求 |
+| 每日新闻前端展示 | shelved | PO 明确本次为最后一次修复；未来仅在新的当次确认、真实浏览器红灯和新架构评审后恢复 |
 
 ## 4. 开放风险
 
@@ -56,6 +58,7 @@
 - Runtime Cache 区域一致性：两个端点固定同区并测试缓存命中。
 - Owner 登录恢复与页面数据请求时序：PR #64 的第二套 token provider 在真实启动中与 AuthGate 生命周期分叉。PR #65 改为由同一个认证服务在 Session、认证事件和显式登录时更新内存 Token；正式发布前仍需 Preview，发布后必须看到 Owner 浏览器实际请求和新闻渲染。
 - 多次热修复仍存在双状态：应用自建 token cache 与 Supabase provider Session 可在真实恢复时序中分叉。PR #72 直接移除 cache/revision/waiter，所有 Owner API 在请求时读取 provider 当前 Session，并用闭集状态暴露 fetch 前失败。
+- PR #72 最终仍在 fetch 前失败：当前只证明闭集为 `error`，未证明是 provider 读取、刷新锁、浏览器持久化还是其他异常。该项已搁置；待证假设不得写成已确认根因。
 - Production 内容链路可观测性：HTTP 空态会吞掉真实失败阶段。快速维护只允许记录闭集状态、来源、失败阶段、稳定错误码、摘要日期和收据可用性；未知字符串统一降级，不记录标题、摘要、URL、JWT、Secret 或供应商响应体。
 - 已认证事件缺少 access token：AuthGate 可凭用户字段渲染 Owner UI，但旧 `getAccessToken()` 因 `hasAuthState` 直接返回 null。恢复只允许在 `currentSession` 非空且 token 缺失时重读存储 Session；明确退出仍保持 null，不得复活旧会话。
 - Unsplash Key 可能不存在：Preview 使用合成元数据，Production 使用渐变。
@@ -121,4 +124,5 @@
 | 2026-08-22 | PR #72 认证单一真相源架构 | PR #71 发布及 Owner 退出重登后浏览器仍无新闻 API 请求；PO 确认删除内存 token 状态机，以 Supabase provider 当前 Session 为唯一真相源，并增加去敏闭集新闻加载状态；不改数据库、Cron 或新闻生成 |
 | 2026-08-22 | PR #72 本地 TDD 与门禁 | 旧实现 3 个预期红灯后完成最小重构；定向 31 项、Vitest 597 项、应用 Python 93 项、根工具 Python 372 项（1 项跳过）、默认/Production/Preview build、Playwright 9/9、治理与 Git 隐私通过；全仓便携性脚本仍有既存私人文件/制品告警，不由本 PR 修改 |
 | 2026-08-22 | Draft PR #72 与纯静态 Preview | PR 已创建并保持 Draft，privacy/Python/Node CI 全绿；合格 Preview READY、0 Functions、0 Cron、首页 200、新闻 API 404、严格 CSP。误带 5 个 Functions 的首次源码制品未交付并已删除，本地 OIDC 与项目链接已清理 |
+| 2026-08-22 | PR #72 最终发布与新闻展示搁置 | PR 已合并并发布；Production、Functions、Cron 正常，Owner 页面仍为 `error` 且 API 请求数为 0。PO 明确停止本轮修复，完整接力信息已留存 |
 | 2026-08-19 | 视觉、设计、技术确认前不写生产功能 | Gate 2 v2 后已满足 |

@@ -12,5 +12,6 @@
 - [工程评审与验收](工程评审与验收-生活助手-LifeConsole-2.5.0.md)
 - [项目管理](项目管理-生活助手-LifeConsole-2.5.0.md)
 - [上线证据](上线证据-生活助手-LifeConsole-2.5.0.md)
+- [每日新闻搁置与接力](每日新闻搁置与接力-生活助手-LifeConsole-2.5.0.md)
 
-当前状态：2.5.0 主功能已发布，服务端每日新闻、Cron、Runtime Cache 与运行收据已有成功证据；但 PR #71 发布并完成 Owner 退出重登后，浏览器仍未发出新闻 API 请求。PO 已确认进入 [Draft PR #72](https://github.com/Matthew-1996/life-assistant/pull/72) 架构修复：删除应用级 token cache，以 Supabase provider 当前 Session 为唯一真相源，并增加去敏闭集新闻加载状态。本地 TDD/全量门禁、三项远程 CI 与纯静态合成 Preview 已通过；PR 保持 Draft，仍需新的 Production 合并发布确认。
+当前状态：2.5.0 主功能已发布。PR #72 已合并并从准确 `main` 重新发布，Production、新闻 Functions 与 Cron 均正常；但最终 Owner 只读复验仍为 `error`、0 条，且服务器侧没有收到 `/api/daily-news` 请求。按 PO 的最后一次修复边界，每日新闻前端展示已搁置，不再继续热修复；历史定位、剩余假设和未来恢复门禁见“每日新闻搁置与接力”。
