@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createDailyNewsApiClient } from "../../src/api/daily-news-client";
@@ -70,8 +70,67 @@ function authPort(): SupabaseAuthPort {
 }
 
 describe("Owner news authentication lifecycle", () => {
+  it("exposes an authenticated-session failure as a deidentified closed state", async () => {
+    const token = "must-not-appear-in-the-dom";
+    const news = {
+      getDigest: vi.fn(async () => {
+        throw new Error("daily_news_unauthenticated");
+      }),
+    };
+
+    const { container } = render(<DailyNewsPanel client={news} />);
+
+    const panel = await screen.findByRole("region", { name: "每日新闻" });
+    await waitFor(() => {
+      expect(panel.getAttribute("data-news-load-state"))
+        .toBe("auth-unavailable");
+    });
+    expect(screen.getByText("登录会话暂不可用，请重新登录后重试。")).toBeTruthy();
+    expect(container.textContent).not.toContain(token);
+    expect(container.textContent).not.toContain("daily_news_unauthenticated");
+  });
+
+  it("uses a distinct deidentified state for non-authentication failures", async () => {
+    const providerMessage = "private upstream details";
+    const news = {
+      getDigest: vi.fn(async () => {
+        throw new Error(providerMessage);
+      }),
+    };
+
+    const { container } = render(<DailyNewsPanel client={news} />);
+
+    const panel = await screen.findByRole("region", { name: "每日新闻" });
+    await waitFor(() => {
+      expect(panel.getAttribute("data-news-load-state")).toBe("error");
+    });
+    expect(screen.getByText("新闻摘要读取失败，请稍后重试。")).toBeTruthy();
+    expect(container.textContent).not.toContain(providerMessage);
+  });
+
+  it("recovers from an unavailable session when the Owner explicitly retries", async () => {
+    const news = {
+      getDigest: vi.fn()
+        .mockRejectedValueOnce(new Error("daily_news_unauthenticated"))
+        .mockResolvedValueOnce({ digest, state: "success" as const }),
+    };
+
+    render(<DailyNewsPanel client={news} />);
+
+    expect(await screen.findByText(
+      "登录会话暂不可用，请重新登录后重试。",
+    )).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "重试" }));
+
+    expect(await screen.findByRole("heading", { name: "Title a" })).toBeTruthy();
+    expect(news.getDigest).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole("region", { name: "每日新闻" })
+      .getAttribute("data-news-load-state")).toBe("success");
+  });
+
   it("uses the AuthGate session to issue the authorized news request", async () => {
-    const auth = createSupabaseAuthService(authPort());
+    const port = authPort();
+    const auth = createSupabaseAuthService(port);
     let requestedPath: string | URL | Request | undefined;
     let requestedInit: RequestInit | undefined;
     const fetch = vi.fn(async (
@@ -98,6 +157,7 @@ describe("Owner news authentication lifecycle", () => {
     expect(requestedPath).toBe("/api/daily-news?rebuild=1");
     expect(new Headers(requestedInit?.headers).get("authorization"))
       .toBe("Bearer synthetic-owner-access");
+    expect(port.getSession).toHaveBeenCalledTimes(2);
   });
 
   it("recovers a stored token before news fetch when the UI event omits it", async () => {
@@ -139,6 +199,6 @@ describe("Owner news authentication lifecycle", () => {
 
     expect(await screen.findByRole("heading", { name: "Title a" })).toBeTruthy();
     await waitFor(() => expect(fetch).toHaveBeenCalledOnce());
-    expect(getSession).toHaveBeenCalled();
+    expect(getSession).toHaveBeenCalledTimes(2);
   });
 });

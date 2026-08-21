@@ -132,6 +132,15 @@ Supabase 首次上线前只读核对曾因账号不匹配而失败关闭；重�
 
 每次验收只记录去敏结论、合成 fixture、命令、计数和提交，不记录真实日记、健康值、Owner 标识、项目 ID、部署 ID、Secret 或自动化内部凭据。
 
+### PR #72 认证单一真相源本地工程证据
+
+- 线上只读边界保持为：Owner 完成退出重登后，页面仍未触发 `/api/daily-news`；服务端 Cron、缓存和响应契约此前已有成功证据，因此 PR #72 只修改浏览器认证读取与面板状态，不改数据库、Cron、DeepSeek、新闻正文或 Owner 数据。
+- TDD 红灯精确覆盖三项缺口：第二次 Owner API 请求仍返回旧内存 token；认证失败无 `auth-unavailable` 闭集状态；普通失败无 `error` 闭集状态。红灯均在修改生产代码前观察到。
+- 最小实现删除 `currentAccessToken`、`authRevision`、`tokenWaiters`、`hasAuthState` 与 `commitSession`。`session()` 与 `getAccessToken()` 每次读取 Supabase provider 当前 Session；认证事件只投影去敏用户字段。新闻面板只保存闭集状态，不保存异常对象或正文，显式重试可从认证不可用恢复为成功。
+- 定向 4 文件 / 31 项、全量 Vitest 80 文件 / 597 项、应用 Python 93 项、根工具 Python 372 项（1 项跳过）、默认/Production/候选 Preview build 与 Playwright 9/9 通过；治理和 Git 隐私检查通过。根工具测试在沙箱内仅因 4 项 loopback bind `EPERM` 失败，沙箱外同一套 372 项通过。
+- `validate_project.py` 在独立 worktree 会因刻意不检出私人真相源而失败，在私人根目录也存在本 PR 之前的绝对路径、私有职业资料和本地制品告警；本 PR 未修改这些范围。可提交边界继续由 `check_project_governance.py`、`check_git_privacy.sh`、差异与历史扫描负责。
+- 当前仅完成本地开发证据；Draft PR、远程 CI、纯合成 Preview、PO 合并发布确认及 Production Owner 只读复验仍是独立门禁。
+
 ## 11. 内容自动化收口证据
 
 - DeepSeek Production Owner 合成健康探针返回 `HTTP 200 / provider_ok / no-store`；请求只含代码内置合成日记，不读写任何日记表，响应不含模型正文。

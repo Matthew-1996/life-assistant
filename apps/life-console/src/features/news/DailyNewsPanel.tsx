@@ -17,19 +17,36 @@ interface DailyNewsPanelProps {
   client?: DailyNewsClient;
 }
 
+type NewsLoadState =
+  | "auth-unavailable"
+  | "empty"
+  | "error"
+  | "loading"
+  | "stale"
+  | "success";
+
+function failedLoadState(error: unknown): NewsLoadState {
+  return error instanceof Error && error.message === "daily_news_unauthenticated"
+    ? "auth-unavailable"
+    : "error";
+}
+
 export function DailyNewsPanel({ client }: DailyNewsPanelProps) {
   const [result, setResult] = useState<DailyNewsResult | null>(null);
-  const [loading, setLoading] = useState(Boolean(client));
+  const [loadState, setLoadState] = useState<NewsLoadState>(
+    client ? "loading" : "empty",
+  );
 
   async function load(allowRebuild: boolean) {
     if (!client) return;
-    setLoading(true);
+    setLoadState("loading");
     try {
-      setResult(await client.getDigest({ allowRebuild }));
-    } catch {
-      setResult({ retryable: true, state: "empty" });
-    } finally {
-      setLoading(false);
+      const nextResult = await client.getDigest({ allowRebuild });
+      setResult(nextResult);
+      setLoadState(nextResult.state);
+    } catch (error) {
+      setResult(null);
+      setLoadState(failedLoadState(error));
     }
   }
 
@@ -42,7 +59,12 @@ export function DailyNewsPanel({ client }: DailyNewsPanelProps) {
     : null;
 
   return (
-    <section aria-label="每日新闻" className="card pad news-panel" role="region">
+    <section
+      aria-label="每日新闻"
+      className="card pad news-panel"
+      data-news-load-state={loadState}
+      role="region"
+    >
       <div className="section-head">
         <div>
           <p className="kicker">DAILY DIGEST</p>
@@ -50,7 +72,7 @@ export function DailyNewsPanel({ client }: DailyNewsPanelProps) {
         </div>
         <span className="status gray">07:00 更新</span>
       </div>
-      {loading ? (
+      {loadState === "loading" ? (
         <p className="empty-state">正在读取公开摘要…</p>
       ) : digest ? (
         <>
@@ -74,7 +96,15 @@ export function DailyNewsPanel({ client }: DailyNewsPanelProps) {
         </>
       ) : (
         <div className="news-panel__empty">
-          <p className="empty-state">{client ? "暂时没有可用摘要。" : "新闻服务尚未连接；上线前保持可重试空态。"}</p>
+          <p className="empty-state">
+            {loadState === "auth-unavailable"
+              ? "登录会话暂不可用，请重新登录后重试。"
+              : loadState === "error"
+                ? "新闻摘要读取失败，请稍后重试。"
+                : client
+                  ? "暂时没有可用摘要。"
+                  : "新闻服务尚未连接；上线前保持可重试空态。"}
+          </p>
           {client && <button className="secondary-button" onClick={() => void load(true)} type="button">重试</button>}
         </div>
       )}

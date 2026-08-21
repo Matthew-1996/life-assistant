@@ -13,4 +13,4 @@
 - [项目管理](项目管理-生活助手-LifeConsole-2.5.0.md)
 - [上线证据](上线证据-生活助手-LifeConsole-2.5.0.md)
 
-当前状态：Gate 1 与 Gate 2 v2 已确认，[PR #58](https://github.com/Matthew-1996/life-assistant/pull/58)、记录页溢出热修复 [PR #59](https://github.com/Matthew-1996/life-assistant/pull/59)、顶部横幅热修复 [PR #60](https://github.com/Matthew-1996/life-assistant/pull/60)、内容自动化收口 [PR #62](https://github.com/Matthew-1996/life-assistant/pull/62)、新闻可靠性 [PR #63](https://github.com/Matthew-1996/life-assistant/pull/63) 与首轮认证热修复 [PR #64](https://github.com/Matthew-1996/life-assistant/pull/64) 已合并发布。Owner 新闻接口当日摘要成功但浏览器未请求；[Draft PR #65](https://github.com/Matthew-1996/life-assistant/pull/65) 已统一 AuthGate 与新闻客户端的内存 Token 生命周期，全量门禁、独立复审和纯静态合成 Preview 已完成。未经新的验收与 Production 门禁不得合并发布。
+当前状态：2.5.0 主功能已发布，服务端每日新闻、Cron、Runtime Cache 与运行收据已有成功证据；但 PR #71 发布并完成 Owner 退出重登后，浏览器仍未发出新闻 API 请求。PO 已确认进入 PR #72 架构修复：删除应用级 token cache，以 Supabase provider 当前 Session 为唯一真相源，并增加去敏闭集新闻加载状态。本地 TDD、Vitest/Python、三种构建、Playwright、治理与 Git 隐私门禁已通过；仍需 Draft PR、远程 CI、纯合成 Preview，以及新的 Production 合并发布确认。
