@@ -515,7 +515,7 @@ git commit -m "docs(life-console): record 2.5 release evidence"
 - Consumes: `PublicNewsCandidate`、`DailyNewsCategory`、`DailyNewsScope`。
 - Produces: `discoverPublisherNewsCandidates(dependencies): Promise<PublicNewsCandidate[]>`；`PublisherNewsClientError` 只暴露稳定错误码。
 
-- [ ] **Step 1: 为 BBC RSS 写红灯**
+- [x] **Step 1: 为 BBC RSS 写红灯**
 
 ```ts
 const candidates = await discoverPublisherNewsCandidates({
@@ -538,12 +538,12 @@ expect(candidates).toEqual(expect.arrayContaining([
 Run: `npx vitest run tests/server/publisher-news-client.test.ts`
 Expected: FAIL because `publisher-news-client.ts` does not exist.
 
-- [ ] **Step 2: 安装并锁定服务器端解析依赖**
+- [x] **Step 2: 安装并锁定服务器端解析依赖**
 
 Run: `npm install --save-exact cheerio@1.2.0`
 Expected: `package.json` 和公共 npm registry lockfile 只增加 Cheerio 及其传递依赖；浏览器 bundle 不导入该模块。
 
-- [ ] **Step 3: 实现 BBC RSS 最小解析器并转绿**
+- [x] **Step 3: 实现 BBC RSS 最小解析器并转绿**
 
 ```ts
 export interface PublisherNewsClientDependencies {
@@ -563,7 +563,7 @@ export async function discoverPublisherNewsCandidates(
 Run: `npx vitest run tests/server/publisher-news-client.test.ts`
 Expected: BBC 三分类用例 PASS。
 
-- [ ] **Step 4: 为新华网当前频道与文章元数据写红灯**
+- [x] **Step 4: 为新华网当前频道与文章元数据写红灯**
 
 ```ts
 expect(candidates).toEqual(expect.arrayContaining([
@@ -580,14 +580,14 @@ expect(requestedUrls).not.toContain("https://www.news.cn/tech/news_tech.xml");
 Run: `npx vitest run tests/server/publisher-news-client.test.ts`
 Expected: FAIL because Xinhua channel/article discovery is absent.
 
-- [ ] **Step 5: 实现新华网当前页面解析、失败隔离和边界保护**
+- [x] **Step 5: 实现新华网当前页面解析、失败隔离和边界保护**
 
 固定读取科技、财经、时政当前频道；每类最多解析 6 个可信文章链接、最多抓取 2 篇文章元数据。文章页从公开标题、精确时间、description 和 source 投影候选；单个频道、Feed 或文章失败不得中断其他入口。畸形 XML/HTML、超时、响应过大、HTTP 链接、非可信域名、过期或未来时间全部丢弃。
 
 Run: `npx vitest run tests/server/publisher-news-client.test.ts`
 Expected: 正常、单入口失败、过期、恶意链接、超时和响应体上限全部 PASS。
 
-- [ ] **Step 6: 提交备用源解析器**
+- [x] **Step 6: 提交备用源解析器**
 
 ```bash
 git add apps/life-console/src/server/publisher-news-client.ts apps/life-console/tests/server/publisher-news-client.test.ts apps/life-console/package.json apps/life-console/package-lock.json
