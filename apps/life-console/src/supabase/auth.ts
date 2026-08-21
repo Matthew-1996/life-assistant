@@ -168,8 +168,9 @@ export function createSupabaseAuthService(
 
     subscribe(listener) {
       let active = true;
-      const { data } = auth.onAuthStateChange((_event, session) => {
+      const { data } = auth.onAuthStateChange((event, session) => {
         if (!active) return;
+        if (event === "INITIAL_SESSION" && !session) return;
         listener(commitSession(session));
       });
       return () => {
