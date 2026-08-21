@@ -17,7 +17,18 @@ import {
 } from "../../scripts/supabase-candidate-config.mjs";
 
 const empty: DailyNewsResult = { state: "empty", retryable: true };
-const service = { getDigest: vi.fn(async () => empty) };
+const emptyExecution = {
+  result: empty,
+  diagnostics: {
+    discoverySource: "none" as const,
+    errorCode: null,
+    failureStage: null,
+  },
+};
+const service = {
+  getDigest: vi.fn(async () => empty),
+  getDigestWithDiagnostics: vi.fn(async () => emptyExecution),
+};
 
 const productionEnvironment = {
   VERCEL_ENV: "production",
@@ -91,7 +102,10 @@ describe("daily news Vercel requests", () => {
   });
 
   it("passes only the requested rebuild flag after Owner verification", async () => {
-    const isolatedService = { getDigest: vi.fn(async () => empty) };
+    const isolatedService = {
+      getDigest: vi.fn(async () => empty),
+      getDigestWithDiagnostics: vi.fn(async () => emptyExecution),
+    };
     const response = await dailyNewsOwnerRequest(
       new Request("https://life-console.invalid/api/daily-news?rebuild=1", {
         headers: { authorization: "Bearer synthetic-owner-jwt" },

@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { DailyNewsDigest } from "../../src/domain/daily-news";
 import {
   createDailyNewsService,
+  DailyNewsServiceError,
   type DailyNewsCachePort,
 } from "../../src/server/daily-news-service";
 import type { PublicNewsCandidate } from "../../src/server/daily-news-validator";
@@ -134,5 +135,118 @@ describe("daily news service", () => {
       retryable: true,
     });
     expect(discover).not.toHaveBeenCalled();
+  });
+
+  it("reports a cache hit without changing the existing digest response", async () => {
+    const service = createDailyNewsService({
+      cache: memoryCache({ current: digest() }),
+      discover: vi.fn(async () => candidates),
+      now: () => now,
+      summarize: vi.fn(async () => []),
+    });
+
+    await expect(service.getDigestWithDiagnostics({ allowRebuild: true })).resolves.toEqual({
+      result: { state: "success", digest: digest() },
+      diagnostics: {
+        discoverySource: "cache",
+        errorCode: null,
+        failureStage: null,
+      },
+    });
+  });
+
+  it("reports publisher fallback success without changing the digest payload", async () => {
+    const service = createDailyNewsService({
+      cache: memoryCache(),
+      discover: vi.fn(async () => ({
+        candidates,
+        source: "publisher_fallback" as const,
+      })),
+      now: () => now,
+      summarize: vi.fn(async (items: PublicNewsCandidate[]) => items.map((item) => ({
+        id: item.id,
+        summary: `摘要 ${item.id}`,
+      }))),
+    });
+
+    await expect(service.getDigestWithDiagnostics({ allowRebuild: true })).resolves.toEqual({
+      result: { state: "success", digest: digest() },
+      diagnostics: {
+        discoverySource: "publisher_fallback",
+        errorCode: null,
+        failureStage: null,
+      },
+    });
+  });
+
+  it.each([
+    {
+      name: "discovery",
+      expectedCode: "news_discovery_unavailable",
+      expectedSource: "none",
+      expectedStage: "discovery",
+      discover: vi.fn(async () => { throw new Error("private upstream detail"); }),
+      summarize: vi.fn(async () => []),
+      cache: memoryCache(),
+    },
+    {
+      name: "selection",
+      expectedCode: "candidate_mix_unavailable",
+      expectedSource: "gdelt",
+      expectedStage: "selection",
+      discover: vi.fn(async () => ({
+        candidates: candidates.slice(0, 2),
+        source: "gdelt" as const,
+      })),
+      summarize: vi.fn(async () => []),
+      cache: memoryCache(),
+    },
+    {
+      name: "summarization",
+      expectedCode: "provider_timeout",
+      expectedSource: "gdelt",
+      expectedStage: "summarization",
+      discover: vi.fn(async () => ({ candidates, source: "gdelt" as const })),
+      summarize: vi.fn(async () => { throw new DailyNewsServiceError("provider_timeout"); }),
+      cache: memoryCache(),
+    },
+    {
+      name: "cache write",
+      expectedCode: "cache_write_failed",
+      expectedSource: "gdelt",
+      expectedStage: "cache_write",
+      discover: vi.fn(async () => ({ candidates, source: "gdelt" as const })),
+      summarize: vi.fn(async (items: PublicNewsCandidate[]) => items.map((item) => ({
+        id: item.id,
+        summary: `摘要 ${item.id}`,
+      }))),
+      cache: {
+        ...memoryCache(),
+        setSuccessful: vi.fn(async () => { throw new Error("private cache detail"); }),
+      },
+    },
+  ])("reports a sanitized $name failure", async ({
+    cache,
+    discover,
+    expectedCode,
+    expectedSource,
+    expectedStage,
+    summarize,
+  }) => {
+    const service = createDailyNewsService({
+      cache,
+      discover,
+      now: () => now,
+      summarize,
+    });
+
+    await expect(service.getDigestWithDiagnostics({ allowRebuild: true })).resolves.toEqual({
+      result: { state: "empty", retryable: true },
+      diagnostics: {
+        discoverySource: expectedSource,
+        errorCode: expectedCode,
+        failureStage: expectedStage,
+      },
+    });
   });
 });

@@ -12,7 +12,14 @@ import {
   type PublicNewsCandidate,
 } from "./daily-news-validator.js";
 import { createRuntimeDailyNewsCache } from "./daily-news-cache.js";
+import {
+  DailyNewsDiscoveryError,
+  discoverDailyNewsCandidates,
+  type DailyNewsDiscoveryResult,
+  type DailyNewsDiscoverySource,
+} from "./daily-news-discovery.js";
 import { discoverGdeltCandidates } from "./gdelt-client.js";
+import { discoverPublisherNewsCandidates } from "./publisher-news-client.js";
 
 const DEEPSEEK_ENDPOINT = "https://api.deepseek.com/chat/completions";
 const NEWS_SYSTEM_PROMPT = [
@@ -46,13 +53,59 @@ export interface DailyNewsCachePort {
 
 export interface DailyNewsServicePort {
   getDigest(options: { allowRebuild: boolean }): Promise<DailyNewsResult>;
+  getDigestWithDiagnostics(
+    options: { allowRebuild: boolean },
+  ): Promise<DailyNewsExecution>;
+}
+
+export type DailyNewsFailureStage =
+  | "discovery"
+  | "selection"
+  | "summarization"
+  | "cache_write";
+
+export interface DailyNewsExecutionDiagnostics {
+  discoverySource: "cache" | DailyNewsDiscoverySource | "none";
+  failureStage: DailyNewsFailureStage | null;
+  errorCode: string | null;
+}
+
+export interface DailyNewsExecution {
+  result: DailyNewsResult;
+  diagnostics: DailyNewsExecutionDiagnostics;
 }
 
 export interface DailyNewsServiceDependencies {
   cache: DailyNewsCachePort;
-  discover(): Promise<PublicNewsCandidate[]>;
+  discover(): Promise<PublicNewsCandidate[] | DailyNewsDiscoveryResult>;
   summarize(candidates: PublicNewsCandidate[]): Promise<DailyNewsSummary[]>;
   now?: () => Date;
+}
+
+class DailyNewsStageError extends Error {
+  constructor(
+    public readonly stage: DailyNewsFailureStage,
+    public readonly code: string,
+    public readonly source: DailyNewsDiscoverySource | "none",
+  ) {
+    super(code);
+    this.name = "DailyNewsStageError";
+  }
+}
+
+function stableErrorCode(error: unknown, fallback: string): string {
+  const code = (error as { code?: unknown })?.code;
+  return typeof code === "string" && /^[a-z0-9_]{1,80}$/.test(code)
+    ? code
+    : fallback;
+}
+
+function discoveryResult(
+  value: PublicNewsCandidate[] | DailyNewsDiscoveryResult,
+): DailyNewsDiscoveryResult {
+  return Array.isArray(value)
+    ? { candidates: value, source: "gdelt" }
+    : value;
 }
 
 export interface DailyNewsOwnerEnvironment {
@@ -223,7 +276,10 @@ function validCachedDigest(value: unknown): DailyNewsDigest | undefined {
 export function createDailyNewsService(
   dependencies: DailyNewsServiceDependencies,
 ): DailyNewsServicePort {
-  const inFlight = new Map<string, Promise<DailyNewsDigest>>();
+  const inFlight = new Map<string, Promise<{
+    digest: DailyNewsDigest;
+    source: DailyNewsDiscoverySource;
+  }>>();
   const now = dependencies.now ?? (() => new Date());
 
   async function current(date: string): Promise<DailyNewsDigest | undefined> {
@@ -242,12 +298,52 @@ export function createDailyNewsService(
     }
   }
 
-  function rebuild(date: string): Promise<DailyNewsDigest> {
+  function rebuild(date: string): Promise<{
+    digest: DailyNewsDigest;
+    source: DailyNewsDiscoverySource;
+  }> {
     const active = inFlight.get(date);
     if (active) return active;
     const generation = (async () => {
-      const selected = selectTopFive(await dependencies.discover());
-      const summaries = await dependencies.summarize(selected);
+      let discovered: DailyNewsDiscoveryResult;
+      try {
+        discovered = discoveryResult(await dependencies.discover());
+      } catch (error) {
+        if (error instanceof DailyNewsDiscoveryError) {
+          throw new DailyNewsStageError(
+            error.code === "candidate_mix_unavailable" ? "selection" : "discovery",
+            error.code,
+            error.source,
+          );
+        }
+        throw new DailyNewsStageError(
+          "discovery",
+          stableErrorCode(error, "news_discovery_unavailable"),
+          "none",
+        );
+      }
+
+      let selected: PublicNewsCandidate[];
+      try {
+        selected = selectTopFive(discovered.candidates);
+      } catch (error) {
+        throw new DailyNewsStageError(
+          "selection",
+          stableErrorCode(error, "candidate_mix_unavailable"),
+          discovered.source,
+        );
+      }
+
+      let summaries: DailyNewsSummary[];
+      try {
+        summaries = await dependencies.summarize(selected);
+      } catch (error) {
+        throw new DailyNewsStageError(
+          "summarization",
+          stableErrorCode(error, "summarization_unavailable"),
+          discovered.source,
+        );
+      }
       const summaryById = new Map(summaries.map((summary) => [summary.id, summary.summary]));
       const generatedAt = now().toISOString();
       const digest = validateDailyNewsDigest({
@@ -264,8 +360,16 @@ export function createDailyNewsService(
           scope: candidate.scope,
         })),
       });
-      await dependencies.cache.setSuccessful(digest);
-      return digest;
+      try {
+        await dependencies.cache.setSuccessful(digest);
+      } catch {
+        throw new DailyNewsStageError(
+          "cache_write",
+          "cache_write_failed",
+          discovered.source,
+        );
+      }
+      return { digest, source: discovered.source };
     })();
     inFlight.set(date, generation);
     void generation.finally(() => {
@@ -274,27 +378,68 @@ export function createDailyNewsService(
     return generation;
   }
 
-  return {
-    async getDigest({ allowRebuild }) {
+  async function getDigestWithDiagnostics(
+    { allowRebuild }: { allowRebuild: boolean },
+  ): Promise<DailyNewsExecution> {
       const requestNow = now();
       const date = shanghaiDate(requestNow);
       const cached = await current(date);
-      if (cached) return { state: "success", digest: cached };
+      if (cached) {
+        return {
+          result: { state: "success", digest: cached },
+          diagnostics: {
+            discoverySource: "cache",
+            failureStage: null,
+            errorCode: null,
+          },
+        };
+      }
       if (!allowRebuild) {
         const previous = await lastSuccess();
-        return previous
-          ? { state: "stale", digest: previous, failedAt: requestNow.toISOString() }
-          : { state: "empty", retryable: true };
+        return {
+          result: previous
+            ? { state: "stale", digest: previous, failedAt: requestNow.toISOString() }
+            : { state: "empty", retryable: true },
+          diagnostics: {
+            discoverySource: "none",
+            failureStage: null,
+            errorCode: null,
+          },
+        };
       }
       try {
-        return { state: "success", digest: await rebuild(date) };
-      } catch {
+        const generated = await rebuild(date);
+        return {
+          result: { state: "success", digest: generated.digest },
+          diagnostics: {
+            discoverySource: generated.source,
+            failureStage: null,
+            errorCode: null,
+          },
+        };
+      } catch (error) {
         const previous = await lastSuccess();
-        return previous
-          ? { state: "stale", digest: previous, failedAt: requestNow.toISOString() }
-          : { state: "empty", retryable: true };
+        const failure = error instanceof DailyNewsStageError
+          ? error
+          : new DailyNewsStageError("discovery", "news_generation_failed", "none");
+        return {
+          result: previous
+            ? { state: "stale", digest: previous, failedAt: requestNow.toISOString() }
+            : { state: "empty", retryable: true },
+          diagnostics: {
+            discoverySource: failure.source,
+            failureStage: failure.stage,
+            errorCode: failure.code,
+          },
+        };
       }
+  }
+
+  return {
+    async getDigest(options) {
+      return (await getDigestWithDiagnostics(options)).result;
     },
+    getDigestWithDiagnostics,
   };
 }
 
@@ -303,7 +448,10 @@ export function createRuntimeDailyNewsService(
 ): DailyNewsServicePort {
   return createDailyNewsService({
     cache: createRuntimeDailyNewsCache(),
-    discover: async () => await discoverGdeltCandidates({ fetch: globalThis.fetch }),
+    discover: async () => await discoverDailyNewsCandidates({
+      primary: async () => await discoverGdeltCandidates({ fetch: globalThis.fetch }),
+      fallback: async () => await discoverPublisherNewsCandidates({ fetch: globalThis.fetch }),
+    }),
     summarize: async (candidates) => await requestDeepSeekNewsSummaries(candidates, {
       credential: environment.deepSeekApiKey,
       fetch: globalThis.fetch,

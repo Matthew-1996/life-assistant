@@ -606,7 +606,7 @@ git commit -m "feat(life-console): add trusted publisher news fallback"
 - Consumes: `discoverGdeltCandidates`、`discoverPublisherNewsCandidates`、`selectTopFive`。
 - Produces: `DailyNewsDiscoveryResult = { candidates: PublicNewsCandidate[]; source: "gdelt" | "publisher_fallback" | "gdelt_plus_publisher_fallback" }`；`DailyNewsExecution = { result: DailyNewsResult; diagnostics: DailyNewsExecutionDiagnostics }`，其中 diagnostics 精确字段为 `discoverySource: "cache" | DailyNewsDiscoverySource | "none"`、`failureStage: "discovery" | "selection" | "summarization" | "cache_write" | null`、`errorCode: string | null`。
 
-- [ ] **Step 1: 写主源健康时不调用备用源红灯**
+- [x] **Step 1: 写主源健康时不调用备用源红灯**
 
 ```ts
 await expect(discoverDailyNewsCandidates({ primary, fallback })).resolves.toEqual({
@@ -619,7 +619,7 @@ expect(fallback).not.toHaveBeenCalled();
 Run: `npx vitest run tests/server/daily-news-discovery.test.ts`
 Expected: FAIL because the orchestrator does not exist.
 
-- [ ] **Step 2: 写主源异常和配比不足的备用源红灯**
+- [x] **Step 2: 写主源异常和配比不足的备用源红灯**
 
 ```ts
 await expect(discoverDailyNewsCandidates({
@@ -636,7 +636,7 @@ await expect(discoverDailyNewsCandidates({
 Run: `npx vitest run tests/server/daily-news-discovery.test.ts`
 Expected: both cases FAIL for missing fallback behavior.
 
-- [ ] **Step 3: 实现最小主备编排并转绿**
+- [x] **Step 3: 实现最小主备编排并转绿**
 
 ```ts
 export type DailyNewsDiscoverySource =
@@ -657,7 +657,7 @@ export async function discoverDailyNewsCandidates(
 Run: `npx vitest run tests/server/daily-news-discovery.test.ts`
 Expected: all PASS。
 
-- [ ] **Step 4: 为服务级诊断写红灯**
+- [x] **Step 4: 为服务级诊断写红灯**
 
 ```ts
 await expect(service.getDigestWithDiagnostics({ allowRebuild: true })).resolves.toEqual({
@@ -675,7 +675,7 @@ await expect(service.getDigestWithDiagnostics({ allowRebuild: true })).resolves.
 Run: `npx vitest run tests/server/daily-news-service.test.ts`
 Expected: FAIL because the service exposes no diagnostics method.
 
-- [ ] **Step 5: 实现诊断接口并保持 Owner API body 不变**
+- [x] **Step 5: 实现诊断接口并保持 Owner API body 不变**
 
 ```ts
 export interface DailyNewsServicePort {
