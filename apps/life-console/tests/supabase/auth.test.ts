@@ -362,6 +362,35 @@ describe("Supabase Auth service", () => {
     await expect(auth.getAccessToken()).resolves.toBe(syntheticSession.access_token);
   });
 
+  it("recovers the stored Owner token after a transient empty initial event", async () => {
+    let authStateListener:
+      | ((event: string, session: typeof syntheticSession | null) => void)
+      | undefined;
+    const getSession = vi.fn(async () => ({
+      data: { session: syntheticSession },
+      error: null,
+    }));
+    const auth = createSupabaseAuthService(createAuthPort({
+      getSession,
+      onAuthStateChange: vi.fn((listener) => {
+        authStateListener = listener;
+        return {
+          data: {
+            subscription: { unsubscribe: vi.fn() },
+          },
+        };
+      }),
+    }));
+
+    auth.subscribe(vi.fn());
+    authStateListener?.("INITIAL_SESSION", null);
+
+    await expect(auth.getAccessToken()).resolves.toBe(
+      syntheticSession.access_token,
+    );
+    expect(getSession).toHaveBeenCalledOnce();
+  });
+
   it("does not retain the Owner token after sign-out", async () => {
     const getSession = vi.fn()
       .mockResolvedValueOnce({ data: { session: syntheticSession }, error: null })
