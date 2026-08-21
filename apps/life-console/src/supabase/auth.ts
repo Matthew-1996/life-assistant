@@ -92,10 +92,16 @@ export function createSupabaseAuthService(
   function commitSession(
     session: SupabaseSessionLike | null,
   ): AuthSession | null {
+    const nextSession = mapSession(session);
+    const nextAccessToken = accessToken(session);
+    const preservedAccessToken = nextSession
+      && currentSession?.userId === nextSession.userId
+      ? currentAccessToken
+      : null;
     authRevision += 1;
     hasAuthState = true;
-    currentAccessToken = accessToken(session);
-    currentSession = mapSession(session);
+    currentAccessToken = nextAccessToken ?? preservedAccessToken;
+    currentSession = nextSession;
     for (const resolve of tokenWaiters) resolve(currentAccessToken);
     tokenWaiters.clear();
     return currentSession;

@@ -2,10 +2,10 @@
 
 ## 1. 当前状态
 
-- 主阶段：2.5.0 已上线；PR #69 已合并并重新发布，Production DeepSeek Key 已轮换为本机纯合成探针验证过的 Key。Cron 手动运行返回 `success`，当日 Runtime Cache 与运行收据可用，但 Owner 页面仍未发出 `/api/daily-news` 请求，因此上线验收未完成。
-- 子状态：去敏完成日志已排除新闻发现、DeepSeek、摘要校验和缓存写入失败；真实浏览器把故障继续收窄到“AuthGate 已渲染 Owner UI，但认证事件缺少 access token 时，新闻客户端直接得到 null 且不重读存储 Session”。
-- 分支：`agent/life-console-news-owner-fetch-recovery` 独立 worktree；只在已认证 UI 缺少内存 token 时重新读取 Supabase Session，并补充服务层与 AuthGate→新闻请求组合回归测试。
-- PR：Owner 读取恢复热修复正在本地门禁和独立审查；Draft PR 与 CI 完成后，仍需 PO 当次确认才能合并和重新发布 Production。
+- 主阶段：2.5.0 已上线；PR #70 已合并并重新发布，Production READY，但 Owner 页面仍未发出 `/api/daily-news` 请求。后端 Cron、当日 Runtime Cache 与运行收据继续为成功，故上线验收仍未完成。
+- 子状态：PR #70 解决 tokenless UI Session 的安全回读竞态，但同一 Owner 后续 tokenless 认证事件仍会在 `commitSession()` 主动清空此前有效 token，继而依赖可能失败的回读。TDD 红灯已精确复现该路径。
+- 分支：`agent/life-console-news-owner-token-preserve` 独立 worktree；同一 Owner 的非空 tokenless 事件保留最近有效内存 token，空 Session、明确退出或用户切换仍清空。
+- PR：token 保留热修复正在本地门禁和独立审查；Draft PR 与 CI 完成后，仍需 PO 当次确认才能合并和重新发布 Production。
 - 数据库：两个加法 migration 保持已应用，不回滚或删除用户数据；本次不改 Supabase schema 或 Owner 数据。
 
 ## 2. 阶段计划
@@ -25,6 +25,7 @@
 11. 认证生命周期统一：PO 已确认进入 PR #65 开发；TDD、全量门禁、独立复审与 Draft PR 已完成。PO 确认合成 Preview 应展示新闻上线效果，并授权 Agent 代替手工验收；Production 发布仍保持独立门禁。
 12. Cron 注册与 Production 诊断：PR #68 已合并发布并关闭“Cron 未注册”；Owner 页面仍为空后，按 TDD 增加闭集去敏完成日志，准备以已验证 Key 轮换、手动触发和 Owner 页面五条摘要作为最终验收。
 13. Production 诊断与 Owner token 恢复：PR #69 已合并发布，Key 轮换与手动 Cron 证明后端当日缓存成功；TDD 修复“已认证 Session 缺少内存 access token 时不再回读”的客户端恢复缺口，等待独立 PR 与发布门禁。
+14. Owner 有效 token 保留：PR #70 已合并发布但页面仍无 API 请求；TDD 修复同一 Owner tokenless 事件清空既有有效 token，退出和用户切换继续失败关闭。
 
 ## 3. 门禁与恢复条件
 
@@ -42,7 +43,8 @@
 | Owner 认证生命周期 PR #65 | agent_acceptance_in_progress | PO 已授权 Agent 代替用户手工验收；必须完成合成新闻 Preview、远程 CI 和去敏浏览器验收。Production 合并发布仍需当次确认 |
 | Cron 注册 PR #68 | completed | PR 已合并；Production 重新发布后控制面存在且启用 `/api/cron/daily-news`，手动调用进入函数；该结果不替代摘要成功和 Owner 页面可见性 |
 | Production 新闻诊断热修复 PR #69 | completed | PO 已确认 Key 轮换、合并、重新发布与手动触发；去敏日志为 success/cache，收据可用，未输出新闻正文或凭据 |
-| Owner 新闻 token 恢复热修复 | implementation_in_progress | TDD、完整门禁、独立复审与 Draft PR 完成后，由 PO 当次确认合并和重新发布；最终必须看到浏览器实际请求与五条摘要 |
+| Owner 新闻 token 恢复热修复 PR #70 | completed_with_followup | PR 已合并发布且 Production READY；真实浏览器仍无 API 请求，继续由同 Owner token 保留热修复收口 |
+| Owner 有效 token 保留热修复 | implementation_in_progress | 同一 Owner tokenless 事件、跨用户与退出测试及完整门禁通过后进入 Draft PR；Production 合并发布需新的当次确认 |
 
 ## 4. 开放风险
 

@@ -74,6 +74,112 @@ describe("Supabase Auth service", () => {
     expect(port.getSession).toHaveBeenCalledOnce();
   });
 
+  it("preserves the valid token across a same-Owner tokenless auth event", async () => {
+    let authStateListener:
+      | Parameters<SupabaseAuthPort["onAuthStateChange"]>[0]
+      | undefined;
+    const getSession = vi.fn()
+      .mockResolvedValueOnce({
+        data: { session: syntheticSession },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: { session: null },
+        error: new Error("synthetic fallback must not run"),
+      });
+    const auth = createSupabaseAuthService(createAuthPort({
+      getSession,
+      onAuthStateChange: vi.fn((listener) => {
+        authStateListener = listener;
+        return {
+          data: {
+            subscription: { unsubscribe: vi.fn() },
+          },
+        };
+      }),
+    }));
+
+    auth.subscribe(vi.fn());
+    await auth.session();
+    authStateListener?.("TOKEN_REFRESHED", {
+      ...syntheticSession,
+      access_token: undefined,
+    });
+
+    await expect(auth.getAccessToken()).resolves.toBe(
+      syntheticSession.access_token,
+    );
+    expect(getSession).toHaveBeenCalledOnce();
+  });
+
+  it("does not preserve a token across a tokenless user change", async () => {
+    let authStateListener:
+      | Parameters<SupabaseAuthPort["onAuthStateChange"]>[0]
+      | undefined;
+    const getSession = vi.fn()
+      .mockResolvedValueOnce({
+        data: { session: syntheticSession },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: { session: null },
+        error: null,
+      });
+    const auth = createSupabaseAuthService(createAuthPort({
+      getSession,
+      onAuthStateChange: vi.fn((listener) => {
+        authStateListener = listener;
+        return {
+          data: {
+            subscription: { unsubscribe: vi.fn() },
+          },
+        };
+      }),
+    }));
+
+    auth.subscribe(vi.fn());
+    await auth.session();
+    authStateListener?.("SIGNED_IN", {
+      ...syntheticSession,
+      access_token: undefined,
+      user: {
+        ...syntheticSession.user,
+        id: "different-synthetic-owner",
+      },
+    });
+
+    await expect(auth.getAccessToken()).resolves.toBeNull();
+    expect(getSession).toHaveBeenCalledTimes(2);
+  });
+
+  it("clears a valid token on an authoritative signed-out event", async () => {
+    let authStateListener:
+      | Parameters<SupabaseAuthPort["onAuthStateChange"]>[0]
+      | undefined;
+    const getSession = vi.fn(async () => ({
+      data: { session: syntheticSession },
+      error: null,
+    }));
+    const auth = createSupabaseAuthService(createAuthPort({
+      getSession,
+      onAuthStateChange: vi.fn((listener) => {
+        authStateListener = listener;
+        return {
+          data: {
+            subscription: { unsubscribe: vi.fn() },
+          },
+        };
+      }),
+    }));
+
+    auth.subscribe(vi.fn());
+    await auth.session();
+    authStateListener?.("SIGNED_OUT", null);
+
+    await expect(auth.getAccessToken()).resolves.toBeNull();
+    expect(getSession).toHaveBeenCalledOnce();
+  });
+
   it("signs in with a trimmed email and provider password flow", async () => {
     const port = createAuthPort();
     const auth = createSupabaseAuthService(port);

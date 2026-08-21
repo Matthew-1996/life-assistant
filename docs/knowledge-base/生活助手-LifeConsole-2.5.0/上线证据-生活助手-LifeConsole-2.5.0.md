@@ -141,3 +141,10 @@
 - 已登录 Owner 页面刷新和点击重试后仍显示空态；同期 Production 请求日志没有 `/api/daily-news`，证明浏览器在 fetch 前失败。结合认证端口允许 access token 缺省的契约，复现出 AuthGate 可由用户字段保持已认证，而旧 `getAccessToken()` 因已有认证状态直接返回 null、不再重读存储 Session。
 - 新热修复按 TDD 先得到 `expected access token / received null` 红灯，再将快速返回限制为“已有 token 或明确无 Owner Session”；已认证 Session 但 token 缺失时继续使用既有 revision-safe Session 回退。服务层及 AuthGate→DailyNewsClient 组合测试均通过，明确退出仍不重读或复活会话。
 - 最终验收仍需独立复审、Draft PR/CI、PO 当次合并发布确认，以及发布后真实浏览器产生 Owner 新闻请求并渲染五条摘要。
+
+## 17. PR #70 发布结果与同 Owner token 保留
+
+- PR #70 经 PO 当次确认后完成 squash merge；Production 配置继续包含每日 Cron 与三个新闻函数且不嵌入环境变量，远端构建 READY 并切换稳定正式域名。
+- 已登录 Owner 页面刷新后仍显示可重试空态，Production 最近请求中仍没有 `/api/daily-news`，因此不把 PR #70 记录为展示验收通过；后端当日摘要与运行收据此前已确认成功，本次未重复调用模型或改写缓存。
+- 状态机复核发现：AuthGate 初始 Session 可以先缓存有效 token，随后同一 Owner 的非空 tokenless 认证事件会由旧 `commitSession()` 把它覆盖为 null。PR #70 的安全回读虽可恢复多数路径，但回读错误仍让新闻停在 fetch 前。
+- 新热修复按 TDD 先以“第二次回读不得发生”得到红灯，再让同一 Owner tokenless 事件保留最近有效 token；token-bearing 事件仍替换为新 token，空 Session、`SIGNED_OUT` 和用户切换均清空，不跨 Owner 复用。最终验收仍需独立复审、Draft PR/CI、PO 当次合并发布确认及真实 Owner 页面五条摘要。
