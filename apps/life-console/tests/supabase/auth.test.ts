@@ -337,6 +337,31 @@ describe("Supabase Auth service", () => {
     await expect(auth.getAccessToken()).resolves.toBeNull();
   });
 
+  it("ignores auth events delivered after their subscription is stopped", async () => {
+    const authStateListeners: Array<
+      (event: string, session: typeof syntheticSession | null) => void
+    > = [];
+    const auth = createSupabaseAuthService(createAuthPort({
+      onAuthStateChange: vi.fn((listener) => {
+        authStateListeners.push(listener);
+        return {
+          data: {
+            subscription: { unsubscribe: vi.fn() },
+          },
+        };
+      }),
+    }));
+
+    const stopInitialSubscription = auth.subscribe(vi.fn());
+    stopInitialSubscription();
+    auth.subscribe(vi.fn());
+    await auth.session();
+
+    authStateListeners[0]?.("SIGNED_OUT", null);
+
+    await expect(auth.getAccessToken()).resolves.toBe(syntheticSession.access_token);
+  });
+
   it("does not retain the Owner token after sign-out", async () => {
     const getSession = vi.fn()
       .mockResolvedValueOnce({ data: { session: syntheticSession }, error: null })

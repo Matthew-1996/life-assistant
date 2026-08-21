@@ -167,10 +167,15 @@ export function createSupabaseAuthService(
     },
 
     subscribe(listener) {
+      let active = true;
       const { data } = auth.onAuthStateChange((_event, session) => {
+        if (!active) return;
         listener(commitSession(session));
       });
-      return () => data.subscription.unsubscribe();
+      return () => {
+        active = false;
+        data.subscription.unsubscribe();
+      };
     },
   };
 }
