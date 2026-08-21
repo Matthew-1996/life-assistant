@@ -7,5 +7,6 @@ coverage/
 *.log
 *.tsbuildinfo
 .vercel
+/vercel.json
 .env*
 migration-reports/

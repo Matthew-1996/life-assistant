@@ -1,6 +1,5 @@
 import {
   lstatSync,
-  mkdirSync,
   realpathSync,
   renameSync,
   rmSync,
@@ -12,8 +11,8 @@ import { pathToFileURL } from "node:url";
 
 import { createLifeConsoleVercelConfig } from "./supabase-candidate-config.mjs";
 
-const outputRelativePath = ".vercel/life-console.production.json";
-const outputFilename = "life-console.production.json";
+const outputRelativePath = "vercel.json";
+const outputFilename = "vercel.json";
 
 function optionalLstat(path) {
   return lstatSync(path, { throwIfNoEntry: false });
@@ -32,20 +31,20 @@ function assertRegularOutputOrMissing(outputPath) {
 function assertTrustedParent(parent) {
   const currentStat = optionalLstat(parent.requested);
   if (!currentStat) {
-    throw new Error(".vercel disappeared during config generation");
+    throw new Error("Workspace root disappeared during config generation");
   }
   if (currentStat.isSymbolicLink()) {
-    throw new Error(".vercel must not be a symbolic link");
+    throw new Error("Workspace root must not be a symbolic link");
   }
   if (!currentStat.isDirectory()) {
-    throw new Error(".vercel must be a directory");
+    throw new Error("Workspace root must be a directory");
   }
   if (
     currentStat.dev !== parent.dev
     || currentStat.ino !== parent.ino
     || realpathSync(parent.requested) !== parent.resolved
   ) {
-    throw new Error(".vercel changed during config generation");
+    throw new Error("Workspace root changed during config generation");
   }
 
   const resolvedStat = lstatSync(parent.resolved);
@@ -55,30 +54,26 @@ function assertTrustedParent(parent) {
     || resolvedStat.dev !== parent.dev
     || resolvedStat.ino !== parent.ino
   ) {
-    throw new Error(".vercel resolved parent is not trusted");
+    throw new Error("Resolved workspace root is not trusted");
   }
 }
 
 function resolveOutputParent() {
-  const workspaceRoot = realpathSync(process.cwd());
-  const requestedParent = resolve(workspaceRoot, ".vercel");
+  const requestedParent = resolve(process.cwd());
   const initialStat = optionalLstat(requestedParent);
   if (initialStat?.isSymbolicLink()) {
-    throw new Error(".vercel must not be a symbolic link");
+    throw new Error("Workspace root must not be a symbolic link");
   }
   if (initialStat && !initialStat.isDirectory()) {
-    throw new Error(".vercel must be a directory");
-  }
-  if (!initialStat) {
-    mkdirSync(requestedParent, { mode: 0o700 });
+    throw new Error("Workspace root must be a directory");
   }
 
   const parentStat = lstatSync(requestedParent);
   if (parentStat.isSymbolicLink()) {
-    throw new Error(".vercel must not be a symbolic link");
+    throw new Error("Workspace root must not be a symbolic link");
   }
   if (!parentStat.isDirectory()) {
-    throw new Error(".vercel must be a directory");
+    throw new Error("Workspace root must be a directory");
   }
 
   const parent = {

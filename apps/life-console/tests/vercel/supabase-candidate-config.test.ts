@@ -12,7 +12,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { join, resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
@@ -213,6 +213,27 @@ describe("Supabase Production Vercel configuration", () => {
 });
 
 describe("Vercel deployment artifact generation", () => {
+  it("writes the deployable config to root vercel.json for Cron discovery", () => {
+    const root = createGeneratorFixture();
+    const outputPath = resolve(root, "vercel.json");
+
+    try {
+      const result = runGenerator(root, "vercel.json");
+
+      expect(result.status, result.stderr).toBe(0);
+      expect(JSON.parse(readFileSync(outputPath, "utf8"))).toMatchObject({
+        crons: [
+          {
+            path: "/api/cron/daily-news",
+            schedule: "0 23 * * *",
+          },
+        ],
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("type-checks the journal normalization function with Vercel NodeNext resolution", () => {
     const result = spawnSync(
       resolve(process.cwd(), "node_modules/.bin/tsc"),
@@ -243,13 +264,13 @@ describe("Vercel deployment artifact generation", () => {
     expect(existsSync(resolve(process.cwd(), "vercel.mjs"))).toBe(false);
 
     const root = mkdtempSync(join(tmpdir(), "life-console-vercel-entrypoint-"));
-    const outputPath = resolve(root, ".vercel/life-console.production.json");
+    const outputPath = resolve(root, "vercel.json");
     const result = spawnSync(
       process.execPath,
       [
         resolve(process.cwd(), "scripts/write-vercel-config.mjs"),
         "--write",
-        ".vercel/life-console.production.json",
+        "vercel.json",
       ],
       {
         cwd: root,
@@ -289,7 +310,7 @@ describe("Vercel deployment artifact generation", () => {
 
   it("writes valid JSON without embedding the publishable key or a secret", () => {
     const root = createGeneratorFixture();
-    const outputPath = resolve(root, ".vercel/life-console.production.json");
+    const outputPath = resolve(root, "vercel.json");
     const environmentPath = resolve(root, ".synthetic-production.env");
     const publishableKey = "sb_publishable_must_not_be_serialized";
 
@@ -313,7 +334,7 @@ describe("Vercel deployment artifact generation", () => {
           `--env-file=${environmentPath}`,
           "scripts/write-vercel-config.mjs",
           "--write",
-          ".vercel/life-console.production.json",
+          "vercel.json",
         ],
         {
           cwd: root,
@@ -345,6 +366,7 @@ describe("Vercel deployment artifact generation", () => {
     const root = createGeneratorFixture();
     try {
       for (const outputPath of [
+        ".vercel/life-console.production.json",
         ".vercel/production.json",
         ".vercel/nested/life-console.production.json",
         "life-console.production.json",
@@ -352,7 +374,7 @@ describe("Vercel deployment artifact generation", () => {
         const result = runGenerator(root, outputPath);
         expect(result.status, outputPath).not.toBe(0);
         expect(result.stderr).toContain(
-          "Output path must be .vercel/life-console.production.json",
+          "Output path must be vercel.json",
         );
       }
     } finally {
@@ -375,29 +397,21 @@ describe("Vercel deployment artifact generation", () => {
 
       expect(result.status).not.toBe(0);
       expect(result.stderr).toContain(
-        "Usage: node scripts/write-vercel-config.mjs --write .vercel/life-console.production.json",
+        "Usage: node scripts/write-vercel-config.mjs --write vercel.json",
       );
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
   });
 
-  it("rejects a symlinked .vercel parent without writing through it", () => {
+  it("writes the root deployment config without creating a .vercel directory", () => {
     const root = createGeneratorFixture();
-    const redirectedDirectory = resolve(root, "redirected");
-    mkdirSync(redirectedDirectory);
-    symlinkSync(redirectedDirectory, resolve(root, ".vercel"), "dir");
 
     try {
-      const result = runGenerator(
-        root,
-        ".vercel/life-console.production.json",
-      );
-      expect(result.status).not.toBe(0);
-      expect(result.stderr).toContain(".vercel must not be a symbolic link");
-      expect(() => readFileSync(
-        resolve(redirectedDirectory, "life-console.production.json"),
-      )).toThrow();
+      const result = runGenerator(root, "vercel.json");
+      expect(result.status, result.stderr).toBe(0);
+      expect(existsSync(resolve(root, "vercel.json"))).toBe(true);
+      expect(existsSync(resolve(root, ".vercel"))).toBe(false);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -405,20 +419,16 @@ describe("Vercel deployment artifact generation", () => {
 
   it("rejects a symlinked output without modifying its target", () => {
     const root = createGeneratorFixture();
-    const outputPath = resolve(root, ".vercel/life-console.production.json");
+    const outputPath = resolve(root, "vercel.json");
     const redirectedPath = resolve(root, "redirected.json");
-    mkdirSync(dirname(outputPath));
     writeFileSync(redirectedPath, "unchanged\n");
     symlinkSync(redirectedPath, outputPath);
 
     try {
-      const result = runGenerator(
-        root,
-        ".vercel/life-console.production.json",
-      );
+      const result = runGenerator(root, "vercel.json");
       expect(result.status).not.toBe(0);
       expect(result.stderr).toContain(
-        "life-console.production.json must not be a symbolic link",
+        "vercel.json must not be a symbolic link",
       );
       expect(readFileSync(redirectedPath, "utf8")).toBe("unchanged\n");
     } finally {
