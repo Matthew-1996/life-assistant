@@ -116,3 +116,4 @@
 - Owner 只读核验显示最新运行收据为 `success`，发现来源为官方发布方备用源，日期为 2026-08-21；当日摘要为 5 条，覆盖科技、财经、政治最低配比及国内/国际范围。证据不记录标题、Owner 标识或任何私人记录。
 - 同一成功响应通过正式 `DailyNewsClient` 解析契约，结果为 5 条；但已登录 Production 浏览器在登录恢复后未发出 `/api/daily-news` 请求，页面仍为空。该差异定位为认证启动竞态，不是新闻生成或缓存失败，因此本节不把 Owner 页面可见性标记为通过。
 - 独立热修复以 TDD 新增应用级 access-token provider：在 AuthGate 挂载前订阅 Supabase 认证事件，认证事件可直接结束已挂起的会话读取，并用 revision 防止迟到会话覆盖刷新或退出；无事件 token 时保留 `getSession()` 回退。修复分支 Vitest 79 文件 / 587 项、应用 Python 93 项、Production build、Playwright 9/9、治理与隐私门禁全绿；独立代码评审无 Critical 或 Important 阻断项，仍需 Draft PR/Preview、PO 合并和 Production 当次确认。
+- Draft PR #64 已创建并保持 Draft。纯合成 Preview READY；1440px 与 390px 四页均无根页面横向溢出，严格 CSP 不含 `unsafe-eval`，runtime error 为 0，`/api/daily-news` 为 404。Preview 使用静态候选模式，0 Functions、0 Cron，不连接 Owner 数据或 Production Secret；认证竞态的最终证据仍是发布后 Owner 浏览器确实发出新闻请求。

@@ -5,7 +5,7 @@
 - 主阶段：已上线；每日新闻可靠性后端已发布，Owner 页面启动竞态热修复待独立验收。PR #58、Supabase migration、Owner Preview、界面热修复、PR #62、PR #63 与对应 Production 发布均已完成。
 - 子状态：2026-08-21 PR #63 已按 PO 当次确认合并发布；手动 Cron 已成功生成当日 5 条摘要并写入去敏运行收据。Production 浏览器随后发现登录恢复时未发起新闻请求，已按 TDD 完成最小 token provider 修复，全量门禁通过。
 - 分支：`agent/life-console-news-auth-token` 独立 worktree；只处理 Supabase 登录启动竞态和去敏发布证据，不改新闻生成、数据库或 Owner 数据。
-- PR：认证启动竞态热修复将建立新的 Draft PR；在 PO 新的当次确认前不合并、不重新发布 Production。
+- PR：Draft PR #64 已创建，纯合成 Preview READY 并完成桌面/移动只读验收；在 PO 新的当次确认前不合并、不重新发布 Production。
 - 数据库：两个加法 migration 保持已应用，不回滚或删除用户数据；本次不改 Supabase schema 或 Owner 数据。
 
 ## 2. 阶段计划
@@ -21,7 +21,7 @@
 7. 测试与 Preview：记录页反馈与更新后的纯静态合成 Preview 已完成；锁文件可移植性和 Runner UTC 时区确定性补丁均已由 GitHub Actions 复验，privacy、Python、Node 三项全绿。
 8. 上线：原 2.5.0 migration、Owner Preview、自动化、PR 合并、Production 发布与首跑验收均已完成。
 9. 新闻可靠性快速维护：正式设计补充、TDD、独立代码评审、全量门禁、PR #63、Production 与手动生成今日新闻均已完成；服务端结果和运行收据成功。
-10. 新闻展示启动竞态热修复：TDD、独立代码评审、Production build、Playwright 与全量门禁已完成；等待 Draft PR、Preview 和 PO 合并/发布门禁。
+10. 新闻展示启动竞态热修复：TDD、独立代码评审、Production build、Playwright、全量门禁、Draft PR #64 与纯合成 Preview 已完成；等待 PO 合并/发布门禁。
 
 ## 3. 门禁与恢复条件
 
@@ -35,7 +35,7 @@
 | 新闻可靠性设计补充 | approved | PO 于 2026-08-21 确认官方备用源与 Runtime Cache 7 天运维记录方向；不新增 Supabase 表或密钥 |
 | 新闻可靠性 Preview/验收 | completed | PO 于 2026-08-21 当次确认验收 PR #63 |
 | 新闻可靠性 Production | completed | PR #63 已合并，Production READY；Cron 已手动触发并成功生成 2026-08-21 摘要及运行收据 |
-| Owner 新闻展示热修复 | awaiting_po | 登录恢复启动竞态的 TDD 修复与本地全量门禁已通过；Draft PR/Preview 完成后需 PO 新的当次确认才可重新发布 |
+| Owner 新闻展示热修复 | awaiting_po | 登录恢复启动竞态的 TDD 修复、独立评审、Draft PR #64 与纯合成 Preview 已通过；需 PO 新的当次确认才可合并并重新发布 |
 
 ## 4. 开放风险
 
@@ -95,4 +95,5 @@
 | 2026-08-21 | GDELT 失败备用源与 Cron 运行记录 | PO 确认采用新华网/BBC 官方公开源，并用同区域 Runtime Cache 保存最近 7 天去敏运维记录；不新增 Supabase schema/Secret |
 | 2026-08-21 | PR #63 合并、Production 发布与今日新闻手动 Cron | PO 当次确认并完成；合并后 main CI 全绿，Cron Enabled 且手动运行 HTTP 200，当日运行收据成功并生成 5 条满足分类/地域最低配比的摘要 |
 | 2026-08-21 | Owner 页面新闻未展示根因 | 服务端与正式客户端解析均成功，但浏览器登录恢复后没有发出 `/api/daily-news` 请求；定位为 `getSession()` 启动竞态，按 TDD 改为先订阅认证事件提供内存 token，等待新 Draft PR 和独立发布门禁 |
+| 2026-08-21 | Draft PR #64 与认证热修复 Preview | 独立评审无 Critical/Important；纯合成 Preview READY，1440px/390px 四页无横向溢出、严格 CSP、runtime error 0，新闻 API 为 404；未连接 Owner 数据、Functions、Cron 或 Production Secret |
 | 2026-08-19 | 视觉、设计、技术确认前不写生产功能 | Gate 2 v2 后已满足 |

@@ -882,7 +882,7 @@ provider 在 AuthGate 前实例化；新闻客户端只调用 `getAccessToken()`
 
 Vitest 79 文件 / 587 项、应用 Python 93 项、Production build、Playwright 9/9、治理、隐私与差异检查全绿；独立评审无 Critical/Important 阻断项。
 
-- [ ] **Step 4: 创建 Draft PR 并部署纯合成 Preview**
+- [x] **Step 4: 创建 Draft PR 并部署纯合成 Preview**
 
 Preview 验证构建、CSP、四页与静态回归；由于纯合成模式不连接 Supabase，认证竞态以单元测试及发布后的 Owner 只读浏览器请求为最终证据。
 
