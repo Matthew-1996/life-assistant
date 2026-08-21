@@ -838,13 +838,15 @@ PR 标题调整为每日新闻可靠性修复，说明 GDELT 主源、新华网/
 
 使用公开合成 RSS/HTML fixture 验证主源成功不触发备用源、主源失败生成完整 Top 5、运行收据查询 401/200、CSP 和 console；不得调用真实 DeepSeek、写 Owner 数据或配置 Production Secret。
 
-- [ ] **Step 5: 取得 PO 验收及 Production 当次确认**
+- [x] **Step 5: 取得 PO 验收及 Production 当次确认**
 
 在用户确认前保持 Draft，不合并 PR、不切换正式别名、不手动触发 Production Cron。
 
-- [ ] **Step 6: 发布后手动生成今日新闻并核验**
+- [x] **Step 6: 发布后手动生成今日新闻并核验**
 
 核对 GitHub/Vercel 账号与项目绑定；合并并发布后使用 Vercel Cron 的最终 Sensitive Secret 触发一次。验收 HTTP 状态、运行收据、Owner 页面 Top 5、更新时间、来源链接、CSP 和 console；不读取或记录 Owner 私人数据。
+
+服务端 Cron、运行收据、当日 5 条摘要与正式客户端解析均通过；Production 浏览器登录恢复阶段未发出新闻请求，Owner 页面可见性转入 Task 14 热修复，不在本步骤误记为通过。
 
 - [ ] **Step 7: 提交去敏证据并清理**
 
@@ -854,3 +856,40 @@ git commit -m "docs(life-console): record news fallback release evidence"
 ```
 
 合并证据后删除活动分支/worktree；Runtime Cache 可自然过期，不执行数据库回滚或个人数据操作。
+
+### Task 14: Owner 新闻展示认证启动竞态热修复
+
+**Files:**
+- Create: `apps/life-console/src/supabase/auth-token.ts`
+- Create: `apps/life-console/tests/supabase/auth-token.test.ts`
+- Modify: `apps/life-console/src/main.tsx`
+- Modify: `docs/knowledge-base/生活助手-LifeConsole-2.5.0/项目管理-生活助手-LifeConsole-2.5.0.md`
+- Modify: `docs/knowledge-base/生活助手-LifeConsole-2.5.0/上线证据-生活助手-LifeConsole-2.5.0.md`
+
+**Goal:** 已登录 Owner 首次恢复会话时，新闻客户端不再因 `getSession()` 启动竞态停在空态，并能在不暴露 token 的前提下发出鉴权请求。
+
+**Architecture:** 在应用启动、AuthGate 挂载前创建单例 access-token provider，立即订阅 `onAuthStateChange`；认证事件提供的 token 只保留在闭包内存，刷新与退出同步更新。无事件 token 时才调用 `getSession()` 兼容冷启动；UI、日志、DOM 和持久化层均不接触 token。
+
+- [x] **Step 1: 以红灯复现登录事件先于 `getSession()` 完成的竞态**
+
+测试让 `getSession()` 永不完成，同时由 `SIGNED_IN` 事件提供合成 token；修复前模块不存在并失败。
+
+- [x] **Step 2: 实现事件优先、会话回退的 token provider 并接入新闻客户端**
+
+provider 在 AuthGate 前实例化；新闻客户端只调用 `getAccessToken()`，不再直接依赖启动阶段的 `getSession()`。
+
+- [x] **Step 3: 运行本地全量门禁和独立代码评审**
+
+Vitest 79 文件 / 587 项、应用 Python 93 项、Production build、Playwright 9/9、治理、隐私与差异检查全绿；独立评审无 Critical/Important 阻断项。
+
+- [ ] **Step 4: 创建 Draft PR 并部署纯合成 Preview**
+
+Preview 验证构建、CSP、四页与静态回归；由于纯合成模式不连接 Supabase，认证竞态以单元测试及发布后的 Owner 只读浏览器请求为最终证据。
+
+- [ ] **Step 5: 取得 PO 当次确认后合并并重新发布 Production**
+
+不得复用 PR #63 的发布确认；重新核对 GitHub/Vercel 绑定后发布同一合并提交。
+
+- [ ] **Step 6: 发布后只读复验 Owner 今日新闻**
+
+仅确认 `/api/daily-news` 已由浏览器发出、面板显示 5 条、来源链接存在、CSP 与 console 正常；不记录标题、Owner 标识或任何私人页面内容。

@@ -2,7 +2,7 @@
 
 ## 1. 当前结论
 
-2.5.0 已上线并完成内容自动化收口。PR #58、PR #59、PR #60 与 PR #62 均已合并；Production Supabase、Owner Preview、桌面/移动页面、严格 CSP、DeepSeek 合成健康探针、每日新闻 Cron 与每周寄语运行实例均已验收。GDELT 共享出口限流时继续使用最近成功缓存或可重试空态，不生成未经来源支持的摘要。
+2.5.0 已上线，内容自动化后端与手动 Cron 已完成验收。PR #58、PR #59、PR #60、PR #62 与 PR #63 均已合并；Production Supabase、Owner Preview、桌面/移动页面、严格 CSP、DeepSeek 合成健康探针、每日新闻 Cron 与每周寄语运行实例均已验收。PR #63 发布后发现 Owner 登录恢复阶段的新闻展示启动竞态，最小热修复正在独立 Draft PR 门禁内，未在本文中提前标记为已发布。
 
 ## 2. 已验证基线
 
@@ -105,4 +105,14 @@
 - 精确内容服务测试 6 文件 / 55 项，全量 Vitest 78 文件 / 582 项、应用 Python 93 项、根工具 Python 372 项（1 项跳过）、Production build、Playwright 9/9、治理与隐私门禁均通过；独立代码评审无 Critical 或 Important 阻断项。
 - Draft PR #63 的 privacy、Python、Node 三项远端 CI 全绿，PR 仍为 Draft。纯静态合成 Preview READY：首页 200、新闻 API 404、严格 CSP `connect-src 'none'` 且不含 `unsafe-eval`，制品含 0 个 Functions、0 个 Cron、无 Owner 连接或 Production Secret。
 - 1440px/390px 四页均有有效内容、无根页面横向溢出或错误覆盖层。唯一 console 异常来自 Vercel Preview Protection 工具栏对 `vercel.com/api/jwt` 的 403 及其 Google Provider/FedCM 提示，不属于应用自身请求。
-- 当前仍未合并 PR #63、未重新发布 Production、未手动触发今日新闻 Cron。需 PO 完成本阶段验收并另行当次确认 Production 后才执行。
+- PO 已于 2026-08-21 当次确认验收、合并、发布和手动触发今日新闻 Cron；执行结果见第 13 节。
+
+## 13. PR #63 Production 与今日新闻 Cron 证据
+
+- PR #63 已按 PO 当次确认 squash merge；合并后 `main` 的 privacy、Python、Node 三项 CI 全绿。发布制品来自同一合并提交，Production 达到 READY，稳定正式域名指向最终部署。
+- 首次远端发布使用自定义本地配置路径时，部署 API 未保留 Cron 定义；在不含 Secret 的同一配置上复现并定位后，改用临时根 `vercel.json` 完成最终发布。最终部署包含 Cron，临时文件已删除且未进入 Git；没有读取、轮换或输出 Secret。
+- 正式首页返回 200；新闻、运行收据和 Cron 三个端点在无凭据时均返回 401 与 `no-store`；严格 CSP 不含 `unsafe-eval`。
+- Vercel 控制面确认 `/api/cron/daily-news` 为 Enabled，计划 `0 23 * * *`。通过控制面手动运行一次，Production 日志显示 Cron GET 返回 HTTP 200。
+- Owner 只读核验显示最新运行收据为 `success`，发现来源为官方发布方备用源，日期为 2026-08-21；当日摘要为 5 条，覆盖科技、财经、政治最低配比及国内/国际范围。证据不记录标题、Owner 标识或任何私人记录。
+- 同一成功响应通过正式 `DailyNewsClient` 解析契约，结果为 5 条；但已登录 Production 浏览器在登录恢复后未发出 `/api/daily-news` 请求，页面仍为空。该差异定位为认证启动竞态，不是新闻生成或缓存失败，因此本节不把 Owner 页面可见性标记为通过。
+- 独立热修复以 TDD 新增应用级 access-token provider：在 AuthGate 挂载前订阅 Supabase 认证事件，认证事件可直接结束已挂起的会话读取，并用 revision 防止迟到会话覆盖刷新或退出；无事件 token 时保留 `getSession()` 回退。修复分支 Vitest 79 文件 / 587 项、应用 Python 93 项、Production build、Playwright 9/9、治理与隐私门禁全绿；独立代码评审无 Critical 或 Important 阻断项，仍需 Draft PR/Preview、PO 合并和 Production 当次确认。
