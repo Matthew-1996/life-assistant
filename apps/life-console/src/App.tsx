@@ -14,7 +14,6 @@ import type {
 } from "./api/sites-client";
 import { AppShell, type PageId } from "./components/shell/AppShell";
 import { syntheticDashboard, type Dashboard } from "./data/dashboard";
-import { syntheticDailyNewsClient } from "./data/daily-news";
 import { ProgressPage } from "./features/progress/ProgressPage";
 import { RecordsPage } from "./features/records/RecordsPage";
 import { createCandidateJournalRepository } from "./features/journals/candidate-journal-repository";
@@ -76,8 +75,6 @@ export function App({
   todos,
 }: AppProps) {
   const supabaseMode = mode === "supabase-candidate" || mode === "supabase-production";
-  const resolvedDailyNews = dailyNews
-    ?? (mode === "candidate-preview" ? syntheticDailyNewsClient : undefined);
   const [activePage, setActivePage] = useState<PageId>("today");
   const [dashboard, setDashboard] = useState<Dashboard | null>(
     initialDashboard ?? (client ? null : syntheticDashboard),
@@ -204,7 +201,7 @@ export function App({
         client={mode === "candidate-preview" ? undefined : client}
         mode={mode}
         draftScope={supabase?.session.userId}
-        dailyNews={resolvedDailyNews}
+        dailyNews={dailyNews}
         dashboardMessages={dashboardMessages ?? supabase?.dashboardMessages}
         onNavigate={setActivePage}
         onSaved={refreshAfterWrite}

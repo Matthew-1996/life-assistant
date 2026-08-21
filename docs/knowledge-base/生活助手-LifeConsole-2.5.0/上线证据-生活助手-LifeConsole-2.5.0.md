@@ -124,4 +124,4 @@
 - Owner 新闻接口只读复验返回 2026-08-21 成功摘要 5 条，但真实浏览器仍未发出新闻请求，页面保持空态。因此 PR #64 只记录为已发布，不记录为前端展示验收通过。
 - PO 已确认进入 PR #65 开发。PR #65 只统一 AuthGate 与新闻客户端的内存 Token 生命周期，不改数据库、新闻内容、Cron、Secrets 或 Owner 数据；完成 Draft PR 和合成 Preview 后仍需新的验收与 Production 确认。
 - Draft PR #65 与纯静态合成 Preview 已完成：Preview READY、0 Functions、0 Cron、首页 200、新闻 API 404、严格 CSP 通过。首次误带 Functions 的候选已删除且未交付；Production 未变更。
-- PO 确认合成 Preview 应直接展示新闻最终布局，并同意 Agent 执行全量验收代替手工 Preview 验收。候选模式已以纯内存 client 渲染 6 条明确标注的合成新闻，不发起 API 请求，不含 Owner 连接、Token、Functions 或 Cron。本地 1440px/390px 浏览器均显示 6 条、无空态、无根页面溢出且 console error 为 0；正式 Owner 链路仍留待 Production 发布后只读验证。
+- PO 确认合成 Preview 应直接展示新闻最终布局，并同意 Agent 执行全量验收代替手工 Preview 验收。候选模式已以动态加载的纯内存 client 渲染 6 条明确标注的合成新闻，不发起 API 请求，不含 Owner 连接、Token、Functions 或 Cron；Production Vite 制品黑盒扫描不含候选新闻标记。本地 1440px/390px 浏览器均显示 6 条、无空态、无根页面溢出且 console error 为 0；正式 Owner 链路仍留待 Production 发布后只读验证。

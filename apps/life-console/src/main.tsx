@@ -34,9 +34,8 @@ const stageAPocEnabled = import.meta.env.MODE === "stage-a-candidate";
 const supabaseCandidateMode = import.meta.env.MODE === "supabase-candidate";
 const supabaseProductionMode = import.meta.env.MODE === "supabase-production";
 const supabaseMode = supabaseCandidateMode || supabaseProductionMode;
-const candidateMode = ["candidate-preview", "stage-a-candidate"].includes(
-  import.meta.env.MODE,
-);
+const candidateMode = import.meta.env.MODE === "candidate-preview"
+  || import.meta.env.MODE === "stage-a-candidate";
 const client = candidateMode || supabaseMode
   ? undefined
   : sitesMode ? createSitesApiClient() : createApiClient();
@@ -108,14 +107,20 @@ if (supabaseMode) {
     </StrictMode>,
   );
 } else {
-  createRoot(root).render(
-    <StrictMode>
-      <App
-        client={client}
-        initialDashboard={candidateMode ? syntheticDashboard : undefined}
-        mode={candidateMode ? "candidate-preview" : sitesMode ? "sites" : "local"}
-        stageAPocEnabled={stageAPocEnabled}
-      />
-    </StrictMode>,
-  );
+  void (async () => {
+    const dailyNews = candidateMode
+      ? (await import("./data/daily-news")).syntheticDailyNewsClient
+      : undefined;
+    createRoot(root).render(
+      <StrictMode>
+        <App
+          client={client}
+          dailyNews={dailyNews}
+          initialDashboard={candidateMode ? syntheticDashboard : undefined}
+          mode={candidateMode ? "candidate-preview" : sitesMode ? "sites" : "local"}
+          stageAPocEnabled={stageAPocEnabled}
+        />
+      </StrictMode>,
+    );
+  })();
 }

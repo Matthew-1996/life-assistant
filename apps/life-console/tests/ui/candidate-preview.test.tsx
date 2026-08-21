@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { App } from "../../src/App";
 import { syntheticDashboard } from "../../src/data/dashboard";
+import { syntheticDailyNewsClient } from "../../src/data/daily-news";
 
 afterEach(() => {
   cleanup();
@@ -46,7 +47,11 @@ describe("Life Console candidate preview", () => {
 
   it("shows a complete synthetic daily-news digest on the workbench", async () => {
     render(
-      <App initialDashboard={syntheticDashboard} mode="candidate-preview" />,
+      <App
+        dailyNews={syntheticDailyNewsClient}
+        initialDashboard={syntheticDashboard}
+        mode="candidate-preview"
+      />,
     );
 
     const panel = screen.getByRole("region", { name: "每日新闻" });
