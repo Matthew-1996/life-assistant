@@ -111,7 +111,25 @@ export function createSupabaseAuthService(
     },
 
     async getAccessToken() {
-      if (hasAuthState) return currentAccessToken;
+      if (hasAuthState) {
+        if (currentAccessToken || !currentSession) return currentAccessToken;
+        const userIdAtStart = currentSession.userId;
+        const { data, error } = await auth.getSession();
+        if (
+          currentAccessToken
+          || !currentSession
+          || currentSession.userId !== userIdAtStart
+        ) {
+          return currentAccessToken;
+        }
+        if (error) throw error;
+        const storedSession = mapSession(data.session);
+        if (!storedSession || storedSession.userId !== userIdAtStart) {
+          return currentAccessToken;
+        }
+        commitSession(data.session);
+        return currentAccessToken;
+      }
       const revisionAtStart = authRevision;
       let resolveEvent!: (token: string | null) => void;
       const authEvent = new Promise<string | null>((resolve) => {

@@ -391,6 +391,272 @@ describe("Supabase Auth service", () => {
     expect(getSession).toHaveBeenCalledOnce();
   });
 
+  it("recovers the stored token when an authenticated event omits its access token", async () => {
+    let authStateListener:
+      | Parameters<SupabaseAuthPort["onAuthStateChange"]>[0]
+      | undefined;
+    const getSession = vi.fn(async () => ({
+      data: { session: syntheticSession },
+      error: null,
+    }));
+    const auth = createSupabaseAuthService(createAuthPort({
+      getSession,
+      onAuthStateChange: vi.fn((listener) => {
+        authStateListener = listener;
+        return {
+          data: {
+            subscription: { unsubscribe: vi.fn() },
+          },
+        };
+      }),
+    }));
+
+    auth.subscribe(vi.fn());
+    authStateListener?.("SIGNED_IN", {
+      ...syntheticSession,
+      access_token: undefined,
+    });
+
+    await expect(auth.getAccessToken()).resolves.toBe(
+      syntheticSession.access_token,
+    );
+    expect(getSession).toHaveBeenCalledOnce();
+  });
+
+  it("keeps recovering for the same Owner across repeated tokenless events", async () => {
+    let authStateListener:
+      | Parameters<SupabaseAuthPort["onAuthStateChange"]>[0]
+      | undefined;
+    let resolveSession:
+      | ((value: {
+          data: { session: typeof syntheticSession | null };
+          error: Error | null;
+        }) => void)
+      | undefined;
+    const getSession = vi.fn(
+      async () => await new Promise<{
+        data: { session: typeof syntheticSession | null };
+        error: Error | null;
+      }>((resolve) => {
+        resolveSession = resolve;
+      }),
+    );
+    const auth = createSupabaseAuthService(createAuthPort({
+      getSession,
+      onAuthStateChange: vi.fn((listener) => {
+        authStateListener = listener;
+        return {
+          data: {
+            subscription: { unsubscribe: vi.fn() },
+          },
+        };
+      }),
+    }));
+    const tokenlessSession = {
+      ...syntheticSession,
+      access_token: undefined,
+    };
+
+    auth.subscribe(vi.fn());
+    authStateListener?.("SIGNED_IN", tokenlessSession);
+    const token = auth.getAccessToken();
+    authStateListener?.("TOKEN_REFRESHED", tokenlessSession);
+    resolveSession?.({ data: { session: syntheticSession }, error: null });
+
+    await expect(token).resolves.toBe(syntheticSession.access_token);
+    await expect(auth.getAccessToken()).resolves.toBe(
+      syntheticSession.access_token,
+    );
+    expect(getSession).toHaveBeenCalledOnce();
+  });
+
+  it("does not restore a tokenless Owner after sign-out during recovery", async () => {
+    let authStateListener:
+      | Parameters<SupabaseAuthPort["onAuthStateChange"]>[0]
+      | undefined;
+    let resolveSession:
+      | ((value: {
+          data: { session: typeof syntheticSession | null };
+          error: Error | null;
+        }) => void)
+      | undefined;
+    const getSession = vi.fn(
+      async () => await new Promise<{
+        data: { session: typeof syntheticSession | null };
+        error: Error | null;
+      }>((resolve) => {
+        resolveSession = resolve;
+      }),
+    );
+    const auth = createSupabaseAuthService(createAuthPort({
+      getSession,
+      onAuthStateChange: vi.fn((listener) => {
+        authStateListener = listener;
+        return {
+          data: {
+            subscription: { unsubscribe: vi.fn() },
+          },
+        };
+      }),
+    }));
+
+    auth.subscribe(vi.fn());
+    authStateListener?.("SIGNED_IN", {
+      ...syntheticSession,
+      access_token: undefined,
+    });
+    const token = auth.getAccessToken();
+    authStateListener?.("SIGNED_OUT", null);
+    resolveSession?.({ data: { session: syntheticSession }, error: null });
+
+    await expect(token).resolves.toBeNull();
+    await expect(auth.getAccessToken()).resolves.toBeNull();
+    expect(getSession).toHaveBeenCalledOnce();
+  });
+
+  it("does not restore the previous Owner after user change during recovery", async () => {
+    let authStateListener:
+      | Parameters<SupabaseAuthPort["onAuthStateChange"]>[0]
+      | undefined;
+    let resolveSession:
+      | ((value: {
+          data: { session: typeof syntheticSession | null };
+          error: Error | null;
+        }) => void)
+      | undefined;
+    const getSession = vi.fn(
+      async () => await new Promise<{
+        data: { session: typeof syntheticSession | null };
+        error: Error | null;
+      }>((resolve) => {
+        resolveSession = resolve;
+      }),
+    );
+    const auth = createSupabaseAuthService(createAuthPort({
+      getSession,
+      onAuthStateChange: vi.fn((listener) => {
+        authStateListener = listener;
+        return {
+          data: {
+            subscription: { unsubscribe: vi.fn() },
+          },
+        };
+      }),
+    }));
+
+    auth.subscribe(vi.fn());
+    authStateListener?.("SIGNED_IN", {
+      ...syntheticSession,
+      access_token: undefined,
+    });
+    const token = auth.getAccessToken();
+    authStateListener?.("SIGNED_IN", {
+      ...syntheticSession,
+      access_token: undefined,
+      user: {
+        ...syntheticSession.user,
+        id: "different-synthetic-owner",
+      },
+    });
+    resolveSession?.({ data: { session: syntheticSession }, error: null });
+
+    await expect(token).resolves.toBeNull();
+    expect(getSession).toHaveBeenCalledOnce();
+  });
+
+  it("keeps a refreshed token authoritative over a late recovery error", async () => {
+    let authStateListener:
+      | Parameters<SupabaseAuthPort["onAuthStateChange"]>[0]
+      | undefined;
+    let resolveSession:
+      | ((value: {
+          data: { session: typeof syntheticSession | null };
+          error: Error | null;
+        }) => void)
+      | undefined;
+    const getSession = vi.fn(
+      async () => await new Promise<{
+        data: { session: typeof syntheticSession | null };
+        error: Error | null;
+      }>((resolve) => {
+        resolveSession = resolve;
+      }),
+    );
+    const auth = createSupabaseAuthService(createAuthPort({
+      getSession,
+      onAuthStateChange: vi.fn((listener) => {
+        authStateListener = listener;
+        return {
+          data: {
+            subscription: { unsubscribe: vi.fn() },
+          },
+        };
+      }),
+    }));
+
+    auth.subscribe(vi.fn());
+    authStateListener?.("SIGNED_IN", {
+      ...syntheticSession,
+      access_token: undefined,
+    });
+    const token = auth.getAccessToken();
+    authStateListener?.("TOKEN_REFRESHED", {
+      ...syntheticSession,
+      access_token: "newer-synthetic-access-token",
+    });
+    resolveSession?.({
+      data: { session: null },
+      error: new Error("late synthetic session failure"),
+    });
+
+    await expect(token).resolves.toBe("newer-synthetic-access-token");
+  });
+
+  it("keeps sign-out authoritative over a late recovery error", async () => {
+    let authStateListener:
+      | Parameters<SupabaseAuthPort["onAuthStateChange"]>[0]
+      | undefined;
+    let resolveSession:
+      | ((value: {
+          data: { session: typeof syntheticSession | null };
+          error: Error | null;
+        }) => void)
+      | undefined;
+    const getSession = vi.fn(
+      async () => await new Promise<{
+        data: { session: typeof syntheticSession | null };
+        error: Error | null;
+      }>((resolve) => {
+        resolveSession = resolve;
+      }),
+    );
+    const auth = createSupabaseAuthService(createAuthPort({
+      getSession,
+      onAuthStateChange: vi.fn((listener) => {
+        authStateListener = listener;
+        return {
+          data: {
+            subscription: { unsubscribe: vi.fn() },
+          },
+        };
+      }),
+    }));
+
+    auth.subscribe(vi.fn());
+    authStateListener?.("SIGNED_IN", {
+      ...syntheticSession,
+      access_token: undefined,
+    });
+    const token = auth.getAccessToken();
+    authStateListener?.("SIGNED_OUT", null);
+    resolveSession?.({
+      data: { session: null },
+      error: new Error("late synthetic session failure"),
+    });
+
+    await expect(token).resolves.toBeNull();
+  });
+
   it("does not retain the Owner token after sign-out", async () => {
     const getSession = vi.fn()
       .mockResolvedValueOnce({ data: { session: syntheticSession }, error: null })
