@@ -152,3 +152,5 @@ Supabase 首次上线前只读核对曾因账号不匹配而失败关闭；重�
 - 定向 4 个测试文件 / 28 项、全量 Vitest 79 文件 / 589 项、应用 Python 93 项、根工具 Python 372 项（1 项跳过）、默认与 Supabase Production build、Playwright 9/9、治理及隐私门禁均通过。最终结论仍等待 PO 验收和新的 Production 当次确认；本节不把 Owner 页面新闻展示标记为完成。
 - Draft PR #65 已创建并保持 Draft。最终合成 Preview 由本地 candidate-preview 静态制品通过 Vercel Build Output 部署：状态 READY，0 Functions、0 Cron，首页 200，`/api/daily-news` 404，严格 CSP 为 `connect-src 'none'` 且不含 `unsafe-eval`。
 - 首次从源码根部署时，Vercel 自动识别 `api/` 并打包 5 个 Functions；该制品不符合 Preview 边界，未交付且已精确删除。最终合格制品不含 Owner 连接、Functions、Cron 或 Production Secret；本地 OIDC、项目配置和临时目录已清理。
+- PO 确认合成 Preview 必须可见展示每日新闻上线效果，并授权 Agent 代替用户手工 Preview 验收。TDD 红灯在旧实现上只看到未连接空态；最小实现后候选工作台显示 6 条明确标注的合成新闻，覆盖三类与国内/国际，不连接 API 或 Owner 数据。
+- 本地 Chrome 在 1440px/390px 下均渲染 6 条，空态不存在、根页面无横向溢出、console error 为 0。单 worker 全量 Vitest 79 文件 / 590 项、应用 Python 93 项、Supabase Production build 与 Playwright 9/9 通过；并行首轮的 3 个无断言资源超时在不放宽超时后以单 worker 全量 590/590 通过收口。Production 发布后仍必须验证真实 Owner 请求与页面渲染，合成验收不替代该结论。

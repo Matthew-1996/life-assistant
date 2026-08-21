@@ -935,6 +935,6 @@ Preview 仅验证构建、CSP、四页和静态回归，不连接 Supabase、Own
 
 Draft PR #65 已创建。最终 Preview 使用纯静态 Build Output，状态 READY、0 Functions、0 Cron；首页 200、`/api/daily-news` 404、严格 CSP 通过。第一次从源码根部署时误带 5 个 API Functions，发现后未交付、已删除，并清理本地 OIDC/项目配置；该失败制品不作为验收候选。
 
-- [ ] **Step 6: 取得新的验收与 Production 当次确认**
+- [ ] **Step 6: 完成 Agent 验收并取得 Production 当次确认**
 
-PR #65 合并与 Production 发布必须分别取得新的确认；发布后只读验证浏览器确实请求 `/api/daily-news`、显示 5 条并保持 CSP/console 正常，不记录标题或私人内容。
+PO 已授权 Agent 以自动化全量验收代替用户手工 Preview 验收；合成 Preview 必须可见展示 6 条、覆盖三类与国内/国际，且不连接 Owner/API。PR #65 合并与 Production 发布仍必须取得当次确认；发布后只读验证浏览器确实请求 `/api/daily-news`、显示有效摘要并保持 CSP/console 正常，不记录标题或私人内容。

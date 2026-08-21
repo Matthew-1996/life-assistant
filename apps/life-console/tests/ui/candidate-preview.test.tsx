@@ -44,6 +44,23 @@ describe("Life Console candidate preview", () => {
     expect(screen.getByText("mode=CANDIDATE_PREVIEW · 合成数据")).toBeTruthy();
   });
 
+  it("shows a complete synthetic daily-news digest on the workbench", async () => {
+    render(
+      <App initialDashboard={syntheticDashboard} mode="candidate-preview" />,
+    );
+
+    const panel = screen.getByRole("region", { name: "每日新闻" });
+    expect(await within(panel).findByText("合成示例：人工智能基础设施持续演进")).toBeTruthy();
+    expect(within(panel).getAllByRole("article")).toHaveLength(6);
+    expect(within(panel).getAllByText("合成示例")).toHaveLength(6);
+    expect(within(panel).getAllByText("科技")).toHaveLength(2);
+    expect(within(panel).getAllByText("财经")).toHaveLength(2);
+    expect(within(panel).getAllByText("政治")).toHaveLength(2);
+    expect(within(panel).getAllByText("国内")).toHaveLength(3);
+    expect(within(panel).getAllByText("国际")).toHaveLength(3);
+    expect(within(panel).queryByText("新闻服务尚未连接；上线前保持可重试空态。")).toBeNull();
+  });
+
   it("shows the synthetic journal title and original text below conversation capture", async () => {
     const user = userEvent.setup();
     render(
