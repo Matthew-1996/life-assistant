@@ -927,7 +927,7 @@ Preview 验证构建、CSP、四页与静态回归；由于纯合成模式不连
 
 - [x] **Step 4: 运行本地全量门禁与独立代码评审**
 
-首轮独立审查发现迟到 Session 覆盖认证事件的 Important 竞态；补充红灯并修复。定向 4 文件 / 28 项、全量 Vitest 79 文件 / 589 项、应用 Python 93 项、根工具 Python 372 项（1 项跳过）、Production build 与 Playwright 9/9 已通过；复审通过后才能推送。
+首轮独立审查发现迟到 Session 覆盖认证事件的 Important 竞态；补充红灯并修复。定向 4 文件 / 28 项、全量 Vitest 79 文件 / 589 项、应用 Python 93 项、根工具 Python 372 项（1 项跳过）、Production build 与 Playwright 9/9 已通过；复审无 Critical 或 Important 遗留。
 
 - [ ] **Step 5: 创建 Draft PR #65 并部署纯合成 Preview**
 

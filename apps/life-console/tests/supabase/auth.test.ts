@@ -291,8 +291,12 @@ describe("Supabase Auth service", () => {
       }),
     ]);
     resolveSession?.({ data: { session: syntheticSession }, error: null });
+    await Promise.resolve();
 
     expect(result).toBe("refreshed-auth-event-access");
+    await expect(auth.getAccessToken()).resolves.toBe(
+      "refreshed-auth-event-access",
+    );
   });
 
   it("keeps sign-out authoritative over an in-flight token fallback", async () => {

@@ -101,4 +101,5 @@
 | 2026-08-21 | PR #64 合并、Production 发布与只读复验 | PO 当次确认并完成；发布、Cron、鉴权和 Owner API 当日 5 条摘要通过，但已登录浏览器未发出新闻请求，UI 仍为空态，未宣称新闻展示完成 |
 | 2026-08-21 | PR #65 认证生命周期统一 | PO 已确认进入开发；删除独立 token provider，由 AuthGate 使用的认证服务持有内存 Token，TDD 覆盖 Session、认证事件、显式登录与退出清理；不改数据库、Cron 或新闻生成 |
 | 2026-08-21 | PR #65 首轮独立代码审查 | 发现迟到 Session 可能覆盖或复活更新认证事件的 Important 竞态；以三组红灯、service revision、Token waiter 和真实 AuthGate→新闻请求组合测试修复，全量门禁通过 |
+| 2026-08-21 | PR #65 代码复审 | 无 Critical 或 Important 遗留；唯一 Minor 为刷新事件后补充迟到 Session 不覆盖缓存 Token 的直接断言，已补充并定向复验 |
 | 2026-08-19 | 视觉、设计、技术确认前不写生产功能 | Gate 2 v2 后已满足 |
