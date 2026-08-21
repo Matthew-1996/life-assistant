@@ -938,3 +938,44 @@ Draft PR #65 已创建。最终 Preview 使用纯静态 Build Output，状态 RE
 - [ ] **Step 6: 完成 Agent 验收并取得 Production 当次确认**
 
 PO 已授权 Agent 以自动化全量验收代替用户手工 Preview 验收；合成 Preview 必须可见展示 6 条、覆盖三类与国内/国际，且不连接 Owner/API。PR #65 合并与 Production 发布仍必须取得当次确认；发布后只读验证浏览器确实请求 `/api/daily-news`、显示有效摘要并保持 CSP/console 正常，不记录标题或私人内容。
+
+### Task 16: Owner 认证单一真相源架构修复
+
+**Files:**
+- Modify: `apps/life-console/src/supabase/auth.ts`
+- Modify: `apps/life-console/src/features/news/DailyNewsPanel.tsx`
+- Modify: `apps/life-console/tests/supabase/auth.test.ts`
+- Modify: `apps/life-console/tests/ui/supabase-news-auth-lifecycle.test.tsx`
+- Modify: `docs/knowledge-base/生活助手-LifeConsole-2.5.0/`
+
+**Goal:** 消除 UI 认证状态与隐藏 token cache 的双状态分叉；AuthGate 显示 Owner 页面后，新闻客户端从 Supabase provider 当前 Session 取得本次请求 token，并以去敏闭集状态暴露认证失败边界。
+
+**Architecture:** Supabase provider 持久化 Session 是唯一真相源。`session()` 和 `getAccessToken()` 均按调用时读取 provider；`subscribe()` 只投影去敏用户信息，不提交 token。token 只存在于请求函数局部变量，不进入 React、DOM、日志或文档。面板仅暴露稳定的 `data-news-load-state`，不暴露异常正文。
+
+- [x] **Step 1: 用 Production 只读证据确认双状态问题**
+
+PR #71 发布且 Owner 完成退出/重新登录后，页面仍无新闻，Production 请求日志中 `/api/daily-news` 调用数仍为零；后端 Cron、Runtime Cache 与 Owner API 契约此前已通过，失败边界保持在浏览器 fetch 前。
+
+- [x] **Step 2: 先写认证 provider 单一真相源红灯**
+
+连续调用 `getAccessToken()` 时 provider 返回不同 Session token，第二次必须使用最新值且 `getSession()` 调用两次；旧内存 cache 应在该断言上失败。另覆盖空 Session、provider 错误、退出和事件只投影 Session。
+
+- [x] **Step 3: 先写新闻闭集错误状态红灯**
+
+`daily_news_unauthenticated` 映射为 `auth-unavailable`，普通异常映射为 `error`；可见提示和 DOM 不包含 token 或原始错误文本，重试仍可恢复成功。
+
+- [x] **Step 4: 最小实现并清理旧状态机测试**
+
+删除 service 级 token cache、revision 与 waiter；保留登录、退出、密码恢复和 AuthGate Session 行为。将旧竞态测试改写为 provider 真相源、事件投影与失败关闭测试，不通过删除测试掩盖安全语义。
+
+实际结果：旧实现先出现 3 个预期红灯，分别证明第二次请求复用旧 token、认证错误没有闭集状态、普通错误没有闭集状态。最小实现后定向 4 文件 / 31 项通过；认证测试由 24 个旧状态机用例改为 12 个 provider 真相源、失败关闭、认证事件去敏投影、登录/退出/密码流程用例，未保留已删除架构的缓存语义。
+
+- [x] **Step 5: 全量门禁、Draft PR #72 与合成 Preview**
+
+运行定向测试、Vitest、Python、Production build、Playwright、治理与当前/历史隐私检查。Preview 继续为 0 Functions、0 Cron 的纯合成制品；最终需远程 CI 全绿。PR 合并和 Production 发布必须取得新的当次确认。
+
+实际结果：Draft PR #72 已创建并保持 Draft，privacy、Python、Node 三项远程 CI 全绿。合格 Preview 使用本地 Build Output API 静态制品，READY、0 Functions、0 Cron；首页 200、新闻 API 404、`connect-src 'none'` 且不含 `unsafe-eval`。首个源码部署仍被 Vercel 自动发现 5 个 API Functions，检查后未交付并已删除；临时 OIDC、项目链接与 Build Output 目录已清理。
+
+- [ ] **Step 6: 发布后 Owner 只读最终复验**
+
+仅在 PO 确认合并发布后执行：确认浏览器实际发出 `/api/daily-news`、面板展示有效摘要、严格 CSP 与 console 正常；不记录新闻正文、Owner 标识或任何私人数据。

@@ -148,3 +148,10 @@
 - 已登录 Owner 页面刷新后仍显示可重试空态，Production 最近请求中仍没有 `/api/daily-news`，因此不把 PR #70 记录为展示验收通过；后端当日摘要与运行收据此前已确认成功，本次未重复调用模型或改写缓存。
 - 状态机复核发现：AuthGate 初始 Session 可以先缓存有效 token，随后同一 Owner 的非空 tokenless 认证事件会由旧 `commitSession()` 把它覆盖为 null。PR #70 的安全回读虽可恢复多数路径，但回读错误仍让新闻停在 fetch 前。
 - 新热修复按 TDD 先以“第二次回读不得发生”得到红灯，再让同一 Owner tokenless 事件保留最近有效 token；token-bearing 事件仍替换为新 token，空 Session、`SIGNED_OUT` 和用户切换均清空，不跨 Owner 复用。最终验收仍需独立复审、Draft PR/CI、PO 当次合并发布确认及真实 Owner 页面五条摘要。
+
+## 18. PR #71 发布复验与 PR #72 开发边界
+
+- PR #71 已合并发布；Owner 随后完成退出和重新登录，Production 页面仍为空，近期函数请求中仍没有 `/api/daily-news`。该复验只证明连续内存 token 状态机热修复未关闭真实链路，不证明服务端摘要或缓存失败。
+- PO 已确认进入 PR #72 架构修复。范围固定为删除浏览器应用级 token cache，以 Supabase provider 当前 Session 作为唯一认证真相源，并为新闻面板增加去敏闭集加载状态；不改 Supabase schema、Owner 数据、Cron、Secrets、DeepSeek 或新闻生成。
+- 本地 TDD 和完整工程门禁已经通过，详细计数见工程评审文档。Draft PR #72 保持 Draft，三项 CI 与纯静态 Preview 已通过；Preview 为 READY、0 Functions、0 Cron、新闻 API 404、严格 CSP，未连接 Owner 或 Production Secret。首个误带 Functions 的源码制品未交付并已删除。
+- 本节不提前记录 Production 发布或 Owner 页面新闻展示成功；合并、发布与上线后只读复验只在 PO 新的当次确认后执行。

@@ -83,88 +83,26 @@ function normalizedEmail(email: string): string {
 export function createSupabaseAuthService(
   auth: SupabaseAuthPort,
 ): LifeConsoleAuthService {
-  let currentAccessToken: string | null = null;
-  let currentSession: AuthSession | null = null;
-  let hasAuthState = false;
-  let authRevision = 0;
-  const tokenWaiters = new Set<(token: string | null) => void>();
-
-  function commitSession(
-    session: SupabaseSessionLike | null,
-  ): AuthSession | null {
-    const nextSession = mapSession(session);
-    const nextAccessToken = accessToken(session);
-    const preservedAccessToken = nextSession
-      && currentSession?.userId === nextSession.userId
-      ? currentAccessToken
-      : null;
-    authRevision += 1;
-    hasAuthState = true;
-    currentAccessToken = nextAccessToken ?? preservedAccessToken;
-    currentSession = nextSession;
-    for (const resolve of tokenWaiters) resolve(currentAccessToken);
-    tokenWaiters.clear();
-    return currentSession;
-  }
-
   return {
     async session() {
-      const revisionAtStart = authRevision;
       const { data, error } = await auth.getSession();
-      if (authRevision !== revisionAtStart) return currentSession;
       if (error) throw error;
-      return commitSession(data.session);
+      return mapSession(data.session);
     },
 
     async getAccessToken() {
-      if (hasAuthState) {
-        if (currentAccessToken || !currentSession) return currentAccessToken;
-        const userIdAtStart = currentSession.userId;
-        const { data, error } = await auth.getSession();
-        if (
-          currentAccessToken
-          || !currentSession
-          || currentSession.userId !== userIdAtStart
-        ) {
-          return currentAccessToken;
-        }
-        if (error) throw error;
-        const storedSession = mapSession(data.session);
-        if (!storedSession || storedSession.userId !== userIdAtStart) {
-          return currentAccessToken;
-        }
-        commitSession(data.session);
-        return currentAccessToken;
-      }
-      const revisionAtStart = authRevision;
-      let resolveEvent!: (token: string | null) => void;
-      const authEvent = new Promise<string | null>((resolve) => {
-        resolveEvent = resolve;
-        tokenWaiters.add(resolve);
-      });
-      const storedSession = auth.getSession().then(({ data, error }) => {
-        if (authRevision !== revisionAtStart) return currentAccessToken;
-        if (error) throw error;
-        commitSession(data.session);
-        return currentAccessToken;
-      });
-      try {
-        return await Promise.race([authEvent, storedSession]);
-      } finally {
-        tokenWaiters.delete(resolveEvent);
-      }
+      const { data, error } = await auth.getSession();
+      if (error) throw error;
+      return accessToken(data.session);
     },
 
     async signIn(email, password) {
-      const revisionAtStart = authRevision;
       const { data, error } = await auth.signInWithPassword({
         email: normalizedEmail(email),
         password,
       });
       if (error) throw error;
-      const session = authRevision === revisionAtStart
-        ? commitSession(data.session)
-        : currentSession;
+      const session = mapSession(data.session);
       if (!session) {
         throw new Error("Password sign-in did not create a session");
       }
@@ -187,7 +125,6 @@ export function createSupabaseAuthService(
     async signOut() {
       const { error } = await auth.signOut();
       if (error) throw error;
-      commitSession(null);
     },
 
     subscribe(listener) {
@@ -195,7 +132,7 @@ export function createSupabaseAuthService(
       const { data } = auth.onAuthStateChange((event, session) => {
         if (!active) return;
         if (event === "INITIAL_SESSION" && !session) return;
-        listener(commitSession(session));
+        listener(mapSession(session));
       });
       return () => {
         active = false;

@@ -111,7 +111,8 @@ Owner Agent (Monday 12:00 Asia/Shanghai)
 ## 8. 前端与 CSP
 
 - Today、Records、Progress 拆为页面容器和聚焦组件；Repository 注入继续由 `App` 统一装配。
-- Supabase 认证只保留一个应用级生命周期：AuthGate 使用的 `LifeConsoleAuthService` 在 Session 恢复、认证事件和显式登录时更新仅存于内存闭包的 access token；新闻客户端复用同一服务的 `getAccessToken()`。服务内部以 revision 防止迟到 Session 覆盖更新的登录、刷新或退出事件，并用事件结束进行中的 Token 回退。Token 不进入 `AuthSession`、React state、DOM、日志、备份或知识库；退出后立即清空。
+- Supabase provider 持久化 Session 是 Owner 认证的唯一真相源。`LifeConsoleAuthService` 不再维护第二份 access token、revision、waiter 或认证状态机：AuthGate 的去敏用户投影与每次 Owner API 请求均在需要时调用 provider `getSession()`；新闻请求只从该次 Session 读取 token，并立即作为本次 `Authorization` 局部变量使用。
+- `onAuthStateChange` 只负责通知 AuthGate 更新去敏 `AuthSession`，不得写入隐藏 token cache。Token 不进入 `AuthSession`、React state、DOM、日志、备份或知识库；退出后 provider 返回空 Session，后续请求失败关闭。新闻面板用闭集状态区分 `loading | success | stale | empty | auth-unavailable | error`，只展示稳定、去敏的重试提示，不暴露异常文本。
 - Records 头部使用单栏 hero，对话式记录之后直接装配现有 `SupabaseJournalsPanel`，Supabase 模式继续注入 Owner-scoped `JournalRepositoryPort`，不修改线上读写契约。
 - `candidate-preview` 仅根据公开 dashboard fixture 创建页面生命周期内的内存 `JournalRepositoryPort`；其更新、软删除和恢复只修改内存数组，重新挂载即重置。全局候选写入拦截仅对该本地演示区域放行，区域内不持有 client、JWT 或外部存储引用。
 - `candidate-preview` 还注入一个纯内存 `DailyNewsClient`，固定返回明确标注“合成示例”的 6 条公开演示摘要，覆盖科技、财经、政治及国内/国际。该 client 不发起网络请求、不持有 Token，且不得在 `supabase-production` 装配中使用。
