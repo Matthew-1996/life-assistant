@@ -149,4 +149,6 @@ Supabase 首次上线前只读核对曾因账号不匹配而失败关闭；重�
 - 真实 Owner 浏览器加载了 PR #64 新资产，但新闻区仍为空，且 Production 日志没有对应 `/api/daily-news` 请求。由此排除缓存缺失和旧资产，失败边界位于浏览器调用 `fetch` 之前的独立 Token 获取生命周期。
 - PR #65 按 PO 确认进入 TDD：红灯分别证明同一个认证服务尚不能复用 Session、认证事件和显式登录产生的 Token，以及退出后必须清理 Token。最小实现将 Token 保留在 `LifeConsoleAuthService` 内存闭包，新闻客户端直接复用该服务，并删除第二套订阅/provider。
 - 首轮独立审查发现迟到 `getSession()` 可能覆盖或复活更新认证事件的 Important 竞态；新增 `SIGNED_IN`、`TOKEN_REFRESHED`、`SIGNED_OUT` 三组红灯后，以 service revision 和 Token waiter 修复。另新增真实 `AuthGate → DailyNewsClient → /api/daily-news` 组合测试；复审无 Critical 或 Important 遗留。
-- 定向 4 个测试文件 / 28 项、全量 Vitest 79 文件 / 589 项、应用 Python 93 项、根工具 Python 372 项（1 项跳过）、默认与 Supabase Production build、Playwright 9/9、治理及隐私门禁均通过。最终结论仍等待 Draft PR、合成 Preview 和新的 Production 当次确认；本节不把 Owner 页面新闻展示标记为完成。
+- 定向 4 个测试文件 / 28 项、全量 Vitest 79 文件 / 589 项、应用 Python 93 项、根工具 Python 372 项（1 项跳过）、默认与 Supabase Production build、Playwright 9/9、治理及隐私门禁均通过。最终结论仍等待 PO 验收和新的 Production 当次确认；本节不把 Owner 页面新闻展示标记为完成。
+- Draft PR #65 已创建并保持 Draft。最终合成 Preview 由本地 candidate-preview 静态制品通过 Vercel Build Output 部署：状态 READY，0 Functions、0 Cron，首页 200，`/api/daily-news` 404，严格 CSP 为 `connect-src 'none'` 且不含 `unsafe-eval`。
+- 首次从源码根部署时，Vercel 自动识别 `api/` 并打包 5 个 Functions；该制品不符合 Preview 边界，未交付且已精确删除。最终合格制品不含 Owner 连接、Functions、Cron 或 Production Secret；本地 OIDC、项目配置和临时目录已清理。

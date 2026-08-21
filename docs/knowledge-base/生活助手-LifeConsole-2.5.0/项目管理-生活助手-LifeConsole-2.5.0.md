@@ -3,9 +3,9 @@
 ## 1. 当前状态
 
 - 主阶段：已上线；每日新闻后端可用，Owner 页面展示认证生命周期修复开发中。PR #58、Supabase migration、Owner Preview、界面热修复、PR #62、PR #63、PR #64 与对应 Production 发布均已完成。
-- 子状态：PR #64 已按 PO 当次确认合并发布；Production 控制面、Cron、匿名鉴权和 Owner 新闻接口只读复验通过，但真实浏览器仍未发出 `/api/daily-news` 请求。PO 已确认进入 PR #65 开发，当前按 TDD 统一 AuthGate 与新闻客户端的 Token 生命周期。
+- 子状态：PR #64 已按 PO 当次确认合并发布；Production 控制面、Cron、匿名鉴权和 Owner 新闻接口只读复验通过，但真实浏览器仍未发出 `/api/daily-news` 请求。PO 已确认进入 PR #65 开发；统一认证生命周期、全量本地门禁、独立复审、Draft PR 与纯静态合成 Preview 已完成。
 - 分支：`agent/life-console-news-auth-lifecycle` 独立 worktree；只处理前端 Owner 认证生命周期和去敏证据，不改新闻生成、数据库、Cron 或 Owner 数据。
-- PR：PR #65 开发中；仅可创建 Draft PR 和合成 Preview。在新的当次确认前不得合并或重新发布 Production。
+- PR：Draft PR #65 已创建；纯静态合成 Preview READY，0 Functions、0 Cron。在新的验收与 Production 当次确认前不得转 Ready、合并或重新发布 Production。
 - 数据库：两个加法 migration 保持已应用，不回滚或删除用户数据；本次不改 Supabase schema 或 Owner 数据。
 
 ## 2. 阶段计划
@@ -22,7 +22,7 @@
 8. 上线：原 2.5.0 migration、Owner Preview、自动化、PR 合并、Production 发布与首跑验收均已完成。
 9. 新闻可靠性快速维护：正式设计补充、TDD、独立代码评审、全量门禁、PR #63、Production 与手动生成今日新闻均已完成；服务端结果和运行收据成功。
 10. 新闻展示启动竞态热修复：PR #64 已合并发布；后端和控制面复验通过，但真实 Owner 浏览器仍为空态，第一版修复未覆盖实际认证时序。
-11. 认证生命周期统一：PO 已确认进入 PR #65 开发；TDD 红灯覆盖 Session 恢复、认证事件、显式登录和退出清理，最小实现、全量门禁与 Production build 已通过；Draft PR 和合成 Preview 进行中。
+11. 认证生命周期统一：PO 已确认进入 PR #65 开发；TDD、全量门禁、独立复审、Draft PR 与纯静态合成 Preview 已完成；等待 PO 验收，Production 保持不变。
 
 ## 3. 门禁与恢复条件
 
@@ -37,7 +37,7 @@
 | 新闻可靠性 Preview/验收 | completed | PO 于 2026-08-21 当次确认验收 PR #63 |
 | 新闻可靠性 Production | completed | PR #63 已合并，Production READY；Cron 已手动触发并成功生成 2026-08-21 摘要及运行收据 |
 | Owner 新闻展示 PR #64 | completed_with_followup | PO 已确认合并和发布；Production 后端今日摘要成功，但浏览器没有发起新闻请求，需 PR #65 收口 |
-| Owner 认证生命周期 PR #65 | in_progress | PO 已确认进入开发；完成全量门禁、Draft PR 与合成 Preview 后等待新的验收/Production 门禁 |
+| Owner 认证生命周期 PR #65 | awaiting_po | 全量门禁、Draft PR 与 0 Functions/0 Cron 合成 Preview 已完成；等待新的验收与 Production 当次确认 |
 
 ## 4. 开放风险
 
@@ -102,4 +102,5 @@
 | 2026-08-21 | PR #65 认证生命周期统一 | PO 已确认进入开发；删除独立 token provider，由 AuthGate 使用的认证服务持有内存 Token，TDD 覆盖 Session、认证事件、显式登录与退出清理；不改数据库、Cron 或新闻生成 |
 | 2026-08-21 | PR #65 首轮独立代码审查 | 发现迟到 Session 可能覆盖或复活更新认证事件的 Important 竞态；以三组红灯、service revision、Token waiter 和真实 AuthGate→新闻请求组合测试修复，全量门禁通过 |
 | 2026-08-21 | PR #65 代码复审 | 无 Critical 或 Important 遗留；唯一 Minor 为刷新事件后补充迟到 Session 不覆盖缓存 Token 的直接断言，已补充并定向复验 |
+| 2026-08-21 | Draft PR #65 与合成 Preview | Draft PR 已创建；合格 Preview 为 READY、0 Functions、0 Cron、首页 200、新闻 API 404、严格 CSP。首个误带 5 个 Functions 的 Preview 未交付并已删除，本地 OIDC/配置已清理 |
 | 2026-08-19 | 视觉、设计、技术确认前不写生产功能 | Gate 2 v2 后已满足 |

@@ -929,9 +929,11 @@ Preview 验证构建、CSP、四页与静态回归；由于纯合成模式不连
 
 首轮独立审查发现迟到 Session 覆盖认证事件的 Important 竞态；补充红灯并修复。定向 4 文件 / 28 项、全量 Vitest 79 文件 / 589 项、应用 Python 93 项、根工具 Python 372 项（1 项跳过）、Production build 与 Playwright 9/9 已通过；复审无 Critical 或 Important 遗留。
 
-- [ ] **Step 5: 创建 Draft PR #65 并部署纯合成 Preview**
+- [x] **Step 5: 创建 Draft PR #65 并部署纯合成 Preview**
 
 Preview 仅验证构建、CSP、四页和静态回归，不连接 Supabase、Owner 数据、Functions、Cron 或 Production Secret。
+
+Draft PR #65 已创建。最终 Preview 使用纯静态 Build Output，状态 READY、0 Functions、0 Cron；首页 200、`/api/daily-news` 404、严格 CSP 通过。第一次从源码根部署时误带 5 个 API Functions，发现后未交付、已删除，并清理本地 OIDC/项目配置；该失败制品不作为验收候选。
 
 - [ ] **Step 6: 取得新的验收与 Production 当次确认**
 

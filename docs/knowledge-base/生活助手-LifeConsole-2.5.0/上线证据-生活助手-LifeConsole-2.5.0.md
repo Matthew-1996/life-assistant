@@ -123,3 +123,4 @@
 - PR #64 已按 PO 当次确认合并并重新发布 Production；发布状态、稳定别名、合并提交和新闻 Cron 配置一致，匿名鉴权与严格 CSP 通过。
 - Owner 新闻接口只读复验返回 2026-08-21 成功摘要 5 条，但真实浏览器仍未发出新闻请求，页面保持空态。因此 PR #64 只记录为已发布，不记录为前端展示验收通过。
 - PO 已确认进入 PR #65 开发。PR #65 只统一 AuthGate 与新闻客户端的内存 Token 生命周期，不改数据库、新闻内容、Cron、Secrets 或 Owner 数据；完成 Draft PR 和合成 Preview 后仍需新的验收与 Production 确认。
+- Draft PR #65 与纯静态合成 Preview 已完成：Preview READY、0 Functions、0 Cron、首页 200、新闻 API 404、严格 CSP 通过。首次误带 Functions 的候选已删除且未交付；Production 未变更。
