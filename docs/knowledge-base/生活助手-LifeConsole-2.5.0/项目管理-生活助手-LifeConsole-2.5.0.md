@@ -2,10 +2,10 @@
 
 ## 1. 当前状态
 
-- 主阶段：已上线；每日新闻可靠性快速维护进行中。PR #58、Supabase migration、Owner Preview、两次界面热修复、PR #62 与既有 Production 发布均已完成。
-- 子状态：2026-08-21 PO 已批准“GDELT 失败切换新华网/BBC + Runtime Cache 最近 7 天运行记录”方向；设计补充已同步，待 TDD 实施、Preview 验收和 Production 独立门禁。
-- 分支：沿用 `agent/life-console-content-release-evidence` 独立 worktree 与 Draft PR #63，避免同范围重复 PR；完成后按 Git 规范清理。
-- PR：PR #63 当前为 Draft；既有证据提交保持不变，新增修复、测试和去敏证据将以独立提交追加。
+- 主阶段：已上线；每日新闻可靠性后端已发布，Owner 页面启动竞态热修复待独立验收。PR #58、Supabase migration、Owner Preview、界面热修复、PR #62、PR #63 与对应 Production 发布均已完成。
+- 子状态：2026-08-21 PR #63 已按 PO 当次确认合并发布；手动 Cron 已成功生成当日 5 条摘要并写入去敏运行收据。Production 浏览器随后发现登录恢复时未发起新闻请求，已按 TDD 完成最小 token provider 修复，全量门禁通过。
+- 分支：`agent/life-console-news-auth-token` 独立 worktree；只处理 Supabase 登录启动竞态和去敏发布证据，不改新闻生成、数据库或 Owner 数据。
+- PR：Draft PR #64 已创建，纯合成 Preview READY 并完成桌面/移动只读验收；在 PO 新的当次确认前不合并、不重新发布 Production。
 - 数据库：两个加法 migration 保持已应用，不回滚或删除用户数据；本次不改 Supabase schema 或 Owner 数据。
 
 ## 2. 阶段计划
@@ -20,7 +20,8 @@
 6. 内容服务：寄语展示、新闻 API、Runtime Cache、降级。已完成本地实现与测试。
 7. 测试与 Preview：记录页反馈与更新后的纯静态合成 Preview 已完成；锁文件可移植性和 Runner UTC 时区确定性补丁均已由 GitHub Actions 复验，privacy、Python、Node 三项全绿。
 8. 上线：原 2.5.0 migration、Owner Preview、自动化、PR 合并、Production 发布与首跑验收均已完成。
-9. 新闻可靠性快速维护：正式设计补充、TDD、独立代码评审、全量门禁、远端 CI 与纯静态合成 Preview 已完成；等待 PO 验收，PR 合并、Production 和手动生成今日新闻尚未执行。
+9. 新闻可靠性快速维护：正式设计补充、TDD、独立代码评审、全量门禁、PR #63、Production 与手动生成今日新闻均已完成；服务端结果和运行收据成功。
+10. 新闻展示启动竞态热修复：TDD、独立代码评审、Production build、Playwright、全量门禁、Draft PR #64 与纯合成 Preview 已完成；等待 PO 合并/发布门禁。
 
 ## 3. 门禁与恢复条件
 
@@ -32,8 +33,9 @@
 | 寄语自动化创建 | completed | PO 于 2026-08-20 明确要求创建；规范 Prompt/私有注册表/运行实例一致，ACTIVE，下一次运行落在周一 12:00 上海时间允许抖动内 |
 | 2.5.0 PR #58 合并 | completed | PO 已确认并 squash merge 到 main |
 | 新闻可靠性设计补充 | approved | PO 于 2026-08-21 确认官方备用源与 Runtime Cache 7 天运维记录方向；不新增 Supabase 表或密钥 |
-| 新闻可靠性 Preview/验收 | awaiting_po | TDD、全量门禁、远端 CI、合成 Preview 和 Owner 鉴权运行记录接口测试已通过，等待 PO 当次验收 |
-| 新闻可靠性 Production | pending | PO 验收并当次确认 PR 合并/Production 后发布；随后手动触发一次生成今日新闻 |
+| 新闻可靠性 Preview/验收 | completed | PO 于 2026-08-21 当次确认验收 PR #63 |
+| 新闻可靠性 Production | completed | PR #63 已合并，Production READY；Cron 已手动触发并成功生成 2026-08-21 摘要及运行收据 |
+| Owner 新闻展示热修复 | awaiting_po | 登录恢复启动竞态的 TDD 修复、独立评审、Draft PR #64 与纯合成 Preview 已通过；需 PO 新的当次确认才可合并并重新发布 |
 
 ## 4. 开放风险
 
@@ -41,6 +43,7 @@
 - 新华网当前频道 HTML 结构可能变化，BBC RSS 也可能单入口异常：解析器固定入口、体积/超时、严格字段和失败隔离；任何不足不得放宽可信域名或伪造时间。
 - Runtime Cache 运行记录可跨部署但属于可逐出的 7 天运维状态；若未来要求永久审计，再单独评审 Supabase 表与服务器凭据，不在本次静默扩展。
 - Runtime Cache 区域一致性：两个端点固定同区并测试缓存命中。
+- Owner 登录恢复与页面数据请求时序：应用级 token provider 在 AuthGate 挂载前订阅 Supabase 认证事件，并保留 `getSession()` 兼容回退；热修复发布前继续以单元测试、Preview 与正式浏览器请求证据验收。
 - Unsplash Key 可能不存在：Preview 使用合成元数据，Production 使用渐变。
 - 当前 bundle 大于 500 kB：样式/组件拆分时观察，不为追求指标引入无关架构。
 - iCloud worktree 偶发 interrupted syscall：每次创建后验证对象、HEAD 和工作树完整性。
@@ -90,4 +93,7 @@
 | 2026-08-20 | GDELT 503 根因与兼容修复 | 公开探针证实 DOC API 要求每 5 秒最多一次请求；原三分类并发会共同触发 429。TDD 改为至少间隔 5 秒的顺序请求，并将两个重建 Function 上限调整为 60 秒 |
 | 2026-08-20 | Life Console 每周寄语自动化 | PO 明确要求创建；Owner 最小投影与 revision-safe 写入工具完成 TDD，私有规范 Prompt/注册表/运行实例一致，下一次运行已核对上海与 UTC 时间 |
 | 2026-08-21 | GDELT 失败备用源与 Cron 运行记录 | PO 确认采用新华网/BBC 官方公开源，并用同区域 Runtime Cache 保存最近 7 天去敏运维记录；不新增 Supabase schema/Secret |
+| 2026-08-21 | PR #63 合并、Production 发布与今日新闻手动 Cron | PO 当次确认并完成；合并后 main CI 全绿，Cron Enabled 且手动运行 HTTP 200，当日运行收据成功并生成 5 条满足分类/地域最低配比的摘要 |
+| 2026-08-21 | Owner 页面新闻未展示根因 | 服务端与正式客户端解析均成功，但浏览器登录恢复后没有发出 `/api/daily-news` 请求；定位为 `getSession()` 启动竞态，按 TDD 改为先订阅认证事件提供内存 token，等待新 Draft PR 和独立发布门禁 |
+| 2026-08-21 | Draft PR #64 与认证热修复 Preview | 独立评审无 Critical/Important；纯合成 Preview READY，1440px/390px 四页无横向溢出、严格 CSP、runtime error 0，新闻 API 为 404；未连接 Owner 数据、Functions、Cron 或 Production Secret |
 | 2026-08-19 | 视觉、设计、技术确认前不写生产功能 | Gate 2 v2 后已满足 |
