@@ -4,6 +4,7 @@ interface SupabaseUserLike {
 }
 
 interface SupabaseSessionLike {
+  access_token?: string;
   user: SupabaseUserLike;
   expires_at?: number;
 }
@@ -49,6 +50,7 @@ export interface AuthSession {
 
 export interface LifeConsoleAuthService {
   session(): Promise<AuthSession | null>;
+  getAccessToken(): Promise<string | null>;
   signIn(email: string, password: string): Promise<AuthSession>;
   requestPasswordReset(email: string, redirectTo: string): Promise<void>;
   updatePassword(password: string): Promise<void>;
@@ -69,6 +71,11 @@ function mapSession(
   };
 }
 
+function accessToken(session: SupabaseSessionLike | null): string | null {
+  const value = session?.access_token;
+  return typeof value === "string" && value ? value : null;
+}
+
 function normalizedEmail(email: string): string {
   return email.trim();
 }
@@ -76,20 +83,64 @@ function normalizedEmail(email: string): string {
 export function createSupabaseAuthService(
   auth: SupabaseAuthPort,
 ): LifeConsoleAuthService {
+  let currentAccessToken: string | null = null;
+  let currentSession: AuthSession | null = null;
+  let hasAuthState = false;
+  let authRevision = 0;
+  const tokenWaiters = new Set<(token: string | null) => void>();
+
+  function commitSession(
+    session: SupabaseSessionLike | null,
+  ): AuthSession | null {
+    authRevision += 1;
+    hasAuthState = true;
+    currentAccessToken = accessToken(session);
+    currentSession = mapSession(session);
+    for (const resolve of tokenWaiters) resolve(currentAccessToken);
+    tokenWaiters.clear();
+    return currentSession;
+  }
+
   return {
     async session() {
+      const revisionAtStart = authRevision;
       const { data, error } = await auth.getSession();
+      if (authRevision !== revisionAtStart) return currentSession;
       if (error) throw error;
-      return mapSession(data.session);
+      return commitSession(data.session);
+    },
+
+    async getAccessToken() {
+      if (hasAuthState) return currentAccessToken;
+      const revisionAtStart = authRevision;
+      let resolveEvent!: (token: string | null) => void;
+      const authEvent = new Promise<string | null>((resolve) => {
+        resolveEvent = resolve;
+        tokenWaiters.add(resolve);
+      });
+      const storedSession = auth.getSession().then(({ data, error }) => {
+        if (authRevision !== revisionAtStart) return currentAccessToken;
+        if (error) throw error;
+        commitSession(data.session);
+        return currentAccessToken;
+      });
+      try {
+        return await Promise.race([authEvent, storedSession]);
+      } finally {
+        tokenWaiters.delete(resolveEvent);
+      }
     },
 
     async signIn(email, password) {
+      const revisionAtStart = authRevision;
       const { data, error } = await auth.signInWithPassword({
         email: normalizedEmail(email),
         password,
       });
       if (error) throw error;
-      const session = mapSession(data.session);
+      const session = authRevision === revisionAtStart
+        ? commitSession(data.session)
+        : currentSession;
       if (!session) {
         throw new Error("Password sign-in did not create a session");
       }
@@ -112,11 +163,12 @@ export function createSupabaseAuthService(
     async signOut() {
       const { error } = await auth.signOut();
       if (error) throw error;
+      commitSession(null);
     },
 
     subscribe(listener) {
       const { data } = auth.onAuthStateChange((_event, session) => {
-        listener(mapSession(session));
+        listener(commitSession(session));
       });
       return () => data.subscription.unsubscribe();
     },

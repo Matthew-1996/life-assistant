@@ -859,6 +859,8 @@ git commit -m "docs(life-console): record news fallback release evidence"
 
 ### Task 14: Owner 新闻展示认证启动竞态热修复
 
+状态：历史实现。PR #64 已合并发布，但真实 Owner 浏览器仍未发出新闻请求；该独立 provider 方案由 Task 15 取代。
+
 **Files:**
 - Create: `apps/life-console/src/supabase/auth-token.ts`
 - Create: `apps/life-console/tests/supabase/auth-token.test.ts`
@@ -886,10 +888,53 @@ Vitest 79 文件 / 587 项、应用 Python 93 项、Production build、Playwrigh
 
 Preview 验证构建、CSP、四页与静态回归；由于纯合成模式不连接 Supabase，认证竞态以单元测试及发布后的 Owner 只读浏览器请求为最终证据。
 
-- [ ] **Step 5: 取得 PO 当次确认后合并并重新发布 Production**
+- [x] **Step 5: 取得 PO 当次确认后合并并重新发布 Production**
 
 不得复用 PR #63 的发布确认；重新核对 GitHub/Vercel 绑定后发布同一合并提交。
 
-- [ ] **Step 6: 发布后只读复验 Owner 今日新闻**
+- [x] **Step 6: 发布后只读复验 Owner 今日新闻**
 
 仅确认 `/api/daily-news` 已由浏览器发出、面板显示 5 条、来源链接存在、CSP 与 console 正常；不记录标题、Owner 标识或任何私人页面内容。
+
+实际结果：Production 发布、Cron、匿名鉴权与 Owner API 当日 5 条摘要通过；浏览器加载新资产后仍没有发出 `/api/daily-news` 请求，UI 保持空态。本步骤完成了只读复验，但验收结论为失败，不把新闻展示标记为完成。
+
+### Task 15: 统一 Owner UI 与新闻客户端认证生命周期
+
+**Files:**
+- Modify: `apps/life-console/src/supabase/auth.ts`
+- Modify: `apps/life-console/src/main.tsx`
+- Delete: `apps/life-console/src/supabase/auth-token.ts`
+- Modify: `apps/life-console/tests/supabase/auth.test.ts`
+- Create: `apps/life-console/tests/ui/supabase-news-auth-lifecycle.test.tsx`
+- Delete: `apps/life-console/tests/supabase/auth-token.test.ts`
+- Modify: `docs/knowledge-base/生活助手-LifeConsole-2.5.0/`
+
+**Goal:** AuthGate 已恢复或建立 Owner 会话后，新闻客户端复用同一个认证服务的内存 Token 发出鉴权请求；刷新、退出和迟到的 Session 读取不得覆盖更新的认证事件。
+
+**Architecture:** `LifeConsoleAuthService` 同时拥有去敏 `AuthSession` 投影和仅存于闭包内存的 access token。Session 恢复、认证事件与显式登录使用 revision 排序并唤醒 Token 等待者；退出提交权威空状态。新闻客户端直接使用同一服务的 `getAccessToken()`，不创建第二个订阅或 Provider。Token 不进入 React state、DOM、日志、备份或知识库。
+
+- [x] **Step 1: 用 Production 证据定位失败边界**
+
+正式 Owner API 返回当日 5 条摘要，但浏览器未发出请求；新资产已加载，排除旧部署与缓存缺失，将根因缩小到 `fetch` 之前的独立 Token 生命周期。
+
+- [x] **Step 2: 以红灯覆盖统一生命周期**
+
+红灯分别覆盖 Session 恢复复用、认证事件复用、显式登录复用、退出清理、迟到 Session 不覆盖 `SIGNED_IN` / `TOKEN_REFRESHED` / `SIGNED_OUT`，以及 AuthGate → DailyNewsClient 的完整鉴权请求。
+
+- [x] **Step 3: 实现 revision-safe 单一认证服务**
+
+删除独立 provider；同一个认证服务提交内存 Token 与去敏 Session 投影，事件可结束进行中的 Token 回退，迟到读取不覆盖更高 revision，已知退出状态不重复读取 Session。
+
+- [x] **Step 4: 运行本地全量门禁与独立代码评审**
+
+首轮独立审查发现迟到 Session 覆盖认证事件的 Important 竞态；补充红灯并修复。定向 4 文件 / 28 项、全量 Vitest 79 文件 / 589 项、应用 Python 93 项、根工具 Python 372 项（1 项跳过）、Production build 与 Playwright 9/9 已通过；复审无 Critical 或 Important 遗留。
+
+- [x] **Step 5: 创建 Draft PR #65 并部署纯合成 Preview**
+
+Preview 仅验证构建、CSP、四页和静态回归，不连接 Supabase、Owner 数据、Functions、Cron 或 Production Secret。
+
+Draft PR #65 已创建。最终 Preview 使用纯静态 Build Output，状态 READY、0 Functions、0 Cron；首页 200、`/api/daily-news` 404、严格 CSP 通过。第一次从源码根部署时误带 5 个 API Functions，发现后未交付、已删除，并清理本地 OIDC/项目配置；该失败制品不作为验收候选。
+
+- [ ] **Step 6: 完成 Agent 验收并取得 Production 当次确认**
+
+PO 已授权 Agent 以自动化全量验收代替用户手工 Preview 验收；合成 Preview 必须可见展示 6 条、覆盖三类与国内/国际，且不连接 Owner/API。PR #65 合并与 Production 发布仍必须取得当次确认；发布后只读验证浏览器确实请求 `/api/daily-news`、显示有效摘要并保持 CSP/console 正常，不记录标题或私人内容。

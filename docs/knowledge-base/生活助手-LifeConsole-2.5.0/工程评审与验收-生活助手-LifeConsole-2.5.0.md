@@ -141,3 +141,17 @@ Supabase 首次上线前只读核对曾因账号不匹配而失败关闭；重�
 - 私有规范 Prompt、注册表 SHA-256 与运行实例 Prompt 完全一致；实例状态 ACTIVE，RRULE 为每周一 12:00 上海本地时间，调度库的下一次运行换算为周一 12:01:43 上海 / 04:01:43 UTC，在 300 秒允许抖动内。未记录自动化 ID、目标线程 ID 或 Owner 数据。
 - PR #62 已 squash 合并，privacy、Python、Node 三项远端 CI 全绿。合并后的 Production 制品构建为 READY 并完成稳定正式别名切换；稳定域名与验收部署使用相同 JS/CSS 资产，首页 200，严格 CSP 保持 `script-src 'self'` 且不含 `unsafe-eval`。
 - 每日新闻 Cron 在 Vercel 设置中为 Enabled，路径与 `23:00 UTC` 日计划匹配上海次日名义 07:00；当前 Hobby 调度允许在该小时内弹性触发。未带凭据请求返回 `401 / no-store`，函数请求落在预定区域。控制台 Run 首跑通过鉴权并进入函数，因 GDELT 共享出口限流返回 `503 / retryable empty`，没有半成品或伪造摘要。
+
+## 12. PR #64 发布复验与 PR #65 开发证据
+
+- PR #64 已按 PO 当次确认合并并发布。Production 为 READY，稳定别名、合并提交和 Cron 定义一致；首页 200，严格 CSP 不含 `unsafe-eval`，新闻、运行记录和 Cron 三个匿名请求均为 `401 / no-store`。
+- 使用既有 Owner 会话只读调用正式新闻接口返回 `success`，日期为 2026-08-21，共 5 条，且响应为 `no-store`；未输出新闻正文、Owner 标识或任何个人记录。
+- 真实 Owner 浏览器加载了 PR #64 新资产，但新闻区仍为空，且 Production 日志没有对应 `/api/daily-news` 请求。由此排除缓存缺失和旧资产，失败边界位于浏览器调用 `fetch` 之前的独立 Token 获取生命周期。
+- PR #65 按 PO 确认进入 TDD：红灯分别证明同一个认证服务尚不能复用 Session、认证事件和显式登录产生的 Token，以及退出后必须清理 Token。最小实现将 Token 保留在 `LifeConsoleAuthService` 内存闭包，新闻客户端直接复用该服务，并删除第二套订阅/provider。
+- 首轮独立审查发现迟到 `getSession()` 可能覆盖或复活更新认证事件的 Important 竞态；新增 `SIGNED_IN`、`TOKEN_REFRESHED`、`SIGNED_OUT` 三组红灯后，以 service revision 和 Token waiter 修复。另新增真实 `AuthGate → DailyNewsClient → /api/daily-news` 组合测试；复审无 Critical 或 Important 遗留。
+- 定向 4 个测试文件 / 28 项、全量 Vitest 79 文件 / 589 项、应用 Python 93 项、根工具 Python 372 项（1 项跳过）、默认与 Supabase Production build、Playwright 9/9、治理及隐私门禁均通过。最终结论仍等待 PO 验收和新的 Production 当次确认；本节不把 Owner 页面新闻展示标记为完成。
+- Draft PR #65 已创建并保持 Draft。最终合成 Preview 由本地 candidate-preview 静态制品通过 Vercel Build Output 部署：状态 READY，0 Functions、0 Cron，首页 200，`/api/daily-news` 404，严格 CSP 为 `connect-src 'none'` 且不含 `unsafe-eval`。
+- 首次从源码根部署时，Vercel 自动识别 `api/` 并打包 5 个 Functions；该制品不符合 Preview 边界，未交付且已精确删除。最终合格制品不含 Owner 连接、Functions、Cron 或 Production Secret；本地 OIDC、项目配置和临时目录已清理。
+- PO 确认合成 Preview 必须可见展示每日新闻上线效果，并授权 Agent 代替用户手工 Preview 验收。TDD 红灯在旧实现上只看到未连接空态；最小实现后候选工作台显示 6 条明确标注的合成新闻，覆盖三类与国内/国际，不连接 API 或 Owner 数据。
+- 首次实现虽只在候选模式渲染，但静态 import 仍把合成字符串带入 Production bundle；以真实 Vite `supabase-production` 构建红灯复现后，改为候选分支动态加载，并将 Production 制品不含两个合成标记纳入回归测试。
+- 本地 Chrome 在 1440px/390px 下均渲染 6 条，空态不存在、根页面无横向溢出、console error 为 0。单 worker 全量 Vitest 80 文件 / 591 项、应用 Python 93 项、Candidate/Production build 与 Playwright 9/9 通过；并行首轮的 3 个无断言资源超时在不放宽超时后以单 worker 全量通过收口。Production 发布后仍必须验证真实 Owner 请求与页面渲染，合成验收不替代该结论。

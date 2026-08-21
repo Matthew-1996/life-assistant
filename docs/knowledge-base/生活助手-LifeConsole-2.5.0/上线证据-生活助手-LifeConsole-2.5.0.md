@@ -117,3 +117,11 @@
 - 同一成功响应通过正式 `DailyNewsClient` 解析契约，结果为 5 条；但已登录 Production 浏览器在登录恢复后未发出 `/api/daily-news` 请求，页面仍为空。该差异定位为认证启动竞态，不是新闻生成或缓存失败，因此本节不把 Owner 页面可见性标记为通过。
 - 独立热修复以 TDD 新增应用级 access-token provider：在 AuthGate 挂载前订阅 Supabase 认证事件，认证事件可直接结束已挂起的会话读取，并用 revision 防止迟到会话覆盖刷新或退出；无事件 token 时保留 `getSession()` 回退。修复分支 Vitest 79 文件 / 587 项、应用 Python 93 项、Production build、Playwright 9/9、治理与隐私门禁全绿；独立代码评审无 Critical 或 Important 阻断项，仍需 Draft PR/Preview、PO 合并和 Production 当次确认。
 - Draft PR #64 已创建并保持 Draft。纯合成 Preview READY；1440px 与 390px 四页均无根页面横向溢出，严格 CSP 不含 `unsafe-eval`，runtime error 为 0，`/api/daily-news` 为 404。Preview 使用静态候选模式，0 Functions、0 Cron，不连接 Owner 数据或 Production Secret；认证竞态的最终证据仍是发布后 Owner 浏览器确实发出新闻请求。
+
+## 14. PR #64 发布结果与后续门禁
+
+- PR #64 已按 PO 当次确认合并并重新发布 Production；发布状态、稳定别名、合并提交和新闻 Cron 配置一致，匿名鉴权与严格 CSP 通过。
+- Owner 新闻接口只读复验返回 2026-08-21 成功摘要 5 条，但真实浏览器仍未发出新闻请求，页面保持空态。因此 PR #64 只记录为已发布，不记录为前端展示验收通过。
+- PO 已确认进入 PR #65 开发。PR #65 只统一 AuthGate 与新闻客户端的内存 Token 生命周期，不改数据库、新闻内容、Cron、Secrets 或 Owner 数据；完成 Draft PR 和合成 Preview 后仍需新的验收与 Production 确认。
+- Draft PR #65 与纯静态合成 Preview 已完成：Preview READY、0 Functions、0 Cron、首页 200、新闻 API 404、严格 CSP 通过。首次误带 Functions 的候选已删除且未交付；Production 未变更。
+- PO 确认合成 Preview 应直接展示新闻最终布局，并同意 Agent 执行全量验收代替手工 Preview 验收。候选模式已以动态加载的纯内存 client 渲染 6 条明确标注的合成新闻，不发起 API 请求，不含 Owner 连接、Token、Functions 或 Cron；Production Vite 制品黑盒扫描不含候选新闻标记。本地 1440px/390px 浏览器均显示 6 条、无空态、无根页面溢出且 console error 为 0；正式 Owner 链路仍留待 Production 发布后只读验证。
