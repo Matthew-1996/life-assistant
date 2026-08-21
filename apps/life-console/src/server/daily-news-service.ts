@@ -43,6 +43,38 @@ const NEWS_SYSTEM_PROMPT = [
   "每条只总结已明确给出的事实，地点、人物、原因或结果缺失时保持未知。",
   "输出结构固定为 {\"items\":[{\"id\":\"原 id\",\"summary\":\"不超过160字\"}]}。",
 ].join("\n");
+const CRON_LOG_STATES = new Set(["success", "stale", "empty", "failed"]);
+const CRON_LOG_SOURCES = new Set([
+  "cache", "gdelt", "publisher_fallback", "gdelt_plus_publisher_fallback", "none",
+]);
+const CRON_LOG_FAILURE_STAGES = new Set([
+  "discovery", "selection", "summarization", "cache_write",
+]);
+const CRON_LOG_ERROR_CODES = new Set([
+  "cache_write_failed",
+  "candidate_mix_unavailable",
+  "gdelt_endpoint_not_allowlisted",
+  "gdelt_invalid_json",
+  "gdelt_invalid_response",
+  "gdelt_response_too_large",
+  "gdelt_timeout",
+  "gdelt_unavailable",
+  "news_discovery_unavailable",
+  "news_generation_failed",
+  "news_service_unavailable",
+  "provider_endpoint_not_allowlisted",
+  "provider_invalid_json",
+  "provider_invalid_response",
+  "provider_invalid_schema",
+  "provider_key_unavailable",
+  "provider_response_too_large",
+  "provider_timeout",
+  "provider_unavailable",
+  "publisher_response_too_large",
+  "publisher_sources_unavailable",
+  "publisher_timeout",
+  "publisher_unavailable",
+]);
 
 export class DailyNewsServiceError extends Error {
   constructor(public readonly code: string) {
@@ -569,6 +601,52 @@ export async function dailyNewsCronRequest(
     }
   }
 
+  function logCompletion(completion: DailyNewsRunCompletion): void {
+    const state = typeof completion.state === "string"
+      && CRON_LOG_STATES.has(completion.state)
+      ? completion.state
+      : "failed";
+    const discoverySource = typeof completion.discoverySource === "string"
+      && CRON_LOG_SOURCES.has(completion.discoverySource)
+      ? completion.discoverySource
+      : "none";
+    const failureStage = typeof completion.failureStage === "string"
+      && CRON_LOG_FAILURE_STAGES.has(completion.failureStage)
+      ? completion.failureStage
+      : null;
+    const errorCode = completion.errorCode === null
+      ? null
+      : typeof completion.errorCode === "string"
+        && (CRON_LOG_ERROR_CODES.has(completion.errorCode)
+          || /^(?:gdelt|provider|publisher)_http_[1-5]\d{2}$/.test(completion.errorCode))
+        ? completion.errorCode
+        : "invalid_diagnostics";
+    const digestDate = typeof completion.digestDate === "string"
+      && /^\d{4}-\d{2}-\d{2}$/.test(completion.digestDate)
+      ? completion.digestDate
+      : null;
+    const digestGeneratedAt = typeof completion.digestGeneratedAt === "string"
+      && Number.isFinite(Date.parse(completion.digestGeneratedAt))
+      && new Date(completion.digestGeneratedAt).toISOString() === completion.digestGeneratedAt
+      ? completion.digestGeneratedAt
+      : null;
+    try {
+      console.info(JSON.stringify({
+        event: "daily_news_cron_completed",
+        runId: /^[A-Za-z0-9_-]{1,80}$/.test(runId) ? runId : "invalid-run-id",
+        state,
+        discoverySource,
+        failureStage,
+        errorCode,
+        digestDate,
+        digestGeneratedAt,
+        receiptAvailable,
+      }));
+    } catch {
+      // Diagnostics must never change the Cron response.
+    }
+  }
+
   try {
     const execution = await requestService(dependencies.service)
       .getDigestWithDiagnostics({ allowRebuild: true });
@@ -576,7 +654,7 @@ export async function dailyNewsCronRequest(
     const digest = result.state === "success" || result.state === "stale"
       ? result.digest
       : null;
-    await finish({
+    const completion: DailyNewsRunCompletion = {
       state: result.state,
       finishedAt: now().toISOString(),
       discoverySource: execution.diagnostics.discoverySource,
@@ -584,14 +662,16 @@ export async function dailyNewsCronRequest(
       errorCode: execution.diagnostics.errorCode,
       digestDate: digest?.date ?? null,
       digestGeneratedAt: digest?.generatedAt ?? null,
-    });
+    };
+    await finish(completion);
+    logCompletion(completion);
     return jsonResponse(
       result.state === "empty" ? 503 : 200,
       result,
       responseHeaders(),
     );
   } catch {
-    await finish({
+    const completion: DailyNewsRunCompletion = {
       state: "failed",
       finishedAt: now().toISOString(),
       discoverySource: "none",
@@ -599,7 +679,9 @@ export async function dailyNewsCronRequest(
       errorCode: "news_service_unavailable",
       digestDate: null,
       digestGeneratedAt: null,
-    });
+    };
+    await finish(completion);
+    logCompletion(completion);
     return jsonResponse(
       503,
       { state: "empty", retryable: true },

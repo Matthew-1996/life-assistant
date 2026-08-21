@@ -2,10 +2,10 @@
 
 ## 1. 当前状态
 
-- 主阶段：已上线；每日新闻后端可用，Owner 页面展示认证生命周期修复开发中。PR #58、Supabase migration、Owner Preview、界面热修复、PR #62、PR #63、PR #64 与对应 Production 发布均已完成。
-- 子状态：PR #64 已按 PO 当次确认合并发布；Production 控制面、Cron、匿名鉴权和 Owner 新闻接口只读复验通过，但真实浏览器仍未发出 `/api/daily-news` 请求。PO 已确认进入 PR #65 开发，并同意用 Agent 全量验收代替用户手工 Preview 验收；统一认证生命周期、独立复审与 Draft PR 已完成，纯静态合成新闻 Preview 增量已完成本地门禁，等待更新远端 Preview。
-- 分支：`agent/life-console-news-auth-lifecycle` 独立 worktree；只处理前端 Owner 认证生命周期和去敏证据，不改新闻生成、数据库、Cron 或 Owner 数据。
-- PR：Draft PR #65 已创建；纯静态合成 Preview READY，0 Functions、0 Cron。在新的验收与 Production 当次确认前不得转 Ready、合并或重新发布 Production。
+- 主阶段：2.5.0 已上线；PR #68 已合并并以项目根 `vercel.json` 重新发布，Vercel Cron 已注册、Enabled 且手动调用进入 Production。Owner 页面仍显示每日新闻可重试空态，因此上线验收未完成。
+- 子状态：分层公开探针确认 GDELT 在 5 秒窗口内超时，但 BBC/新华网备用源可发现 47 条候选，五条配比筛选与 DeepSeek 摘要均成功；Production 现有空态缺少去敏失败阶段日志，无法区分 Production Secret、出站源或 Runtime Cache 边界。
+- 分支：`agent/life-console-news-production-diagnostics` 独立 worktree；只增加 Cron 完成事件的闭集去敏诊断与回归测试，不改数据库、Owner 数据、新闻正文、来源白名单、配比或缓存契约。
+- PR：诊断热修复正在本地门禁和独立审查；提交 Draft PR 后仍需 PO 当次确认才能轮换 `DEEPSEEK_API_KEY`、合并和重新发布 Production。
 - 数据库：两个加法 migration 保持已应用，不回滚或删除用户数据；本次不改 Supabase schema 或 Owner 数据。
 
 ## 2. 阶段计划
@@ -23,6 +23,7 @@
 9. 新闻可靠性快速维护：正式设计补充、TDD、独立代码评审、全量门禁、PR #63、Production 与手动生成今日新闻均已完成；服务端结果和运行收据成功。
 10. 新闻展示启动竞态热修复：PR #64 已合并发布；后端和控制面复验通过，但真实 Owner 浏览器仍为空态，第一版修复未覆盖实际认证时序。
 11. 认证生命周期统一：PO 已确认进入 PR #65 开发；TDD、全量门禁、独立复审与 Draft PR 已完成。PO 确认合成 Preview 应展示新闻上线效果，并授权 Agent 代替手工验收；Production 发布仍保持独立门禁。
+12. Cron 注册与 Production 诊断：PR #68 已合并发布并关闭“Cron 未注册”；Owner 页面仍为空后，按 TDD 增加闭集去敏完成日志，准备以已验证 Key 轮换、手动触发和 Owner 页面五条摘要作为最终验收。
 
 ## 3. 门禁与恢复条件
 
@@ -38,6 +39,8 @@
 | 新闻可靠性 Production | completed | PR #63 已合并，Production READY；Cron 已手动触发并成功生成 2026-08-21 摘要及运行收据 |
 | Owner 新闻展示 PR #64 | completed_with_followup | PO 已确认合并和发布；Production 后端今日摘要成功，但浏览器没有发起新闻请求，需 PR #65 收口 |
 | Owner 认证生命周期 PR #65 | agent_acceptance_in_progress | PO 已授权 Agent 代替用户手工验收；必须完成合成新闻 Preview、远程 CI 和去敏浏览器验收。Production 合并发布仍需当次确认 |
+| Cron 注册 PR #68 | completed | PR 已合并；Production 重新发布后控制面存在且启用 `/api/cron/daily-news`，手动调用进入函数；该结果不替代摘要成功和 Owner 页面可见性 |
+| Production 新闻诊断热修复 | implementation_in_progress | 去敏日志、完整相关测试、独立审查与 Draft PR 完成后，由 PO 当次确认 Secret 轮换、合并、重新发布和手动触发 |
 
 ## 4. 开放风险
 
@@ -46,6 +49,7 @@
 - Runtime Cache 运行记录可跨部署但属于可逐出的 7 天运维状态；若未来要求永久审计，再单独评审 Supabase 表与服务器凭据，不在本次静默扩展。
 - Runtime Cache 区域一致性：两个端点固定同区并测试缓存命中。
 - Owner 登录恢复与页面数据请求时序：PR #64 的第二套 token provider 在真实启动中与 AuthGate 生命周期分叉。PR #65 改为由同一个认证服务在 Session、认证事件和显式登录时更新内存 Token；正式发布前仍需 Preview，发布后必须看到 Owner 浏览器实际请求和新闻渲染。
+- Production 内容链路可观测性：HTTP 空态会吞掉真实失败阶段。快速维护只允许记录闭集状态、来源、失败阶段、稳定错误码、摘要日期和收据可用性；未知字符串统一降级，不记录标题、摘要、URL、JWT、Secret 或供应商响应体。
 - Unsplash Key 可能不存在：Preview 使用合成元数据，Production 使用渐变。
 - 当前 bundle 大于 500 kB：样式/组件拆分时观察，不为追求指标引入无关架构。
 - iCloud worktree 偶发 interrupted syscall：每次创建后验证对象、HEAD 和工作树完整性。
@@ -104,4 +108,6 @@
 | 2026-08-21 | PR #65 代码复审 | 无 Critical 或 Important 遗留；唯一 Minor 为刷新事件后补充迟到 Session 不覆盖缓存 Token 的直接断言，已补充并定向复验 |
 | 2026-08-21 | Draft PR #65 与合成 Preview | Draft PR 已创建；合格 Preview 为 READY、0 Functions、0 Cron、首页 200、新闻 API 404、严格 CSP。首个误带 5 个 Functions 的 Preview 未交付并已删除，本地 OIDC/配置已清理 |
 | 2026-08-21 | PR #65 合成新闻可见验收 | PO 确认 Preview 需展示上线效果；仅在 `candidate-preview` 动态注入 6 条公开合成摘要，覆盖三类与国内/国际。Production bundle 黑盒回归确认不含两项候选标记。PO 同意 Agent 全量验收代替手工 Preview 验收；合成数据不得替代上线后 Owner 真实链路验证 |
+| 2026-08-21 | PR #68 与 Production Cron 注册 | PO 选择方案 A；PR 合并后从项目根动态配置重新发布，Cron 已注册、Enabled 且手动进入 Production，匿名 401 与严格 CSP 保持；Owner 页面仍为空，因此不宣称每日新闻完成 |
+| 2026-08-21 | Production 新闻空态分层诊断 | Keychain DeepSeek 纯合成连通测试 200；正确 TLS 条件下备用源 47 条、五条配比与五条摘要通过，GDELT 超时按设计降级。新增闭集去敏 Cron 完成日志，不改 Owner 数据或新闻正文 |
 | 2026-08-19 | 视觉、设计、技术确认前不写生产功能 | Gate 2 v2 后已满足 |

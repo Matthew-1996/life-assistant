@@ -125,3 +125,11 @@
 - PO 已确认进入 PR #65 开发。PR #65 只统一 AuthGate 与新闻客户端的内存 Token 生命周期，不改数据库、新闻内容、Cron、Secrets 或 Owner 数据；完成 Draft PR 和合成 Preview 后仍需新的验收与 Production 确认。
 - Draft PR #65 与纯静态合成 Preview 已完成：Preview READY、0 Functions、0 Cron、首页 200、新闻 API 404、严格 CSP 通过。首次误带 Functions 的候选已删除且未交付；Production 未变更。
 - PO 确认合成 Preview 应直接展示新闻最终布局，并同意 Agent 执行全量验收代替手工 Preview 验收。候选模式已以动态加载的纯内存 client 渲染 6 条明确标注的合成新闻，不发起 API 请求，不含 Owner 连接、Token、Functions 或 Cron；Production Vite 制品黑盒扫描不含候选新闻标记。本地 1440px/390px 浏览器均显示 6 条、无空态、无根页面溢出且 console error 为 0；正式 Owner 链路仍留待 Production 发布后只读验证。
+
+## 15. PR #68 Cron 注册与后续诊断
+
+- PO 选择根配置方案 A；PR #68 合并后，从准确 `main` checkout 生成被 Git 忽略的项目根 `vercel.json` 并发布 Production。控制面确认每日新闻 Cron 存在、Enabled，路径与 `0 23 * * *` 计划正确；临时配置不含 Secret 且未进入 Git。
+- 手动 Cron 调用已进入 Production；首页、严格 CSP、匿名新闻/收据/Cron 401 均通过，最近错误级日志为空。但 Owner 真实页面仍显示可重试空态，因此不把 HTTP 进入函数等同于摘要生成成功。
+- 去敏分层探针确认本机 Keychain 中的 DeepSeek Key 对官方接口返回 200；在正确 TLS 信任条件下，GDELT 于产品 5 秒窗口超时，官方发布方备用源仍得到 47 条候选，最终五条覆盖三类与国内/国际，DeepSeek 返回五条有效摘要。探针未输出标题、摘要、Key 或 Owner 数据，临时测试文件已删除。
+- 为定位 Production Secret、出站来源和 Runtime Cache 之间的真实失败边界，独立热修复按 TDD 增加单条 Cron 完成日志。字段使用闭集白名单：事件、运行 ID、状态、发现来源、失败阶段、稳定错误码、摘要日期/时间和收据可用性；未知诊断统一降级，不记录正文、URL、JWT、Secret 或供应商响应体。该热修复尚未合并或发布。
+- 最终完成门槛保持不变：PO 当次确认后轮换为已验证的 Production DeepSeek Key、合并诊断 PR、重新发布、手动触发；只在运行结果为 success、Runtime Cache 可读且 Owner 页面显示五条新闻后关闭缺陷。

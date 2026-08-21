@@ -3,7 +3,7 @@
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import ownerHandler from "../../api/daily-news";
 import runsHandler from "../../api/daily-news-runs";
@@ -56,6 +56,11 @@ const productionEnvironment = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.spyOn(console, "info").mockImplementation(() => undefined);
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 describe("daily news Vercel requests", () => {
@@ -152,6 +157,91 @@ describe("daily news Vercel requests", () => {
     expect(response.headers.get("x-life-console-run-id")).toBe("run-synthetic");
     expect(response.headers.get("x-life-console-run-receipt")).toBe("stored");
     await expect(response.json()).resolves.toEqual(empty);
+  });
+
+  it("logs only sanitized completion diagnostics for an empty Cron run", async () => {
+    const runs = runStore();
+    const isolatedService = {
+      getDigest: vi.fn(async () => empty),
+      getDigestWithDiagnostics: vi.fn(async () => ({
+        result: empty,
+        diagnostics: {
+          discoverySource: "publisher_fallback" as const,
+          failureStage: "summarization" as const,
+          errorCode: "provider_http_401",
+        },
+      })),
+    };
+
+    await dailyNewsCronRequest(
+      new Request("https://life-console.invalid/api/cron/daily-news", {
+        headers: { authorization: "Bearer synthetic-cron-secret-at-least-16" },
+      }),
+      { cronSecret: "synthetic-cron-secret-at-least-16" },
+      {
+        service: isolatedService,
+        runs,
+        now: () => new Date("2030-05-14T01:30:00.000Z"),
+        randomId: () => "run-synthetic",
+      },
+    );
+
+    expect(console.info).toHaveBeenCalledOnce();
+    expect(console.info).toHaveBeenCalledWith(JSON.stringify({
+      event: "daily_news_cron_completed",
+      runId: "run-synthetic",
+      state: "empty",
+      discoverySource: "publisher_fallback",
+      failureStage: "summarization",
+      errorCode: "provider_http_401",
+      digestDate: null,
+      digestGeneratedAt: null,
+      receiptAvailable: true,
+    }));
+    expect(JSON.stringify(vi.mocked(console.info).mock.calls))
+      .not.toContain("synthetic-cron-secret-at-least-16");
+  });
+
+  it("normalizes unsafe completion diagnostics at the log boundary", async () => {
+    const privateDiagnostic = "private raw provider response";
+    const unsafeService = {
+      getDigest: vi.fn(async () => empty),
+      getDigestWithDiagnostics: vi.fn(async () => ({
+        result: empty,
+        diagnostics: {
+          discoverySource: "private source" as never,
+          failureStage: "private stage" as never,
+          errorCode: privateDiagnostic,
+        },
+      })),
+    };
+
+    await dailyNewsCronRequest(
+      new Request("https://life-console.invalid/api/cron/daily-news", {
+        headers: { authorization: "Bearer synthetic-cron-secret-at-least-16" },
+      }),
+      { cronSecret: "synthetic-cron-secret-at-least-16" },
+      {
+        service: unsafeService,
+        runs: runStore(),
+        now: () => new Date("2030-05-14T01:30:00.000Z"),
+        randomId: () => "run-synthetic",
+      },
+    );
+
+    expect(console.info).toHaveBeenCalledWith(JSON.stringify({
+      event: "daily_news_cron_completed",
+      runId: "run-synthetic",
+      state: "empty",
+      discoverySource: "none",
+      failureStage: null,
+      errorCode: "invalid_diagnostics",
+      digestDate: null,
+      digestGeneratedAt: null,
+      receiptAvailable: true,
+    }));
+    expect(JSON.stringify(vi.mocked(console.info).mock.calls))
+      .not.toContain(privateDiagnostic);
   });
 
   it("keeps the news result when receipt persistence is unavailable", async () => {
