@@ -2,10 +2,10 @@
 
 ## 1. 当前状态
 
-- 主阶段：已上线；内容自动化已收口。PR #58、Supabase migration、Owner Preview、两次界面热修复、PR #62 与 Production 发布均已完成。
-- 子状态：DeepSeek 纯合成健康探针为 `provider_ok`；每日新闻 Cron 已启用并鉴权首跑；每周寄语规范 Prompt、私有注册表与 ACTIVE 运行实例一致。
-- 分支：PR #62 的开发分支/worktree 已在合并后清理；仅保留去敏上线证据分支，合并后立即清理。
-- PR：PR #62 已 squash 合并且 privacy、Python、Node 三项远端 CI 全绿；本分支只补充不含凭据或资源 ID 的最终证据。
+- 主阶段：已上线；每日新闻可靠性快速维护进行中。PR #58、Supabase migration、Owner Preview、两次界面热修复、PR #62 与既有 Production 发布均已完成。
+- 子状态：2026-08-21 PO 已批准“GDELT 失败切换新华网/BBC + Runtime Cache 最近 7 天运行记录”方向；设计补充已同步，待 TDD 实施、Preview 验收和 Production 独立门禁。
+- 分支：沿用 `agent/life-console-content-release-evidence` 独立 worktree 与 Draft PR #63，避免同范围重复 PR；完成后按 Git 规范清理。
+- PR：PR #63 当前为 Draft；既有证据提交保持不变，新增修复、测试和去敏证据将以独立提交追加。
 - 数据库：两个加法 migration 保持已应用，不回滚或删除用户数据；本次不改 Supabase schema 或 Owner 数据。
 
 ## 2. 阶段计划
@@ -19,7 +19,8 @@
 5. 页面与算法：工作台、记录、进展、样式拆分。已完成本地实现与测试。
 6. 内容服务：寄语展示、新闻 API、Runtime Cache、降级。已完成本地实现与测试。
 7. 测试与 Preview：记录页反馈与更新后的纯静态合成 Preview 已完成；锁文件可移植性和 Runner UTC 时区确定性补丁均已由 GitHub Actions 复验，privacy、Python、Node 三项全绿。
-8. 上线：migration、Owner Preview、自动化、PR 合并、Production 发布与首跑验收均已完成。
+8. 上线：原 2.5.0 migration、Owner Preview、自动化、PR 合并、Production 发布与首跑验收均已完成。
+9. 新闻可靠性快速维护：正式设计补充已确认；TDD、合成 Preview、Owner 鉴权状态接口、PR 合并、Production 和手动生成今日新闻待执行。
 
 ## 3. 门禁与恢复条件
 
@@ -30,12 +31,15 @@
 | Owner Preview 写入 | completed | PO 已授权；Todo、日记与远期寄语仅用合成标记记录完成验收 |
 | 寄语自动化创建 | completed | PO 于 2026-08-20 明确要求创建；规范 Prompt/私有注册表/运行实例一致，ACTIVE，下一次运行落在周一 12:00 上海时间允许抖动内 |
 | 2.5.0 PR #58 合并 | completed | PO 已确认并 squash merge 到 main |
-| Production | completed | PR #62 合并后新制品 READY 并完成稳定正式别名切换；严格 CSP、Cron 401 门禁、预定区域、任务启用状态与鉴权首跑均已复验；GDELT 限流时按方案保留可重试空态 |
+| 新闻可靠性设计补充 | approved | PO 于 2026-08-21 确认官方备用源与 Runtime Cache 7 天运维记录方向；不新增 Supabase 表或密钥 |
+| 新闻可靠性 Preview/验收 | pending | TDD、全量门禁、合成 Preview 和 Owner 鉴权运行记录接口通过后交由 PO 验收 |
+| 新闻可靠性 Production | pending | PO 验收并当次确认 PR 合并/Production 后发布；随后手动触发一次生成今日新闻 |
 
 ## 4. 开放风险
 
-- 新闻源可用性和 GDELT 结果质量不稳定：白名单、动态配比、最近成功缓存降级。
-- GDELT DOC API 的共享出口限流可能继续返回 429；当前客户端已消除自身三并发违规并按每 5 秒一次顺序请求。共享出口仍被上游限制时保持最近成功/可重试空态，不绕过白名单或改发私人数据。
+- 新闻源可用性和 GDELT 结果质量不稳定：GDELT 保持主源，新华网/BBC 官方公开源按需降级，最终仍执行白名单、24 小时、动态配比和最近成功缓存降级。
+- 新华网当前频道 HTML 结构可能变化，BBC RSS 也可能单入口异常：解析器固定入口、体积/超时、严格字段和失败隔离；任何不足不得放宽可信域名或伪造时间。
+- Runtime Cache 运行记录可跨部署但属于可逐出的 7 天运维状态；若未来要求永久审计，再单独评审 Supabase 表与服务器凭据，不在本次静默扩展。
 - Runtime Cache 区域一致性：两个端点固定同区并测试缓存命中。
 - Unsplash Key 可能不存在：Preview 使用合成元数据，Production 使用渐变。
 - 当前 bundle 大于 500 kB：样式/组件拆分时观察，不为追求指标引入无关架构。
@@ -85,4 +89,5 @@
 | 2026-08-20 | DeepSeek Production 纯合成复验 | Owner 健康探针返回 `HTTP 200 / provider_ok / no-store`；只发送内置合成文本，未读取或写入真实日记 |
 | 2026-08-20 | GDELT 503 根因与兼容修复 | 公开探针证实 DOC API 要求每 5 秒最多一次请求；原三分类并发会共同触发 429。TDD 改为至少间隔 5 秒的顺序请求，并将两个重建 Function 上限调整为 60 秒 |
 | 2026-08-20 | Life Console 每周寄语自动化 | PO 明确要求创建；Owner 最小投影与 revision-safe 写入工具完成 TDD，私有规范 Prompt/注册表/运行实例一致，下一次运行已核对上海与 UTC 时间 |
+| 2026-08-21 | GDELT 失败备用源与 Cron 运行记录 | PO 确认采用新华网/BBC 官方公开源，并用同区域 Runtime Cache 保存最近 7 天去敏运维记录；不新增 Supabase schema/Secret |
 | 2026-08-19 | 视觉、设计、技术确认前不写生产功能 | Gate 2 v2 后已满足 |

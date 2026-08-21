@@ -32,14 +32,19 @@
 
 - Cron Secret、缺失/错误 Owner JWT 均返回 401；Secrets 不进入响应、日志或 bundle。
 - GDELT 域名白名单、URL 规范化、标题指纹去重、分类最低配比和国内/国际覆盖。
+- GDELT 成功时不请求备用源；GDELT 超时、429、5xx 或候选配比不足时切换备用源。
+- 新华网当前频道页面与 BBC RSS 使用固定 HTTPS 入口、响应体/超时上限和公开合成 fixture；新华网旧 RSS、非可信链接、缺失/过期时间、畸形 XML/HTML 与单个入口失败均覆盖。
+- 备用源合并后仍满足 24 小时、科技/财经/政治各一条及国内/国际覆盖；不足时拒绝半成品且不调用 DeepSeek。
 - 恶意标题/片段只作为数据，不能改变模型 Schema、域名规则或缓存键。
 - DeepSeek 成功、非法 JSON、未知字段、摘要超长、429/5xx、超时和响应体过大。
 - Runtime Cache 当日命中、单飞重建、7 天保留、上一成功降级和完全无缓存空态。
+- Cron 鉴权通过后先写 `running`，成功、陈旧、空态和未捕获失败均完成去敏收据；硬终止模拟保留 `running`。最近记录只允许 Owner JWT 读取，anon/错误 JWT 为 401。
+- 收据只包含允许字段，不出现标题、URL、候选片段、模型内容、Secret、Owner 标识或环境变量；7 天过期、畸形/逐出值和收据存储失败按稳定错误码处理。
 - Unsplash 通用查询、热链归因、无 Key、超时和图片失败渐变；私人上下文不得进入查询词。
 - CSP 继续禁止 `unsafe-eval`；只允许指定图片域；浏览器控制台无应用错误。
 
 ## 5. 发布门禁
 
-按顺序执行：治理完整性 → 当前隐私 → Git 历史隐私 → Python → Vitest → Production build → Playwright → 合成 Preview → Owner Preview → PO 验收 → Production。
+按顺序执行：治理完整性 → 当前隐私 → Git 历史隐私 → Python → Vitest → Production build → Playwright → 合成 Preview → Owner Preview/鉴权状态接口 → PO 验收 → Production → 手动 Cron 生成今日新闻。
 
 Owner Preview 只允许写入带明确合成标记的 Todo、寄语和日记记录，并在验收后用受控软删除或状态标记处理；不得触碰真实记录。
