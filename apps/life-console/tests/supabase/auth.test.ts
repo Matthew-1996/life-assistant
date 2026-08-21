@@ -201,6 +201,138 @@ describe("Supabase Auth service", () => {
     expect(port.getSession).not.toHaveBeenCalled();
   });
 
+  it("keeps a newer signed-in event authoritative over a late session read", async () => {
+    let authStateListener:
+      | ((event: string, session: typeof syntheticSession | null) => void)
+      | undefined;
+    let resolveSession:
+      | ((value: {
+          data: { session: typeof syntheticSession | null };
+          error: Error | null;
+        }) => void)
+      | undefined;
+    const getSession = vi.fn(
+      async () => await new Promise<{
+        data: { session: typeof syntheticSession | null };
+        error: Error | null;
+      }>((resolve) => {
+        resolveSession = resolve;
+      }),
+    );
+    const auth = createSupabaseAuthService(createAuthPort({
+      getSession,
+      onAuthStateChange: vi.fn((listener) => {
+        authStateListener = listener;
+        return {
+          data: {
+            subscription: { unsubscribe: vi.fn() },
+          },
+        };
+      }),
+    }));
+    auth.subscribe(vi.fn());
+    const restoredSession = auth.session();
+    const eventSession = {
+      ...syntheticSession,
+      access_token: "new-auth-event-access",
+    };
+
+    authStateListener?.("SIGNED_IN", eventSession);
+    resolveSession?.({ data: { session: null }, error: null });
+
+    await expect(restoredSession).resolves.toEqual({
+      userId: "synthetic-owner",
+      email: "owner@example.invalid",
+      expiresAt: "2027-01-15T08:00:00.000Z",
+    });
+    await expect(auth.getAccessToken()).resolves.toBe("new-auth-event-access");
+    expect(getSession).toHaveBeenCalledOnce();
+  });
+
+  it("settles an in-flight token fallback from a newer refresh event", async () => {
+    let authStateListener:
+      | ((event: string, session: typeof syntheticSession | null) => void)
+      | undefined;
+    let resolveSession:
+      | ((value: {
+          data: { session: typeof syntheticSession | null };
+          error: Error | null;
+        }) => void)
+      | undefined;
+    const auth = createSupabaseAuthService(createAuthPort({
+      getSession: vi.fn(
+        async () => await new Promise<{
+          data: { session: typeof syntheticSession | null };
+          error: Error | null;
+        }>((resolve) => {
+          resolveSession = resolve;
+        }),
+      ),
+      onAuthStateChange: vi.fn((listener) => {
+        authStateListener = listener;
+        return {
+          data: {
+            subscription: { unsubscribe: vi.fn() },
+          },
+        };
+      }),
+    }));
+    auth.subscribe(vi.fn());
+    const token = auth.getAccessToken();
+
+    authStateListener?.("TOKEN_REFRESHED", {
+      ...syntheticSession,
+      access_token: "refreshed-auth-event-access",
+    });
+    const result = await Promise.race([
+      token,
+      new Promise<"token_wait_timed_out">((resolve) => {
+        setTimeout(() => resolve("token_wait_timed_out"), 50);
+      }),
+    ]);
+    resolveSession?.({ data: { session: syntheticSession }, error: null });
+
+    expect(result).toBe("refreshed-auth-event-access");
+  });
+
+  it("keeps sign-out authoritative over an in-flight token fallback", async () => {
+    let authStateListener:
+      | ((event: string, session: typeof syntheticSession | null) => void)
+      | undefined;
+    let resolveSession:
+      | ((value: {
+          data: { session: typeof syntheticSession | null };
+          error: Error | null;
+        }) => void)
+      | undefined;
+    const auth = createSupabaseAuthService(createAuthPort({
+      getSession: vi.fn(
+        async () => await new Promise<{
+          data: { session: typeof syntheticSession | null };
+          error: Error | null;
+        }>((resolve) => {
+          resolveSession = resolve;
+        }),
+      ),
+      onAuthStateChange: vi.fn((listener) => {
+        authStateListener = listener;
+        return {
+          data: {
+            subscription: { unsubscribe: vi.fn() },
+          },
+        };
+      }),
+    }));
+    auth.subscribe(vi.fn());
+    const token = auth.getAccessToken();
+
+    authStateListener?.("SIGNED_OUT", null);
+    resolveSession?.({ data: { session: syntheticSession }, error: null });
+
+    await expect(token).resolves.toBeNull();
+    await expect(auth.getAccessToken()).resolves.toBeNull();
+  });
+
   it("does not retain the Owner token after sign-out", async () => {
     const getSession = vi.fn()
       .mockResolvedValueOnce({ data: { session: syntheticSession }, error: null })
@@ -211,7 +343,7 @@ describe("Supabase Auth service", () => {
     await auth.signOut();
 
     await expect(auth.getAccessToken()).resolves.toBeNull();
-    expect(getSession).toHaveBeenCalledTimes(2);
+    expect(getSession).toHaveBeenCalledOnce();
   });
 
   it("signs out and releases the Supabase subscription", async () => {

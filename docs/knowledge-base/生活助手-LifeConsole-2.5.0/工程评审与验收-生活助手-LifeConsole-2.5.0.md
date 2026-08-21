@@ -148,4 +148,5 @@ Supabase 首次上线前只读核对曾因账号不匹配而失败关闭；重�
 - 使用既有 Owner 会话只读调用正式新闻接口返回 `success`，日期为 2026-08-21，共 5 条，且响应为 `no-store`；未输出新闻正文、Owner 标识或任何个人记录。
 - 真实 Owner 浏览器加载了 PR #64 新资产，但新闻区仍为空，且 Production 日志没有对应 `/api/daily-news` 请求。由此排除缓存缺失和旧资产，失败边界位于浏览器调用 `fetch` 之前的独立 Token 获取生命周期。
 - PR #65 按 PO 确认进入 TDD：红灯分别证明同一个认证服务尚不能复用 Session、认证事件和显式登录产生的 Token，以及退出后必须清理 Token。最小实现将 Token 保留在 `LifeConsoleAuthService` 内存闭包，新闻客户端直接复用该服务，并删除第二套订阅/provider。
-- 定向 3 个测试文件 / 24 项、全量 Vitest 78 文件 / 585 项、应用 Python 93 项、根工具 Python 372 项（1 项跳过）、默认与 Supabase Production build、Playwright 9/9、治理及隐私门禁均通过。最终结论仍等待 Draft PR、合成 Preview 和新的 Production 当次确认；本节不把 Owner 页面新闻展示标记为完成。
+- 首轮独立审查发现迟到 `getSession()` 可能覆盖或复活更新认证事件的 Important 竞态；新增 `SIGNED_IN`、`TOKEN_REFRESHED`、`SIGNED_OUT` 三组红灯后，以 service revision 和 Token waiter 修复。另新增真实 `AuthGate → DailyNewsClient → /api/daily-news` 组合测试。
+- 定向 4 个测试文件 / 28 项、全量 Vitest 79 文件 / 589 项、应用 Python 93 项、根工具 Python 372 项（1 项跳过）、默认与 Supabase Production build、Playwright 9/9、治理及隐私门禁均通过。最终结论仍等待 Draft PR、合成 Preview 和新的 Production 当次确认；本节不把 Owner 页面新闻展示标记为完成。
