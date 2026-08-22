@@ -132,6 +132,14 @@ Supabase 首次上线前只读核对曾因账号不匹配而失败关闭；重�
 
 每次验收只记录去敏结论、合成 fixture、命令、计数和提交，不记录真实日记、健康值、Owner 标识、项目 ID、部署 ID、Secret 或自动化内部凭据。
 
+### PR #72 Production 最终工程结论与搁置
+
+- PO 明确确认合并、重新发布和 Owner 只读复验，并声明这是每日新闻的最后一次修复；失败后只留档，不再继续改代码。
+- PR #72 合并前 GitHub 3/3 CI 全绿、无冲突；本轮补跑非回环 Vitest 571 项、Miniflare 26 项、应用 Python 93 项与 Production build，全部通过。
+- 发布制品来自合并后的 `main`。Production READY；资源页确认三个新闻 Functions，Cron 为 Enabled、`0 23 * * *`。临时发布配置不含 env 或 Secret，使用后已删除。
+- 已登录 Owner 页面无登录表单，新闻面板 `data-news-load-state=error`、0 条、1 个重试入口；console error/warning 为 0。同期 Vercel 没有 `/api/daily-news` 请求或该路由运行错误。
+- 验收结论：工程发布通过，Owner 新闻展示失败，失败边界仍在 Function fetch 前。每日新闻前端展示标记为 shelved；完整时间线与恢复门禁见“每日新闻搁置与接力”。
+
 ### PR #72 认证单一真相源本地工程证据
 
 - 线上只读边界保持为：Owner 完成退出重登后，页面仍未触发 `/api/daily-news`；服务端 Cron、缓存和响应契约此前已有成功证据，因此 PR #72 只修改浏览器认证读取与面板状态，不改数据库、Cron、DeepSeek、新闻正文或 Owner 数据。

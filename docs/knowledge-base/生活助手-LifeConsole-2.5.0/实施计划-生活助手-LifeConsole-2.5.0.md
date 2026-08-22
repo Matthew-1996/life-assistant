@@ -976,6 +976,8 @@ PR #71 发布且 Owner 完成退出/重新登录后，页面仍无新闻，Produ
 
 实际结果：Draft PR #72 已创建并保持 Draft，privacy、Python、Node 三项远程 CI 全绿。合格 Preview 使用本地 Build Output API 静态制品，READY、0 Functions、0 Cron；首页 200、新闻 API 404、`connect-src 'none'` 且不含 `unsafe-eval`。首个源码部署仍被 Vercel 自动发现 5 个 API Functions，检查后未交付并已删除；临时 OIDC、项目链接与 Build Output 目录已清理。
 
-- [ ] **Step 6: 发布后 Owner 只读最终复验**
+- [x] **Step 6: 发布后 Owner 只读最终复验**
 
 仅在 PO 确认合并发布后执行：确认浏览器实际发出 `/api/daily-news`、面板展示有效摘要、严格 CSP 与 console 正常；不记录新闻正文、Owner 标识或任何私人数据。
+
+实际结果：PO 已确认，PR #72 已 squash merge 并从合并后的 `main` 重新发布。Production、三个新闻 Functions 与每日 Cron 均正常；但 Owner 页面闭集状态为 `error`、0 条，console 无错误，Vercel 同期没有收到 `/api/daily-news` 请求。验收结论为失败。按 PO 的最后一次修复边界，每日新闻前端展示转为 shelved，不再继续代码修复；历史时间线、待证假设和恢复门禁已写入“每日新闻搁置与接力”。
