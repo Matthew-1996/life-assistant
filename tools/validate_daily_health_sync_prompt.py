@@ -12,31 +12,43 @@ HEALTH_SYNC_COMMAND = (
     "PYTHONPATH=.:tools python3 tools/life_console_cloud.py health-day "
     "--source records/apple-health-latest.txt --expect-today"
 )
+CANONICAL_ROLLOUT_BLOCK = """Read only the redacted receipt.
+If status=saved, including action created, updated or unchanged, continue quietly.
+On any failure, say only “今日健康数据未同步” and continue the check-in.
+Never display device health values, retry a past date, backfill history or write a local fallback."""
 
-QUESTION_MARKERS = ("开始每日回访提问", "逐项询问", "只问缺失字段")
-FAILURE_CONTINUE_PATTERN = re.compile(r"(?:若失败|失败|未同步).{0,80}继续回访", re.DOTALL)
-HISTORY_PROHIBITION_PATTERN = re.compile(
-    r"(?:不得|禁止|不进行).{0,40}(?:补历史|历史回填)", re.DOTALL
+QUESTION_MARKERS = (
+    "开始每日回访提问",
+    "逐项询问",
+    "只问缺失字段",
+    "今天感觉如何",
 )
-LOCAL_FALLBACK_PROHIBITION_PATTERN = re.compile(
-    r"(?:不得|禁止|不进行).{0,40}回退本地写入", re.DOTALL
-)
-METRIC_PROHIBITION_PATTERN = re.compile(
-    r"(?:不得|禁止|不).{0,40}(?:展示|输出|透露|回显).{0,40}(?:设备)?健康(?:数值|指标)",
-    re.DOTALL,
-)
+NEGATION_PATTERN = re.compile(r"\b(?:never|do not|must not)\b|(?:不得|禁止)", re.IGNORECASE)
 
 
-def _contains_permitted_action(prompt_text: str, object_pattern: str) -> bool:
-    return re.search(
-        rf"(?:允许|可以|应当|需要|请).{{0,16}}{object_pattern}",
-        prompt_text,
-        re.DOTALL,
-    ) is not None
+def _has_unsafe_instruction(text: str, pattern: str) -> bool:
+    """Match a concrete positive instruction while ignoring a negated sentence."""
+    for sentence in re.split(r"[\n。！？!?]", text):
+        match = re.search(pattern, sentence, re.IGNORECASE)
+        if match is None:
+            continue
+        if NEGATION_PATTERN.search(sentence[:match.start()]) is None:
+            return True
+    return False
+
+
+def _has_canonical_block(prompt_text: str) -> bool:
+    if prompt_text.count(CANONICAL_ROLLOUT_BLOCK) != 1:
+        return False
+    position = prompt_text.find(CANONICAL_ROLLOUT_BLOCK)
+    before = prompt_text[position - 1 : position]
+    after_position = position + len(CANONICAL_ROLLOUT_BLOCK)
+    after = prompt_text[after_position : after_position + 1]
+    return before in ("", "\n") and after in ("", "\n")
 
 
 def validate_prompt(prompt_text: str) -> list[str]:
-    """Return contract violations for a daily check-in Prompt without executing it."""
+    """Return daily health-sync Prompt contract violations without executing it."""
     errors: list[str] = []
     health_day_lines = [
         line.strip() for line in prompt_text.splitlines() if "health-day" in line
@@ -55,38 +67,50 @@ def validate_prompt(prompt_text: str) -> list[str]:
     ]
     if not question_positions:
         errors.append("每日回访健康同步契约缺失：每日回访提问")
-    elif command_positions and min(command_positions) > min(question_positions):
+    elif not command_positions or min(command_positions) > min(question_positions):
         errors.append("Apple Health 同步必须发生在每日回访提问前")
 
-    if "只读取命令回执" not in prompt_text:
-        errors.append("每日回访健康同步契约缺失：只读取命令回执")
-    if "status=saved" not in prompt_text:
-        errors.append("每日回访健康同步契约缺失：成功回执处理")
+    if not _has_canonical_block(prompt_text):
+        errors.append("每日回访健康同步契约缺失：精确 rollout 契约")
 
-    if FAILURE_CONTINUE_PATTERN.search(prompt_text) is None or re.search(
-        r"(?:失败|未同步).{0,80}(?:停止|中断|终止).{0,20}回访",
-        prompt_text,
-        re.DOTALL,
-    ) is not None:
-        errors.append("每日回访健康同步契约缺失：同步失败不得阻断回访")
-
-    if (
-        HISTORY_PROHIBITION_PATTERN.search(prompt_text) is None
-        or _contains_permitted_action(prompt_text, r"(?:补历史|历史回填)")
-    ):
-        errors.append("每日回访健康同步契约缺失：禁止健康历史回填")
-    if (
-        LOCAL_FALLBACK_PROHIBITION_PATTERN.search(prompt_text) is None
-        or _contains_permitted_action(prompt_text, r"回退本地写入")
-        or re.search(r"(?:失败后|失败时).{0,16}回退本地写入", prompt_text, re.DOTALL)
-        is not None
-    ):
-        errors.append("每日回访健康同步契约缺失：禁止本地回退写入")
-    if (
-        METRIC_PROHIBITION_PATTERN.search(prompt_text) is None
-        or _contains_permitted_action(prompt_text, r"(?:设备)?健康(?:数值|指标)")
-    ):
-        errors.append("每日回访健康同步契约缺失：禁止展示设备健康数值")
+    surrounding_text = prompt_text.replace(CANONICAL_ROLLOUT_BLOCK, "")
+    conflicts = (
+        (
+            r"\baction\s*=\s*(?!created\b|updated\b|unchanged\b)\w+"
+            r"|\b(?:regardless of action|any action)\b",
+            "每日回访健康同步契约冲突：封闭成功 action 集合",
+        ),
+        (
+            r"\b(?:print|show|display|output|reveal)\b.{0,60}"
+            r"\b(?:detailed errors?|source path)\b",
+            "每日回访健康同步契约冲突：禁止输出来源或详细错误",
+        ),
+        (
+            r"\bread\b.{0,40}\bsource file\b"
+            r"|\b(?:display|show)\b.{0,40}\bsource (?:contents?|file)\b",
+            "每日回访健康同步契约冲突：只读取去敏回执",
+        ),
+        (r"\b(?:retry|rerun|re-run)\b", "每日回访健康同步契约冲突：禁止重试"),
+        (r"--expect-date\b", "每日回访健康同步契约冲突：禁止替代日期同步命令"),
+        (
+            r"\bwrite\b.{0,30}\b(?:a past date|history|iCloud)\b"
+            r"|(?:补历史|历史回填|回退本地写入)",
+            "每日回访健康同步契约冲突：禁止历史或 iCloud 写入",
+        ),
+        (
+            r"\b(?:display|show|output|print|reveal)\b.{0,50}"
+            r"\b(?:steps?|sleep|active energy|exercise minutes)\b",
+            "每日回访健康同步契约冲突：禁止输出健康数值",
+        ),
+        (
+            r"\b(?:display|show|output|print|reveal)\b.{0,50}"
+            r"\b(?:access token|owner jwt|credentials?)\b",
+            "每日回访健康同步契约冲突：禁止输出凭据",
+        ),
+    )
+    for pattern, error in conflicts:
+        if _has_unsafe_instruction(surrounding_text, pattern):
+            errors.append(error)
     return errors
 
 
