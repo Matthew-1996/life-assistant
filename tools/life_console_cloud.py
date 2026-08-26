@@ -41,17 +41,28 @@ HEALTH_RPC_ERROR_STATUS = {
 }
 
 
-def _closed_http_error_status(exc: error.HTTPError) -> str:
-    if exc.code in (401, 403):
-        return "unauthenticated"
-    if exc.code == 409:
-        return "conflict"
+def _closed_http_error_status(exc: error.HTTPError, *, health_rpc: bool) -> str:
     try:
-        payload = json.loads(exc.read())
-    except (OSError, json.JSONDecodeError, TypeError):
-        return "unavailable"
-    message = payload.get("message") if isinstance(payload, dict) else None
-    return HEALTH_RPC_ERROR_STATUS.get(message, "unavailable")
+        if exc.code in (401, 403):
+            return "unauthenticated"
+        if exc.code == 409:
+            return "conflict"
+        if not health_rpc:
+            return "unavailable"
+        try:
+            payload = json.loads(exc.read())
+        except (OSError, ValueError, json.JSONDecodeError, TypeError):
+            return "unavailable"
+        message = payload.get("message") if isinstance(payload, dict) else None
+        if not isinstance(message, str):
+            return "unavailable"
+        return HEALTH_RPC_ERROR_STATUS.get(message, "unavailable")
+    finally:
+        try:
+            exc.close()
+        except Exception:
+            pass
+        exc.fp = None
 
 
 class Transport(Protocol):
@@ -94,13 +105,19 @@ class HttpTransport:
             headers=headers,
             method=method,
         )
+        http_error_status = None
         try:
             with request.urlopen(outgoing, timeout=self.timeout_seconds) as response:
                 raw = response.read()
         except error.HTTPError as exc:
-            raise CloudWriteError(_closed_http_error_status(exc)) from exc
+            http_error_status = _closed_http_error_status(
+                exc,
+                health_rpc=path == "/rest/v1/rpc/upsert_health_day_v1",
+            )
         except (error.URLError, TimeoutError, OSError) as exc:
             raise CloudWriteError("unavailable") from exc
+        if http_error_status is not None:
+            raise CloudWriteError(http_error_status)
         if not raw:
             return None
         try:
@@ -444,7 +461,7 @@ class CloudClient:
         return self._receipt("daily_checkin", created)
 
     def upsert_health_day(self, parsed: dict[str, Any]) -> dict[str, Any]:
-        row = _first_row(self._request(
+        rows = self._request(
             "POST",
             "/rest/v1/rpc/upsert_health_day_v1",
             body={
@@ -452,13 +469,22 @@ class CloudClient:
                 "p_generated_at": parsed.get("generated_at"),
                 "p_summary": parsed.get("summary"),
             },
-        ))
+        )
+        if not isinstance(rows, list) or len(rows) != 1 or not isinstance(rows[0], dict):
+            raise CloudWriteError("unavailable")
+        row = rows[0]
         action = row.get("action")
         health_date = row.get("health_date")
         revision = row.get("revision")
         if action not in {"created", "updated", "unchanged"}:
             raise CloudWriteError("unavailable")
-        if not isinstance(health_date, str) or not isinstance(revision, int):
+        if not isinstance(health_date, str) or health_date != parsed.get("health_date"):
+            raise CloudWriteError("unavailable")
+        try:
+            valid_date = datetime.strptime(health_date, "%Y-%m-%d").date().isoformat() == health_date
+        except ValueError:
+            valid_date = False
+        if not valid_date or type(revision) is not int or revision < 1:
             raise CloudWriteError("unavailable")
         return {
             "status": "saved",

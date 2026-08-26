@@ -1,5 +1,6 @@
 import io
 import json
+import traceback
 import unittest
 from pathlib import Path
 from urllib.error import HTTPError
@@ -445,6 +446,105 @@ class LifeConsoleCloudTest(unittest.TestCase):
                     with self.assertRaisesRegex(CloudWriteError, f"^{expected}$") as raised:
                         transport.request("POST", "/rest/v1/rpc/upsert_health_day_v1", body={})
                 self.assertNotIn(message, str(raised.exception))
+
+    def test_http_transport_discards_error_body_from_exception_chain_and_traceback(self):
+        markers = (
+            "marker-private-body",
+            "marker-metric",
+            "marker-token",
+            "marker-project",
+        )
+        response = io.BytesIO(json.dumps({
+            "message": "health_day_invalid_source",
+            "detail": " ".join(markers),
+        }).encode("utf-8"))
+        exc = HTTPError("https://project.invalid", 400, "Bad Request", None, response)
+        transport = HttpTransport("https://project.invalid", "synthetic-publishable-key")
+
+        with mock.patch("life_console_cloud.request.urlopen", side_effect=exc):
+            with self.assertRaisesRegex(CloudWriteError, "^invalid_source$") as raised:
+                transport.request("POST", "/rest/v1/rpc/upsert_health_day_v1", body={})
+
+        current = raised.exception
+        chain = []
+        while current is not None:
+            chain.append(current)
+            current = current.__cause__ or current.__context__
+        self.assertEqual(chain, [raised.exception])
+        rendered = "".join(traceback.format_exception(
+            type(raised.exception), raised.exception, raised.exception.__traceback__
+        ))
+        for marker in markers:
+            self.assertNotIn(marker, rendered)
+            self.assertNotIn(marker, "\n".join(repr(item) for item in chain))
+
+    def test_http_transport_fails_closed_for_malformed_health_error_bodies(self):
+        class ReadFailure:
+            def read(self):
+                raise OSError("closed")
+
+            def close(self):
+                return None
+
+        class CloseFailure:
+            def read(self):
+                return b"\xff"
+
+            def close(self):
+                raise RuntimeError("closed")
+
+        bodies = (
+            io.BytesIO(json.dumps({"message": []}).encode("utf-8")),
+            io.BytesIO(json.dumps({"message": {}}).encode("utf-8")),
+            io.BytesIO(b"\xff"),
+            ReadFailure(),
+            CloseFailure(),
+        )
+        transport = HttpTransport("https://project.invalid", "synthetic-publishable-key")
+        for body in bodies:
+            with self.subTest(body_type=type(body).__name__):
+                exc = HTTPError("https://project.invalid", 400, "Bad Request", None, body)
+                with mock.patch("life_console_cloud.request.urlopen", side_effect=exc):
+                    with self.assertRaisesRegex(CloudWriteError, "^unavailable$"):
+                        transport.request("POST", "/rest/v1/rpc/upsert_health_day_v1", body={})
+
+    def test_http_transport_leaves_health_messages_unavailable_off_health_rpc(self):
+        response = io.BytesIO(json.dumps({
+            "message": "health_day_invalid_source",
+        }).encode("utf-8"))
+        exc = HTTPError("https://project.invalid", 400, "Bad Request", None, response)
+        transport = HttpTransport("https://project.invalid", "synthetic-publishable-key")
+
+        with mock.patch("life_console_cloud.request.urlopen", side_effect=exc):
+            with self.assertRaisesRegex(CloudWriteError, "^unavailable$"):
+                transport.request("POST", "/rest/v1/rpc/create_daily_checkin", body={})
+
+    def test_health_day_write_rejects_malformed_dates_revisions_and_multiple_rows(self):
+        parsed = {
+            "health_date": "2026-08-26",
+            "generated_at": "2026-08-26T13:30:00+08:00",
+            "summary": {},
+        }
+        malformed_responses = (
+            [{"action": "created", "health_date": "", "revision": 1}],
+            [{"action": "created", "health_date": "not-a-date", "revision": 1}],
+            [{"action": "created", "health_date": "2026-02-30", "revision": 1}],
+            [{"action": "created", "health_date": "2026-08-25", "revision": 1}],
+            [{"action": "created", "health_date": "2026-08-26", "revision": True}],
+            [{"action": "created", "health_date": "2026-08-26", "revision": 0}],
+            [{"action": "created", "health_date": "2026-08-26", "revision": -1}],
+            [
+                {"action": "created", "health_date": "2026-08-26", "revision": 1},
+                {"action": "created", "health_date": "2026-08-26", "revision": 1},
+            ],
+        )
+        for response in malformed_responses:
+            with self.subTest(response=response):
+                client = CloudClient(
+                    FakeTransport([response]), token_provider=lambda: "synthetic-token"
+                )
+                with self.assertRaisesRegex(CloudWriteError, "^unavailable$"):
+                    client.upsert_health_day(parsed)
 
     def test_health_day_cli_parses_before_loading_client_and_prints_only_receipt(self):
         parsed = {
