@@ -121,3 +121,13 @@ iPhone 快捷指令（约 13:30）
 - 缺失或失败不影响回访，不回填历史，不产生本地第二真相源。
 - Life Console 无需前端改动即可在 14 天活动趋势中读取新增行。
 - 凭据、健康值、Owner 标识和服务资源 ID 不进入 Git、PR、日志或对话证据。
+
+## 9. Implementation evidence
+
+- Parser/CLI: targeted Python tests passed (49); full tools discovery passed (397, 1 skipped); receipts contain no health values or credentials.
+- Database: PGlite behavior and permission tests passed within the fresh full Vitest run (81 files / 619 tests); migration only adds one function and grants.
+- Prompt contract: synthetic validator tests passed (12, included in the targeted Python count); private Prompt remains gated and unmodified.
+- Frontend: no source changes; the existing `health_days` reader remains the consumer.
+- Builds: default and Supabase Production builds passed (129 modules each).
+- Implementation commits: `6054133af29aca16aa372756a25a7d4de72140b8`, `68ddbee55927fede6b9c30ff7afc6e1b592b05da`, `a11e8da3a8291d1009aea5c5c74f56b0fc2b3fa3`, `2b7521f99c9eae7d7d6daae185fedc1d3b8f3b96`, `211b9a18386521ca12a83e82edf648d829f0edf8`, `669c83f0094f89507db4ac7623478b9acf0a332b`, `3ebf23f3a5a3ab247594d6d5b1a1e76ca35381ed`, `d9405624fc17336156f88c32c067933ea236e68b`, `c935c6c7e21747e94c582d75973b2fb471525af7`, `4dafdd96dcc9c048fd253b9855e177a04cbf11c7`, `c0d527d6e1ae6c5978b82c5e6472417c53dd2749`.
+- Release state: Draft PR only; Production migration, runtime update, real write and LaunchAgent unload not performed.
