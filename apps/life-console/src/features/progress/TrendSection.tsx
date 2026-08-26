@@ -4,6 +4,7 @@ import type { Dashboard } from "../../data/dashboard";
 import type {
   HealthDayMetric,
   HealthRepositoryPort,
+  SleepTiming,
 } from "../../supabase/health";
 import { observeTrend } from "./trend-observations";
 
@@ -84,6 +85,24 @@ function explicitSleepDuration(summary: Record<string, unknown>): number | null 
     : null;
 }
 
+function sleepDurationFromTiming(
+  timing: SleepTiming | undefined,
+): number | null {
+  if (!timing?.sleep_time || !timing.wake_time) return null;
+  const parse = (value: string): number | null => {
+    const match = /^(\d{2}):(\d{2})$/.exec(value);
+    if (!match) return null;
+    const hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    return hours <= 23 && minutes <= 59 ? hours * 60 + minutes : null;
+  };
+  const start = parse(timing.sleep_time);
+  const end = parse(timing.wake_time);
+  if (start === null || end === null) return null;
+  const duration = end >= start ? end - start : end + 24 * 60 - start;
+  return duration <= 18 * 60 ? duration : null;
+}
+
 function validCount(values: Array<number | null>): number {
   return values.filter((value): value is number => value !== null).length;
 }
@@ -120,6 +139,7 @@ function TrendCard({ metric }: { metric: TrendMetric }) {
 
 export function TrendSection({ currentDate, dashboard, health }: TrendSectionProps) {
   const [healthRows, setHealthRows] = useState<HealthDayMetric[]>([]);
+  const [sleepRows, setSleepRows] = useState<SleepTiming[]>([]);
   const [healthFailed, setHealthFailed] = useState(false);
   const [loading, setLoading] = useState(Boolean(health));
   const dates = useMemo(() => isoDaysEnding(currentDate, 14), [currentDate]);
@@ -128,19 +148,23 @@ export function TrendSection({ currentDate, dashboard, health }: TrendSectionPro
     let active = true;
     if (!health) {
       setHealthRows([]);
+      setSleepRows([]);
       setHealthFailed(false);
       setLoading(false);
       return () => { active = false; };
     }
     setLoading(true);
     setHealthFailed(false);
-    void health.listDailyMetrics(dates[0], dates[13]).then((rows) => {
-      if (active) setHealthRows(rows);
-    }).catch(() => {
-      if (active) {
-        setHealthRows([]);
-        setHealthFailed(true);
-      }
+    void Promise.allSettled([
+      health.listDailyMetrics(dates[0], dates[13]),
+      health.listSleepTimings(dates[0], dates[13]),
+    ]).then(([metricsResult, sleepResult]) => {
+      if (!active) return;
+      setHealthRows(metricsResult.status === "fulfilled" ? metricsResult.value : []);
+      setSleepRows(sleepResult.status === "fulfilled" ? sleepResult.value : []);
+      setHealthFailed(
+        metricsResult.status === "rejected" || sleepResult.status === "rejected",
+      );
     }).finally(() => {
       if (active) setLoading(false);
     });
@@ -150,6 +174,7 @@ export function TrendSection({ currentDate, dashboard, health }: TrendSectionPro
   const metrics = useMemo(() => {
     const ratingsByDate = new Map(dashboard.progress.ratings.map((row) => [row.date, row]));
     const healthByDate = new Map(healthRows.map((row) => [row.health_date, row]));
+    const sleepByDate = new Map(sleepRows.map((row) => [row.checkin_date, row]));
     const subjective: TrendMetric[] = subjectiveMetrics.map((metric) => ({
       group: "subjective",
       key: metric.key,
@@ -162,14 +187,15 @@ export function TrendSection({ currentDate, dashboard, health }: TrendSectionPro
       label: metric.label,
       values: dates.map((date) => {
         const row = healthByDate.get(date);
-        if (!row) return null;
-        return metric.key === "sleep_duration_min"
-          ? explicitSleepDuration(row.summary)
-          : numeric(row.summary, metric.aliases);
+        if (metric.key === "sleep_duration_min") {
+          return (row ? explicitSleepDuration(row.summary) : null)
+            ?? sleepDurationFromTiming(sleepByDate.get(date));
+        }
+        return row ? numeric(row.summary, metric.aliases) : null;
       }),
     }));
     return [...subjective, ...device];
-  }, [dashboard.progress.ratings, dates, healthRows]);
+  }, [dashboard.progress.ratings, dates, healthRows, sleepRows]);
 
   const groups = [
     { key: "subjective", label: "主观信号" },

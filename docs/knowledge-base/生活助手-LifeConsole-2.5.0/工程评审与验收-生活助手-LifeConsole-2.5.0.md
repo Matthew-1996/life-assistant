@@ -173,3 +173,13 @@ Supabase 首次上线前只读核对曾因账号不匹配而失败关闭；重�
 - PO 确认合成 Preview 必须可见展示每日新闻上线效果，并授权 Agent 代替用户手工 Preview 验收。TDD 红灯在旧实现上只看到未连接空态；最小实现后候选工作台显示 6 条明确标注的合成新闻，覆盖三类与国内/国际，不连接 API 或 Owner 数据。
 - 首次实现虽只在候选模式渲染，但静态 import 仍把合成字符串带入 Production bundle；以真实 Vite `supabase-production` 构建红灯复现后，改为候选分支动态加载，并将 Production 制品不含两个合成标记纳入回归测试。
 - 本地 Chrome 在 1440px/390px 下均渲染 6 条，空态不存在、根页面无横向溢出、console error 为 0。单 worker 全量 Vitest 80 文件 / 591 项、应用 Python 93 项、Candidate/Production build 与 Playwright 9/9 通过；并行首轮的 3 个无断言资源超时在不放宽超时后以单 worker 全量通过收口。Production 发布后仍必须验证真实 Owner 请求与页面渲染，合成验收不替代该结论。
+
+## 13. 2026-08-26 记录与进展快速维护
+
+- Production 只读复现确认：主观信号前一窗口始终为 0，睡眠时刻表有已保存记录但睡眠趋势为 0，活动最近窗口无可渲染记录；诊断只记录结构与计数，不把真实日记或健康值写入 Git。
+- 主观信号根因是 Dashboard 只把 `daily_checkins` 投影到当前自然周，随后 14 天趋势组件只能得到 7 天输入。修复后趋势固定返回截至当天的连续 14 天；工作台当前自然周样本计数仍按 7 天计算，不改变既有口径。
+- 睡眠时长根因是趋势只读取 `health_days.summary`，没有复用同页睡眠时刻表的 `daily_checkins.sleep_time/wake_time`。修复后优先使用明确的健康摘要时长，缺失时再按保存时刻确定性计算；跨午夜按次日处理，异常格式与超过 18 小时继续保留未知。
+- 活动卡片直接读取 `health_days`；当前链路没有最近窗口数据，且本机最小健康摘要源同期也没有新归档。此项不是图表漏画，不从睡眠、主观状态或旧日期推断活动值；若要恢复连续活动趋势，需另行确认 Apple Health 采集和 Owner-scoped 云端写入范围。
+- 日记 raw-first 保存按设计成功，但 Production 客户端没有注入自动 normalization provider。真实日记经 Vercel Function 发送 DeepSeek 的长期外发授权此前未成立；本轮不静默开启，也未用管理权限绕过 Owner 会话回写当前日记。
+- TDD 红灯在生产代码修改前覆盖了 7 天输入、前一窗口丢失、睡眠查询拒绝 14 天、睡眠时刻未派生四项；最小修复后定向 3 文件 / 24 项、应用 Python 93 项、根工具 Python 372 项（1 项跳过）与 Production build 通过。沙箱外全量 Vitest 为 80 文件中 79 通过、1 失败，合计 598 项通过、1 项失败；唯一失败是修改前已复现的 Todo `DDL` 与计划开始日期约束，本次未触碰该范围。治理与当前 Git 隐私检查通过；隔离 worktree 的便携性验证仍因刻意不检出的私人真相源和既存告警失败，不复制私人文件伪造通过。
+- 当前只完成本地修复与证据记录；Draft PR、合成 Preview、PO 验收、Production 合并发布和发布后 Owner 只读复验仍是独立门禁。

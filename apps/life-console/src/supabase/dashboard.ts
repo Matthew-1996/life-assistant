@@ -98,6 +98,15 @@ function naturalWeek(date: string): string[] {
   });
 }
 
+function isoDaysEnding(date: string, count: number): string[] {
+  const current = new Date(`${ensureIsoDate(date)}T00:00:00Z`);
+  return Array.from({ length: count }, (_, index) => {
+    const day = new Date(current);
+    day.setUTCDate(current.getUTCDate() - (count - index - 1));
+    return day.toISOString().slice(0, 10);
+  });
+}
+
 function apiError(
   code: ErrorCode,
   status: number,
@@ -477,18 +486,20 @@ export function createSupabaseDashboardClient({
       dailyCheckins.get(date),
     ]);
     const week = naturalWeek(date);
-    const weekSet = new Set(week);
+    const trendDays = isoDaysEnding(date, 14);
+    const trendSet = new Set(trendDays);
     const byDate = new Map<string, DailyCheckin>();
     [...checkinPage.items]
       .sort((left, right) =>
         right.checkin_date.localeCompare(left.checkin_date) || right.id - left.id
       )
       .forEach((checkin) => {
-        if (weekSet.has(checkin.checkin_date) && !byDate.has(checkin.checkin_date)) {
+        if (trendSet.has(checkin.checkin_date) && !byDate.has(checkin.checkin_date)) {
           byDate.set(checkin.checkin_date, checkin);
         }
       });
-    if (today && weekSet.has(date)) byDate.set(date, today);
+    if (today && trendSet.has(date)) byDate.set(date, today);
+    const weeklySampleCount = week.filter((weekDate) => byDate.has(weekDate)).length;
 
     const activeGoals = [...goalRows]
       .filter((goal) => goal.status === "active" && goal.deleted_at === null)
@@ -537,10 +548,10 @@ export function createSupabaseDashboardClient({
         confirmations: [],
       },
       progress: {
-        ratings: week.map((weekDate) => {
-          const checkin = byDate.get(weekDate);
+        ratings: trendDays.map((trendDate) => {
+          const checkin = byDate.get(trendDate);
           return {
-            date: weekDate,
+            date: trendDate,
             sleep_quality: checkin?.sleep_quality ?? null,
             energy: checkin?.energy ?? null,
             mood: checkin?.mood ?? null,
@@ -549,8 +560,8 @@ export function createSupabaseDashboardClient({
         }),
         sleep: [],
         sample_counts: {
-          daily: byDate.size,
-          missing: 7 - byDate.size,
+          daily: weeklySampleCount,
+          missing: 7 - weeklySampleCount,
         },
       },
       records: { recent_journals: journalsForDashboard },

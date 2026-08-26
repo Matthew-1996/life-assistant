@@ -28,6 +28,7 @@
 14. Owner 有效 token 保留：PR #70 已合并发布但页面仍无 API 请求；TDD 修复同一 Owner tokenless 事件清空既有有效 token，退出和用户切换继续失败关闭。
 15. 认证单一真相源架构修复：PR #71 发布和 Owner 重新登录仍未触发新闻 API；PO 已确认进入 PR #72，按 provider Session 真相源、请求时取 token、闭集加载状态和全量门禁执行。
 16. 最终复验与搁置：PR #72 已合并发布；Owner 页面闭集状态为 `error` 且 Function 请求计数为 0。PO 已决定停止本轮新闻修复，转为完整接力留档。
+17. 记录与进展快速维护：已复现并按 TDD 修复主观信号只加载自然周、睡眠趋势不复用每日状态时刻两项缺陷；活动最近窗口没有可供页面读取的 `health_days`，不伪造或跨源补值。日记原文自动发送 DeepSeek 仍等待 PO 对真实日记外发的当次确认，当前保持原文已保存、等待整理。
 
 ## 3. 门禁与恢复条件
 
@@ -49,6 +50,7 @@
 | Owner 有效 token 保留热修复 | completed_with_followup | PR #71 已合并发布且 Owner 退出重登复验失败；该内存 token 方案由 PR #72 的 provider Session 单一真相源取代 |
 | Owner 认证单一真相源 PR #72 | completed_failed_acceptance | PR 已合并并重新发布；Functions/Cron 正常，但最终 Owner 页面为 `error`、0 条且未发出 API 请求 |
 | 每日新闻前端展示 | shelved | PO 明确本次为最后一次修复；未来仅在新的当次确认、真实浏览器红灯和新架构评审后恢复 |
+| 记录与 14 天趋势快速维护 | in_local_validation | 两项确定性趋势修复已通过定向测试与 Production build；日记自动外发、活动采集补链、Draft PR、Preview 和 Production 均保持独立门禁 |
 
 ## 4. 开放风险
 
@@ -125,4 +127,5 @@
 | 2026-08-22 | PR #72 本地 TDD 与门禁 | 旧实现 3 个预期红灯后完成最小重构；定向 31 项、Vitest 597 项、应用 Python 93 项、根工具 Python 372 项（1 项跳过）、默认/Production/Preview build、Playwright 9/9、治理与 Git 隐私通过；全仓便携性脚本仍有既存私人文件/制品告警，不由本 PR 修改 |
 | 2026-08-22 | Draft PR #72 与纯静态 Preview | PR 已创建并保持 Draft，privacy/Python/Node CI 全绿；合格 Preview READY、0 Functions、0 Cron、首页 200、新闻 API 404、严格 CSP。误带 5 个 Functions 的首次源码制品未交付并已删除，本地 OIDC 与项目链接已清理 |
 | 2026-08-22 | PR #72 最终发布与新闻展示搁置 | PR 已合并并发布；Production、Functions、Cron 正常，Owner 页面仍为 `error` 且 API 请求数为 0。PO 明确停止本轮修复，完整接力信息已留存 |
+| 2026-08-26 | 记录与进展问题定位 | 主观趋势读取窗口错误和睡眠时长投影缺失进入快速维护；活动为源数据缺失，不做插值；真实日记自动发送 DeepSeek 等待新的当次明确确认 |
 | 2026-08-19 | 视觉、设计、技术确认前不写生产功能 | Gate 2 v2 后已满足 |
