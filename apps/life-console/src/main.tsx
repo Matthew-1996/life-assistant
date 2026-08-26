@@ -114,12 +114,16 @@ if (supabaseMode) {
   );
 } else {
   void (async () => {
-    const dailyNews = candidateMode
-      ? (await import("./data/daily-news")).syntheticDailyNewsClient
-      : undefined;
+    const [dailyNews, candidateHealth] = candidateMode
+      ? await Promise.all([
+        import("./data/daily-news").then((module) => module.syntheticDailyNewsClient),
+        import("./data/candidate-health").then((module) => module.candidateHealthRepository),
+      ])
+      : [undefined, undefined];
     createRoot(root).render(
       <StrictMode>
         <App
+          candidateHealth={candidateHealth}
           client={client}
           dailyNews={dailyNews}
           initialDashboard={candidateMode ? syntheticDashboard : undefined}

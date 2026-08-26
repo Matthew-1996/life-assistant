@@ -29,7 +29,7 @@ afterEach(() => {
 });
 
 describe("Supabase Production browser bundle boundary", () => {
-  it("excludes candidate-only synthetic news content", async () => {
+  it("excludes candidate-only synthetic news and health content", async () => {
     const outputDirectory = mkdtempSync(join(tmpdir(), "life-console-production-bundle-"));
     temporaryDirectories.push(outputDirectory);
 
@@ -42,5 +42,7 @@ describe("Supabase Production browser bundle boundary", () => {
     const bundle = readTree(outputDirectory);
     expect(bundle).not.toContain("synthetic-technology-domestic");
     expect(bundle).not.toContain("合成示例：人工智能基础设施持续演进");
+    expect(bundle).not.toContain("2026-01-03");
+    expect(bundle).not.toContain("candidate-health-preview-only");
   }, 15_000);
 });

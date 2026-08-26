@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { App } from "../../src/App";
+import { candidateHealthRepository } from "../../src/data/candidate-health";
 import { syntheticDashboard } from "../../src/data/dashboard";
 import { syntheticDailyNewsClient } from "../../src/data/daily-news";
 
@@ -23,7 +24,11 @@ describe("Life Console candidate preview", () => {
   it("shows the synthetic read-only identity across all four pages", async () => {
     const user = userEvent.setup();
     render(
-      <App initialDashboard={syntheticDashboard} mode="candidate-preview" />,
+      <App
+        candidateHealth={candidateHealthRepository}
+        initialDashboard={syntheticDashboard}
+        mode="candidate-preview"
+      />,
     );
 
     expect(screen.getByText("Life Console · Candidate")).toBeTruthy();
@@ -43,6 +48,28 @@ describe("Life Console candidate preview", () => {
 
     await user.click(navigationButton("系统"));
     expect(screen.getByText("mode=CANDIDATE_PREVIEW · 合成数据")).toBeTruthy();
+  });
+
+  it("shows populated synthetic activity and sleep trends", async () => {
+    const user = userEvent.setup();
+    render(
+      <App
+        candidateHealth={candidateHealthRepository}
+        initialDashboard={syntheticDashboard}
+        mode="candidate-preview"
+      />,
+    );
+
+    await user.click(navigationButton("进展"));
+
+    for (const label of ["步数", "活动能量", "锻炼分钟", "睡眠时长"]) {
+      const card = await screen.findByRole("article", {
+        name: `${label} 14 天趋势`,
+      });
+      expect(
+        within(card).getByText("前 7 天有效 3 · 最近 7 天有效 3"),
+      ).toBeTruthy();
+    }
   });
 
   it("shows a complete synthetic daily-news digest on the workbench", async () => {
