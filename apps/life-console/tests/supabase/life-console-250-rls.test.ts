@@ -116,7 +116,7 @@ describe("Life Console 2.5.0 owner data behavior", () => {
       "synthetic-idempotent-0001",
       "Idempotent Todo",
       "P0",
-      null,
+      "2026-08-21T01:00:00Z",
       "2026-08-22T01:00:00Z",
     ];
     const first = await queryAs<{ id: number; priority: string; status: string }>(
