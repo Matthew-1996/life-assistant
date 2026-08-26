@@ -26,10 +26,32 @@ from journal_normalization_contract import (
     load_contract,
     validate_normalization,
 )
+from apple_health_history import LOCAL_ZONE, HealthHistoryError, read_health_summary
 
 
 class CloudWriteError(RuntimeError):
     """A fail-closed cloud write result suitable for user-facing routing."""
+
+
+HEALTH_RPC_ERROR_STATUS = {
+    "health_day_stale_source": "stale_source",
+    "health_day_invalid_source": "invalid_source",
+    "health_day_conflict": "conflict",
+    "health_day_unauthenticated": "unauthenticated",
+}
+
+
+def _closed_http_error_status(exc: error.HTTPError) -> str:
+    if exc.code in (401, 403):
+        return "unauthenticated"
+    if exc.code == 409:
+        return "conflict"
+    try:
+        payload = json.loads(exc.read())
+    except (OSError, json.JSONDecodeError, TypeError):
+        return "unavailable"
+    message = payload.get("message") if isinstance(payload, dict) else None
+    return HEALTH_RPC_ERROR_STATUS.get(message, "unavailable")
 
 
 class Transport(Protocol):
@@ -76,11 +98,7 @@ class HttpTransport:
             with request.urlopen(outgoing, timeout=self.timeout_seconds) as response:
                 raw = response.read()
         except error.HTTPError as exc:
-            if exc.code in (401, 403):
-                raise CloudWriteError("unauthenticated") from exc
-            if exc.code == 409:
-                raise CloudWriteError("conflict") from exc
-            raise CloudWriteError("unavailable") from exc
+            raise CloudWriteError(_closed_http_error_status(exc)) from exc
         except (error.URLError, TimeoutError, OSError) as exc:
             raise CloudWriteError("unavailable") from exc
         if not raw:
@@ -425,6 +443,31 @@ class CloudClient:
             ))
         return self._receipt("daily_checkin", created)
 
+    def upsert_health_day(self, parsed: dict[str, Any]) -> dict[str, Any]:
+        row = _first_row(self._request(
+            "POST",
+            "/rest/v1/rpc/upsert_health_day_v1",
+            body={
+                "p_health_date": parsed.get("health_date"),
+                "p_generated_at": parsed.get("generated_at"),
+                "p_summary": parsed.get("summary"),
+            },
+        ))
+        action = row.get("action")
+        health_date = row.get("health_date")
+        revision = row.get("revision")
+        if action not in {"created", "updated", "unchanged"}:
+            raise CloudWriteError("unavailable")
+        if not isinstance(health_date, str) or not isinstance(revision, int):
+            raise CloudWriteError("unavailable")
+        return {
+            "status": "saved",
+            "resource": "health_day",
+            "action": action,
+            "date": health_date,
+            "revision": revision,
+        }
+
     def weekly_message_context(self, week_start: str) -> dict[str, Any]:
         week_start = _monday_date(week_start)
         goals = self._request(
@@ -720,6 +763,9 @@ def main(argv: list[str] | None = None) -> int:
     ):
         child = subparsers.add_parser(command)
         child.add_argument("--input", default="-", help="JSON file or - for stdin")
+    health_day = subparsers.add_parser("health-day")
+    health_day.add_argument("--source", type=Path, required=True)
+    health_day.add_argument("--expect-today", action="store_true", required=True)
     weekly_context = subparsers.add_parser("weekly-message-context")
     weekly_context.add_argument("--week-start", required=True)
     args = parser.parse_args(argv)
@@ -738,6 +784,13 @@ def main(argv: list[str] | None = None) -> int:
             )
             print(json.dumps(receipt, ensure_ascii=False, sort_keys=True))
             return 0
+        if args.command == "health-day":
+            expected_date = datetime.now(LOCAL_ZONE).date().isoformat()
+            parsed = read_health_summary(args.source, expected_date)
+            client = _load_client(args.config)
+            receipt = client.upsert_health_day(parsed)
+            print(json.dumps(receipt, ensure_ascii=False, sort_keys=True))
+            return 0
         client = _load_client(args.config)
         if args.command == "weekly-message-context":
             receipt = client.weekly_message_context(args.week_start)
@@ -753,6 +806,9 @@ def main(argv: list[str] | None = None) -> int:
             receipt = client.upsert_daily_checkin(payload)
         else:
             receipt = client.upsert_dashboard_message(payload)
+    except HealthHistoryError:
+        print(json.dumps({"status": "invalid_source"}, ensure_ascii=False), file=sys.stderr)
+        return 2
     except (CloudWriteError, OSError, json.JSONDecodeError, ValueError) as exc:
         code = str(exc) if isinstance(exc, CloudWriteError) else "unavailable"
         print(json.dumps({"status": code}, ensure_ascii=False), file=sys.stderr)
