@@ -126,7 +126,7 @@ def validate_prompt(prompt_text: str) -> list[str]:
             r"\bbackfill\b.{0,50}\b(?:yesterday|past|health record)\b"
             r"|\bwrite\b.{0,30}\ba past date\b"
             r"|\b(?:persist|write|save)\b.{0,50}\b(?:iCloud|history|local fallback|local file|file)\b"
-            r"|(?:补历史|历史回填|回退本地写入|回填.{0,16}(?:昨天|历史|健康记录)"
+            r"|(?:补\s*(?:昨天|昨日)|补历史|历史回填|回退本地写入|回填.{0,16}(?:昨天|历史|健康记录)"
             r"|补.{0,16}(?:昨天|昨日).{0,16}健康数据|写入.{0,16}(?:iCloud|历史|本地)"
             r"|保存.{0,20}(?:iCloud|本地回退文件))",
             "每日回访健康同步契约冲突：禁止历史或 iCloud 写入",

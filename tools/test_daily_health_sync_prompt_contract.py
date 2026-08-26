@@ -245,6 +245,14 @@ class DailyHealthSyncPromptContractTests(unittest.TestCase):
                     "\n".join(validate_prompt(f"{VALID_PROMPT}\n{conflict}")),
                 )
 
+    def test_rejects_bare_chinese_yesterday_backfill_directives(self):
+        for directive in ("补昨天。", "补昨日。"):
+            with self.subTest(directive=directive):
+                self.assertIn(
+                    "禁止历史或 iCloud 写入",
+                    "\n".join(validate_prompt(f"{VALID_PROMPT}\n{directive}")),
+                )
+
     def test_cli_returns_exact_content_free_valid_invalid_and_unavailable_receipts(self):
         marker = "SYNTHETIC-PRIVATE-MARKER-8474"
         valid = self.run_validator(VALID_PROMPT)
