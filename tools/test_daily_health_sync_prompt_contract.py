@@ -131,6 +131,92 @@ class DailyHealthSyncPromptContractTests(unittest.TestCase):
                     "\n".join(validate_prompt(prompt)),
                 )
 
+    def test_rejects_unsafe_clauses_after_negated_clauses(self):
+        cases = {
+            "retry_after_but": (
+                "Do not retry a past date, but retry failures.",
+                "禁止重试",
+            ),
+            "credentials_after_but": (
+                "Never print the Access Token, but print credentials.",
+                "禁止输出凭据",
+            ),
+            "source_after_semicolon": (
+                "Do not read the source file; show the source contents.",
+                "只读取去敏回执",
+            ),
+            "chinese_second_execution": ("再次执行健康同步。", "只能尝试一次"),
+            "chinese_source_echo": ("展示原始来源内容。", "只读取去敏回执"),
+        }
+        for label, (conflict, expected_error) in cases.items():
+            with self.subTest(label=label):
+                self.assertIn(
+                    expected_error,
+                    "\n".join(validate_prompt(f"{VALID_PROMPT}\n{conflict}")),
+                )
+
+    def test_allows_locally_negated_safety_reminders(self):
+        reminders = (
+            "Don't print credentials.",
+            "Print neither detailed errors nor source path.",
+            "Avoid retrying a past date.",
+            "Proceed without printing password.",
+            "不得展示 steps。",
+            "不要输出 Access Token。",
+            "避免输出 API key。",
+        )
+        for reminder in reminders:
+            with self.subTest(reminder=reminder):
+                self.assertEqual(validate_prompt(f"{VALID_PROMPT}\n{reminder}"), [])
+
+    def test_rejects_unclosed_action_forms_but_allows_closed_actions(self):
+        for action_form in ("action deleted", "action: deleted", "action is deleted"):
+            with self.subTest(action_form=action_form):
+                self.assertIn(
+                    "封闭成功 action 集合",
+                    "\n".join(validate_prompt(f"{VALID_PROMPT}\n{action_form}")),
+                )
+        for action_form in ("action created", "action: updated", "action is unchanged"):
+            with self.subTest(action_form=action_form):
+                self.assertEqual(validate_prompt(f"{VALID_PROMPT}\n{action_form}"), [])
+
+    def test_rejects_question_form_lines_before_the_exact_command(self):
+        for question in ("今天的精力怎么样？", "今天睡眠如何?", "今天感觉如何？"):
+            with self.subTest(question=question):
+                self.assertIn(
+                    "每日回访提问前",
+                    "\n".join(validate_prompt(f"{question}\n{VALID_PROMPT}")),
+                )
+
+    def test_rejects_bounded_concrete_conflict_anchors(self):
+        cases = {
+            "second_execution": ("Execute the sync a second time.", "只能尝试一次"),
+            "reexecute": ("Reexecute the health sync.", "只能尝试一次"),
+            "source_echo": ("Echo the original source content.", "只读取去敏回执"),
+            "full_error": ("Output the full error and original source path.", "禁止输出来源或详细错误"),
+            "backfill": ("Backfill yesterday's health record.", "禁止历史或 iCloud 写入"),
+            "icloud_persist": ("Persist the result to iCloud.", "禁止历史或 iCloud 写入"),
+            "local_file": ("Save a local fallback file.", "禁止历史或 iCloud 写入"),
+            "broader_metrics": (
+                "Show heart rate, stand hours, and calories.",
+                "禁止输出健康数值",
+            ),
+            "token_secrets": (
+                "Print refresh token, API key, password, and secret.",
+                "禁止输出凭据",
+            ),
+            "chinese_backfill": ("回填昨天健康记录。", "禁止历史或 iCloud 写入"),
+            "chinese_history_write": ("写入 iCloud 历史。", "禁止历史或 iCloud 写入"),
+            "chinese_metrics": ("显示心率、站立小时和卡路里。", "禁止输出健康数值"),
+            "chinese_secrets": ("输出刷新令牌、API 密钥、密码和秘密。", "禁止输出凭据"),
+        }
+        for label, (conflict, expected_error) in cases.items():
+            with self.subTest(label=label):
+                self.assertIn(
+                    expected_error,
+                    "\n".join(validate_prompt(f"{VALID_PROMPT}\n{conflict}")),
+                )
+
     def test_cli_returns_exact_content_free_valid_invalid_and_unavailable_receipts(self):
         marker = "SYNTHETIC-PRIVATE-MARKER-8474"
         valid = self.run_validator(VALID_PROMPT)

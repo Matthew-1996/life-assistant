@@ -23,17 +23,32 @@ QUESTION_MARKERS = (
     "只问缺失字段",
     "今天感觉如何",
 )
-NEGATION_PATTERN = re.compile(r"\b(?:never|do not|must not)\b|(?:不得|禁止)", re.IGNORECASE)
+NEGATION_PATTERN = re.compile(
+    r"\b(?:never|do not|don't|must not|avoid|without)\b"
+    r"|\bneither\b|(?:不得|禁止|不要|不可|不应|避免)",
+    re.IGNORECASE,
+)
+CLAUSE_SPLIT_PATTERN = re.compile(
+    r"(?:[\n。！？!?;；]+|\b(?:but|however)\b|(?:但是|但))",
+    re.IGNORECASE,
+)
+
+
+def _is_locally_negated(clause: str, match: re.Match[str]) -> bool:
+    before = clause[max(0, match.start() - 32) : match.start()]
+    matched_text = clause[match.start() : match.end()]
+    return (
+        NEGATION_PATTERN.search(before) is not None
+        or re.search(r"\bneither\b", matched_text, re.IGNORECASE) is not None
+    )
 
 
 def _has_unsafe_instruction(text: str, pattern: str) -> bool:
-    """Match a concrete positive instruction while ignoring a negated sentence."""
-    for sentence in re.split(r"[\n。！？!?]", text):
-        match = re.search(pattern, sentence, re.IGNORECASE)
-        if match is None:
-            continue
-        if NEGATION_PATTERN.search(sentence[:match.start()]) is None:
-            return True
+    """Match every positive concrete instruction after splitting adversative clauses."""
+    for clause in CLAUSE_SPLIT_PATTERN.split(text):
+        for match in re.finditer(pattern, clause, re.IGNORECASE):
+            if not _is_locally_negated(clause, match):
+                return True
     return False
 
 
@@ -65,6 +80,11 @@ def validate_prompt(prompt_text: str) -> list[str]:
         position for marker in QUESTION_MARKERS
         if (position := prompt_text.find(marker)) >= 0
     ]
+    line_position = 0
+    for line in prompt_text.splitlines(keepends=True):
+        if "?" in line or "？" in line:
+            question_positions.append(line_position)
+        line_position += len(line)
     if not question_positions:
         errors.append("每日回访健康同步契约缺失：每日回访提问")
     elif not command_positions or min(command_positions) > min(question_positions):
@@ -76,35 +96,48 @@ def validate_prompt(prompt_text: str) -> list[str]:
     surrounding_text = prompt_text.replace(CANONICAL_ROLLOUT_BLOCK, "")
     conflicts = (
         (
-            r"\baction\s*=\s*(?!created\b|updated\b|unchanged\b)\w+"
+            r"\baction(?:\s*(?:=|:)\s*|\s+is\s+|\s+(?!is\b))"
+            r"(?!(?:created|updated|unchanged)\b)\w+"
             r"|\b(?:regardless of action|any action)\b",
             "每日回访健康同步契约冲突：封闭成功 action 集合",
         ),
         (
-            r"\b(?:print|show|display|output|reveal)\b.{0,60}"
-            r"\b(?:detailed errors?|source path)\b",
+            r"\b(?:print|show|display|output|reveal|echo)\b.{0,60}"
+            r"\b(?:full|original|detailed)\s+(?:errors?|source (?:path|contents?|content|file))\b"
+            r"|\b(?:print|show|display|output|reveal|echo)\b.{0,60}\bsource path\b"
+            r"|(?:输出|展示|显示|打印).{0,30}(?:完整|原始|详细).{0,20}(?:错误|来源)",
             "每日回访健康同步契约冲突：禁止输出来源或详细错误",
         ),
         (
             r"\bread\b.{0,40}\bsource file\b"
-            r"|\b(?:display|show)\b.{0,40}\bsource (?:contents?|file)\b",
+            r"|\b(?:display|show|echo)\b.{0,40}\b(?:original )?source (?:contents?|content|file)\b"
+            r"|(?:读取|展示|显示).{0,30}(?:原始)?来源.{0,20}(?:内容|文件)",
             "每日回访健康同步契约冲突：只读取去敏回执",
         ),
-        (r"\b(?:retry|rerun|re-run)\b", "每日回访健康同步契约冲突：禁止重试"),
+        (
+            r"\b(?:retry|rerun|re-run)\b"
+            r"|\b(?:reexecute|execute|run)\b.{0,40}\b(?:again|a second time|second time|health sync)\b"
+            r"|(?:再次|第二次).{0,16}(?:执行|运行|同步)",
+            "每日回访健康同步契约冲突：只能尝试一次，禁止重试",
+        ),
         (r"--expect-date\b", "每日回访健康同步契约冲突：禁止替代日期同步命令"),
         (
-            r"\bwrite\b.{0,30}\b(?:a past date|history|iCloud)\b"
-            r"|(?:补历史|历史回填|回退本地写入)",
+            r"\bbackfill\b.{0,50}\b(?:yesterday|past|health record)\b"
+            r"|\bwrite\b.{0,30}\ba past date\b"
+            r"|\b(?:persist|write|save)\b.{0,50}\b(?:iCloud|history|local fallback|local file|file)\b"
+            r"|(?:补历史|历史回填|回退本地写入|回填.{0,16}(?:昨天|历史|健康记录)|写入.{0,16}(?:iCloud|历史|本地))",
             "每日回访健康同步契约冲突：禁止历史或 iCloud 写入",
         ),
         (
-            r"\b(?:display|show|output|print|reveal)\b.{0,50}"
-            r"\b(?:steps?|sleep|active energy|exercise minutes)\b",
+            r"\b(?:display|show|output|print|reveal|echo)\b.{0,50}"
+            r"\b(?:heart rate|stand hours|calories|steps?|sleep|exercise|active energy)\b"
+            r"|(?:展示|显示|输出|打印).{0,40}(?:心率|站立小时|卡路里|步数|睡眠|锻炼|活动能量)",
             "每日回访健康同步契约冲突：禁止输出健康数值",
         ),
         (
-            r"\b(?:display|show|output|print|reveal)\b.{0,50}"
-            r"\b(?:access token|owner jwt|credentials?)\b",
+            r"\b(?:display|show|output|print|reveal|echo)\b.{0,50}"
+            r"\b(?:access token|refresh token|owner jwt|jwt|api key|password|secret|credentials?)\b"
+            r"|(?:输出|展示|显示|打印).{0,40}(?:访问令牌|刷新令牌|Owner JWT|JWT|API 密钥|密码|秘密|凭据)",
             "每日回访健康同步契约冲突：禁止输出凭据",
         ),
     )
