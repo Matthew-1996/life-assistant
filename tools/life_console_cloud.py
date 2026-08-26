@@ -51,7 +51,7 @@ def _closed_http_error_status(exc: error.HTTPError, *, health_rpc: bool) -> str:
             return "unavailable"
         try:
             payload = json.loads(exc.read())
-        except (OSError, ValueError, json.JSONDecodeError, TypeError):
+        except Exception:
             return "unavailable"
         message = payload.get("message") if isinstance(payload, dict) else None
         if not isinstance(message, str):

@@ -2,6 +2,7 @@ import io
 import json
 import traceback
 import unittest
+from http.client import IncompleteRead
 from pathlib import Path
 from urllib.error import HTTPError
 from unittest import mock
@@ -507,6 +508,71 @@ class LifeConsoleCloudTest(unittest.TestCase):
                 with mock.patch("life_console_cloud.request.urlopen", side_effect=exc):
                     with self.assertRaisesRegex(CloudWriteError, "^unavailable$"):
                         transport.request("POST", "/rest/v1/rpc/upsert_health_day_v1", body={})
+
+    def test_health_error_read_failures_are_scrubbed_and_close_the_cli(self):
+        marker = "marker-private-body"
+
+        class FailingBody:
+            def __init__(self, make_error):
+                self.make_error = make_error
+
+            def read(self):
+                raise self.make_error()
+
+            def close(self):
+                return None
+
+        failures = (
+            ("runtime", lambda: RuntimeError(marker)),
+            ("incomplete", lambda: IncompleteRead(b"", 1)),
+        )
+        parsed = {
+            "health_date": "2030-01-02",
+            "generated_at": "2030-01-02T13:30:00+08:00",
+            "summary": {},
+        }
+        for name, make_error in failures:
+            with self.subTest(name=name):
+                transport = HttpTransport("https://project.invalid", "synthetic-publishable-key")
+                exc = HTTPError(
+                    "https://project.invalid", 400, "Bad Request", None, FailingBody(make_error)
+                )
+                with mock.patch("life_console_cloud.request.urlopen", side_effect=exc):
+                    with self.assertRaisesRegex(CloudWriteError, "^unavailable$") as raised:
+                        transport.request("POST", "/rest/v1/rpc/upsert_health_day_v1", body={})
+
+                current = raised.exception
+                chain = []
+                while current is not None:
+                    chain.append(current)
+                    current = current.__cause__ or current.__context__
+                self.assertEqual(chain, [raised.exception])
+                rendered = "".join(traceback.format_exception(
+                    type(raised.exception), raised.exception, raised.exception.__traceback__
+                ))
+                state = "\n".join(repr(vars(item)) for item in chain)
+                self.assertNotIn(marker, rendered)
+                self.assertNotIn(marker, state)
+
+                client = CloudClient(
+                    HttpTransport("https://project.invalid", "synthetic-publishable-key"),
+                    token_provider=lambda: "synthetic-token",
+                )
+                cli_exc = HTTPError(
+                    "https://project.invalid", 400, "Bad Request", None, FailingBody(make_error)
+                )
+                output = io.StringIO()
+                error_output = io.StringIO()
+                with mock.patch("life_console_cloud.read_health_summary", return_value=parsed):
+                    with mock.patch("life_console_cloud._load_client", return_value=client):
+                        with mock.patch("life_console_cloud.request.urlopen", side_effect=cli_exc):
+                            with mock.patch("sys.stdout", output), mock.patch("sys.stderr", error_output):
+                                self.assertEqual(main([
+                                    "health-day", "--source", "synthetic-health.txt", "--expect-today",
+                                ]), 2)
+                self.assertEqual(output.getvalue(), "")
+                self.assertEqual(json.loads(error_output.getvalue()), {"status": "unavailable"})
+                self.assertNotIn(marker, error_output.getvalue())
 
     def test_http_transport_leaves_health_messages_unavailable_off_health_rpc(self):
         response = io.BytesIO(json.dumps({
