@@ -11,6 +11,7 @@ as $$
 declare
   v_user_id uuid := (select auth.uid());
   v_today date := (pg_catalog.clock_timestamp() at time zone 'Asia/Shanghai')::date;
+  v_generated_at timestamptz := pg_catalog.date_trunc('microseconds', p_generated_at);
   v_summary jsonb := p_summary;
   v_existing public.health_days%rowtype;
   v_existing_generated_at timestamptz;
@@ -21,9 +22,9 @@ begin
     raise exception using errcode = '42501', message = 'health_day_unauthenticated';
   end if;
   if p_health_date is null
-    or p_generated_at is null
+    or v_generated_at is null
     or p_health_date <> v_today
-    or (p_generated_at at time zone 'Asia/Shanghai')::date <> v_today
+    or (v_generated_at at time zone 'Asia/Shanghai')::date <> v_today
   then
     raise exception using errcode = '22023', message = 'health_day_invalid_source';
   end if;
@@ -90,8 +91,8 @@ begin
         p_health_date,
         v_summary,
         pg_catalog.to_char(
-          p_generated_at at time zone 'UTC',
-          'YYYY-MM-DD"T"HH24:MI:SS"Z"'
+          v_generated_at at time zone 'UTC',
+          'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'
         ),
         1
       )
@@ -108,10 +109,10 @@ begin
     raise exception using errcode = '40001', message = 'health_day_conflict';
   end;
 
-  if p_generated_at < v_existing_generated_at then
+  if v_generated_at < v_existing_generated_at then
     raise exception using errcode = '22023', message = 'health_day_stale_source';
   end if;
-  if p_generated_at = v_existing_generated_at then
+  if v_generated_at = v_existing_generated_at then
     if v_summary <> v_existing.summary then
       raise exception using errcode = '40001', message = 'health_day_conflict';
     end if;
@@ -124,8 +125,8 @@ begin
     update public.health_days as row_value
     set summary = v_summary,
         source_revision = pg_catalog.to_char(
-          p_generated_at at time zone 'UTC',
-          'YYYY-MM-DD"T"HH24:MI:SS"Z"'
+          v_generated_at at time zone 'UTC',
+          'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'
         ),
         revision = row_value.revision + 1,
         updated_at = pg_catalog.transaction_timestamp()

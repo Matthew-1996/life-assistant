@@ -73,6 +73,25 @@ async function today() {
   return result.rows[0];
 }
 
+async function fractionalToday() {
+  const result = await db.query<{
+    health_date: string;
+    generated_at: string;
+    source_revision: string;
+  }>(`
+    select
+      (clock_timestamp() at time zone 'Asia/Shanghai')::date::text as health_date,
+      ((clock_timestamp() at time zone 'Asia/Shanghai')::date + time '13:30:00.500')
+        at time zone 'Asia/Shanghai' as generated_at,
+      pg_catalog.to_char(
+        ((clock_timestamp() at time zone 'Asia/Shanghai')::date + time '13:30:00.500')
+          at time zone 'Asia/Shanghai' at time zone 'UTC',
+        'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'
+      ) as source_revision
+  `);
+  return result.rows[0];
+}
+
 function returnedDate(healthDate: string) {
   return new Date(`${healthDate}T00:00:00.000Z`);
 }
@@ -95,6 +114,14 @@ async function upsertAs(
     "select * from public.upsert_health_day_v1($1::date, $2::timestamptz, $3::jsonb)",
     [healthDate, generatedAt, value],
   );
+}
+
+async function expectSqlError(
+  operation: Promise<unknown>,
+  code: string,
+  message: string,
+) {
+  await expect(operation).rejects.toMatchObject({ code, message });
 }
 
 beforeEach(async () => {
@@ -120,13 +147,29 @@ describe("health day daily sync migration", () => {
       where n.nspname = 'public' and p.proname = 'upsert_health_day_v1'
     `);
     const grants = await db.query<{ grantee: string; privilege_type: string }>(`
-      select grantee, privilege_type
-      from information_schema.routine_privileges
-      where routine_schema = 'public'
-        and routine_name = 'upsert_health_day_v1'
-        and grantee = 'authenticated'
-        and privilege_type = 'EXECUTE'
+      select coalesce(grantee.rolname, 'PUBLIC') as grantee, acl.privilege_type
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+      cross join lateral aclexplode(p.proacl) as acl
+      left join pg_roles grantee on grantee.oid = acl.grantee
+      where n.nspname = 'public'
+        and p.oid = 'public.upsert_health_day_v1(date,timestamptz,jsonb)'::regprocedure
+        and acl.privilege_type = 'EXECUTE'
+        and acl.grantee <> p.proowner
       order by grantee
+    `);
+    const privileges = await db.query<{ anon_execute: boolean; public_execute: boolean }>(`
+      select
+        pg_catalog.has_function_privilege(
+          'anon',
+          'public.upsert_health_day_v1(date,timestamptz,jsonb)',
+          'EXECUTE'
+        ) as anon_execute,
+        pg_catalog.has_function_privilege(
+          0::oid,
+          'public.upsert_health_day_v1(date,timestamptz,jsonb)',
+          'EXECUTE'
+        ) as public_execute
     `);
 
     expect(functions.rows).toEqual([
@@ -139,16 +182,21 @@ describe("health day daily sync migration", () => {
     expect(grants.rows).toEqual([
       { grantee: "authenticated", privilege_type: "EXECUTE" },
     ]);
+    expect(privileges.rows).toEqual([{ anon_execute: false, public_execute: false }]);
   });
 
   it("rejects anonymous and missing authenticated identities", async () => {
     const { health_date, generated_at } = await today();
 
-    await expect(upsertAs("anon", null, health_date, generated_at)).rejects.toThrow(
-      /permission denied|health_day_unauthenticated/i,
+    await expectSqlError(
+      upsertAs("anon", null, health_date, generated_at),
+      "42501",
+      "permission denied for function upsert_health_day_v1",
     );
-    await expect(upsertAs("authenticated", null, health_date, generated_at)).rejects.toThrow(
-      /health_day_unauthenticated/i,
+    await expectSqlError(
+      upsertAs("authenticated", null, health_date, generated_at),
+      "42501",
+      "health_day_unauthenticated",
     );
   });
 
@@ -190,16 +238,16 @@ describe("health day daily sync migration", () => {
   it("rejects summaries that do not have exactly the five allowed keys", async () => {
     const { health_date, generated_at } = await today();
 
-    await expect(upsertAs("authenticated", ownerA, health_date, generated_at, {
+    await expectSqlError(upsertAs("authenticated", ownerA, health_date, generated_at, {
       ...summary,
       unexpected: true,
-    })).rejects.toThrow(/health_day_invalid_source/i);
-    await expect(upsertAs("authenticated", ownerA, health_date, generated_at, {
+    }), "22023", "health_day_invalid_source");
+    await expectSqlError(upsertAs("authenticated", ownerA, health_date, generated_at, {
       steps: summary.steps,
       active_energy: summary.active_energy,
       exercise_minutes: summary.exercise_minutes,
       sleep_start: summary.sleep_start,
-    })).rejects.toThrow(/health_day_invalid_source/i);
+    }), "22023", "health_day_invalid_source");
   });
 
   it("rejects negative metrics and fractional steps", async () => {
@@ -210,9 +258,11 @@ describe("health day daily sync migration", () => {
       { ...summary, active_energy: -0.1 },
       { ...summary, exercise_minutes: -1 },
     ]) {
-      await expect(
+      await expectSqlError(
         upsertAs("authenticated", ownerA, health_date, generated_at, invalidSummary),
-      ).rejects.toThrow(/health_day_invalid_source/i);
+        "22023",
+        "health_day_invalid_source",
+      );
     }
   });
 
@@ -226,28 +276,28 @@ describe("health day daily sync migration", () => {
       sleep_start: "2000-01-01T22:00:00+08:00",
       sleep_end: "2000-01-02T06:00:00Z",
     })).resolves.toMatchObject({ rows: [expect.objectContaining({ action: "created" })] });
-    await expect(upsertAs("authenticated", ownerB, health_date, generated_at, {
+    await expectSqlError(upsertAs("authenticated", ownerB, health_date, generated_at, {
       ...summary,
       sleep_start: "2026-08-26T22:00:00",
       sleep_end: "2026-08-27T06:00:00+08:00",
-    })).rejects.toThrow(/health_day_invalid_source/i);
+    }), "22023", "health_day_invalid_source");
   });
 
   it("rejects yesterday and tomorrow even when their payloads otherwise match", async () => {
     const { health_date, generated_at } = await today();
 
-    await expect(queryAs(
+    await expectSqlError(queryAs(
       "authenticated",
       ownerA,
       "select * from public.upsert_health_day_v1($1::date - 1, $2::timestamptz - interval '1 day', $3::jsonb)",
       [health_date, generated_at, summary],
-    )).rejects.toThrow(/health_day_invalid_source/i);
-    await expect(queryAs(
+    ), "22023", "health_day_invalid_source");
+    await expectSqlError(queryAs(
       "authenticated",
       ownerA,
       "select * from public.upsert_health_day_v1($1::date + 1, $2::timestamptz + interval '1 day', $3::jsonb)",
       [health_date, generated_at, summary],
-    )).rejects.toThrow(/health_day_invalid_source/i);
+    ), "22023", "health_day_invalid_source");
   });
 
   it("keeps revision one for an identical generated timestamp and summary", async () => {
@@ -295,8 +345,10 @@ describe("health day daily sync migration", () => {
       [health_date, generated_at, { ...summary, steps: 5000 }],
     );
 
-    await expect(upsertAs("authenticated", ownerA, health_date, generated_at)).rejects.toThrow(
-      /health_day_stale_source/i,
+    await expectSqlError(
+      upsertAs("authenticated", ownerA, health_date, generated_at),
+      "22023",
+      "health_day_stale_source",
     );
     const stored = await queryAs<{ summary: { steps: number }; revision: number }>(
       "authenticated",
@@ -311,24 +363,93 @@ describe("health day daily sync migration", () => {
     const { health_date, generated_at } = await today();
     await upsertAs("authenticated", ownerA, health_date, generated_at);
 
-    await expect(upsertAs("authenticated", ownerA, health_date, generated_at, {
+    await expectSqlError(upsertAs("authenticated", ownerA, health_date, generated_at, {
       ...summary,
       steps: 5000,
-    })).rejects.toThrow(/health_day_conflict/i);
+    }), "40001", "health_day_conflict");
   });
 
-  it("leaves exactly one row after duplicate submissions", async () => {
-    const { health_date, generated_at } = await today();
-    await upsertAs("authenticated", ownerA, health_date, generated_at);
-    await upsertAs("authenticated", ownerA, health_date, generated_at);
-
-    const rows = await queryAs<{ count: number }>(
+  it("keeps a fractional-second source canonical for identical retries", async () => {
+    const { health_date, generated_at, source_revision } = await fractionalToday();
+    const first = await upsertAs("authenticated", ownerA, health_date, generated_at);
+    const second = await upsertAs("authenticated", ownerA, health_date, generated_at);
+    const stored = await queryAs<{ source_revision: string; revision: number }>(
       "authenticated",
       ownerA,
-      "select count(*)::int as count from public.health_days where health_date = $1::date",
+      "select source_revision, revision from public.health_days where health_date = $1::date",
       [health_date],
     );
-    expect(rows.rows).toEqual([{ count: 1 }]);
+
+    expect(second.rows).toEqual([{
+      action: "unchanged",
+      id: first.rows[0].id,
+      health_date: returnedDate(health_date),
+      revision: 1,
+    }]);
+    expect(stored.rows).toEqual([{ source_revision, revision: 1 }]);
+  });
+
+  it("rejects a conflicting fractional-second retry", async () => {
+    const { health_date, generated_at } = await fractionalToday();
+    await upsertAs("authenticated", ownerA, health_date, generated_at);
+
+    await expectSqlError(upsertAs("authenticated", ownerA, health_date, generated_at, {
+      ...summary,
+      steps: 5000,
+    }), "40001", "health_day_conflict");
+  });
+
+  it("rejects a stale fractional-second source without changing stored data", async () => {
+    const { health_date, generated_at, source_revision } = await fractionalToday();
+    await upsertAs("authenticated", ownerA, health_date, generated_at);
+
+    await expectSqlError(queryAs(
+      "authenticated",
+      ownerA,
+      "select * from public.upsert_health_day_v1($1::date, $2::timestamptz - interval '0.250 seconds', $3::jsonb)",
+      [health_date, generated_at, { ...summary, steps: 5000 }],
+    ), "22023", "health_day_stale_source");
+    const stored = await queryAs<{ source_revision: string; summary: { steps: number } }>(
+      "authenticated",
+      ownerA,
+      "select source_revision, summary from public.health_days where health_date = $1::date",
+      [health_date],
+    );
+    expect(stored.rows).toEqual([{ source_revision, summary }]);
+  });
+
+  it("holds a transaction-level advisory lock across deterministic duplicate submissions", async () => {
+    const { health_date, generated_at } = await today();
+    await db.query("select set_config('request.jwt.claim.sub', $1, false)", [ownerA]);
+    await db.exec("begin");
+    try {
+      await db.exec("set local role authenticated");
+      const first = await db.query<{ action: string; revision: number }>(
+        "select action, revision from public.upsert_health_day_v1($1::date, $2::timestamptz, $3::jsonb)",
+        [health_date, generated_at, summary],
+      );
+      const second = await db.query<{ action: string; revision: number }>(
+        "select action, revision from public.upsert_health_day_v1($1::date, $2::timestamptz, $3::jsonb)",
+        [health_date, generated_at, summary],
+      );
+      const locks = await db.query<{ count: number }>(`
+        select count(*)::int as count
+        from pg_catalog.pg_locks
+        where locktype = 'advisory' and granted
+      `);
+      const rows = await db.query<{ count: number }>(
+        "select count(*)::int as count from public.health_days where health_date = $1::date",
+        [health_date],
+      );
+
+      expect(first.rows).toEqual([{ action: "created", revision: 1 }]);
+      expect(second.rows).toEqual([{ action: "unchanged", revision: 1 }]);
+      expect(locks.rows).toEqual([{ count: 1 }]);
+      expect(rows.rows).toEqual([{ count: 1 }]);
+    } finally {
+      await db.exec("rollback");
+      await db.exec("reset role");
+    }
   });
 
   it("returns only action, id, health_date and revision", async () => {
