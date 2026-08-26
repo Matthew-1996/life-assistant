@@ -170,6 +170,24 @@ def _read_source(source_path: Path) -> dict[str, Any]:
     }
 
 
+def read_health_summary(source_path: Path, expected_date: str | None = None) -> dict[str, Any]:
+    source = _read_source(source_path)
+    health_date = source["generated_at"][:10]
+    if expected_date is not None and _validate_date(expected_date) != health_date:
+        raise HealthHistoryError("苹果健康摘要不是指定日期生成，已忽略")
+    return {
+        "health_date": health_date,
+        "generated_at": source["generated_at"],
+        "summary": {
+            "steps": source["steps"],
+            "active_energy": source["active_energy"],
+            "exercise_minutes": source["exercise_minutes"],
+            "sleep_start": source["sleep_start"],
+            "sleep_end": source["sleep_end"],
+        },
+    }
+
+
 def _validate_iso_local(value: Any, field: str, line_number: int, *, allow_none: bool) -> None:
     if value is None and allow_none:
         return
@@ -311,10 +329,9 @@ def _atomic_replace_if_unchanged(data_path: Path, expected: bytes, content: byte
 
 
 def ingest(root: Path, source_path: Path, expected_date: str | None) -> dict[str, Any]:
-    source = _read_source(source_path)
-    record_date = source["generated_at"][:10]
-    if expected_date is not None and _validate_date(expected_date) != record_date:
-        raise HealthHistoryError("苹果健康摘要不是指定日期生成，已忽略")
+    parsed = read_health_summary(source_path, expected_date)
+    record_date = parsed["health_date"]
+    source = {"generated_at": parsed["generated_at"], **parsed["summary"]}
     key = f"apple-health-summary:{record_date}"
 
     with _records_lock(root):
