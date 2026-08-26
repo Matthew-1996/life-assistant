@@ -4,8 +4,8 @@
 
 - 主阶段：2.5.0 已上线；PR #72 已合并并从准确 `main` 重新发布，Production READY，三个新闻 Functions 与每日 Cron 均正常。
 - 子状态：最终 Owner 只读复验仍为 `error`、0 条，且同期 `/api/daily-news` 请求计数为 0。按 PO 明确边界，每日新闻前端展示已搁置，不再继续热修复。
-- 分支：仅保留文档接力分支 `agent/life-console-news-shelved-handoff` 完成去敏留档；不包含生产代码修改。
-- PR：PR #72 已 squash merge；本轮 571 + 26 项 Vitest、Python 93 项、Production build 与发布后控制面核对通过。最终失败和恢复门禁见“每日新闻搁置与接力”。
+- 分支：`agent/life-console-records-progress-fixes` 承载 2026-08-26 记录与进展快速维护；既有新闻搁置边界不变。
+- PR：Draft PR #74 已创建，仅含两项趋势修复、合成测试与去敏证据；未创建 Preview、未合并或发布。PR #72 的最终失败和恢复门禁仍见“每日新闻搁置与接力”。
 - 数据库：两个加法 migration 保持已应用，不回滚或删除用户数据；本次不改 Supabase schema 或 Owner 数据。
 
 ## 2. 阶段计划
@@ -50,7 +50,7 @@
 | Owner 有效 token 保留热修复 | completed_with_followup | PR #71 已合并发布且 Owner 退出重登复验失败；该内存 token 方案由 PR #72 的 provider Session 单一真相源取代 |
 | Owner 认证单一真相源 PR #72 | completed_failed_acceptance | PR 已合并并重新发布；Functions/Cron 正常，但最终 Owner 页面为 `error`、0 条且未发出 API 请求 |
 | 每日新闻前端展示 | shelved | PO 明确本次为最后一次修复；未来仅在新的当次确认、真实浏览器红灯和新架构评审后恢复 |
-| 记录与 14 天趋势快速维护 | in_local_validation | 两项确定性趋势修复已通过定向测试与 Production build；日记自动外发、活动采集补链、Draft PR、Preview 和 Production 均保持独立门禁 |
+| 记录与 14 天趋势快速维护 | draft_pr | Draft PR #74 已创建；两项确定性趋势修复已通过定向测试与 Production build，日记自动外发、活动采集补链、Preview 和 Production 均保持独立门禁 |
 
 ## 4. 开放风险
 
@@ -128,4 +128,5 @@
 | 2026-08-22 | Draft PR #72 与纯静态 Preview | PR 已创建并保持 Draft，privacy/Python/Node CI 全绿；合格 Preview READY、0 Functions、0 Cron、首页 200、新闻 API 404、严格 CSP。误带 5 个 Functions 的首次源码制品未交付并已删除，本地 OIDC 与项目链接已清理 |
 | 2026-08-22 | PR #72 最终发布与新闻展示搁置 | PR 已合并并发布；Production、Functions、Cron 正常，Owner 页面仍为 `error` 且 API 请求数为 0。PO 明确停止本轮修复，完整接力信息已留存 |
 | 2026-08-26 | 记录与进展问题定位 | 主观趋势读取窗口错误和睡眠时长投影缺失进入快速维护；活动为源数据缺失，不做插值；真实日记自动发送 DeepSeek 等待新的当次明确确认 |
+| 2026-08-26 | Draft PR #74 | 只包含两项趋势修复、合成测试和去敏证据；未创建 Preview、未合并、未发布或写 Owner 数据 |
 | 2026-08-19 | 视觉、设计、技术确认前不写生产功能 | Gate 2 v2 后已满足 |

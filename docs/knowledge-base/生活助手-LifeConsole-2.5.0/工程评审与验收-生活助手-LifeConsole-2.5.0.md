@@ -182,4 +182,4 @@ Supabase 首次上线前只读核对曾因账号不匹配而失败关闭；重�
 - 活动卡片直接读取 `health_days`；当前链路没有最近窗口数据，且本机最小健康摘要源同期也没有新归档。此项不是图表漏画，不从睡眠、主观状态或旧日期推断活动值；若要恢复连续活动趋势，需另行确认 Apple Health 采集和 Owner-scoped 云端写入范围。
 - 日记 raw-first 保存按设计成功，但 Production 客户端没有注入自动 normalization provider。真实日记经 Vercel Function 发送 DeepSeek 的长期外发授权此前未成立；本轮不静默开启，也未用管理权限绕过 Owner 会话回写当前日记。
 - TDD 红灯在生产代码修改前覆盖了 7 天输入、前一窗口丢失、睡眠查询拒绝 14 天、睡眠时刻未派生四项；最小修复后定向 3 文件 / 24 项、应用 Python 93 项、根工具 Python 372 项（1 项跳过）与 Production build 通过。沙箱外全量 Vitest 为 80 文件中 79 通过、1 失败，合计 598 项通过、1 项失败；唯一失败是修改前已复现的 Todo `DDL` 与计划开始日期约束，本次未触碰该范围。治理与当前 Git 隐私检查通过；隔离 worktree 的便携性验证仍因刻意不检出的私人真相源和既存告警失败，不复制私人文件伪造通过。
-- 当前只完成本地修复与证据记录；Draft PR、合成 Preview、PO 验收、Production 合并发布和发布后 Owner 只读复验仍是独立门禁。
+- Draft PR #74 已创建并保持 Draft；当前只完成本地修复与证据记录，未创建合成 Preview。PO 验收、Production 合并发布和发布后 Owner 只读复验仍是独立门禁。
