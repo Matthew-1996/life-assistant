@@ -77,7 +77,7 @@ export class HealthRepository implements HealthRepositoryPort {
   }
 
   async listSleepTimings(from: string, to: string): Promise<SleepTiming[]> {
-    const [start, end] = range(from, to, 7);
+    const [start, end] = range(from, to, 14);
     return await this.repository.executeRead<SleepTiming[]>(async () =>
       await this.client
         .from("daily_checkins")

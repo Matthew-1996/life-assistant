@@ -141,7 +141,7 @@ function clientOptions(
 }
 
 describe("Supabase dashboard client adapter", () => {
-  it("builds a genuine empty natural-week dashboard without fixture content", async () => {
+  it("builds a genuine empty 14-day trend dashboard without fixture content", async () => {
     const repos = repositories();
     const client = createSupabaseDashboardClient(clientOptions(repos));
 
@@ -164,13 +164,20 @@ describe("Supabase dashboard client adapter", () => {
       daily_revision: null,
     }));
     expect(dashboard.progress.ratings.map((item) => item.date)).toEqual([
+      "2030-03-21",
+      "2030-03-22",
+      "2030-03-23",
+      "2030-03-24",
+      "2030-03-25",
+      "2030-03-26",
+      "2030-03-27",
+      "2030-03-28",
+      "2030-03-29",
+      "2030-03-30",
+      "2030-03-31",
       "2030-04-01",
       "2030-04-02",
       "2030-04-03",
-      "2030-04-04",
-      "2030-04-05",
-      "2030-04-06",
-      "2030-04-07",
     ]);
     expect(dashboard.progress.ratings.every((item) =>
       item.sleep_quality === null
@@ -184,6 +191,29 @@ describe("Supabase dashboard client adapter", () => {
     expect(dashboard.system.icloud).toBe("unavailable");
     expect(dashboard.system.backup).toBe("unknown");
     expect(JSON.stringify(dashboard)).not.toContain("合成室内训练");
+  });
+
+  it("keeps check-ins from the previous seven-day window in 14-day trends", async () => {
+    const previousWindow = checkin({
+      id: 9,
+      checkin_date: "2030-03-27",
+      sleep_quality: 4,
+      energy: 3,
+      mood: 2,
+      life_feeling: 5,
+    });
+    const repos = repositories({ dailyRows: [previousWindow] });
+    const client = createSupabaseDashboardClient(clientOptions(repos));
+
+    const dashboard = await client.dashboard();
+
+    expect(dashboard.progress.ratings[6]).toEqual({
+      date: "2030-03-27",
+      sleep_quality: 4,
+      energy: 3,
+      mood: 2,
+      life_feeling: 5,
+    });
   });
 
   it("continues goal pagination before deciding that Today has no active goal", async () => {
@@ -277,7 +307,9 @@ describe("Supabase dashboard client adapter", () => {
       wind_down: null,
     });
     expect(dashboard.today.daily_revision).toBe(4);
-    expect(dashboard.progress.ratings[0]).toEqual({
+    expect(
+      dashboard.progress.ratings.find((row) => row.date === "2030-04-01"),
+    ).toEqual({
       date: "2030-04-01",
       sleep_quality: 2,
       energy: null,

@@ -4,8 +4,8 @@
 
 - 主阶段：2.5.0 已上线；PR #72 已合并并从准确 `main` 重新发布，Production READY，三个新闻 Functions 与每日 Cron 均正常。
 - 子状态：最终 Owner 只读复验仍为 `error`、0 条，且同期 `/api/daily-news` 请求计数为 0。按 PO 明确边界，每日新闻前端展示已搁置，不再继续热修复。
-- 分支：仅保留文档接力分支 `agent/life-console-news-shelved-handoff` 完成去敏留档；不包含生产代码修改。
-- PR：PR #72 已 squash merge；本轮 571 + 26 项 Vitest、Python 93 项、Production build 与发布后控制面核对通过。最终失败和恢复门禁见“每日新闻搁置与接力”。
+- 分支：`agent/life-console-records-progress-fixes` 承载 2026-08-26 记录与进展快速维护；既有新闻搁置边界不变。
+- PR：Draft PR #74 已创建，包含两项趋势修复、新日记自动整理候选接线、合成测试与去敏证据；纯静态合成 Preview 已完成，未合并或发布 Production。PR #72 的最终失败和恢复门禁仍见“每日新闻搁置与接力”。
 - 数据库：两个加法 migration 保持已应用，不回滚或删除用户数据；本次不改 Supabase schema 或 Owner 数据。
 
 ## 2. 阶段计划
@@ -28,6 +28,7 @@
 14. Owner 有效 token 保留：PR #70 已合并发布但页面仍无 API 请求；TDD 修复同一 Owner tokenless 事件清空既有有效 token，退出和用户切换继续失败关闭。
 15. 认证单一真相源架构修复：PR #71 发布和 Owner 重新登录仍未触发新闻 API；PO 已确认进入 PR #72，按 provider Session 真相源、请求时取 token、闭集加载状态和全量门禁执行。
 16. 最终复验与搁置：PR #72 已合并发布；Owner 页面闭集状态为 `error` 且 Function 请求计数为 0。PO 已决定停止本轮新闻修复，转为完整接力留档。
+17. 记录与进展快速维护：已复现并按 TDD 修复主观信号只加载自然周、睡眠趋势不复用每日状态时刻两项缺陷；活动最近窗口没有可供 Production 页面读取的 `health_days`，不伪造或跨源补值。PO 于 2026-08-26 明确同意以后新日记在原文保存成功后自动发送 DeepSeek 整理并回写，并在确认账号没有训练开关后知情接受可能的训练用途。候选接线与纯静态合成 Preview 已完成，既有待整理日记不追溯发送。
 
 ## 3. 门禁与恢复条件
 
@@ -49,6 +50,7 @@
 | Owner 有效 token 保留热修复 | completed_with_followup | PR #71 已合并发布且 Owner 退出重登复验失败；该内存 token 方案由 PR #72 的 provider Session 单一真相源取代 |
 | Owner 认证单一真相源 PR #72 | completed_failed_acceptance | PR 已合并并重新发布；Functions/Cron 正常，但最终 Owner 页面为 `error`、0 条且未发出 API 请求 |
 | 每日新闻前端展示 | shelved | PO 明确本次为最后一次修复；未来仅在新的当次确认、真实浏览器红灯和新架构评审后恢复 |
+| 记录与 14 天趋势快速维护 | preview_accepted | Draft PR #74 的两项确定性趋势修复、新日记自动整理候选接线和纯静态合成 Preview 已通过；PO 已知情接受可能的供应商训练用途，活动采集补链、Production 与发布后 Owner 复验仍保持独立门禁 |
 
 ## 4. 开放风险
 
@@ -60,6 +62,7 @@
 - 多次热修复仍存在双状态：应用自建 token cache 与 Supabase provider Session 可在真实恢复时序中分叉。PR #72 直接移除 cache/revision/waiter，所有 Owner API 在请求时读取 provider 当前 Session，并用闭集状态暴露 fetch 前失败。
 - PR #72 最终仍在 fetch 前失败：当前只证明闭集为 `error`，未证明是 provider 读取、刷新锁、浏览器持久化还是其他异常。该项已搁置；待证假设不得写成已确认根因。
 - Production 内容链路可观测性：HTTP 空态会吞掉真实失败阶段。快速维护只允许记录闭集状态、来源、失败阶段、稳定错误码、摘要日期和收据可用性；未知字符串统一降级，不记录标题、摘要、URL、JWT、Secret 或供应商响应体。
+- DeepSeek 当前公开隐私政策说明，经安全加密和去标识化后，输入及输出可能用于模型训练与服务优化。PO 已确认账号没有训练开关，并于 2026-08-26 知情接受以后新日记可能用于该用途；此决定清除数据用途门禁，但不替代 PR 合并、Production 发布或发布后 Owner 复验确认。
 - 已认证事件缺少 access token：AuthGate 可凭用户字段渲染 Owner UI，但旧 `getAccessToken()` 因 `hasAuthState` 直接返回 null。恢复只允许在 `currentSession` 非空且 token 缺失时重读存储 Session；明确退出仍保持 null，不得复活旧会话。
 - Unsplash Key 可能不存在：Preview 使用合成元数据，Production 使用渐变。
 - 当前 bundle 大于 500 kB：样式/组件拆分时观察，不为追求指标引入无关架构。
@@ -125,4 +128,9 @@
 | 2026-08-22 | PR #72 本地 TDD 与门禁 | 旧实现 3 个预期红灯后完成最小重构；定向 31 项、Vitest 597 项、应用 Python 93 项、根工具 Python 372 项（1 项跳过）、默认/Production/Preview build、Playwright 9/9、治理与 Git 隐私通过；全仓便携性脚本仍有既存私人文件/制品告警，不由本 PR 修改 |
 | 2026-08-22 | Draft PR #72 与纯静态 Preview | PR 已创建并保持 Draft，privacy/Python/Node CI 全绿；合格 Preview READY、0 Functions、0 Cron、首页 200、新闻 API 404、严格 CSP。误带 5 个 Functions 的首次源码制品未交付并已删除，本地 OIDC 与项目链接已清理 |
 | 2026-08-22 | PR #72 最终发布与新闻展示搁置 | PR 已合并并发布；Production、Functions、Cron 正常，Owner 页面仍为 `error` 且 API 请求数为 0。PO 明确停止本轮修复，完整接力信息已留存 |
+| 2026-08-26 | 记录与进展问题定位 | 主观趋势读取窗口错误和睡眠时长投影缺失进入快速维护；活动为源数据缺失，不做插值 |
+| 2026-08-26 | 以后新日记原文保存成功后自动发送 DeepSeek 并回写结构化字段 | PO 已明确同意；只覆盖以后新建日记，不追溯当前或历史待整理日记，不替代 Preview、Production 或供应商训练用途确认 |
+| 2026-08-26 | Draft PR #74 | 包含两项趋势修复、新日记自动整理候选接线、合成测试和去敏证据；未创建 Preview、未合并、未发布或写 Owner 数据 |
+| 2026-08-26 | DeepSeek 可能训练用途 | 账号无训练开关；PO 在知情后明确接受以后新日记输入及输出可能用于训练或服务优化，范围不追溯既有日记 |
+| 2026-08-26 | Draft PR #74 纯静态合成 Preview | READY、0 Functions、0 Cron、首页 200，日记整理与新闻 API 均为 404，严格 CSP `connect-src 'none'`；桌面与 390px 验证通过，活动和睡眠合成趋势均显示前后窗口各 3 条；未连接 Owner、DeepSeek 或 Production |
 | 2026-08-19 | 视觉、设计、技术确认前不写生产功能 | Gate 2 v2 后已满足 |

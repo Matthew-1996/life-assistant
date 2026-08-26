@@ -60,6 +60,7 @@ interface AppProps {
   stageAPocEnabled?: boolean;
   supabase?: SupabaseProductContext;
   dailyNews?: DailyNewsClient;
+  candidateHealth?: HealthRepositoryPort;
   dashboardMessages?: DashboardMessageRepositoryPort;
   todos?: TodoRepositoryPort;
 }
@@ -71,6 +72,7 @@ export function App({
   stageAPocEnabled = false,
   supabase,
   dailyNews,
+  candidateHealth,
   dashboardMessages,
   todos,
 }: AppProps) {
@@ -213,7 +215,7 @@ export function App({
       <ProgressPage
         dashboard={dashboard}
         goals={supabase?.goals}
-        health={supabase?.health}
+        health={mode === "candidate-preview" ? candidateHealth : supabase?.health}
         mode={mode}
         onSaved={refreshAfterWrite}
         draftScope={supabase?.session.userId}

@@ -155,4 +155,24 @@ describe("Life Console 2.5 progress page", () => {
     expect(within(trend).getAllByText("数据不足")).toHaveLength(8);
     expect(within(trend).queryByText(/异常|风险|诊断/)).toBeNull();
   });
+
+  it("derives sleep duration from saved sleep and wake times when health summaries omit it", async () => {
+    const sleeps = Array.from({ length: 6 }, (_, index) => sleep(index + 9, {
+      sleep_time: index === 0 ? "23:40" : "00:40",
+      wake_time: "07:10",
+    }));
+    render(
+      <ProgressPage
+        dashboard={dashboardWithRatings()}
+        goals={goals()}
+        health={health([], sleeps)}
+        mode="supabase-candidate"
+      />,
+    );
+
+    const duration = await screen.findByRole("article", {
+      name: "睡眠时长 14 天趋势",
+    });
+    expect(within(duration).getByText("前 7 天有效 0 · 最近 7 天有效 6")).toBeTruthy();
+  });
 });

@@ -162,16 +162,19 @@ describe("Life Console Miniflare maintenance flows", () => {
       {},
       { "If-Match": "1" },
     );
+    const plannedPayload = await planned.json();
     const cancelled = await harness.write(
       `/api/v1/journals/${created.id}/delete-plan/cancel`,
       {},
       { "If-Match": "2" },
     );
+    const cancelledPayload = await cancelled.json();
     const replanned = await harness.write(
       `/api/v1/journals/${created.id}/delete-plan`,
       {},
       { "If-Match": "3" },
     );
+    const replannedPayload = await replanned.json();
     const activePurge = await harness.write(
       `/api/v1/journals/${created.id}/purge`,
       {},
@@ -190,12 +193,12 @@ describe("Life Console Miniflare maintenance flows", () => {
       "DELETE",
     );
 
-    expect(await planned.json()).toEqual(expect.objectContaining({ revision: 2 }));
-    expect(await cancelled.json()).toEqual(expect.objectContaining({
+    expect(plannedPayload).toEqual(expect.objectContaining({ revision: 2 }));
+    expect(cancelledPayload).toEqual(expect.objectContaining({
       revision: 3,
       deletion_plan_until: null,
     }));
-    expect(await replanned.json()).toEqual(expect.objectContaining({ revision: 4 }));
+    expect(replannedPayload).toEqual(expect.objectContaining({ revision: 4 }));
     expect(activePurge.status).toBe(409);
     expect(purged.status).toBe(200);
     expect(await harness.query<{ count: number }>(

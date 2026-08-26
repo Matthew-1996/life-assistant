@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { createApiClient } from "./api/client";
 import { createDailyNewsApiClient } from "./api/daily-news-client";
+import { createJournalNormalizationApiClient } from "./api/journal-normalization-client";
 import { createSitesApiClient } from "./api/sites-client";
 import { syntheticDashboard } from "./data/dashboard";
 import { SupabaseAuthGate } from "./features/auth/SupabaseAuthGate";
@@ -70,11 +71,16 @@ if (supabaseMode) {
     fetch: globalThis.fetch,
     getAccessToken: auth.getAccessToken,
   });
+  const normalizeJournal = createJournalNormalizationApiClient({
+    fetch: globalThis.fetch,
+    getAccessToken: auth.getAccessToken,
+  });
   const dashboardClient = createSupabaseDashboardClient({
     dateProvider: shanghaiDate,
     dailyCheckins,
     goals,
     journals,
+    normalizeJournal,
   });
   const isRecoveryPath = window.location.pathname === "/auth/recovery";
   createRoot(root).render(
@@ -108,12 +114,16 @@ if (supabaseMode) {
   );
 } else {
   void (async () => {
-    const dailyNews = candidateMode
-      ? (await import("./data/daily-news")).syntheticDailyNewsClient
-      : undefined;
+    const [dailyNews, candidateHealth] = candidateMode
+      ? await Promise.all([
+        import("./data/daily-news").then((module) => module.syntheticDailyNewsClient),
+        import("./data/candidate-health").then((module) => module.candidateHealthRepository),
+      ])
+      : [undefined, undefined];
     createRoot(root).render(
       <StrictMode>
         <App
+          candidateHealth={candidateHealth}
           client={client}
           dailyNews={dailyNews}
           initialDashboard={candidateMode ? syntheticDashboard : undefined}

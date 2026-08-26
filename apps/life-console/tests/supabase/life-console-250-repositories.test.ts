@@ -219,7 +219,7 @@ describe("Life Console 2.5.0 repositories", () => {
     const repository = new HealthRepository(client);
 
     await repository.listDailyMetrics("2030-04-18", "2030-05-01");
-    await repository.listSleepTimings("2030-04-25", "2030-05-01");
+    await repository.listSleepTimings("2030-04-18", "2030-05-01");
 
     const metrics = new URL(requests[0].url);
     expect(metrics.pathname).toBe("/rest/v1/health_days");
@@ -227,7 +227,7 @@ describe("Life Console 2.5.0 repositories", () => {
     expect(metrics.searchParams.get("order")).toBe("health_date.asc,id.asc");
     const sleep = new URL(requests[1].url);
     expect(sleep.pathname).toBe("/rest/v1/daily_checkins");
-    expect(sleep.searchParams.get("checkin_date")).toEqual("gte.2030-04-25");
+    expect(sleep.searchParams.get("checkin_date")).toEqual("gte.2030-04-18");
     expect(sleep.searchParams.get("select")).toContain("sleep_time");
   });
 
