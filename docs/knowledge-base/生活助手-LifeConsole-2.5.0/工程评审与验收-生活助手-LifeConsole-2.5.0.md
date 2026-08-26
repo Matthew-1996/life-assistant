@@ -180,7 +180,9 @@ Supabase 首次上线前只读核对曾因账号不匹配而失败关闭；重�
 - 主观信号根因是 Dashboard 只把 `daily_checkins` 投影到当前自然周，随后 14 天趋势组件只能得到 7 天输入。修复后趋势固定返回截至当天的连续 14 天；工作台当前自然周样本计数仍按 7 天计算，不改变既有口径。
 - 睡眠时长根因是趋势只读取 `health_days.summary`，没有复用同页睡眠时刻表的 `daily_checkins.sleep_time/wake_time`。修复后优先使用明确的健康摘要时长，缺失时再按保存时刻确定性计算；跨午夜按次日处理，异常格式与超过 18 小时继续保留未知。
 - 活动卡片直接读取 `health_days`；当前链路没有最近窗口数据，且本机最小健康摘要源同期也没有新归档。此项不是图表漏画，不从睡眠、主观状态或旧日期推断活动值；若要恢复连续活动趋势，需另行确认 Apple Health 采集和 Owner-scoped 云端写入范围。
-- 日记 raw-first 保存按设计成功，但 Production 客户端没有注入自动 normalization provider。真实日记经 Vercel Function 发送 DeepSeek 的长期外发授权此前未成立；本轮不静默开启，也未用管理权限绕过 Owner 会话回写当前日记。
+- 日记 raw-first 保存按设计成功，根因是 Production 客户端没有注入自动 normalization provider。PO 于 2026-08-26 明确同意以后新日记在原文保存成功后自动发送 DeepSeek 并回写标题、摘要等统一字段；候选实现复用当前 Owner Session，每次请求只发送 journal ID、source revision 和幂等 task key，由服务端在 Owner RLS 下读取当篇原文并执行已有 revision-safe 状态机。当前及历史待整理日记不追溯发送，也未用管理权限绕过 Owner 会话。
+- 浏览器整理客户端的 TDD 红灯先因模块缺失失败；最小实现后，Owner token、同源 POST、三字段最小请求体、无 Session 不发请求、HTTP/非法响应失败关闭，以及 raw-first/服务端鉴权/DeepSeek 去敏失败/原子完成等定向 4 文件 / 26 项通过。当前树的 Vitest 为沙箱内非回环 76 文件 / 576 项与沙箱外 Miniflare 4 文件 / 26 项，合计 80 文件 / 602 项；应用 Python 93 项、Production build、治理、Git 隐私与 `git diff --check` 通过。整理失败只返回稳定状态，原文保存不回滚，浏览器和日志不接触 DeepSeek Key 或供应商原始错误。
+- DeepSeek 2026-02-10 公开隐私政策说明，输入及输出经安全加密和去标识化后仍可能用于模型训练与服务优化。本次 PO 确认只解决自动发送授权；账号训练选项或对此数据用途的知情接受仍是 Production 独立门禁，候选代码和合成测试不构成已上线或真实日记处理证据。
 - TDD 红灯在生产代码修改前覆盖了 7 天输入、前一窗口丢失、睡眠查询拒绝 14 天、睡眠时刻未派生四项；最小修复后定向 3 文件 / 24 项、全量 Vitest 80 文件 / 599 项、应用 Python 93 项、根工具 Python 372 项（1 项跳过）与 Production build 通过。修改前基线及首次 CI 的唯一 Node 红灯来自 Todo 幂等合成 fixture：计划开始为空时，固定的 2026-08-22 截止时间会在当前日期之后违反生产 DDL。只为该 fixture 补上更早的固定计划开始时间，不改 Todo 生产逻辑；同文件 8 项与完整 `npm test` 重跑均通过。治理与当前 Git 隐私检查通过；隔离 worktree 的便携性验证仍因刻意不检出的私人真相源和既存告警失败，不复制私人文件伪造通过。
 - 第二轮远端 Node 在 Miniflare 删除计划合成用例出现 `Body has already been read`，同轮 Todo fixture 与本次趋势测试均通过。测试原先连续发出后续请求后才消费前三个一次性 Response body；改为每次响应返回后立即解析，再继续状态流转，不改 Worker 或产品行为。
-- Draft PR #74 已创建并保持 Draft；当前只完成本地修复与证据记录，未创建合成 Preview。PO 验收、Production 合并发布和发布后 Owner 只读复验仍是独立门禁。
+- Draft PR #74 已创建并保持 Draft；当前只完成本地修复、自动整理候选接线与证据记录，未创建合成 Preview。合成 Preview 验收、供应商数据用途确认、Production 合并发布和发布后 Owner 只读复验仍是独立门禁。
