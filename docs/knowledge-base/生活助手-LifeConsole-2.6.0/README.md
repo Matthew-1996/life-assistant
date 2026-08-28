@@ -10,4 +10,4 @@
 - [工程评审与验收](工程评审与验收-生活助手-LifeConsole-2.6.0.md)
 - [项目管理](项目管理-生活助手-LifeConsole-2.6.0.md)
 
-当前状态：PO 于 2026-08-29 确认 Gate 1 与 Gate 2，实施计划已建立并准备按 TDD 执行。Draft PR [#77](https://github.com/Matthew-1996/life-assistant/pull/77) 仍为 Draft；尚未创建 Preview、合并或发布 Production。
+当前状态：方案 2 已按 TDD 完成最小实现并通过本地应用、构建、浏览器、治理与隐私门禁。Draft PR [#77](https://github.com/Matthew-1996/life-assistant/pull/77) 仍为 Draft；尚未创建 Preview、进行真实 iPhone 验收、合并或发布 Production。

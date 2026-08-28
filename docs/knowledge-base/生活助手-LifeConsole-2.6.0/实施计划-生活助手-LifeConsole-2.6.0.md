@@ -37,11 +37,11 @@
 - Consumes: PO 于 2026-08-29 对 Gate 1 / Gate 2 的明确确认。
 - Produces: 可执行的书面基线；不产生应用行为。
 
-- [ ] **Step 1: 更新 Gate 状态**
+- [x] **Step 1: 更新 Gate 状态**
 
 把 PRD、需求评审、设计和技术方案分别标为 Gate 1 / Gate 2 已确认；PMO 进入“待联调 / 进行中”，并继续标明未实现、未 Preview、未上线。
 
-- [ ] **Step 2: 校验文档**
+- [x] **Step 2: 校验文档**
 
 Run:
 
@@ -53,7 +53,7 @@ tools/check_git_privacy.sh
 
 Expected: 三条命令退出码均为 0；治理和隐私脚本打印 `PASS`。
 
-- [ ] **Step 3: 提交 Gate 与计划**
+- [x] **Step 3: 提交 Gate 与计划**
 
 ```bash
 git add docs/knowledge-base/README.md docs/knowledge-base/生活助手-LifeConsole-2.6.0
@@ -69,7 +69,7 @@ git commit -m "docs: approve Life Console 2.6.0 PWA design"
 - Consumes: `apps/life-console/index.html`、`apps/life-console/public/` 和 Vite `build()`。
 - Produces: 安装元数据、PNG 尺寸和无 Service Worker 构建边界的自动化契约。
 
-- [ ] **Step 1: 安装锁定依赖**
+- [x] **Step 1: 安装锁定依赖**
 
 Run:
 
@@ -79,7 +79,7 @@ cd apps/life-console && npm ci
 
 Expected: 安装成功，不修改 `package-lock.json`。
 
-- [ ] **Step 2: 写失败测试**
+- [x] **Step 2: 写失败测试**
 
 创建 `tests/vercel/ios-installation.test.ts`，使用 `cheerio.load()` 解析 `index.html`，并实现以下真实边界：
 
@@ -107,7 +107,7 @@ it("declares an iOS standalone home-screen app", () => {
 
 用 PNG IHDR 的第 16–23 字节读取宽高，逐字面量断言 180×180 和 512×512。调用真实 Vite Production 构建，断言输出包含 `manifest.webmanifest` 与两个 PNG，并且输出文件名和文本不包含 `service-worker`、`sw.js`、`workbox` 或 `serviceWorker.register`。
 
-- [ ] **Step 3: 运行测试并观察正确红灯**
+- [x] **Step 3: 运行测试并观察正确红灯**
 
 Run:
 
@@ -131,7 +131,7 @@ Expected: FAIL；原因是 Manifest、Apple Touch Icon、元数据或 PNG 文件
 - Consumes: 现有 `public/favicon.svg` 的品牌图形语言。
 - Produces: iOS 主屏幕安装配置；不产生运行时脚本或缓存。
 
-- [ ] **Step 1: 添加 HTML 元数据**
+- [x] **Step 1: 添加 HTML 元数据**
 
 在现有 favicon 后增加：
 
@@ -144,7 +144,7 @@ Expected: FAIL；原因是 Manifest、Apple Touch Icon、元数据或 PNG 文件
 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 ```
 
-- [ ] **Step 2: 添加 Manifest**
+- [x] **Step 2: 添加 Manifest**
 
 创建：
 
@@ -165,11 +165,11 @@ Expected: FAIL；原因是 Manifest、Apple Touch Icon、元数据或 PNG 文件
 }
 ```
 
-- [ ] **Step 3: 从现有 SVG 导出 PNG**
+- [x] **Step 3: 从现有 SVG 导出 PNG**
 
 创建不透明满幅背景的 `assets/life-console-icon-source.svg`，复用现有渐变、L 形标识和蓝色圆点。使用系统 Quick Look / `sips` 导出 180×180 与 512×512，再以本机 Pillow 转为 RGB PNG；不引入新的 npm 图片依赖。输出由测试读取真实 PNG IHDR 校验尺寸与无 Alpha 编码。
 
-- [ ] **Step 4: 运行定向测试并观察绿灯**
+- [x] **Step 4: 运行定向测试并观察绿灯**
 
 Run:
 
@@ -179,7 +179,7 @@ cd apps/life-console && npx vitest run tests/vercel/ios-installation.test.ts
 
 Expected: 所有 iOS 安装测试 PASS；Production 构建中存在批准资产且没有 Service Worker。
 
-- [ ] **Step 5: 提交实现**
+- [x] **Step 5: 提交实现**
 
 ```bash
 git add apps/life-console/index.html apps/life-console/assets/life-console-icon-source.svg apps/life-console/public/manifest.webmanifest apps/life-console/public/apple-touch-icon.png apps/life-console/public/life-console-icon-512.png apps/life-console/tests/vercel/ios-installation.test.ts
@@ -197,7 +197,7 @@ git commit -m "feat: add iOS home-screen installation"
 - Consumes: Task 3 的提交与完整验证输出。
 - Produces: 去敏本地验收记录；不产生 Preview 或 Production 授权。
 
-- [ ] **Step 1: 运行应用门禁**
+- [x] **Step 1: 运行应用门禁**
 
 Run:
 
@@ -209,7 +209,7 @@ cd apps/life-console && npm run test:e2e:synthetic
 
 Expected: 全部退出码 0；构建与浏览器回归没有新增错误。
 
-- [ ] **Step 2: 运行仓库门禁**
+- [x] **Step 2: 运行仓库门禁**
 
 Run:
 
@@ -222,7 +222,7 @@ python3 -m unittest discover -s tools -p 'test_*.py'
 
 Expected: 全部退出码 0；如隔离 worktree 的既有私人文件缺失影响某项，必须如实记录而不得复制私人资料。
 
-- [ ] **Step 3: 更新工程证据**
+- [x] **Step 3: 更新工程证据**
 
 只记录命令、退出状态、测试计数、构建结论和无 Service Worker 边界；不记录 Owner 数据、凭据、资源 ID 或部署 ID。PMO 保持 Preview、真机验收、合并和 Production 为独立 pending 门禁。
 
