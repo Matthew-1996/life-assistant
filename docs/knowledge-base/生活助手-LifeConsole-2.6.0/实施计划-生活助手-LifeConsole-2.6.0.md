@@ -6,7 +6,7 @@
 
 **Architecture:** 使用 Vite `public/` 交付同源 Manifest 与 PNG 图标，`index.html` 声明标准 Manifest 和 iOS 元数据。测试直接解析 HTML、Manifest、PNG 头和真实 Production 构建产物，既证明安装资产存在，也固定无 Service Worker 的安全边界。
 
-**Tech Stack:** Vite 7、React 19、Vitest 3、Cheerio、Node.js 文件 API、macOS `sips` 静态图标转换。
+**Tech Stack:** Vite 7、React 19、Vitest 3、Cheerio、Node.js 文件 API、macOS Quick Look / `sips` 与本地 Pillow RGB 规范化。
 
 **Spec:** `docs/knowledge-base/生活助手-LifeConsole-2.6.0/生活助手-LifeConsole-2.6.0.md`
 
@@ -121,13 +121,14 @@ Expected: FAIL；原因是 Manifest、Apple Touch Icon、元数据或 PNG 文件
 
 **Files:**
 - Modify: `apps/life-console/index.html`
+- Create: `apps/life-console/assets/life-console-icon-source.svg`
 - Create: `apps/life-console/public/manifest.webmanifest`
 - Create: `apps/life-console/public/apple-touch-icon.png`
 - Create: `apps/life-console/public/life-console-icon-512.png`
 - Test: `apps/life-console/tests/vercel/ios-installation.test.ts`
 
 **Interfaces:**
-- Consumes: 现有 `public/favicon.svg` 品牌图形。
+- Consumes: 现有 `public/favicon.svg` 的品牌图形语言。
 - Produces: iOS 主屏幕安装配置；不产生运行时脚本或缓存。
 
 - [ ] **Step 1: 添加 HTML 元数据**
@@ -166,7 +167,7 @@ Expected: FAIL；原因是 Manifest、Apple Touch Icon、元数据或 PNG 文件
 
 - [ ] **Step 3: 从现有 SVG 导出 PNG**
 
-使用系统 `sips` 从 `public/favicon.svg` 导出 180×180 与 512×512 PNG；不引入新的 npm 图片依赖。输出由测试读取真实 PNG IHDR 校验。
+创建不透明满幅背景的 `assets/life-console-icon-source.svg`，复用现有渐变、L 形标识和蓝色圆点。使用系统 Quick Look / `sips` 导出 180×180 与 512×512，再以本机 Pillow 转为 RGB PNG；不引入新的 npm 图片依赖。输出由测试读取真实 PNG IHDR 校验尺寸与无 Alpha 编码。
 
 - [ ] **Step 4: 运行定向测试并观察绿灯**
 
@@ -181,7 +182,7 @@ Expected: 所有 iOS 安装测试 PASS；Production 构建中存在批准资产�
 - [ ] **Step 5: 提交实现**
 
 ```bash
-git add apps/life-console/index.html apps/life-console/public/manifest.webmanifest apps/life-console/public/apple-touch-icon.png apps/life-console/public/life-console-icon-512.png apps/life-console/tests/vercel/ios-installation.test.ts
+git add apps/life-console/index.html apps/life-console/assets/life-console-icon-source.svg apps/life-console/public/manifest.webmanifest apps/life-console/public/apple-touch-icon.png apps/life-console/public/life-console-icon-512.png apps/life-console/tests/vercel/ios-installation.test.ts
 git commit -m "feat: add iOS home-screen installation"
 ```
 

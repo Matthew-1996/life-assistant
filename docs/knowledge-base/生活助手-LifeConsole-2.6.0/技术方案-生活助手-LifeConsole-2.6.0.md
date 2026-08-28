@@ -43,6 +43,11 @@ WebKit 当前允许任意网站添加到主屏幕；Manifest 仍用于稳定声�
 - 增加 `theme-color`、`apple-mobile-web-app-capable=yes`、`apple-mobile-web-app-title=Life Console` 和默认状态栏样式。
 - 保留现有 viewport，不增加 `viewport-fit=cover`，避免为最小适配引入新的顶部安全区布局变化。
 
+### 图标源
+
+- `assets/life-console-icon-source.svg` 复用现有 Life Console 渐变、L 形标识与蓝色圆点，但使用不透明满幅方形背景，不预先裁切 iOS 圆角。
+- 180×180 与 512×512 PNG 从该母版导出并规范化为无 Alpha 的 RGB PNG；iOS 在主屏幕展示时负责最终形状裁切。
+
 ## 3. 明确禁止的实现
 
 - 不增加 `service-worker.js`、`sw.js`、`navigator.serviceWorker.register`、Workbox 或 `vite-plugin-pwa`。
@@ -63,7 +68,7 @@ WebKit 当前允许任意网站添加到主屏幕；Manifest 仍用于稳定声�
 ### TDD 自动测试
 
 1. 先写失败的静态契约测试，要求 `index.html` 引用 Manifest、iOS 图标和必要元数据。
-2. 先写失败的 Manifest 契约测试，校验字段、同源路径、PNG 尺寸与文件存在。
+2. 先写失败的 Manifest 契约测试，校验字段、同源路径、PNG 尺寸、无 Alpha 与文件存在。
 3. 先写失败的边界测试，扫描源码和构建产物，拒绝 Service Worker 注册、PWA 缓存插件和 Service Worker 文件。
 4. 构建后验证 Manifest、图标、首页与严格 CSP；复跑现有 390px Playwright 回归。
 
