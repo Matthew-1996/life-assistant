@@ -5,6 +5,7 @@
 - 主阶段：待需求评审。
 - 子状态：进行中。
 - 分支：`agent/life-console-pwa-ios-260`。
+- PR：Draft PR [#77](https://github.com/Matthew-1996/life-assistant/pull/77)，当前仅包含文档草案。
 - 实现：未开始；当前只有可逆文档草案。
 - 数据：不改数据库、Owner 数据、备份或自动化。
 - 发布：未创建 Preview，未申请 PR 合并或 Production 发布。
