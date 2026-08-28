@@ -1,6 +1,6 @@
 # PRD：Life Console 2.6.0
 
-状态：draft.1；PO 已选择“仅安装配置”方向，完整 Gate 1 待书面复核。
+状态：Gate 1 已由 PO 于 2026-08-29 确认；按已批准范围进入实施计划与 Gate 2 方案执行。
 
 ## 1. 背景与目标
 
@@ -50,6 +50,6 @@ Life Console 2.5.0 已具备 390px 移动布局，但 Production 没有 Web App 
 
 ## 6. PO 门禁
 
-1. Gate 1：确认本 PRD，特别是“断网后已加载页面不会被主动遮挡”的限制。
-2. Gate 2：确认图标方向、Manifest / iOS 元数据和测试方案后，才开始代码与静态资源实现。
+1. Gate 1：已确认，包括“断网后已加载页面不会被主动遮挡”的限制。
+2. Gate 2：已确认图标方向、Manifest / iOS 元数据、禁止 Service Worker 和测试方案。
 3. Preview 验收、PR 合并、Production 发布和发布后真实 iPhone 复验分别需要当次明确确认。

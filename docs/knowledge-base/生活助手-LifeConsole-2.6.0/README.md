@@ -6,7 +6,8 @@
 - [需求评审](需求评审报告-生活助手-LifeConsole-2.6.0.md)
 - [设计方案](设计方案-生活助手-LifeConsole-2.6.0.md)
 - [技术方案](技术方案-生活助手-LifeConsole-2.6.0.md)
+- [实施计划](实施计划-生活助手-LifeConsole-2.6.0.md)
 - [工程评审与验收](工程评审与验收-生活助手-LifeConsole-2.6.0.md)
 - [项目管理](项目管理-生活助手-LifeConsole-2.6.0.md)
 
-当前状态：PRD、设计和技术方案 draft.1 已起草并进入 Draft PR [#77](https://github.com/Matthew-1996/life-assistant/pull/77)。PO 已在对话中选择“仅安装配置”方向；完整书面方案仍待 PO 复核，尚未开始应用代码、Preview 或 Production 发布。
+当前状态：PO 于 2026-08-29 确认 Gate 1 与 Gate 2，实施计划已建立并准备按 TDD 执行。Draft PR [#77](https://github.com/Matthew-1996/life-assistant/pull/77) 仍为 Draft；尚未创建 Preview、合并或发布 Production。
