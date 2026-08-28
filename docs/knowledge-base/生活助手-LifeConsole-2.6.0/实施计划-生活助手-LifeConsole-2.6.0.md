@@ -226,7 +226,7 @@ Expected: 全部退出码 0；如隔离 worktree 的既有私人文件缺失影�
 
 只记录命令、退出状态、测试计数、构建结论和无 Service Worker 边界；不记录 Owner 数据、凭据、资源 ID 或部署 ID。PMO 保持 Preview、真机验收、合并和 Production 为独立 pending 门禁。
 
-- [ ] **Step 4: 提交并推送 Draft PR**
+- [x] **Step 4: 提交并推送 Draft PR**
 
 ```bash
 git add docs/knowledge-base/生活助手-LifeConsole-2.6.0
