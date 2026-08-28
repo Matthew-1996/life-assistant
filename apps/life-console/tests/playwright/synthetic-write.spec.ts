@@ -38,6 +38,28 @@ test("keeps the four-page workbench inside a phone viewport", async ({ page }) =
   }
 });
 
+test("keeps mobile controls above the fixed bottom navigation", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+
+  const navigation = page.getByRole("navigation", { name: "全局导航" });
+  const anchorButton = page
+    .getByRole("group", { name: "起床状态" })
+    .getByRole("button", { name: "完成" });
+
+  await expect(navigation).toBeVisible();
+  await expect(anchorButton).toBeVisible();
+  await anchorButton.evaluate((element) => element.scrollIntoView({ block: "end" }));
+
+  const [navigationBox, anchorButtonBox] = await Promise.all([
+    navigation.boundingBox(),
+    anchorButton.boundingBox(),
+  ]);
+  expect(navigationBox).not.toBeNull();
+  expect(anchorButtonBox).not.toBeNull();
+  expect(anchorButtonBox!.y + anchorButtonBox!.height).toBeLessThanOrEqual(navigationBox!.y);
+});
+
 test("keeps the 2.5 workbench in-screen and stacks columns below 1180px content width", async ({ page }) => {
   for (const width of [1440, 1280, 1024, 390]) {
     await page.setViewportSize({ width, height: 900 });

@@ -1163,8 +1163,26 @@ pre {
     min-width: 0;
   }
 
+  .app-shell {
+    display: flex;
+    height: 100svh;
+    height: 100dvh;
+    min-height: 0;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .workspace {
+    min-height: 0;
+    flex: 1 1 auto;
+    margin-bottom: calc(64px + max(8px, env(safe-area-inset-bottom)));
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+  }
+
   .topbar {
     height: 50px;
+    flex: 0 0 50px;
     background: rgb(250 250 250 / 96%);
     backdrop-filter: none;
   }
