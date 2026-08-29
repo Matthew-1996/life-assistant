@@ -10,4 +10,4 @@
 - [工程评审与验收](工程评审与验收-生活助手-LifeConsole-2.6.0.md)
 - [项目管理](项目管理-生活助手-LifeConsole-2.6.0.md)
 
-当前状态：方案 2 与 390px 底部导航安全区修复已按 TDD 完成，并通过本地应用、构建、浏览器、治理与隐私门禁。受保护纯静态合成 Preview 已 READY，390px 四页与可见控件重叠复验通过。Draft PR [#77](https://github.com/Matthew-1996/life-assistant/pull/77) 仍为 Draft；尚未进行真实 iPhone 验收、合并或发布 Production。
+当前状态：方案 2、390px 底部导航安全区和 Todo 表单单列修复已按 TDD 完成，并通过本地应用、构建、浏览器、治理与隐私门禁。二次修复后的受保护纯静态合成 Preview 已 READY；390px 四页的控件彼此交集与底栏交集均为 0。Draft PR [#77](https://github.com/Matthew-1996/life-assistant/pull/77) 仍为 Draft；等待真实 iPhone 复验，尚未合并或发布 Production。
