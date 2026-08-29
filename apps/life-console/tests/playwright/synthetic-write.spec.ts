@@ -122,8 +122,13 @@ test("keeps the mobile Todo status menu compact and floating inside its panel", 
     if (!menuRect) throw new Error("Todo status menu is missing");
     const options = elements.map((element) => {
       const rect = element.getBoundingClientRect();
+      const checkbox = element.querySelector('input[type="checkbox"]');
+      if (!checkbox) throw new Error("Todo status checkbox is missing");
+      const checkboxRect = checkbox.getBoundingClientRect();
       return {
         bottom: rect.bottom,
+        checkboxHeight: checkboxRect.height,
+        checkboxWidth: checkboxRect.width,
         height: rect.height,
         label: element.textContent?.trim() ?? "unknown status",
         left: rect.left,
@@ -135,6 +140,12 @@ test("keeps the mobile Todo status menu compact and floating inside its panel", 
       .filter((option) => option.height < 36
         || option.left < panelRect.left - 0.5
         || option.right > panelRect.right + 0.5)
+      .map((option) => option.label);
+    const oversizedCheckboxes = options
+      .filter((option) => option.checkboxHeight < 12
+        || option.checkboxHeight > 16
+        || option.checkboxWidth < 12
+        || option.checkboxWidth > 16)
       .map((option) => option.label);
     const overlaps: string[] = [];
     for (let leftIndex = 0; leftIndex < options.length; leftIndex += 1) {
@@ -153,12 +164,14 @@ test("keeps the mobile Todo status menu compact and floating inside its panel", 
       menuInsidePanel: menuRect.left >= panelRect.left - 0.5
         && menuRect.right <= panelRect.right + 0.5,
       overlaps,
+      oversizedCheckboxes,
     };
   });
 
   expect(geometry.invalidTargets).toEqual([]);
   expect(geometry.menuInsidePanel).toBe(true);
   expect(geometry.overlaps).toEqual([]);
+  expect(geometry.oversizedCheckboxes).toEqual([]);
 });
 
 test("contains mobile Todo date-time controls when iOS includes their padding in the native width", async ({ page }) => {

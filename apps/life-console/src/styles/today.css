@@ -235,7 +235,12 @@
 }
 
 .todo-status-filter__option input {
+  flex: 0 0 14px;
+  width: 14px;
+  height: 14px;
   margin: 0;
+  padding: 0;
+  border-radius: 3px;
   accent-color: var(--primary);
 }
 
