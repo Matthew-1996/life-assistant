@@ -21,14 +21,16 @@
 
 ## 3. 验收边界
 
-合成数据与浏览器几何验证不读写 Owner 真实数据。本地、CI 或 Draft PR 通过不等于 PO Preview 验收，也不授权合并或发布。
+合成数据与浏览器几何验证不读写 Owner 真实数据。本地、CI、Draft PR 或 Preview 技术验收通过不等于 PO 产品验收，也不授权合并或发布。
 
 ## 4. 执行结果
 
-- Todo 定向测试 10/10 通过；完整 Vitest 81 个文件、611 项通过。
+- Todo 定向测试 10/10 通过；候选 Todo 仓库、Candidate/Production 制品边界与候选 UI 定向测试 23/23 通过；CI 完整 Vitest 82 个文件、615 项通过。
 - 应用内 Python 测试 75 + 7 + 10 + 1 项通过。
 - 完整 Playwright 14/14 通过，包含新增 390px 筛选几何用例。
-- Supabase Production 模式构建通过，129 个模块完成转换。
+- Supabase Production 与 Candidate Preview 模式构建通过，130 个模块完成转换；Production 制品不包含候选 Todo 标题。
+- Vercel Preview 为 10 个静态文件、0 Functions、0 Cron；`/api/*` 返回 404，CSP 为 `connect-src 'none'`、`script-src 'self'`。
+- 真实浏览器验收通过：今日/全部共用筛选；默认隐藏已完成；列表与甘特同步回捞；状态流转后即时隐藏；全不选双空态；390px 无横向溢出或筛选项重叠，最小点击高度 51.5px。
 - 根工具测试 372 项通过，1 项既有跳过；治理、Git 隐私与差异检查通过。
 
 沙箱首跑拒绝 Miniflare、Playwright 与根工具的 `127.0.0.1` 回环端口；在允许本机回环监听的同一 worktree 原样重跑后全部通过，未放宽断言或超时。

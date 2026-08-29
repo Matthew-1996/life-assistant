@@ -32,4 +32,4 @@ Todo 的“全部”和“今日”范围会同时把已完成项目给到列表
 
 ## 5. 门禁
 
-PO 已确认 Gate 1 和 Gate 2，并允许本地开发与创建 Draft PR。Preview、PR 合并、Production 发布分别需要当次明确确认。
+PO 已确认 Gate 1 和 Gate 2，允许本地开发、Draft PR 与本次合成数据 Preview。PR 合并与 Production 发布仍分别需要当次明确确认。

@@ -2,12 +2,12 @@
 
 ## 1. 当前状态
 
-- 主阶段：待验收。
-- 子状态：待开始。
+- 主阶段：验收。
+- 子状态：Preview 已就绪，待 PO 产品验收。
 - 范围：Todo 状态展示筛选，仅前端。
 - 数据：不改 Supabase、Owner 数据、API、备份或自动化。
 - PR：Draft PR [#79](https://github.com/Matthew-1996/life-assistant/pull/79) 已创建，node、python、privacy 三项 CI 已通过。
-- 授权：本地开发与 Draft PR 已执行；不包含 Preview、合并或 Production。
+- 授权：本地开发、Draft PR 与本次合成数据 Preview 已执行；不包含合并或 Production。
 
 ## 2. 决策日志
 
@@ -22,6 +22,10 @@
 | 2026-08-29 | 独立复审确认原 Important 已解决，无新 Critical / Important | 已通过；仅修正复审指出的 PMO 轻微文案滞后 |
 | 2026-08-29 | 创建 Draft PR #79 | 已完成；待 CI，不构成 Preview、合并或 Production 授权 |
 | 2026-08-29 | Draft PR #79 首轮 node 因既有 Daily News NodeNext 类型检查 5.446 秒超过 5 秒限制失败；未修改代码或超时后原样重跑 | node、python、privacy 三项全部通过 |
+| 2026-08-29 | PO 当次确认进入 Preview | 已生成只含合成数据的受保护 Preview；不延伸为合并或 Production 授权 |
+| 2026-08-29 | 首个 Preview 缺少 Todo 合成数据，无法验证筛选行为 | 未作为验收件；补齐纯内存候选 repository 后替换 |
+| 2026-08-29 | 独立审查发现上海午夜跨日边界 | 固定 00:30 红测复现并修复；复审无 Critical / Important |
+| 2026-08-29 | 替代 Preview 静态、安全头、桌面交互与 390px 几何验收通过 | 等待 PO 产品验收 |
 
 ## 3. 门禁
 
@@ -31,11 +35,11 @@
 | Gate 2 设计 / 技术 | completed | PO 于 2026-08-29 确认共用多选投影方案 |
 | 本地开发 | approved | 按 TDD 与治理门禁实施 |
 | Draft PR | completed | PR #79 已创建，三项 CI 已通过 |
-| Preview | pending | PO 对 2.7.0 Preview 当次明确授权 |
+| Preview | in_review | 技术验收已通过；等待 PO 对当前 Preview 的产品验收决定 |
 | PR 合并 | pending | PO 根据验收与 CI 结果当次明确授权 |
 | Production | pending | 合并后由 PO 当次明确授权发布 |
 
 ## 4. 当前下一步
 
-1. 等待 PO 决定是否进入 Preview 与后续验收。
-2. Preview、合并和 Production 继续保持 pending，直到 PO 分别当次明确授权。
+1. 等待 PO 验收当前 Preview。
+2. PR 合并与 Production 继续保持 pending，直到 PO 分别当次明确授权。
