@@ -18,6 +18,9 @@ const statusLabels: Record<TodoStatus, string> = {
   completed: "已完成",
 };
 
+const statusOptions: readonly TodoStatus[] = ["not_started", "in_progress", "completed"];
+const defaultVisibleStatuses: readonly TodoStatus[] = ["not_started", "in_progress"];
+
 function idempotencyKey(): string {
   const random = globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2);
   return `todo-ui-${Date.now()}-${random}`;
@@ -41,6 +44,9 @@ export function TodoPanel({ now, repository }: TodoPanelProps) {
   const [currentNow] = useState(() => now ?? new Date());
   const [scope, setScope] = useState<"today" | "all">("today");
   const [items, setItems] = useState<TodoItem[]>([]);
+  const [visibleStatuses, setVisibleStatuses] = useState<ReadonlySet<TodoStatus>>(
+    () => new Set(defaultVisibleStatuses),
+  );
   const [loading, setLoading] = useState(Boolean(repository));
   const [busy, setBusy] = useState(false);
   const [title, setTitle] = useState("");
@@ -51,6 +57,16 @@ export function TodoPanel({ now, repository }: TodoPanelProps) {
   const [deleting, setDeleting] = useState<TodoItem | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<string | null>(null);
+  const visibleItems = items.filter((item) => visibleStatuses.has(item.status));
+
+  function toggleVisibleStatus(status: TodoStatus) {
+    setVisibleStatuses((current) => {
+      const next = new Set(current);
+      if (next.has(status)) next.delete(status);
+      else next.add(status);
+      return next;
+    });
+  }
 
   useEffect(() => {
     let active = true;
@@ -178,6 +194,25 @@ export function TodoPanel({ now, repository }: TodoPanelProps) {
         </div>
       </div>
 
+      <div aria-label="项目状态" className="todo-status-filter" role="group">
+        <span className="todo-status-filter__label">项目状态</span>
+        <div className="todo-status-filter__options">
+          {statusOptions.map((status) => {
+            const checked = visibleStatuses.has(status);
+            return (
+              <label className="todo-status-filter__option" data-checked={checked} key={status}>
+                <input
+                  checked={checked}
+                  onChange={() => toggleVisibleStatus(status)}
+                  type="checkbox"
+                />
+                <span>{statusLabels[status]}</span>
+              </label>
+            );
+          })}
+        </div>
+      </div>
+
       <form className="todo-quick-form" onSubmit={(event) => void createTodo(event)}>
         <label className="todo-quick-form__title">
           <span>Todo 项目</span>
@@ -210,7 +245,9 @@ export function TodoPanel({ now, repository }: TodoPanelProps) {
       <div className="todo-list" aria-live="polite">
         {loading ? <p className="empty-state">正在读取 Todo…</p> : items.length === 0 ? (
           <p className="empty-state">{repository ? "当前范围还没有 Todo。" : "当前预览未连接 Todo 数据源。"}</p>
-        ) : items.map((item, index) => (
+        ) : visibleItems.length === 0 ? (
+          <p className="empty-state">当前状态筛选下没有 Todo。</p>
+        ) : visibleItems.map((item, index) => (
           <article aria-label={`Todo ${String(index + 1).padStart(2, "0")} ${item.title}`} className="todo-row-250" key={item.id}>
             <span className="todo-row-250__index">{String(index + 1).padStart(2, "0")}</span>
             <div className="todo-row-250__main">
@@ -243,7 +280,13 @@ export function TodoPanel({ now, repository }: TodoPanelProps) {
         ))}
       </div>
 
-      <TodoGantt now={currentNow} todos={items} />
+      <TodoGantt
+        emptyMessage={items.length > 0 && visibleItems.length === 0
+          ? "当前状态筛选下没有可展示的计划。"
+          : undefined}
+        now={currentNow}
+        todos={visibleItems}
+      />
       <TodoEditorSheet busy={busy} onClose={() => setEditing(null)} onSave={updateTodo} todo={editing} />
       <TodoDeleteDialog
         busy={busy}

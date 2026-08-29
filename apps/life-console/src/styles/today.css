@@ -99,6 +99,8 @@
 .todo-panel,
 .news-panel,
 .anchor-section-250,
+.todo-status-filter,
+.todo-status-filter__options,
 .todo-list,
 .todo-row-250 > *,
 .todo-quick-form > * {
@@ -136,6 +138,52 @@
   color: var(--foreground);
   background: white;
   box-shadow: 0 1px 5px rgb(31 35 48 / 10%);
+}
+
+.todo-status-filter {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-bottom: 14px;
+}
+
+.todo-status-filter__label {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.todo-status-filter__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.todo-status-filter__option {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  color: var(--muted-foreground);
+  background: rgb(255 255 255 / 62%);
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.todo-status-filter__option[data-checked="true"] {
+  border-color: rgb(0 122 255 / 28%);
+  color: var(--foreground);
+  background: var(--blue-soft);
+}
+
+.todo-status-filter__option input {
+  margin: 0;
+  accent-color: var(--primary);
 }
 
 .todo-quick-form {

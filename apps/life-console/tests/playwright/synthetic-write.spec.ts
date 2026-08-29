@@ -96,6 +96,52 @@ test("keeps mobile Todo form controls from overlapping each other", async ({ pag
   expect(overlappingPairs).toEqual([]);
 });
 
+test("keeps mobile Todo status filters as contained, non-overlapping tap targets", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+
+  const statusFilter = page.getByRole("group", { name: "项目状态" });
+  const statusOptions = statusFilter.locator(".todo-status-filter__option");
+  await expect(statusOptions).toHaveCount(3);
+
+  const geometry = await statusOptions.evaluateAll((elements) => {
+    const panelRect = elements[0]?.closest(".todo-panel")?.getBoundingClientRect();
+    if (!panelRect) throw new Error("Todo panel is missing");
+    const options = elements.map((element) => {
+      const rect = element.getBoundingClientRect();
+      return {
+        bottom: rect.bottom,
+        height: rect.height,
+        label: element.textContent?.trim() ?? "unknown status",
+        left: rect.left,
+        right: rect.right,
+        top: rect.top,
+      };
+    });
+    const invalidTargets = options
+      .filter((option) => option.height < 30
+        || option.left < panelRect.left - 0.5
+        || option.right > panelRect.right + 0.5)
+      .map((option) => option.label);
+    const overlaps: string[] = [];
+    for (let leftIndex = 0; leftIndex < options.length; leftIndex += 1) {
+      for (let rightIndex = leftIndex + 1; rightIndex < options.length; rightIndex += 1) {
+        const left = options[leftIndex];
+        const right = options[rightIndex];
+        const horizontalOverlap = Math.min(left.right, right.right) - Math.max(left.left, right.left);
+        const verticalOverlap = Math.min(left.bottom, right.bottom) - Math.max(left.top, right.top);
+        if (horizontalOverlap > 0.5 && verticalOverlap > 0.5) {
+          overlaps.push(`${left.label} ↔ ${right.label}`);
+        }
+      }
+    }
+    return { invalidTargets, overlaps };
+  });
+
+  expect(geometry.invalidTargets).toEqual([]);
+  expect(geometry.overlaps).toEqual([]);
+});
+
 test("contains mobile Todo date-time controls when iOS includes their padding in the native width", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
