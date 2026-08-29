@@ -8,6 +8,7 @@ import { App } from "../../src/App";
 import { candidateHealthRepository } from "../../src/data/candidate-health";
 import { syntheticDashboard } from "../../src/data/dashboard";
 import { syntheticDailyNewsClient } from "../../src/data/daily-news";
+import { createCandidateTodoRepository } from "../../src/features/todos/candidate-todo-repository";
 
 afterEach(() => {
   cleanup();
@@ -21,6 +22,32 @@ function navigationButton(name: string) {
 }
 
 describe("Life Console candidate preview", () => {
+  it("previews Todo status filtering with synthetic rows in both scopes and Gantt", async () => {
+    const user = userEvent.setup();
+    render(
+      <App
+        initialDashboard={syntheticDashboard}
+        mode="candidate-preview"
+        todos={createCandidateTodoRepository()}
+      />,
+    );
+
+    const gantt = screen.getByRole("region", { name: "Todo 14 天甘特" });
+    expect(await screen.findByRole("article", { name: /整理旅行清单/ })).toBeTruthy();
+    expect(screen.getByRole("article", { name: /准备本周采购/ })).toBeTruthy();
+    expect(screen.queryByRole("article", { name: /完成房间整理/ })).toBeNull();
+    expect(within(gantt).queryByText("完成房间整理")).toBeNull();
+
+    await user.click(screen.getByRole("checkbox", { name: "已完成" }));
+    expect(await screen.findByRole("article", { name: /完成房间整理/ })).toBeTruthy();
+    expect(within(gantt).getByText("完成房间整理")).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "全部" }));
+    expect((screen.getByRole("checkbox", { name: "已完成" }) as HTMLInputElement).checked).toBe(true);
+    expect(await screen.findByRole("article", { name: /完成房间整理/ })).toBeTruthy();
+    expect(within(gantt).getByText("完成房间整理")).toBeTruthy();
+  });
+
   it("shows the synthetic read-only identity across all four pages", async () => {
     const user = userEvent.setup();
     render(
