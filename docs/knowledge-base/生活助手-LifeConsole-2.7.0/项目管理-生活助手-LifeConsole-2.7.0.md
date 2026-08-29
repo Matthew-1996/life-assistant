@@ -3,7 +3,7 @@
 ## 1. 当前状态
 
 - 主阶段：发布。
-- 子状态：PR 合并与 Production 已授权，等待最终门禁与执行。
+- 子状态：PR #79 已合并；首次 Production 发布已回滚，等待构建门禁修复、修复 PR、重新发布与 Owner 真实浏览器复验。
 - 范围：Todo 状态展示筛选，仅前端。
 - 数据：不改 Supabase、Owner 数据、API、备份或自动化。
 - PR：Draft PR [#79](https://github.com/Matthew-1996/life-assistant/pull/79) 已创建，node、python、privacy 三项 CI 已通过。
@@ -34,6 +34,9 @@
 | 2026-08-29 | PO 当次授权部署整行点击替换 Preview | 部署 `dpl_24rVsZ6ccxY9eib5SaDr8DRwFda8` Ready；首页 200、严格 CSP 与 `noindex` 保留，`/api/*` 404；390px 空白区域连续点击往返验收通过 |
 | 2026-08-29 | PO 确认最新替换 Preview 产品验收通过 | Preview Gate 完成；不延伸为 PR 合并或 Production 授权 |
 | 2026-08-29 | PO 明确授权“合并和 Production” | 允许合并 PR #79，并从合并后的准确 `main` 发布本版本；不得提前标记完成或扩展发布范围 |
+| 2026-08-29 | PR #79 squash 合并至 `main` | 合并提交 `7988ed3d`；代码与最终 CI 门禁通过 |
+| 2026-08-29 | 首次 Production 本地预构建把 `[SENSITIVE]` 写入 Supabase 浏览器公钥 | Owner 会话无法读取工作台；立即回滚到上一已知可用制品，同一会话恢复，不涉及数据迁移或数据库写入 |
+| 2026-08-29 | Production 构建门禁进入 TDD 修复 | 红测证明占位符此前可打包；最小修复后占位符在编译前失败，合法合成公钥 130 模块构建、应用 618 项及 Python/根目录门禁通过；等待修复 PR 与远端重新构建 |
 
 ## 3. 门禁
 
@@ -44,11 +47,11 @@
 | 本地开发 | approved | 按 TDD 与治理门禁实施 |
 | Draft PR | completed | PR #79 包含整行点击实现 `5463d37`，node、python、privacy 三项 CI 通过 |
 | Preview | completed | 技术、真实浏览器与 PO 产品验收均通过 |
-| PR 合并 | approved | PO 于 2026-08-29 当次明确授权；待最终门禁与执行 |
-| Production | approved | PO 于 2026-08-29 当次明确授权；仅发布合并后的准确 `main` |
+| PR 合并 | reopened | PR #79 已合并；Production 构建门禁修复须通过独立修复 PR 合并 |
+| Production | reopened | 首次制品已回滚；只允许从含构建门禁的准确 `main` 进行 Vercel 远端构建并复验 |
 
 ## 4. 当前下一步
 
-1. 重新执行合并前完整门禁，转 Ready 并合并 PR #79。
-2. 从合并后的准确 `main` 构建并发布 Production，完成稳定域名和真实浏览器只读验收。
+1. 完成 Production 环境占位符构建红绿测试、完整门禁与独立修复 PR。
+2. 合并修复后从准确 `main` 触发 Vercel 远端 Production 构建，完成稳定域名和 Owner 真实浏览器只读验收。
 3. 按实际结果回填去敏上线证据并清理任务分支与 worktree。

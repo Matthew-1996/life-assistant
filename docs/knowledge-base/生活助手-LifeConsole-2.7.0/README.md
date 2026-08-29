@@ -10,4 +10,4 @@
 - [工程评审与验收](工程评审与验收-生活助手-LifeConsole-2.7.0.md)
 - [项目管理](项目管理-生活助手-LifeConsole-2.7.0.md)
 
-当前状态：Gate 1、Gate 2 与[受保护的合成数据 Preview](https://life-console-production-bzv5o4q62-test11-b88a.vercel.app)产品验收均已由 PO 于 2026-08-29 确认；PO 已当次授权合并 [PR #79](https://github.com/Matthew-1996/life-assistant/pull/79) 并将合并后的准确 `main` 发布到 Production。当前等待最终合并前门禁、合并与发布执行；不得在事实发生前标记为已上线。
+当前状态：Gate 1、Gate 2 与[受保护的合成数据 Preview](https://life-console-production-bzv5o4q62-test11-b88a.vercel.app)产品验收均已由 PO 于 2026-08-29 确认，[PR #79](https://github.com/Matthew-1996/life-assistant/pull/79) 已合并。首次 Production 发布因本地预构建把 Vercel 敏感环境变量占位符打入浏览器制品，导致 Owner 登录后无法读取工作台，已立即回滚到上一已知可用制品并验证工作台恢复。当前以独立修复分支增加 Production 构建硬门禁；2.7.0 尚未重新上线，真实浏览器验收保持重新打开。
