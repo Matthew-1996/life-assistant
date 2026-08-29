@@ -2,12 +2,12 @@
 
 ## 1. 当前状态
 
-- 主阶段：验收。
-- 子状态：整行点击替换 Preview 的技术与 390px 真实浏览器验收已通过，等待 PO 产品验收。
+- 主阶段：验收完成，待合并授权。
+- 子状态：最新替换 Preview 已通过 PO 产品验收。
 - 范围：Todo 状态展示筛选，仅前端。
 - 数据：不改 Supabase、Owner 数据、API、备份或自动化。
 - PR：Draft PR [#79](https://github.com/Matthew-1996/life-assistant/pull/79) 已创建，node、python、privacy 三项 CI 已通过。
-- 授权：本地开发、Draft PR 与本次合成数据 Preview 已执行；不包含合并或 Production。
+- 授权：本地开发、Draft PR、本次合成数据 Preview 与产品验收已完成；不包含合并或 Production。
 
 ## 2. 决策日志
 
@@ -32,6 +32,7 @@
 | 2026-08-29 | 紧凑 checkbox 替换 Preview Ready | 内容提交 `309ad1c`；桌面与 390×844 验收通过，等待 PO 产品验收 |
 | 2026-08-29 | PO 确认视觉并要求状态选项整行可点击 | 空白区域红测复现同步 `blur` 过早关闭；最小修复后连续两次整行点击分别选中、取消且保持展开，本地全量门禁、独立复审与三项 CI 通过 |
 | 2026-08-29 | PO 当次授权部署整行点击替换 Preview | 部署 `dpl_24rVsZ6ccxY9eib5SaDr8DRwFda8` Ready；首页 200、严格 CSP 与 `noindex` 保留，`/api/*` 404；390px 空白区域连续点击往返验收通过 |
+| 2026-08-29 | PO 确认最新替换 Preview 产品验收通过 | Preview Gate 完成；不延伸为 PR 合并或 Production 授权 |
 
 ## 3. 门禁
 
@@ -41,11 +42,11 @@
 | Gate 2 设计 / 技术 | completed | PO 于 2026-08-29 确认共用多选投影方案 |
 | 本地开发 | approved | 按 TDD 与治理门禁实施 |
 | Draft PR | completed | PR #79 包含整行点击实现 `5463d37`，node、python、privacy 三项 CI 通过 |
-| Preview | in_review | 最新替换 Preview 技术与 390px 真实浏览器验收通过；待 PO 产品验收 |
+| Preview | completed | 技术、真实浏览器与 PO 产品验收均通过 |
 | PR 合并 | pending | PO 根据验收与 CI 结果当次明确授权 |
 | Production | pending | 合并后由 PO 当次明确授权发布 |
 
 ## 4. 当前下一步
 
-1. 请 PO 验收最新替换 Preview。
-2. PR 合并与 Production 继续保持 pending，直到分别当次明确授权。
+1. PR 合并保持 pending，直到 PO 当次明确授权。
+2. Production 在合并后继续保持 pending，直到 PO 再次当次明确授权。
