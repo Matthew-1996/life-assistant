@@ -1,6 +1,6 @@
 # 工程评审与验收：Life Console 2.6.0
 
-状态：本地工程与二次修复后的受保护合成 Preview 验收通过；等待 PO 在真实 iPhone 复验，尚无 Production 证据。
+状态：本地工程与第三次响应式修复后的受保护合成 Preview 验收通过；等待 PO 在真实 iPhone 复验，尚无 Production 证据。
 
 ## 1. 当前基线
 
@@ -78,9 +78,18 @@ cd apps/life-console && npm run test:e2e:synthetic
 - 二次修复版部署 `dpl_BTcVwuQzXZ7rGcstoFP7UWheWNH7` 状态为 `READY`、目标为 `preview`：<https://life-console-synthetic-preview-fpvhb5oui-test11-b88a.vercel.app>。制品仍为 9 个静态文件、0 Functions、0 Cron；匿名访问返回受保护 SSO 302，认证后首页 / Manifest 为 200、`/api/daily-news` 为 404，CSP 保持 `script-src 'self'` 与 `connect-src 'none'`。
 - 二次修复版真实浏览器在 390×844 下确认 Todo 表单为单列 `320px`。工作台、记录、进展、系统共 38 个可见交互控件的两两交集数为 0，与底部导航交集数为 0；四页根横向溢出为 0、错误覆盖层为 0、控制台日志为空。
 
-## 8. 尚待产生的证据
+## 8. 记录页 iOS 日期筛选边界修复与 Preview 证据
 
-- PO 在真实 iPhone 上对二次修复版的控件布局、安装、独立窗口、登录恢复与飞行模式验收结论。
+- PO 于 2026-08-29 反馈记录页“筛选日记日期”控件超出边界。Chromium 390px 下输入与筛选容器同为 `320px`，但源码同时对输入使用 `width: 100%` 和左右各 `14px` padding；WebKit [Bug 301648](https://bugs.webkit.org/show_bug.cgi?id=301648) 已确认 iOS 26 会对这类 date/time 输入错误计算 100% 宽度，并且问题在 iPhone / iPad 上仍未修复。
+- 新 Playwright 几何测试使用真实生产 CSS 与同构筛选标记，把 WebKit 多算的左右 padding 表示为 `calc(100% + 28px)`。旧样式按预期失败：输入右边为 `399px`、筛选容器右边为 `371px`；移动端让筛选标签成为可收缩网格，日期输入改用 `width: auto; min-width: 0; max-width: 100%` 后，同一测试通过，同时保留 iOS 原生日历控件外观。
+- 提交 `4898454` 的完整本地门禁：Vitest 81 个文件 / 606 项、应用 Python 93 项、Playwright 12/12、默认与 Production 构建均为 129 个模块、根工具 372 项通过（1 项既有跳过），治理与 Git 隐私检查通过。
+- 首个新部署 `dpl_3UsDu2KwpP9Sbor8CiRM8uySHNjS` 虽为 READY，但首页静态文件因路由头顺序没有取得预期 CSP，验收时被拒绝且未作为交付结果。修正临时 Build Output 路由后，最终部署 `dpl_5GxRbybcxVTf8dxdt9qmhe9xrXTk` 状态为 `READY`、目标为 `preview`：<https://life-console-synthetic-preview-8hi8d12kr-test11-b88a.vercel.app>。
+- 最终制品仍为 9 个静态文件、0 Functions、0 Cron；匿名访问返回 Vercel SSO 302 与 `cache-control: no-store`，认证后首页 / Manifest 为 200、`/api/daily-news` 为 404；CSP 保持 `script-src 'self'`、`connect-src 'none'`，并保留 2.5.0 已批准的 `images.unsplash.com` 图片域。
+- 最终 Preview 的真实浏览器 390×844 检查中，日期输入与筛选容器左右边界均为 `35–355px`，计算样式为 `width: 320px; min-width: 0; max-width: 100%`。工作台、记录、进展、系统共 38 个可见交互控件的两两交集数为 0，与底部导航交集数为 0；四页根横向溢出为 0、错误覆盖层为 0、控制台日志为空。
+
+## 9. 尚待产生的证据
+
+- PO 在真实 iPhone 上对第三次响应式修复版的控件布局、安装、独立窗口、登录恢复与飞行模式验收结论。
 - 独立的 PR 合并与 Production 发布确认。
 
 任何本地、CI 或 Preview 通过都不自动授权 Production 发布。
