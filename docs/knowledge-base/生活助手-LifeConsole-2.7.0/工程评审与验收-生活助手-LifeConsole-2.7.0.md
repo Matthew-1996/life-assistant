@@ -21,7 +21,7 @@
 
 ## 3. 全量门禁证据
 
-- Draft PR 当前线上 CI 对应实现提交 `309ad1c`：node、python、privacy 三项均通过；最新整行点击修复将在推送后重新等待 CI。
+- Draft PR 最新整行点击实现提交 `5463d37`：node、python、privacy 三项均通过。
 - 最新交互细化本地完整门禁：Vitest 82 个文件、617 项，应用 Python 75 + 7 + 10 + 1 项，Playwright 14 项，根工具 372 项（1 项既有跳过）全部通过。
 - `npm run build:supabase-production` 与 `npm run build:vercel-preview`：130 个模块转换成功；制品边界测试确认合成 Todo 仅进入 Candidate bundle。
 - `npm run test:e2e:synthetic`：14/14 通过，包含 390px 筛选、Todo 表单、iOS 日期控件与底栏回归。
