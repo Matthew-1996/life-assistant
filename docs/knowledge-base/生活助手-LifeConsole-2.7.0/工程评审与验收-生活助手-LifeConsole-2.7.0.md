@@ -1,6 +1,6 @@
 # 工程评审与验收：Life Console 2.7.0
 
-状态：PO 已确认将原三按钮方案细化为紧凑浮层，并确认整行均可点击；最新交互修复的本地完整门禁与独立复审已通过，等待替换 Preview 与 PO 产品验收。合并与 Production 未授权。
+状态：PO 已确认将原三按钮方案细化为紧凑浮层，并确认整行均可点击；最新交互修复的本地完整门禁、独立复审、Draft PR CI、替换 Preview 技术验收与 390px 真实浏览器验收均通过，等待 PO 产品验收。合并与 Production 未授权。
 
 ## 1. 工程评审
 
@@ -34,11 +34,12 @@ Draft PR #79 首轮 node CI 的既有 Daily News NodeNext 类型检查在共享 
 
 ## 4. Preview 技术验收
 
-- PO 于 2026-08-29 当次确认进入 Preview；当前候选为 [受保护的合成数据 Preview](https://life-console-production-6xg2v146c-test11-b88a.vercel.app)，内容提交为 `309ad1c`。
+- PO 于 2026-08-29 当次授权部署最新替换 Preview；当前候选为 [受保护的合成数据 Preview](https://life-console-production-bzv5o4q62-test11-b88a.vercel.app)，内容提交为 `b39c714`，部署 ID 为 `dpl_24rVsZ6ccxY9eib5SaDr8DRwFda8`。上一候选已被替代，不再作为最新验收件。
 - 首个静态 Preview 因缺少合成 Todo，无法验证本需求，未作为验收件；补齐候选专用内存 repository、失败测试、复审与 CI 后生成替代 Preview。
 - 替代 Preview 状态为 Ready，target 为 preview；10 个静态文件、0 Functions、0 Cron；`/api/*` 返回 404；响应包含 `noindex`、`connect-src 'none'`、`script-src 'self'`、`X-Frame-Options: DENY`。
 - 桌面真实浏览器验证：触发器 32px 高；三个 checkbox 均为 14×14px，选项行均为 38px；浮层展开前后新建表单文档位置差为 0；默认两项选中、回捞已完成、今日/全部保持、点击外部关闭及 `Escape` 关闭并回焦均通过。
 - 390×844 真实浏览器验证：checkbox 仍为 14×14px、选项行 38px，浮层完整位于 Todo 面板内，页面无横向溢出；展开前后 Todo 面板和表单的 `offsetTop` 不变。点击时仅浏览器将内部滚动容器自动滚动 48px，不是布局重排或下推。
+- 最新整行点击真实浏览器验证：在 390×844 下从距选项行右边缘 8px、距 checkbox 右侧 150px 的空白处连续点击；第一次切换为选中、第二次切回未选中，两次 `aria-expanded` 均保持 `true`，触发器摘要分别为“全部状态”和“未开始、进行中”。
 - 独立复审发现的上海 00:00–00:59 完成时间跨日问题已先用固定 00:30 失败用例复现，再修正并复审通过，无剩余 Critical / Important。
 
-当前 Preview 仍对应 `309ad1c`，不包含最新整行点击修复；替换 Preview 需再次取得当次部署授权。待补全：替换 Preview 技术验收与 PO 产品验收决定。PR 合并与 Production 继续保持独立门禁。
+待补全：PO 对最新替换 Preview 的产品验收决定。PR 合并与 Production 继续保持独立门禁。

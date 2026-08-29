@@ -37,6 +37,7 @@
 - Vercel Preview 为 10 个静态文件、0 Functions、0 Cron；`/api/*` 返回 404，CSP 为 `connect-src 'none'`、`script-src 'self'`。
 - 替换 Preview 的桌面真实浏览器验收通过：checkbox 14×14px、选项行 38px、触发器 32px，浮层不改变表单文档位置；多选、两个 Tab 保持、点击外部与 `Escape` 关闭均符合预期。
 - 替换 Preview 的 390×844 真实浏览器验收通过：checkbox 14×14px、选项行 38px，浮层位于 Todo 面板内，无页面横向溢出，Todo 面板与表单 `offsetTop` 在展开前后不变。
+- 最新整行点击替换 Preview 在 390×844 真实浏览器验收通过：点击点距选项行右边缘 8px、距 checkbox 右侧 150px；第一次点击后已完成选中且浮层展开，第二次同点点击后取消且浮层仍展开。
 - 根工具测试 372 项通过，1 项既有跳过；治理、Git 隐私与差异检查通过。
 
 沙箱首跑拒绝 Miniflare、Playwright 与根工具的 `127.0.0.1` 回环端口；在允许本机回环监听的同一 worktree 原样重跑后全部通过，未放宽断言或超时。
