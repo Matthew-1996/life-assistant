@@ -243,4 +243,17 @@ describe("Life Console Todo panel", () => {
     expect(within(screen.getByRole("region", { name: "Todo 14 天甘特" }))
       .getByText("当前状态筛选下没有可展示的计划。")).toBeTruthy();
   });
+
+  it("keeps the filter-specific empty state when the repository is also empty", async () => {
+    const user = userEvent.setup();
+    render(<TodoPanel now={now} repository={repository()} />);
+
+    await screen.findByText("当前范围还没有 Todo。");
+    await user.click(screen.getByRole("checkbox", { name: "未开始" }));
+    await user.click(screen.getByRole("checkbox", { name: "进行中" }));
+
+    expect(screen.getByText("当前状态筛选下没有 Todo。")).toBeTruthy();
+    expect(within(screen.getByRole("region", { name: "Todo 14 天甘特" }))
+      .getByText("当前状态筛选下没有可展示的计划。")).toBeTruthy();
+  });
 });

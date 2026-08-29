@@ -58,6 +58,8 @@ export function TodoPanel({ now, repository }: TodoPanelProps) {
   const [error, setError] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<string | null>(null);
   const visibleItems = items.filter((item) => visibleStatuses.has(item.status));
+  const filterExcludesEverything = visibleStatuses.size === 0
+    || (items.length > 0 && visibleItems.length === 0);
 
   function toggleVisibleStatus(status: TodoStatus) {
     setVisibleStatuses((current) => {
@@ -243,10 +245,10 @@ export function TodoPanel({ now, repository }: TodoPanelProps) {
       {receipt && <p className="save-receipt" role="status">{receipt}</p>}
 
       <div className="todo-list" aria-live="polite">
-        {loading ? <p className="empty-state">正在读取 Todo…</p> : items.length === 0 ? (
-          <p className="empty-state">{repository ? "当前范围还没有 Todo。" : "当前预览未连接 Todo 数据源。"}</p>
-        ) : visibleItems.length === 0 ? (
+        {loading ? <p className="empty-state">正在读取 Todo…</p> : filterExcludesEverything ? (
           <p className="empty-state">当前状态筛选下没有 Todo。</p>
+        ) : items.length === 0 ? (
+          <p className="empty-state">{repository ? "当前范围还没有 Todo。" : "当前预览未连接 Todo 数据源。"}</p>
         ) : visibleItems.map((item, index) => (
           <article aria-label={`Todo ${String(index + 1).padStart(2, "0")} ${item.title}`} className="todo-row-250" key={item.id}>
             <span className="todo-row-250__index">{String(index + 1).padStart(2, "0")}</span>
@@ -281,7 +283,7 @@ export function TodoPanel({ now, repository }: TodoPanelProps) {
       </div>
 
       <TodoGantt
-        emptyMessage={items.length > 0 && visibleItems.length === 0
+        emptyMessage={filterExcludesEverything
           ? "当前状态筛选下没有可展示的计划。"
           : undefined}
         now={currentNow}
