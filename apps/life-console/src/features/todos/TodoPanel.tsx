@@ -236,9 +236,16 @@ export function TodoPanel({ now, repository }: TodoPanelProps) {
       <div
         className="todo-status-filter"
         onBlur={(event) => {
-          if (event.relatedTarget instanceof Node
-            && event.currentTarget.contains(event.relatedTarget)) return;
-          setStatusFilterOpen(false);
+          if (event.relatedTarget instanceof Node) {
+            if (event.currentTarget.contains(event.relatedTarget)) return;
+            setStatusFilterOpen(false);
+            return;
+          }
+          window.setTimeout(() => {
+            const filter = statusFilterRef.current;
+            if (!filter || filter.contains(document.activeElement)) return;
+            setStatusFilterOpen(false);
+          }, 0);
         }}
         ref={statusFilterRef}
       >

@@ -100,7 +100,8 @@ test("keeps the mobile Todo status menu compact and floating inside its panel", 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
 
-  const statusTrigger = page.getByRole("button", { name: "项目状态：未开始、进行中" });
+  const statusTrigger = page.getByRole("button", { name: /^项目状态：/ });
+  await expect(statusTrigger).toHaveAttribute("aria-label", "项目状态：未开始、进行中");
   const form = page.locator(".todo-quick-form");
   const formTopBefore = await form.evaluate((element) => element.getBoundingClientRect().top);
   const triggerRect = await statusTrigger.evaluate((element) => element.getBoundingClientRect());
@@ -172,6 +173,27 @@ test("keeps the mobile Todo status menu compact and floating inside its panel", 
   expect(geometry.menuInsidePanel).toBe(true);
   expect(geometry.overlaps).toEqual([]);
   expect(geometry.oversizedCheckboxes).toEqual([]);
+
+  const completedOption = statusOptions.filter({ hasText: "已完成" });
+  const completedCheckbox = page.getByRole("checkbox", { name: "已完成" });
+  const completedOptionBox = await completedOption.boundingBox();
+  const completedCheckboxBox = await completedCheckbox.boundingBox();
+  if (!completedOptionBox) throw new Error("Completed status option is missing");
+  if (!completedCheckboxBox) throw new Error("Completed status checkbox is missing");
+  const rowEndPosition = {
+    x: completedOptionBox.width - 8,
+    y: completedOptionBox.height / 2,
+  };
+  expect(completedOptionBox.x + rowEndPosition.x)
+    .toBeGreaterThan(completedCheckboxBox.x + completedCheckboxBox.width + 8);
+
+  await completedOption.click({ position: rowEndPosition });
+  await expect(completedCheckbox).toBeChecked();
+  await expect(statusTrigger).toHaveAttribute("aria-expanded", "true");
+
+  await completedOption.click({ position: rowEndPosition });
+  await expect(completedCheckbox).not.toBeChecked();
+  await expect(statusTrigger).toHaveAttribute("aria-expanded", "true");
 });
 
 test("contains mobile Todo date-time controls when iOS includes their padding in the native width", async ({ page }) => {
