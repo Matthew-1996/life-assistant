@@ -99,6 +99,8 @@
 .todo-panel,
 .news-panel,
 .anchor-section-250,
+.todo-status-filter,
+.todo-status-filter__options,
 .todo-list,
 .todo-row-250 > *,
 .todo-quick-form > * {
@@ -136,6 +138,110 @@
   color: var(--foreground);
   background: white;
   box-shadow: 0 1px 5px rgb(31 35 48 / 10%);
+}
+
+.todo-status-filter {
+  position: relative;
+  z-index: 5;
+  width: fit-content;
+  margin-bottom: 14px;
+}
+
+.todo-status-filter__trigger {
+  display: inline-flex;
+  min-height: 32px;
+  max-width: min(100%, 280px);
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 9px;
+  color: var(--foreground);
+  background: rgb(255 255 255 / 82%);
+  font-size: 12px;
+  font-weight: 650;
+  box-shadow: 0 1px 4px rgb(31 35 48 / 6%);
+  cursor: pointer;
+}
+
+.todo-status-filter__trigger:hover,
+.todo-status-filter__trigger[aria-expanded="true"] {
+  border-color: rgb(0 122 255 / 26%);
+  background: white;
+}
+
+.todo-status-filter__trigger-label {
+  flex: 0 0 auto;
+}
+
+.todo-status-filter__separator,
+.todo-status-filter__summary {
+  color: var(--muted-foreground);
+}
+
+.todo-status-filter__summary {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.todo-status-filter__chevron {
+  margin-left: 2px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  line-height: 1;
+  transition: transform 160ms ease;
+}
+
+.todo-status-filter__trigger[aria-expanded="true"] .todo-status-filter__chevron {
+  transform: rotate(180deg);
+}
+
+.todo-status-filter__menu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  left: 0;
+  display: grid;
+  width: 196px;
+  max-width: min(240px, calc(100vw - 64px));
+  gap: 2px;
+  padding: 6px;
+  border: 1px solid var(--line-soft);
+  border-radius: 12px;
+  background: rgb(255 255 255 / 96%);
+  box-shadow: 0 14px 36px rgb(31 35 48 / 16%);
+  backdrop-filter: blur(16px);
+}
+
+.todo-status-filter__option {
+  display: flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  border-radius: 8px;
+  color: var(--muted-foreground);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.todo-status-filter__option:hover,
+.todo-status-filter__option[data-checked="true"] {
+  color: var(--foreground);
+  background: var(--blue-soft);
+}
+
+.todo-status-filter__option input {
+  flex: 0 0 14px;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  padding: 0;
+  border-radius: 3px;
+  accent-color: var(--primary);
 }
 
 .todo-quick-form {

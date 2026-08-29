@@ -114,12 +114,15 @@ if (supabaseMode) {
   );
 } else {
   void (async () => {
-    const [dailyNews, candidateHealth] = candidateMode
+    const [dailyNews, candidateHealth, candidateTodos] = candidateMode
       ? await Promise.all([
         import("./data/daily-news").then((module) => module.syntheticDailyNewsClient),
         import("./data/candidate-health").then((module) => module.candidateHealthRepository),
+        import("./features/todos/candidate-todo-repository").then(
+          (module) => module.createCandidateTodoRepository(),
+        ),
       ])
-      : [undefined, undefined];
+      : [undefined, undefined, undefined];
     createRoot(root).render(
       <StrictMode>
         <App
@@ -129,6 +132,7 @@ if (supabaseMode) {
           initialDashboard={candidateMode ? syntheticDashboard : undefined}
           mode={candidateMode ? "candidate-preview" : sitesMode ? "sites" : "local"}
           stageAPocEnabled={stageAPocEnabled}
+          todos={candidateTodos}
         />
       </StrictMode>,
     );

@@ -70,7 +70,56 @@ function repository(items: TodoItem[] = []): TodoRepositoryPort & {
   };
 }
 
-describe("Life Console 2.5 Todo panel", () => {
+describe("Life Console Todo panel", () => {
+  it("uses a compact status menu that stays open for multi-select and closes accessibly", async () => {
+    const user = userEvent.setup();
+    render(<TodoPanel now={now} repository={repository()} />);
+
+    const trigger = screen.getByRole("button", { name: "项目状态：未开始、进行中" });
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryByRole("group", { name: "项目状态选项" })).toBeNull();
+
+    await user.click(trigger);
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    expect(screen.getByRole("group", { name: "项目状态选项" })).toBeTruthy();
+    await user.click(screen.getByRole("checkbox", { name: "已完成" }));
+    expect(screen.getByRole("button", { name: "项目状态：全部状态" })
+      .getAttribute("aria-expanded")).toBe("true");
+
+    await user.keyboard("{Escape}");
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+    expect(document.activeElement).toBe(trigger);
+
+    await user.click(trigger);
+    await user.click(document.body);
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("closes the status menu when keyboard focus leaves the filter", async () => {
+    const user = userEvent.setup();
+    render(<TodoPanel now={now} repository={repository()} />);
+
+    const trigger = screen.getByRole("button", { name: "项目状态：未开始、进行中" });
+    await user.click(trigger);
+    await user.tab();
+    expect(document.activeElement).toBe(screen.getByRole("checkbox", { name: "未开始" }));
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    await user.tab();
+    await user.tab();
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    await user.tab();
+    expect(document.activeElement).toBe(screen.getByRole("textbox", { name: "Todo 项目" }));
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+
+    await user.click(trigger);
+    await user.tab({ shift: true });
+    const allScope = screen.getByRole("button", { name: "全部" });
+    expect(document.activeElement).toBe(allScope);
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+    await user.keyboard("{Enter}");
+    expect(allScope.getAttribute("aria-pressed")).toBe("true");
+  });
+
   it("creates a P1 Todo once and disables duplicate submission", async () => {
     const user = userEvent.setup();
     const repo = repository();
@@ -162,5 +211,102 @@ describe("Life Console 2.5 Todo panel", () => {
     expect(within(gantt).getAllByRole("columnheader")).toHaveLength(14);
     expect(within(gantt).getByText("01/08")).toBeTruthy();
     expect(within(gantt).getByText("01/21")).toBeTruthy();
+  });
+
+  it("hides completed Todos by default in both Today and All lists and Gantt rows", async () => {
+    const user = userEvent.setup();
+    const repo = repository([
+      todo({ id: 1, title: "未开始任务" }),
+      todo({
+        completed_at: "2030-01-08T03:00:00.000Z",
+        id: 2,
+        status: "completed",
+        title: "已完成任务",
+      }),
+    ]);
+    render(<TodoPanel now={now} repository={repo} />);
+
+    expect(await screen.findByRole("article", { name: "Todo 01 未开始任务" })).toBeTruthy();
+    expect(screen.queryByRole("article", { name: /Todo \d+ 已完成任务/ })).toBeNull();
+    expect(within(screen.getByRole("region", { name: "Todo 14 天甘特" }))
+      .queryByText("已完成任务")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "全部" }));
+
+    expect(await screen.findByRole("article", { name: "Todo 01 未开始任务" })).toBeTruthy();
+    expect(screen.queryByRole("article", { name: /Todo \d+ 已完成任务/ })).toBeNull();
+    expect(within(screen.getByRole("region", { name: "Todo 14 天甘特" }))
+      .queryByText("已完成任务")).toBeNull();
+  });
+
+  it("recovers completed Todos in both the list and Gantt when that status is selected", async () => {
+    const user = userEvent.setup();
+    const repo = repository([todo({
+      completed_at: "2030-01-08T03:00:00.000Z",
+      status: "completed",
+      title: "可回捞任务",
+    })]);
+    render(<TodoPanel now={now} repository={repo} />);
+
+    await screen.findByText("当前状态筛选下没有 Todo。");
+    await user.click(screen.getByRole("button", { name: "项目状态：未开始、进行中" }));
+    await user.click(screen.getByRole("checkbox", { name: "已完成" }));
+
+    expect(await screen.findByRole("article", { name: "Todo 01 可回捞任务" })).toBeTruthy();
+    expect(within(screen.getByRole("region", { name: "Todo 14 天甘特" }))
+      .getByText("可回捞任务")).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "全部" }));
+
+    await user.click(screen.getByRole("button", { name: "项目状态：全部状态" }));
+    expect((screen.getByRole("checkbox", { name: "已完成" }) as HTMLInputElement).checked).toBe(true);
+    expect(await screen.findByRole("article", { name: "Todo 01 可回捞任务" })).toBeTruthy();
+  });
+
+  it("removes a Todo from both the list and Gantt immediately after completing it", async () => {
+    const user = userEvent.setup();
+    const repo = repository([todo({ status: "in_progress" })]);
+    render(<TodoPanel now={now} repository={repo} />);
+
+    const row = await screen.findByRole("article", { name: "Todo 01 合成验收任务" });
+    await user.selectOptions(
+      within(row).getByRole("combobox", { name: "合成验收任务状态" }),
+      "completed",
+    );
+
+    await waitFor(() => expect(screen.queryByRole("article", {
+      name: "Todo 01 合成验收任务",
+    })).toBeNull());
+    expect(within(screen.getByRole("region", { name: "Todo 14 天甘特" }))
+      .queryByText("合成验收任务")).toBeNull();
+  });
+
+  it("shows a filter-specific empty state when every status is unselected", async () => {
+    const user = userEvent.setup();
+    const repo = repository([todo()]);
+    render(<TodoPanel now={now} repository={repo} />);
+
+    await screen.findByRole("article", { name: "Todo 01 合成验收任务" });
+    await user.click(screen.getByRole("button", { name: "项目状态：未开始、进行中" }));
+    await user.click(screen.getByRole("checkbox", { name: "未开始" }));
+    await user.click(screen.getByRole("checkbox", { name: "进行中" }));
+
+    expect(screen.getByText("当前状态筛选下没有 Todo。")).toBeTruthy();
+    expect(within(screen.getByRole("region", { name: "Todo 14 天甘特" }))
+      .getByText("当前状态筛选下没有可展示的计划。")).toBeTruthy();
+  });
+
+  it("keeps the filter-specific empty state when the repository is also empty", async () => {
+    const user = userEvent.setup();
+    render(<TodoPanel now={now} repository={repository()} />);
+
+    await screen.findByText("当前范围还没有 Todo。");
+    await user.click(screen.getByRole("button", { name: "项目状态：未开始、进行中" }));
+    await user.click(screen.getByRole("checkbox", { name: "未开始" }));
+    await user.click(screen.getByRole("checkbox", { name: "进行中" }));
+
+    expect(screen.getByText("当前状态筛选下没有 Todo。")).toBeTruthy();
+    expect(within(screen.getByRole("region", { name: "Todo 14 天甘特" }))
+      .getByText("当前状态筛选下没有可展示的计划。")).toBeTruthy();
   });
 });

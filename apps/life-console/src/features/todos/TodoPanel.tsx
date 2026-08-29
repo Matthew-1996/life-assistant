@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 
 import type {
   TodoItem,
@@ -18,6 +18,9 @@ const statusLabels: Record<TodoStatus, string> = {
   completed: "已完成",
 };
 
+const statusOptions: readonly TodoStatus[] = ["not_started", "in_progress", "completed"];
+const defaultVisibleStatuses: readonly TodoStatus[] = ["not_started", "in_progress"];
+
 function idempotencyKey(): string {
   const random = globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2);
   return `todo-ui-${Date.now()}-${random}`;
@@ -32,6 +35,15 @@ function dateTimeLabel(value: string): string {
   }).format(new Date(value));
 }
 
+function visibleStatusLabel(statuses: ReadonlySet<TodoStatus>): string {
+  if (statuses.size === 0) return "未选择";
+  if (statuses.size === statusOptions.length) return "全部状态";
+  return statusOptions
+    .filter((status) => statuses.has(status))
+    .map((status) => statusLabels[status])
+    .join("、");
+}
+
 interface TodoPanelProps {
   now?: Date;
   repository?: TodoRepositoryPort;
@@ -41,6 +53,13 @@ export function TodoPanel({ now, repository }: TodoPanelProps) {
   const [currentNow] = useState(() => now ?? new Date());
   const [scope, setScope] = useState<"today" | "all">("today");
   const [items, setItems] = useState<TodoItem[]>([]);
+  const [visibleStatuses, setVisibleStatuses] = useState<ReadonlySet<TodoStatus>>(
+    () => new Set(defaultVisibleStatuses),
+  );
+  const [statusFilterOpen, setStatusFilterOpen] = useState(false);
+  const statusFilterRef = useRef<HTMLDivElement>(null);
+  const statusFilterTriggerRef = useRef<HTMLButtonElement>(null);
+  const statusFilterMenuId = useId();
   const [loading, setLoading] = useState(Boolean(repository));
   const [busy, setBusy] = useState(false);
   const [title, setTitle] = useState("");
@@ -51,6 +70,42 @@ export function TodoPanel({ now, repository }: TodoPanelProps) {
   const [deleting, setDeleting] = useState<TodoItem | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<string | null>(null);
+  const visibleItems = items.filter((item) => visibleStatuses.has(item.status));
+  const filterExcludesEverything = visibleStatuses.size === 0
+    || (items.length > 0 && visibleItems.length === 0);
+
+  function toggleVisibleStatus(status: TodoStatus) {
+    setVisibleStatuses((current) => {
+      const next = new Set(current);
+      if (next.has(status)) next.delete(status);
+      else next.add(status);
+      return next;
+    });
+  }
+
+  useEffect(() => {
+    if (!statusFilterOpen) return;
+
+    function closeOnOutsidePointer(event: PointerEvent) {
+      if (event.target instanceof Node
+        && !statusFilterRef.current?.contains(event.target)) {
+        setStatusFilterOpen(false);
+      }
+    }
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      setStatusFilterOpen(false);
+      statusFilterTriggerRef.current?.focus();
+    }
+
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePointer);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [statusFilterOpen]);
 
   useEffect(() => {
     let active = true;
@@ -178,6 +233,60 @@ export function TodoPanel({ now, repository }: TodoPanelProps) {
         </div>
       </div>
 
+      <div
+        className="todo-status-filter"
+        onBlur={(event) => {
+          if (event.relatedTarget instanceof Node) {
+            if (event.currentTarget.contains(event.relatedTarget)) return;
+            setStatusFilterOpen(false);
+            return;
+          }
+          window.setTimeout(() => {
+            const filter = statusFilterRef.current;
+            if (!filter || filter.contains(document.activeElement)) return;
+            setStatusFilterOpen(false);
+          }, 0);
+        }}
+        ref={statusFilterRef}
+      >
+        <button
+          aria-controls={statusFilterMenuId}
+          aria-expanded={statusFilterOpen}
+          aria-label={`项目状态：${visibleStatusLabel(visibleStatuses)}`}
+          className="todo-status-filter__trigger"
+          onClick={() => setStatusFilterOpen((current) => !current)}
+          ref={statusFilterTriggerRef}
+          type="button"
+        >
+          <span className="todo-status-filter__trigger-label">项目状态</span>
+          <span aria-hidden="true" className="todo-status-filter__separator">·</span>
+          <span className="todo-status-filter__summary">{visibleStatusLabel(visibleStatuses)}</span>
+          <span aria-hidden="true" className="todo-status-filter__chevron">⌄</span>
+        </button>
+        {statusFilterOpen && (
+          <div
+            aria-label="项目状态选项"
+            className="todo-status-filter__menu"
+            id={statusFilterMenuId}
+            role="group"
+          >
+            {statusOptions.map((status) => {
+              const checked = visibleStatuses.has(status);
+              return (
+                <label className="todo-status-filter__option" data-checked={checked} key={status}>
+                  <input
+                    checked={checked}
+                    onChange={() => toggleVisibleStatus(status)}
+                    type="checkbox"
+                  />
+                  <span>{statusLabels[status]}</span>
+                </label>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       <form className="todo-quick-form" onSubmit={(event) => void createTodo(event)}>
         <label className="todo-quick-form__title">
           <span>Todo 项目</span>
@@ -208,9 +317,11 @@ export function TodoPanel({ now, repository }: TodoPanelProps) {
       {receipt && <p className="save-receipt" role="status">{receipt}</p>}
 
       <div className="todo-list" aria-live="polite">
-        {loading ? <p className="empty-state">正在读取 Todo…</p> : items.length === 0 ? (
+        {loading ? <p className="empty-state">正在读取 Todo…</p> : filterExcludesEverything ? (
+          <p className="empty-state">当前状态筛选下没有 Todo。</p>
+        ) : items.length === 0 ? (
           <p className="empty-state">{repository ? "当前范围还没有 Todo。" : "当前预览未连接 Todo 数据源。"}</p>
-        ) : items.map((item, index) => (
+        ) : visibleItems.map((item, index) => (
           <article aria-label={`Todo ${String(index + 1).padStart(2, "0")} ${item.title}`} className="todo-row-250" key={item.id}>
             <span className="todo-row-250__index">{String(index + 1).padStart(2, "0")}</span>
             <div className="todo-row-250__main">
@@ -243,7 +354,13 @@ export function TodoPanel({ now, repository }: TodoPanelProps) {
         ))}
       </div>
 
-      <TodoGantt now={currentNow} todos={items} />
+      <TodoGantt
+        emptyMessage={filterExcludesEverything
+          ? "当前状态筛选下没有可展示的计划。"
+          : undefined}
+        now={currentNow}
+        todos={visibleItems}
+      />
       <TodoEditorSheet busy={busy} onClose={() => setEditing(null)} onSave={updateTodo} todo={editing} />
       <TodoDeleteDialog
         busy={busy}

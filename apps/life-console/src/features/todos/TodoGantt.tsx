@@ -25,11 +25,12 @@ function dayLabel(value: Date): string {
 }
 
 interface TodoGanttProps {
+  emptyMessage?: string;
   now: Date;
   todos: readonly TodoItem[];
 }
 
-export function TodoGantt({ now, todos }: TodoGanttProps) {
+export function TodoGantt({ emptyMessage = "创建 Todo 后在这里查看计划跨度。", now, todos }: TodoGanttProps) {
   const start = startOfDay(now);
   const days = Array.from({ length: 14 }, (_, index) => addDays(start, index));
 
@@ -48,7 +49,7 @@ export function TodoGantt({ now, todos }: TodoGanttProps) {
           ))}
         </div>
         {todos.length === 0 ? (
-          <p className="todo-gantt__empty">创建 Todo 后在这里查看计划跨度。</p>
+          <p className="todo-gantt__empty">{emptyMessage}</p>
         ) : todos.map((todo) => {
           const planned = new Date(todo.planned_start_at);
           const due = new Date(todo.due_at);

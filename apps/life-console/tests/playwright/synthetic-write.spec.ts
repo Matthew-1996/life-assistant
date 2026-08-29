@@ -96,6 +96,106 @@ test("keeps mobile Todo form controls from overlapping each other", async ({ pag
   expect(overlappingPairs).toEqual([]);
 });
 
+test("keeps the mobile Todo status menu compact and floating inside its panel", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+
+  const statusTrigger = page.getByRole("button", { name: /^项目状态：/ });
+  await expect(statusTrigger).toHaveAttribute("aria-label", "项目状态：未开始、进行中");
+  const form = page.locator(".todo-quick-form");
+  const formTopBefore = await form.evaluate((element) => element.getBoundingClientRect().top);
+  const triggerRect = await statusTrigger.evaluate((element) => element.getBoundingClientRect());
+  expect(triggerRect.height).toBeGreaterThanOrEqual(30);
+  expect(triggerRect.height).toBeLessThanOrEqual(36);
+
+  await statusTrigger.click();
+  const formTopAfter = await form.evaluate((element) => element.getBoundingClientRect().top);
+  expect(Math.abs(formTopAfter - formTopBefore)).toBeLessThanOrEqual(0.5);
+
+  const statusFilter = page.getByRole("group", { name: "项目状态选项" });
+  const statusOptions = statusFilter.locator(".todo-status-filter__option");
+  await expect(statusOptions).toHaveCount(3);
+
+  const geometry = await statusOptions.evaluateAll((elements) => {
+    const panelRect = elements[0]?.closest(".todo-panel")?.getBoundingClientRect();
+    const menuRect = elements[0]?.closest(".todo-status-filter__menu")?.getBoundingClientRect();
+    if (!panelRect) throw new Error("Todo panel is missing");
+    if (!menuRect) throw new Error("Todo status menu is missing");
+    const options = elements.map((element) => {
+      const rect = element.getBoundingClientRect();
+      const checkbox = element.querySelector('input[type="checkbox"]');
+      if (!checkbox) throw new Error("Todo status checkbox is missing");
+      const checkboxRect = checkbox.getBoundingClientRect();
+      return {
+        bottom: rect.bottom,
+        checkboxHeight: checkboxRect.height,
+        checkboxWidth: checkboxRect.width,
+        height: rect.height,
+        label: element.textContent?.trim() ?? "unknown status",
+        left: rect.left,
+        right: rect.right,
+        top: rect.top,
+      };
+    });
+    const invalidTargets = options
+      .filter((option) => option.height < 36
+        || option.left < panelRect.left - 0.5
+        || option.right > panelRect.right + 0.5)
+      .map((option) => option.label);
+    const oversizedCheckboxes = options
+      .filter((option) => option.checkboxHeight < 12
+        || option.checkboxHeight > 16
+        || option.checkboxWidth < 12
+        || option.checkboxWidth > 16)
+      .map((option) => option.label);
+    const overlaps: string[] = [];
+    for (let leftIndex = 0; leftIndex < options.length; leftIndex += 1) {
+      for (let rightIndex = leftIndex + 1; rightIndex < options.length; rightIndex += 1) {
+        const left = options[leftIndex];
+        const right = options[rightIndex];
+        const horizontalOverlap = Math.min(left.right, right.right) - Math.max(left.left, right.left);
+        const verticalOverlap = Math.min(left.bottom, right.bottom) - Math.max(left.top, right.top);
+        if (horizontalOverlap > 0.5 && verticalOverlap > 0.5) {
+          overlaps.push(`${left.label} ↔ ${right.label}`);
+        }
+      }
+    }
+    return {
+      invalidTargets,
+      menuInsidePanel: menuRect.left >= panelRect.left - 0.5
+        && menuRect.right <= panelRect.right + 0.5,
+      overlaps,
+      oversizedCheckboxes,
+    };
+  });
+
+  expect(geometry.invalidTargets).toEqual([]);
+  expect(geometry.menuInsidePanel).toBe(true);
+  expect(geometry.overlaps).toEqual([]);
+  expect(geometry.oversizedCheckboxes).toEqual([]);
+
+  const completedOption = statusOptions.filter({ hasText: "已完成" });
+  const completedCheckbox = page.getByRole("checkbox", { name: "已完成" });
+  const completedOptionBox = await completedOption.boundingBox();
+  const completedCheckboxBox = await completedCheckbox.boundingBox();
+  if (!completedOptionBox) throw new Error("Completed status option is missing");
+  if (!completedCheckboxBox) throw new Error("Completed status checkbox is missing");
+  const rowEndPosition = {
+    x: completedOptionBox.width - 8,
+    y: completedOptionBox.height / 2,
+  };
+  expect(completedOptionBox.x + rowEndPosition.x)
+    .toBeGreaterThan(completedCheckboxBox.x + completedCheckboxBox.width + 8);
+
+  await completedOption.click({ position: rowEndPosition });
+  await expect(completedCheckbox).toBeChecked();
+  await expect(statusTrigger).toHaveAttribute("aria-expanded", "true");
+
+  await completedOption.click({ position: rowEndPosition });
+  await expect(completedCheckbox).not.toBeChecked();
+  await expect(statusTrigger).toHaveAttribute("aria-expanded", "true");
+});
+
 test("contains mobile Todo date-time controls when iOS includes their padding in the native width", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
