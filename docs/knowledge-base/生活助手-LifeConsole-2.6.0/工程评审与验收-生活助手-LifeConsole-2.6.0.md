@@ -1,6 +1,6 @@
 # 工程评审与验收：Life Console 2.6.0
 
-状态：本地工程与第三次响应式修复后的受保护合成 Preview 验收通过；等待 PO 在真实 iPhone 复验，尚无 Production 证据。
+状态：本地工程与第四次响应式修复后的受保护合成 Preview 验收通过；等待 PO 在真实 iPhone 复验，尚无 Production 证据。
 
 ## 1. 当前基线
 
@@ -87,9 +87,17 @@ cd apps/life-console && npm run test:e2e:synthetic
 - 最终制品仍为 9 个静态文件、0 Functions、0 Cron；匿名访问返回 Vercel SSO 302 与 `cache-control: no-store`，认证后首页 / Manifest 为 200、`/api/daily-news` 为 404；CSP 保持 `script-src 'self'`、`connect-src 'none'`，并保留 2.5.0 已批准的 `images.unsplash.com` 图片域。
 - 最终 Preview 的真实浏览器 390×844 检查中，日期输入与筛选容器左右边界均为 `35–355px`，计算样式为 `width: 320px; min-width: 0; max-width: 100%`。工作台、记录、进展、系统共 38 个可见交互控件的两两交集数为 0，与底部导航交集数为 0；四页根横向溢出为 0、错误覆盖层为 0、控制台日志为空。
 
-## 9. 尚待产生的证据
+## 9. Todo iOS 日期时间边界修复与 Preview 证据
 
-- PO 在真实 iPhone 上对第三次响应式修复版的控件布局、安装、独立窗口、登录恢复与飞行模式验收结论。
+- PO 于 2026-08-29 反馈 Todo 的“计划开始”和“DDL”两个组件超出边界。Chromium 390px 下两个输入、标签和表单当前均为 `320px`，但源码同时使用 `width: 100%` 与左右各 `10px` padding；与记录页相同，WebKit [Bug 301648](https://bugs.webkit.org/show_bug.cgi?id=301648) 覆盖 `datetime-local`，因此 iOS 会把这 20px 计入原生输入的额外宽度。
+- 新 Playwright 几何测试在两个真实 Todo `datetime-local` 控件上模拟 WebKit 多算的 20px。旧样式按预期失败并同时输出 `Todo 计划开始`、`Todo DDL`；移动端把 Todo 标签设为可收缩，并将两个输入改为 `width: auto; min-width: 0; max-width: 100%` 后，同一测试通过。
+- 提交 `6120ab1` 的完整本地门禁：Vitest 81 个文件 / 606 项、应用 Python 93 项、Playwright 13/13、默认与 Production 构建均为 129 个模块、根工具 372 项通过（1 项既有跳过），治理、Git 隐私和差异检查通过。
+- 修复版部署 `dpl_HSVSZjeb9jdHonoN8r6oq9zaXdXG` 状态为 `READY`、目标为 `preview`：<https://life-console-synthetic-preview-6susynxst-test11-b88a.vercel.app>。制品仍为 9 个静态文件、0 Functions、0 Cron；匿名访问返回受保护 SSO 302 与 `cache-control: no-store`，认证后首页 / Manifest 为 200、`/api/daily-news` 为 404，CSP 保持 `script-src 'self'` 与 `connect-src 'none'`。
+- 真实浏览器 390×844 检查中，两个 Todo 日期时间输入及各自标签的左右边界均为 `35–355px`、宽 `320px`，计算样式为 `width: 320px; min-width: 0; max-width: 100%`，各自右侧溢出为 0。工作台、记录、进展、系统共 32 个可见主内容表单控件的两两交集数为 0、横向越界数为 0；底栏按钮自身交集数为 0，四页根横向溢出为 0。
+
+## 10. 尚待产生的证据
+
+- PO 在真实 iPhone 上对第四次响应式修复版的控件布局、安装、独立窗口、登录恢复与飞行模式验收结论。
 - 独立的 PR 合并与 Production 发布确认。
 
 任何本地、CI 或 Preview 通过都不自动授权 Production 发布。
