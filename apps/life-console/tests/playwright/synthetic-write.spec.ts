@@ -38,6 +38,127 @@ test("keeps the four-page workbench inside a phone viewport", async ({ page }) =
   }
 });
 
+test("keeps mobile controls above the fixed bottom navigation", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+
+  const navigation = page.getByRole("navigation", { name: "全局导航" });
+  const anchorButton = page
+    .getByRole("group", { name: "起床状态" })
+    .getByRole("button", { name: "完成" });
+
+  await expect(navigation).toBeVisible();
+  await expect(anchorButton).toBeVisible();
+  await anchorButton.evaluate((element) => element.scrollIntoView({ block: "end" }));
+
+  const [navigationBox, anchorButtonBox] = await Promise.all([
+    navigation.boundingBox(),
+    anchorButton.boundingBox(),
+  ]);
+  expect(navigationBox).not.toBeNull();
+  expect(anchorButtonBox).not.toBeNull();
+  expect(anchorButtonBox!.y + anchorButtonBox!.height).toBeLessThanOrEqual(navigationBox!.y);
+});
+
+test("keeps mobile Todo form controls from overlapping each other", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+
+  const todoControls = page.locator(".todo-quick-form input, .todo-quick-form select, .todo-quick-form button");
+  await expect(todoControls).toHaveCount(5);
+
+  const overlappingPairs = await todoControls.evaluateAll((elements) => {
+    const controls = elements.map((element) => {
+      const rect = element.getBoundingClientRect();
+      return {
+        bottom: rect.bottom,
+        label: element.getAttribute("aria-label") ?? element.textContent?.trim() ?? element.tagName,
+        left: rect.left,
+        right: rect.right,
+        top: rect.top,
+      };
+    });
+    const overlaps: string[] = [];
+    for (let leftIndex = 0; leftIndex < controls.length; leftIndex += 1) {
+      for (let rightIndex = leftIndex + 1; rightIndex < controls.length; rightIndex += 1) {
+        const left = controls[leftIndex];
+        const right = controls[rightIndex];
+        const horizontalOverlap = Math.min(left.right, right.right) - Math.max(left.left, right.left);
+        const verticalOverlap = Math.min(left.bottom, right.bottom) - Math.max(left.top, right.top);
+        if (horizontalOverlap > 0.5 && verticalOverlap > 0.5) {
+          overlaps.push(`${left.label} ↔ ${right.label}`);
+        }
+      }
+    }
+    return overlaps;
+  });
+
+  expect(overlappingPairs).toEqual([]);
+});
+
+test("contains mobile Todo date-time controls when iOS includes their padding in the native width", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+
+  const dateTimeControls = page.locator(".todo-quick-form input[type='datetime-local']");
+  await expect(dateTimeControls).toHaveCount(2);
+  await dateTimeControls.evaluateAll((inputs) => {
+    for (const input of inputs) input.style.width = "calc(100% + 20px)";
+  });
+
+  const overflowingControls = await dateTimeControls.evaluateAll((inputs) => inputs
+    .map((input) => {
+      const inputRect = input.getBoundingClientRect();
+      const labelRect = input.closest("label")?.getBoundingClientRect();
+      if (!labelRect) throw new Error("Todo date-time label is missing");
+      return inputRect.right > labelRect.right + 0.5
+        ? input.getAttribute("aria-label") ?? input.tagName
+        : null;
+    })
+    .filter((label): label is string => label !== null));
+
+  expect(overflowingControls).toEqual([]);
+});
+
+test("contains the mobile journal date filter when iOS includes its padding in the native width", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await page.evaluate(() => {
+    const panel = document.createElement("section");
+    panel.className = "supabase-journals-panel";
+    panel.innerHTML = `
+      <div class="supabase-record-filter">
+        <label>
+          筛选日记日期
+          <input type="date">
+        </label>
+      </div>
+    `;
+    document.body.append(panel);
+  });
+
+  const dateFilter = page.getByLabel("筛选日记日期");
+  await expect(dateFilter).toBeVisible();
+  await dateFilter.evaluate((input) => {
+    input.style.width = "calc(100% + 28px)";
+  });
+
+  const boundary = await dateFilter.evaluate((input) => {
+    const inputRect = input.getBoundingClientRect();
+    const filterRect = input.closest(".supabase-record-filter")?.getBoundingClientRect();
+    if (!filterRect) throw new Error("Journal date filter container is missing");
+    return {
+      inputLeft: inputRect.left,
+      inputRight: inputRect.right,
+      filterLeft: filterRect.left,
+      filterRight: filterRect.right,
+    };
+  });
+
+  expect(boundary.inputLeft).toBeGreaterThanOrEqual(boundary.filterLeft - 0.5);
+  expect(boundary.inputRight).toBeLessThanOrEqual(boundary.filterRight + 0.5);
+});
+
 test("keeps the 2.5 workbench in-screen and stacks columns below 1180px content width", async ({ page }) => {
   for (const width of [1440, 1280, 1024, 390]) {
     await page.setViewportSize({ width, height: 900 });
