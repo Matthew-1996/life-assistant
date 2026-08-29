@@ -1,6 +1,6 @@
 # 工程评审与验收：Life Console 2.6.0
 
-状态：本地工程与第四次响应式修复后的受保护合成 Preview 验收通过；等待 PO 在真实 iPhone 复验，尚无 Production 证据。
+状态：本地工程与第四次响应式修复后的受保护合成 Preview 验收通过；PO 已确认最新 Preview 无问题并明确要求继续开发上线，PR 合并与 Production 门禁已放开，尚无 Production 结果证据。
 
 ## 1. 当前基线
 
@@ -97,7 +97,10 @@ cd apps/life-console && npm run test:e2e:synthetic
 
 ## 10. 尚待产生的证据
 
-- PO 在真实 iPhone 上对第四次响应式修复版的控件布局、安装、独立窗口、登录恢复与飞行模式验收结论。
-- 独立的 PR 合并与 Production 发布确认。
+- PR #77 合并提交、Production `READY / PROMOTED` 与稳定正式域名指向准确 `main` 的证据。
+- 正式域名上的 Manifest、Apple Touch Icon、严格 CSP、无 Service Worker、四页 390px 布局与 Owner 登录边界只读复验。
+- PO 在正式域名上对添加到主屏幕、独立窗口、登录恢复与飞行模式行为的发布后复验结论。
+
+PO 于 2026-08-29 在最新受保护 Preview 上确认“没问题了”，随后明确要求“继续开发上线”。该确认放开 PR #77 合并与本次 Production 发布；发布结果仍必须按实际证据回填，不能因授权提前标记为已上线。
 
 任何本地、CI 或 Preview 通过都不自动授权 Production 发布。

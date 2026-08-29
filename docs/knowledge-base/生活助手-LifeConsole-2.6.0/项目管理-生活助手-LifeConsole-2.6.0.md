@@ -2,13 +2,13 @@
 
 ## 1. 当前状态
 
-- 主阶段：待验收。
+- 主阶段：待上线。
 - 子状态：进行中。
 - 分支：`agent/life-console-pwa-ios-260`。
 - PR：Draft PR [#77](https://github.com/Matthew-1996/life-assistant/pull/77)，包含治理文档、iOS 安装资产与自动化契约。
 - 实现：本地候选、390px 底部导航安全区、Todo 表单单列、记录页 iOS 日期筛选与 Todo“计划开始”/“DDL”日期时间边界修复已完成；Manifest、Apple Touch Icon、iOS 元数据和无 Service Worker 边界均已自动验证。
 - 数据：不改数据库、Owner 数据、备份或自动化。
-- 发布：受保护纯静态合成 Preview 已完成；未申请 PR 合并或 Production 发布。
+- 发布：受保护纯静态合成 Preview 已完成；PO 已放开 PR 合并与本次 Production 发布，正在执行，尚未把未产生的上线证据记为完成。
 
 ## 2. 决策日志
 
@@ -24,6 +24,8 @@
 | 2026-08-29 | PO 反馈“新建 Todo”仍与其他组件重合 | 已确认第一次自动化只覆盖控件与底栏交集；Todo 两列布局中的 DDL 输入与按钮存在真实交集，已按 TDD 改为移动端单列并部署二次修复版 Preview |
 | 2026-08-29 | PO 反馈记录页“筛选日记日期”控件超出边界 | 已确认命中 iOS WebKit 对带 padding 的 date 输入错误计算 `width: 100%` 的已知问题；按 TDD 增加 28px 越界几何回归、避开触发条件并部署第三次响应式修复版 Preview |
 | 2026-08-29 | PO 反馈 Todo“计划开始”和“DDL”组件超出边界 | 已确认相同 iOS WebKit 问题也覆盖 `datetime-local`；按 TDD 对两个控件增加 20px 越界几何回归、避开触发条件并部署第四次响应式修复版 Preview |
+| 2026-08-29 | PO 确认最新 Preview“没问题了” | 最新 390px 响应式修复验收通过 |
+| 2026-08-29 | PO 明确要求“继续开发上线” | PR #77 合并与本次 Production 发布已获当次授权；不扩展数据、API、自动化或离线能力范围 |
 
 书面 PRD 明确补充：方案 2 不会在网络中断瞬间主动遮住已经加载的页面。PO 已在 Gate 1 确认该限制。
 
@@ -45,9 +47,9 @@
 | Gate 2 设计 / 技术 | completed | PO 于 2026-08-29 确认图标、元数据、禁止 Service Worker 和验收方案 |
 | 开始实现 | approved | 按实施计划执行 TDD；不复用为后续发布授权 |
 | Preview | completed | 第四次响应式修复版受保护合成 Preview READY；9 个静态文件、0 Functions、0 Cron，390px 两个 Todo 日期时间控件右侧溢出为 0，四页内容控件彼此交集、控件横向越界、底栏自身交集与根横向溢出均为 0 |
-| 真机验收 | pending | 第四次响应式修复版 Preview 可用，PO 在真实 iPhone 复验日期筛选、Todo 日期时间控件、其他布局与安装 / 离线行为 |
-| PR 合并 | pending | PO 当次确认 |
-| Production | pending | 合并后 PO 当次确认；发布后再次真机复验 |
+| PO Preview 验收 | completed | PO 于 2026-08-29 确认最新修复版“没问题了” |
+| PR 合并 | approved | PO 于 2026-08-29 明确要求继续开发上线；合并后记录准确 merge commit |
+| Production | approved | PO 于 2026-08-29 当次确认；必须从准确 `main` 发布并完成只读验收，发布后再由 PO 复验主屏幕安装 / 离线行为 |
 
 ## 5. 风险
 
