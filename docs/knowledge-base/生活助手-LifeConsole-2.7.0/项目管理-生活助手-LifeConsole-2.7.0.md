@@ -2,8 +2,8 @@
 
 ## 1. 当前状态
 
-- 主阶段：发布。
-- 子状态：PR #79 已合并；首次 Production 发布已回滚，等待构建门禁修复、修复 PR、重新发布与 Owner 真实浏览器复验。
+- 主阶段：已完成。
+- 子状态：PR #79、PR #80、远端 Production 构建与 Owner 真实浏览器只读验收均已完成。
 - 范围：Todo 状态展示筛选，仅前端。
 - 数据：不改 Supabase、Owner 数据、API、备份或自动化。
 - PR：Draft PR [#79](https://github.com/Matthew-1996/life-assistant/pull/79) 已创建，node、python、privacy 三项 CI 已通过。
@@ -37,6 +37,9 @@
 | 2026-08-29 | PR #79 squash 合并至 `main` | 合并提交 `7988ed3d`；代码与最终 CI 门禁通过 |
 | 2026-08-29 | 首次 Production 本地预构建把 `[SENSITIVE]` 写入 Supabase 浏览器公钥 | Owner 会话无法读取工作台；立即回滚到上一已知可用制品，同一会话恢复，不涉及数据迁移或数据库写入 |
 | 2026-08-29 | Production 构建门禁进入 TDD 修复 | 红测证明占位符此前可打包；最小修复后占位符在编译前失败，合法合成公钥 130 模块构建、应用 618 项及 Python/根目录门禁通过；等待修复 PR 与远端重新构建 |
+| 2026-08-29 | PR #80 三项 CI 全绿并合并 | 最终 `main` 为 `feb5c2e3`；新增 Production 环境占位符硬门禁 |
+| 2026-08-29 | Vercel 从准确 `main` 完成远端 Production 构建 | 130 模块，Ready；显式 promote 后稳定域名指向最终制品，上一可用制品保留为回滚锚点 |
+| 2026-08-29 | Owner 真实浏览器只读验收 | 既有会话、今日 / 全部默认筛选、列表与甘特、整行回捞和恢复默认均通过；未执行数据写入 |
 
 ## 3. 门禁
 
@@ -47,11 +50,10 @@
 | 本地开发 | approved | 按 TDD 与治理门禁实施 |
 | Draft PR | completed | PR #79 包含整行点击实现 `5463d37`，node、python、privacy 三项 CI 通过 |
 | Preview | completed | 技术、真实浏览器与 PO 产品验收均通过 |
-| PR 合并 | reopened | PR #79 已合并；Production 构建门禁修复须通过独立修复 PR 合并 |
-| Production | reopened | 首次制品已回滚；只允许从含构建门禁的准确 `main` 进行 Vercel 远端构建并复验 |
+| PR 合并 | completed | PR #79 与 Production 构建门禁 PR #80 均已合并 |
+| Production | completed | 最终远端构建、稳定域名、安全头与 Owner 真实浏览器只读验收均通过 |
 
 ## 4. 当前下一步
 
-1. 完成 Production 环境占位符构建红绿测试、完整门禁与独立修复 PR。
-2. 合并修复后从准确 `main` 触发 Vercel 远端 Production 构建，完成稳定域名和 Owner 真实浏览器只读验收。
-3. 按实际结果回填去敏上线证据并清理任务分支与 worktree。
+1. 合并本次去敏上线证据。
+2. 删除本任务活动分支与 worktree；不触碰其他任务 worktree。
