@@ -60,6 +60,42 @@ test("keeps mobile controls above the fixed bottom navigation", async ({ page })
   expect(anchorButtonBox!.y + anchorButtonBox!.height).toBeLessThanOrEqual(navigationBox!.y);
 });
 
+test("keeps mobile Todo form controls from overlapping each other", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+
+  const todoControls = page.locator(".todo-quick-form input, .todo-quick-form select, .todo-quick-form button");
+  await expect(todoControls).toHaveCount(5);
+
+  const overlappingPairs = await todoControls.evaluateAll((elements) => {
+    const controls = elements.map((element) => {
+      const rect = element.getBoundingClientRect();
+      return {
+        bottom: rect.bottom,
+        label: element.getAttribute("aria-label") ?? element.textContent?.trim() ?? element.tagName,
+        left: rect.left,
+        right: rect.right,
+        top: rect.top,
+      };
+    });
+    const overlaps: string[] = [];
+    for (let leftIndex = 0; leftIndex < controls.length; leftIndex += 1) {
+      for (let rightIndex = leftIndex + 1; rightIndex < controls.length; rightIndex += 1) {
+        const left = controls[leftIndex];
+        const right = controls[rightIndex];
+        const horizontalOverlap = Math.min(left.right, right.right) - Math.max(left.left, right.left);
+        const verticalOverlap = Math.min(left.bottom, right.bottom) - Math.max(left.top, right.top);
+        if (horizontalOverlap > 0.5 && verticalOverlap > 0.5) {
+          overlaps.push(`${left.label} ↔ ${right.label}`);
+        }
+      }
+    }
+    return overlaps;
+  });
+
+  expect(overlappingPairs).toEqual([]);
+});
+
 test("keeps the 2.5 workbench in-screen and stacks columns below 1180px content width", async ({ page }) => {
   for (const width of [1440, 1280, 1024, 390]) {
     await page.setViewportSize({ width, height: 900 });
