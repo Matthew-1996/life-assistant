@@ -1,6 +1,6 @@
 # 工程评审与验收：Life Console 2.7.0
 
-状态：PO 已确认将原三按钮方案细化为紧凑浮层；本地完整门禁与独立复审通过，完整 CI 和替换 Preview 正在刷新。合并与 Production 未授权。
+状态：PO 已确认将原三按钮方案细化为紧凑浮层；本地完整门禁、独立复审、完整 CI、替换 Preview 技术验收及真实浏览器验收均通过，等待 PO 产品验收。合并与 Production 未授权。
 
 ## 1. 工程评审
 
@@ -20,8 +20,8 @@
 
 ## 3. 全量门禁证据
 
-- Draft PR 最新 CI：Vitest 82 个文件、615 项通过；应用 Python 75 + 7 + 10 + 1 项通过；node、python、privacy 三项均通过。
-- 本次视觉细化本地完整门禁：Vitest 82 个文件、617 项，应用 Python 75 + 7 + 10 + 1 项，Playwright 14 项，根工具 372 项（1 项既有跳过）全部通过；CI 待提交后刷新。
+- Draft PR 最新 CI 对应实现提交 `309ad1c`：node、python、privacy 三项均通过。
+- 本次视觉细化本地完整门禁：Vitest 82 个文件、617 项，应用 Python 75 + 7 + 10 + 1 项，Playwright 14 项，根工具 372 项（1 项既有跳过）全部通过。
 - `npm run build:supabase-production` 与 `npm run build:vercel-preview`：130 个模块转换成功；制品边界测试确认合成 Todo 仅进入 Candidate bundle。
 - `npm run test:e2e:synthetic`：14/14 通过，包含 390px 筛选、Todo 表单、iOS 日期控件与底栏回归。
 - 根工具测试：372 项通过，1 项既有跳过。
@@ -33,10 +33,11 @@ Draft PR #79 首轮 node CI 的既有 Daily News NodeNext 类型检查在共享 
 
 ## 4. Preview 技术验收
 
-- PO 于 2026-08-29 当次确认进入 Preview；当前候选为 [受保护的合成数据 Preview](https://life-console-production-p3zs4aeii-test11-b88a.vercel.app)。
+- PO 于 2026-08-29 当次确认进入 Preview；当前候选为 [受保护的合成数据 Preview](https://life-console-production-6xg2v146c-test11-b88a.vercel.app)，内容提交为 `309ad1c`。
 - 首个静态 Preview 因缺少合成 Todo，无法验证本需求，未作为验收件；补齐候选专用内存 repository、失败测试、复审与 CI 后生成替代 Preview。
 - 替代 Preview 状态为 Ready，target 为 preview；10 个静态文件、0 Functions、0 Cron；`/api/*` 返回 404；响应包含 `noindex`、`connect-src 'none'`、`script-src 'self'`、`X-Frame-Options: DENY`。
-- 真实浏览器已验证今日/全部筛选保持、默认隐藏已完成、列表/甘特同步回捞、状态流转后即时隐藏、全不选双空态和 390px 几何边界。
+- 桌面真实浏览器验证：触发器 32px 高；三个 checkbox 均为 14×14px，选项行均为 38px；浮层展开前后新建表单文档位置差为 0；默认两项选中、回捞已完成、今日/全部保持、点击外部关闭及 `Escape` 关闭并回焦均通过。
+- 390×844 真实浏览器验证：checkbox 仍为 14×14px、选项行 38px，浮层完整位于 Todo 面板内，页面无横向溢出；展开前后 Todo 面板和表单的 `offsetTop` 不变。点击时仅浏览器将内部滚动容器自动滚动 48px，不是布局重排或下推。
 - 独立复审发现的上海 00:00–00:59 完成时间跨日问题已先用固定 00:30 失败用例复现，再修正并复审通过，无剩余 Critical / Important。
 
 待补全：PO 对 Preview 的产品验收决定。PR 合并与 Production 继续保持独立门禁。

@@ -3,7 +3,7 @@
 ## 1. 当前状态
 
 - 主阶段：验收。
-- 子状态：PO 已确认紧凑浮层细化，正在刷新验证与替换 Preview。
+- 子状态：紧凑浮层替换 Preview 的技术与真实浏览器验收已通过，等待 PO 产品验收。
 - 范围：Todo 状态展示筛选，仅前端。
 - 数据：不改 Supabase、Owner 数据、API、备份或自动化。
 - PR：Draft PR [#79](https://github.com/Matthew-1996/life-assistant/pull/79) 已创建，node、python、privacy 三项 CI 已通过。
@@ -28,7 +28,8 @@
 | 2026-08-29 | 替代 Preview 静态、安全头、桌面交互与 390px 几何验收通过 | 等待 PO 产品验收 |
 | 2026-08-29 | PO 认为三个大按钮视觉过重，确认改为紧凑多选入口；展开内容须浮在原内容上方，不下推布局 | 已确认并进入实现；不扩大合并或 Production 授权 |
 | 2026-08-29 | 紧凑浮层独立复审发现键盘焦点移出后仍覆盖表单 | 先补 Tab / Shift+Tab 红测再修正；复审无剩余 Critical / Important，本地完整门禁通过 |
-| 2026-08-29 | PO 指出浮层内 checkbox 仍过大，确认缩小框体但保留整行点击区域 | 14×14px 框体、约 38px 行目标；红绿测试与独立复审通过，待替换 Preview |
+| 2026-08-29 | PO 指出浮层内 checkbox 仍过大，确认缩小框体但保留整行点击区域 | 14×14px 框体、38px 行目标；红绿测试、独立复审、CI 与替换 Preview 真实浏览器验收均通过 |
+| 2026-08-29 | 紧凑 checkbox 替换 Preview Ready | 内容提交 `309ad1c`；桌面与 390×844 验收通过，等待 PO 产品验收 |
 
 ## 3. 门禁
 
@@ -38,11 +39,11 @@
 | Gate 2 设计 / 技术 | completed | PO 于 2026-08-29 确认共用多选投影方案 |
 | 本地开发 | approved | 按 TDD 与治理门禁实施 |
 | Draft PR | completed | PR #79 已创建，三项 CI 已通过 |
-| Preview | in_progress | 紧凑浮层细化已确认；待替换 Preview 技术验收与 PO 产品验收 |
+| Preview | in_review | 技术与真实浏览器验收通过；待 PO 产品验收 |
 | PR 合并 | pending | PO 根据验收与 CI 结果当次明确授权 |
 | Production | pending | 合并后由 PO 当次明确授权发布 |
 
 ## 4. 当前下一步
 
-1. 完成独立复审、完整 CI、替换 Preview 与桌面 / 390px 真实浏览器验收。
-2. 请 PO 验收替换 Preview；PR 合并与 Production 继续保持 pending，直到分别当次明确授权。
+1. 请 PO 验收替换 Preview。
+2. PR 合并与 Production 继续保持 pending，直到分别当次明确授权。

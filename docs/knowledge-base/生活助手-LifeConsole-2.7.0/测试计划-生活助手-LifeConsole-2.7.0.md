@@ -33,7 +33,8 @@
 - checkbox 尺寸断言先在三个状态上全部红灯，再以 14×14px 最小覆盖转绿；选项行仍不低于 36px。
 - Supabase Production 与 Candidate Preview 模式构建通过，130 个模块完成转换；Production 制品不包含候选 Todo 标题。
 - Vercel Preview 为 10 个静态文件、0 Functions、0 Cron；`/api/*` 返回 404，CSP 为 `connect-src 'none'`、`script-src 'self'`。
-- 上一版真实浏览器功能验收已通过；紧凑浮层的桌面与 390px 真实浏览器结果待替换 Preview 后补充。
+- 替换 Preview 的桌面真实浏览器验收通过：checkbox 14×14px、选项行 38px、触发器 32px，浮层不改变表单文档位置；多选、两个 Tab 保持、点击外部与 `Escape` 关闭均符合预期。
+- 替换 Preview 的 390×844 真实浏览器验收通过：checkbox 14×14px、选项行 38px，浮层位于 Todo 面板内，无页面横向溢出，Todo 面板与表单 `offsetTop` 在展开前后不变。
 - 根工具测试 372 项通过，1 项既有跳过；治理、Git 隐私与差异检查通过。
 
 沙箱首跑拒绝 Miniflare、Playwright 与根工具的 `127.0.0.1` 回环端口；在允许本机回环监听的同一 worktree 原样重跑后全部通过，未放宽断言或超时。
