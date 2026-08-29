@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 
 import type {
   TodoItem,
@@ -35,6 +35,15 @@ function dateTimeLabel(value: string): string {
   }).format(new Date(value));
 }
 
+function visibleStatusLabel(statuses: ReadonlySet<TodoStatus>): string {
+  if (statuses.size === 0) return "未选择";
+  if (statuses.size === statusOptions.length) return "全部状态";
+  return statusOptions
+    .filter((status) => statuses.has(status))
+    .map((status) => statusLabels[status])
+    .join("、");
+}
+
 interface TodoPanelProps {
   now?: Date;
   repository?: TodoRepositoryPort;
@@ -47,6 +56,10 @@ export function TodoPanel({ now, repository }: TodoPanelProps) {
   const [visibleStatuses, setVisibleStatuses] = useState<ReadonlySet<TodoStatus>>(
     () => new Set(defaultVisibleStatuses),
   );
+  const [statusFilterOpen, setStatusFilterOpen] = useState(false);
+  const statusFilterRef = useRef<HTMLDivElement>(null);
+  const statusFilterTriggerRef = useRef<HTMLButtonElement>(null);
+  const statusFilterMenuId = useId();
   const [loading, setLoading] = useState(Boolean(repository));
   const [busy, setBusy] = useState(false);
   const [title, setTitle] = useState("");
@@ -69,6 +82,30 @@ export function TodoPanel({ now, repository }: TodoPanelProps) {
       return next;
     });
   }
+
+  useEffect(() => {
+    if (!statusFilterOpen) return;
+
+    function closeOnOutsidePointer(event: PointerEvent) {
+      if (event.target instanceof Node
+        && !statusFilterRef.current?.contains(event.target)) {
+        setStatusFilterOpen(false);
+      }
+    }
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      setStatusFilterOpen(false);
+      statusFilterTriggerRef.current?.focus();
+    }
+
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePointer);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [statusFilterOpen]);
 
   useEffect(() => {
     let active = true;
@@ -196,23 +233,51 @@ export function TodoPanel({ now, repository }: TodoPanelProps) {
         </div>
       </div>
 
-      <div aria-label="项目状态" className="todo-status-filter" role="group">
-        <span className="todo-status-filter__label">项目状态</span>
-        <div className="todo-status-filter__options">
-          {statusOptions.map((status) => {
-            const checked = visibleStatuses.has(status);
-            return (
-              <label className="todo-status-filter__option" data-checked={checked} key={status}>
-                <input
-                  checked={checked}
-                  onChange={() => toggleVisibleStatus(status)}
-                  type="checkbox"
-                />
-                <span>{statusLabels[status]}</span>
-              </label>
-            );
-          })}
-        </div>
+      <div
+        className="todo-status-filter"
+        onBlur={(event) => {
+          if (event.relatedTarget instanceof Node
+            && event.currentTarget.contains(event.relatedTarget)) return;
+          setStatusFilterOpen(false);
+        }}
+        ref={statusFilterRef}
+      >
+        <button
+          aria-controls={statusFilterMenuId}
+          aria-expanded={statusFilterOpen}
+          aria-label={`项目状态：${visibleStatusLabel(visibleStatuses)}`}
+          className="todo-status-filter__trigger"
+          onClick={() => setStatusFilterOpen((current) => !current)}
+          ref={statusFilterTriggerRef}
+          type="button"
+        >
+          <span className="todo-status-filter__trigger-label">项目状态</span>
+          <span aria-hidden="true" className="todo-status-filter__separator">·</span>
+          <span className="todo-status-filter__summary">{visibleStatusLabel(visibleStatuses)}</span>
+          <span aria-hidden="true" className="todo-status-filter__chevron">⌄</span>
+        </button>
+        {statusFilterOpen && (
+          <div
+            aria-label="项目状态选项"
+            className="todo-status-filter__menu"
+            id={statusFilterMenuId}
+            role="group"
+          >
+            {statusOptions.map((status) => {
+              const checked = visibleStatuses.has(status);
+              return (
+                <label className="todo-status-filter__option" data-checked={checked} key={status}>
+                  <input
+                    checked={checked}
+                    onChange={() => toggleVisibleStatus(status)}
+                    type="checkbox"
+                  />
+                  <span>{statusLabels[status]}</span>
+                </label>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <form className="todo-quick-form" onSubmit={(event) => void createTodo(event)}>

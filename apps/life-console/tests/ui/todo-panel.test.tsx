@@ -71,6 +71,55 @@ function repository(items: TodoItem[] = []): TodoRepositoryPort & {
 }
 
 describe("Life Console Todo panel", () => {
+  it("uses a compact status menu that stays open for multi-select and closes accessibly", async () => {
+    const user = userEvent.setup();
+    render(<TodoPanel now={now} repository={repository()} />);
+
+    const trigger = screen.getByRole("button", { name: "项目状态：未开始、进行中" });
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryByRole("group", { name: "项目状态选项" })).toBeNull();
+
+    await user.click(trigger);
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    expect(screen.getByRole("group", { name: "项目状态选项" })).toBeTruthy();
+    await user.click(screen.getByRole("checkbox", { name: "已完成" }));
+    expect(screen.getByRole("button", { name: "项目状态：全部状态" })
+      .getAttribute("aria-expanded")).toBe("true");
+
+    await user.keyboard("{Escape}");
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+    expect(document.activeElement).toBe(trigger);
+
+    await user.click(trigger);
+    await user.click(document.body);
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("closes the status menu when keyboard focus leaves the filter", async () => {
+    const user = userEvent.setup();
+    render(<TodoPanel now={now} repository={repository()} />);
+
+    const trigger = screen.getByRole("button", { name: "项目状态：未开始、进行中" });
+    await user.click(trigger);
+    await user.tab();
+    expect(document.activeElement).toBe(screen.getByRole("checkbox", { name: "未开始" }));
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    await user.tab();
+    await user.tab();
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    await user.tab();
+    expect(document.activeElement).toBe(screen.getByRole("textbox", { name: "Todo 项目" }));
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+
+    await user.click(trigger);
+    await user.tab({ shift: true });
+    const allScope = screen.getByRole("button", { name: "全部" });
+    expect(document.activeElement).toBe(allScope);
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+    await user.keyboard("{Enter}");
+    expect(allScope.getAttribute("aria-pressed")).toBe("true");
+  });
+
   it("creates a P1 Todo once and disables duplicate submission", async () => {
     const user = userEvent.setup();
     const repo = repository();
@@ -200,6 +249,7 @@ describe("Life Console Todo panel", () => {
     render(<TodoPanel now={now} repository={repo} />);
 
     await screen.findByText("当前状态筛选下没有 Todo。");
+    await user.click(screen.getByRole("button", { name: "项目状态：未开始、进行中" }));
     await user.click(screen.getByRole("checkbox", { name: "已完成" }));
 
     expect(await screen.findByRole("article", { name: "Todo 01 可回捞任务" })).toBeTruthy();
@@ -208,6 +258,7 @@ describe("Life Console Todo panel", () => {
 
     await user.click(screen.getByRole("button", { name: "全部" }));
 
+    await user.click(screen.getByRole("button", { name: "项目状态：全部状态" }));
     expect((screen.getByRole("checkbox", { name: "已完成" }) as HTMLInputElement).checked).toBe(true);
     expect(await screen.findByRole("article", { name: "Todo 01 可回捞任务" })).toBeTruthy();
   });
@@ -236,6 +287,7 @@ describe("Life Console Todo panel", () => {
     render(<TodoPanel now={now} repository={repo} />);
 
     await screen.findByRole("article", { name: "Todo 01 合成验收任务" });
+    await user.click(screen.getByRole("button", { name: "项目状态：未开始、进行中" }));
     await user.click(screen.getByRole("checkbox", { name: "未开始" }));
     await user.click(screen.getByRole("checkbox", { name: "进行中" }));
 
@@ -249,6 +301,7 @@ describe("Life Console Todo panel", () => {
     render(<TodoPanel now={now} repository={repository()} />);
 
     await screen.findByText("当前范围还没有 Todo。");
+    await user.click(screen.getByRole("button", { name: "项目状态：未开始、进行中" }));
     await user.click(screen.getByRole("checkbox", { name: "未开始" }));
     await user.click(screen.getByRole("checkbox", { name: "进行中" }));
 

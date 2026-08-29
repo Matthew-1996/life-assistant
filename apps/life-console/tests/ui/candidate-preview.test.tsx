@@ -38,11 +38,13 @@ describe("Life Console candidate preview", () => {
     expect(screen.queryByRole("article", { name: /完成房间整理/ })).toBeNull();
     expect(within(gantt).queryByText("完成房间整理")).toBeNull();
 
+    await user.click(screen.getByRole("button", { name: "项目状态：未开始、进行中" }));
     await user.click(screen.getByRole("checkbox", { name: "已完成" }));
     expect(await screen.findByRole("article", { name: /完成房间整理/ })).toBeTruthy();
     expect(within(gantt).getByText("完成房间整理")).toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: "全部" }));
+    await user.click(screen.getByRole("button", { name: "项目状态：全部状态" }));
     expect((screen.getByRole("checkbox", { name: "已完成" }) as HTMLInputElement).checked).toBe(true);
     expect(await screen.findByRole("article", { name: /完成房间整理/ })).toBeTruthy();
     expect(within(gantt).getByText("完成房间整理")).toBeTruthy();

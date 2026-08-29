@@ -3,7 +3,7 @@
 ## 1. 当前状态
 
 - 主阶段：验收。
-- 子状态：Preview 已就绪，待 PO 产品验收。
+- 子状态：PO 已确认紧凑浮层细化，正在刷新验证与替换 Preview。
 - 范围：Todo 状态展示筛选，仅前端。
 - 数据：不改 Supabase、Owner 数据、API、备份或自动化。
 - PR：Draft PR [#79](https://github.com/Matthew-1996/life-assistant/pull/79) 已创建，node、python、privacy 三项 CI 已通过。
@@ -26,6 +26,8 @@
 | 2026-08-29 | 首个 Preview 缺少 Todo 合成数据，无法验证筛选行为 | 未作为验收件；补齐纯内存候选 repository 后替换 |
 | 2026-08-29 | 独立审查发现上海午夜跨日边界 | 固定 00:30 红测复现并修复；复审无 Critical / Important |
 | 2026-08-29 | 替代 Preview 静态、安全头、桌面交互与 390px 几何验收通过 | 等待 PO 产品验收 |
+| 2026-08-29 | PO 认为三个大按钮视觉过重，确认改为紧凑多选入口；展开内容须浮在原内容上方，不下推布局 | 已确认并进入实现；不扩大合并或 Production 授权 |
+| 2026-08-29 | 紧凑浮层独立复审发现键盘焦点移出后仍覆盖表单 | 先补 Tab / Shift+Tab 红测再修正；复审无剩余 Critical / Important，本地完整门禁通过 |
 
 ## 3. 门禁
 
@@ -35,11 +37,11 @@
 | Gate 2 设计 / 技术 | completed | PO 于 2026-08-29 确认共用多选投影方案 |
 | 本地开发 | approved | 按 TDD 与治理门禁实施 |
 | Draft PR | completed | PR #79 已创建，三项 CI 已通过 |
-| Preview | in_review | 技术验收已通过；等待 PO 对当前 Preview 的产品验收决定 |
+| Preview | in_progress | 紧凑浮层细化已确认；待替换 Preview 技术验收与 PO 产品验收 |
 | PR 合并 | pending | PO 根据验收与 CI 结果当次明确授权 |
 | Production | pending | 合并后由 PO 当次明确授权发布 |
 
 ## 4. 当前下一步
 
-1. 等待 PO 验收当前 Preview。
-2. PR 合并与 Production 继续保持 pending，直到 PO 分别当次明确授权。
+1. 完成独立复审、完整 CI、替换 Preview 与桌面 / 390px 真实浏览器验收。
+2. 请 PO 验收替换 Preview；PR 合并与 Production 继续保持 pending，直到分别当次明确授权。

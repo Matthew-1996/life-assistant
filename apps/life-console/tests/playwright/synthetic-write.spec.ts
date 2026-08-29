@@ -96,17 +96,30 @@ test("keeps mobile Todo form controls from overlapping each other", async ({ pag
   expect(overlappingPairs).toEqual([]);
 });
 
-test("keeps mobile Todo status filters as contained, non-overlapping tap targets", async ({ page }) => {
+test("keeps the mobile Todo status menu compact and floating inside its panel", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
 
-  const statusFilter = page.getByRole("group", { name: "项目状态" });
+  const statusTrigger = page.getByRole("button", { name: "项目状态：未开始、进行中" });
+  const form = page.locator(".todo-quick-form");
+  const formTopBefore = await form.evaluate((element) => element.getBoundingClientRect().top);
+  const triggerRect = await statusTrigger.evaluate((element) => element.getBoundingClientRect());
+  expect(triggerRect.height).toBeGreaterThanOrEqual(30);
+  expect(triggerRect.height).toBeLessThanOrEqual(36);
+
+  await statusTrigger.click();
+  const formTopAfter = await form.evaluate((element) => element.getBoundingClientRect().top);
+  expect(Math.abs(formTopAfter - formTopBefore)).toBeLessThanOrEqual(0.5);
+
+  const statusFilter = page.getByRole("group", { name: "项目状态选项" });
   const statusOptions = statusFilter.locator(".todo-status-filter__option");
   await expect(statusOptions).toHaveCount(3);
 
   const geometry = await statusOptions.evaluateAll((elements) => {
     const panelRect = elements[0]?.closest(".todo-panel")?.getBoundingClientRect();
+    const menuRect = elements[0]?.closest(".todo-status-filter__menu")?.getBoundingClientRect();
     if (!panelRect) throw new Error("Todo panel is missing");
+    if (!menuRect) throw new Error("Todo status menu is missing");
     const options = elements.map((element) => {
       const rect = element.getBoundingClientRect();
       return {
@@ -119,7 +132,7 @@ test("keeps mobile Todo status filters as contained, non-overlapping tap targets
       };
     });
     const invalidTargets = options
-      .filter((option) => option.height < 30
+      .filter((option) => option.height < 36
         || option.left < panelRect.left - 0.5
         || option.right > panelRect.right + 0.5)
       .map((option) => option.label);
@@ -135,10 +148,16 @@ test("keeps mobile Todo status filters as contained, non-overlapping tap targets
         }
       }
     }
-    return { invalidTargets, overlaps };
+    return {
+      invalidTargets,
+      menuInsidePanel: menuRect.left >= panelRect.left - 0.5
+        && menuRect.right <= panelRect.right + 0.5,
+      overlaps,
+    };
   });
 
   expect(geometry.invalidTargets).toEqual([]);
+  expect(geometry.menuInsidePanel).toBe(true);
   expect(geometry.overlaps).toEqual([]);
 });
 
