@@ -96,6 +96,30 @@ test("keeps mobile Todo form controls from overlapping each other", async ({ pag
   expect(overlappingPairs).toEqual([]);
 });
 
+test("contains mobile Todo date-time controls when iOS includes their padding in the native width", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+
+  const dateTimeControls = page.locator(".todo-quick-form input[type='datetime-local']");
+  await expect(dateTimeControls).toHaveCount(2);
+  await dateTimeControls.evaluateAll((inputs) => {
+    for (const input of inputs) input.style.width = "calc(100% + 20px)";
+  });
+
+  const overflowingControls = await dateTimeControls.evaluateAll((inputs) => inputs
+    .map((input) => {
+      const inputRect = input.getBoundingClientRect();
+      const labelRect = input.closest("label")?.getBoundingClientRect();
+      if (!labelRect) throw new Error("Todo date-time label is missing");
+      return inputRect.right > labelRect.right + 0.5
+        ? input.getAttribute("aria-label") ?? input.tagName
+        : null;
+    })
+    .filter((label): label is string => label !== null));
+
+  expect(overflowingControls).toEqual([]);
+});
+
 test("contains the mobile journal date filter when iOS includes its padding in the native width", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
