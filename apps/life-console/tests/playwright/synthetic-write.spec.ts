@@ -96,6 +96,45 @@ test("keeps mobile Todo form controls from overlapping each other", async ({ pag
   expect(overlappingPairs).toEqual([]);
 });
 
+test("contains the mobile journal date filter when iOS includes its padding in the native width", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await page.evaluate(() => {
+    const panel = document.createElement("section");
+    panel.className = "supabase-journals-panel";
+    panel.innerHTML = `
+      <div class="supabase-record-filter">
+        <label>
+          筛选日记日期
+          <input type="date">
+        </label>
+      </div>
+    `;
+    document.body.append(panel);
+  });
+
+  const dateFilter = page.getByLabel("筛选日记日期");
+  await expect(dateFilter).toBeVisible();
+  await dateFilter.evaluate((input) => {
+    input.style.width = "calc(100% + 28px)";
+  });
+
+  const boundary = await dateFilter.evaluate((input) => {
+    const inputRect = input.getBoundingClientRect();
+    const filterRect = input.closest(".supabase-record-filter")?.getBoundingClientRect();
+    if (!filterRect) throw new Error("Journal date filter container is missing");
+    return {
+      inputLeft: inputRect.left,
+      inputRight: inputRect.right,
+      filterLeft: filterRect.left,
+      filterRight: filterRect.right,
+    };
+  });
+
+  expect(boundary.inputLeft).toBeGreaterThanOrEqual(boundary.filterLeft - 0.5);
+  expect(boundary.inputRight).toBeLessThanOrEqual(boundary.filterRight + 0.5);
+});
+
 test("keeps the 2.5 workbench in-screen and stacks columns below 1180px content width", async ({ page }) => {
   for (const width of [1440, 1280, 1024, 390]) {
     await page.setViewportSize({ width, height: 900 });

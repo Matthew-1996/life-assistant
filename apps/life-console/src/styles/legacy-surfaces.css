@@ -1378,6 +1378,17 @@ pre {
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .supabase-record-filter label {
+    display: grid;
+    min-width: 0;
+  }
+
+  .supabase-record-filter input[type="date"] {
+    width: auto;
+    min-width: 0;
+    max-width: 100%;
+  }
+
   .hero-card .metric-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
