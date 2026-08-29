@@ -10,4 +10,4 @@
 - [工程评审与验收](工程评审与验收-生活助手-LifeConsole-2.7.0.md)
 - [项目管理](项目管理-生活助手-LifeConsole-2.7.0.md)
 
-当前状态：Gate 1、Gate 2 与[受保护的合成数据 Preview](https://life-console-production-bzv5o4q62-test11-b88a.vercel.app)产品验收均已由 PO 于 2026-08-29 确认；Draft PR [#79](https://github.com/Matthew-1996/life-assistant/pull/79) 保持 Draft，node、python、privacy 三项 CI 已通过。PR 合并与 Production 发布仍未授权。
+当前状态：Gate 1、Gate 2 与[受保护的合成数据 Preview](https://life-console-production-bzv5o4q62-test11-b88a.vercel.app)产品验收均已由 PO 于 2026-08-29 确认；PO 已当次授权合并 [PR #79](https://github.com/Matthew-1996/life-assistant/pull/79) 并将合并后的准确 `main` 发布到 Production。当前等待最终合并前门禁、合并与发布执行；不得在事实发生前标记为已上线。

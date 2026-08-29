@@ -2,12 +2,12 @@
 
 ## 1. 当前状态
 
-- 主阶段：验收完成，待合并授权。
-- 子状态：最新替换 Preview 已通过 PO 产品验收。
+- 主阶段：发布。
+- 子状态：PR 合并与 Production 已授权，等待最终门禁与执行。
 - 范围：Todo 状态展示筛选，仅前端。
 - 数据：不改 Supabase、Owner 数据、API、备份或自动化。
 - PR：Draft PR [#79](https://github.com/Matthew-1996/life-assistant/pull/79) 已创建，node、python、privacy 三项 CI 已通过。
-- 授权：本地开发、Draft PR、本次合成数据 Preview 与产品验收已完成；不包含合并或 Production。
+- 授权：本地开发、Draft PR、合成数据 Preview、产品验收、PR #79 合并与本次 Production 发布均已获当次明确授权。
 
 ## 2. 决策日志
 
@@ -33,6 +33,7 @@
 | 2026-08-29 | PO 确认视觉并要求状态选项整行可点击 | 空白区域红测复现同步 `blur` 过早关闭；最小修复后连续两次整行点击分别选中、取消且保持展开，本地全量门禁、独立复审与三项 CI 通过 |
 | 2026-08-29 | PO 当次授权部署整行点击替换 Preview | 部署 `dpl_24rVsZ6ccxY9eib5SaDr8DRwFda8` Ready；首页 200、严格 CSP 与 `noindex` 保留，`/api/*` 404；390px 空白区域连续点击往返验收通过 |
 | 2026-08-29 | PO 确认最新替换 Preview 产品验收通过 | Preview Gate 完成；不延伸为 PR 合并或 Production 授权 |
+| 2026-08-29 | PO 明确授权“合并和 Production” | 允许合并 PR #79，并从合并后的准确 `main` 发布本版本；不得提前标记完成或扩展发布范围 |
 
 ## 3. 门禁
 
@@ -43,10 +44,11 @@
 | 本地开发 | approved | 按 TDD 与治理门禁实施 |
 | Draft PR | completed | PR #79 包含整行点击实现 `5463d37`，node、python、privacy 三项 CI 通过 |
 | Preview | completed | 技术、真实浏览器与 PO 产品验收均通过 |
-| PR 合并 | pending | PO 根据验收与 CI 结果当次明确授权 |
-| Production | pending | 合并后由 PO 当次明确授权发布 |
+| PR 合并 | approved | PO 于 2026-08-29 当次明确授权；待最终门禁与执行 |
+| Production | approved | PO 于 2026-08-29 当次明确授权；仅发布合并后的准确 `main` |
 
 ## 4. 当前下一步
 
-1. PR 合并保持 pending，直到 PO 当次明确授权。
-2. Production 在合并后继续保持 pending，直到 PO 再次当次明确授权。
+1. 重新执行合并前完整门禁，转 Ready 并合并 PR #79。
+2. 从合并后的准确 `main` 构建并发布 Production，完成稳定域名和真实浏览器只读验收。
+3. 按实际结果回填去敏上线证据并清理任务分支与 worktree。
