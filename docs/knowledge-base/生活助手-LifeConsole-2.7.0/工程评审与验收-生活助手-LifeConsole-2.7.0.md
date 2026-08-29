@@ -1,6 +1,6 @@
 # 工程评审与验收：Life Console 2.7.0
 
-状态：本地候选、全量验证与独立代码复审已通过；Draft PR #79 已创建，待 CI。Preview、合并与 Production 均未授权。
+状态：本地候选、全量验证、独立代码复审与 Draft PR #79 三项 CI 已通过。Preview、合并与 Production 均未授权。
 
 ## 1. 工程评审
 
@@ -26,9 +26,11 @@
 
 首次沙箱执行的回环端口用例因 `listen EPERM 127.0.0.1` 失败；允许本机回环监听后原样重跑全部通过。未修改相关实现、断言或超时。
 
+Draft PR #79 首轮 node CI 的既有 Daily News NodeNext 类型检查在共享 runner 耗时 5.446 秒，超过既有 5 秒用例超时；同一轮其余 610 项、python 与 privacy 通过。未改代码、断言或超时后原样重跑，node、python、privacy 三项均通过。
+
 ## 4. 待补全证据
 
-- Draft PR CI。
+- PO 对 Preview 和后续验收的明确决定。
 - 若 PO 后续授权，再产生 Preview 与真实浏览器验收证据。
 
 本文档不预写未执行的验收结果。

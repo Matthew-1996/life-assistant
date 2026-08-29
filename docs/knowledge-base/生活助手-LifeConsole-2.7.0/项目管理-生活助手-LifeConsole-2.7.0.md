@@ -6,7 +6,7 @@
 - 子状态：待开始。
 - 范围：Todo 状态展示筛选，仅前端。
 - 数据：不改 Supabase、Owner 数据、API、备份或自动化。
-- PR：Draft PR [#79](https://github.com/Matthew-1996/life-assistant/pull/79) 已创建，待 CI。
+- PR：Draft PR [#79](https://github.com/Matthew-1996/life-assistant/pull/79) 已创建，node、python、privacy 三项 CI 已通过。
 - 授权：本地开发与 Draft PR 已执行；不包含 Preview、合并或 Production。
 
 ## 2. 决策日志
@@ -21,6 +21,7 @@
 | 2026-08-29 | 独立代码评审发现 1 个 Important 空状态边界与 1 个 Minor PMO 状态问题 | 均已修正；新增失败用例后定向 10/10、全量 611 项复验通过，待独立复审 |
 | 2026-08-29 | 独立复审确认原 Important 已解决，无新 Critical / Important | 已通过；仅修正复审指出的 PMO 轻微文案滞后 |
 | 2026-08-29 | 创建 Draft PR #79 | 已完成；待 CI，不构成 Preview、合并或 Production 授权 |
+| 2026-08-29 | Draft PR #79 首轮 node 因既有 Daily News NodeNext 类型检查 5.446 秒超过 5 秒限制失败；未修改代码或超时后原样重跑 | node、python、privacy 三项全部通过 |
 
 ## 3. 门禁
 
@@ -29,12 +30,12 @@
 | Gate 1 PRD | completed | PO 于 2026-08-29 确认需求范围 |
 | Gate 2 设计 / 技术 | completed | PO 于 2026-08-29 确认共用多选投影方案 |
 | 本地开发 | approved | 按 TDD 与治理门禁实施 |
-| Draft PR | completed | PR #79 已创建，等待 CI |
+| Draft PR | completed | PR #79 已创建，三项 CI 已通过 |
 | Preview | pending | PO 对 2.7.0 Preview 当次明确授权 |
 | PR 合并 | pending | PO 根据验收与 CI 结果当次明确授权 |
 | Production | pending | 合并后由 PO 当次明确授权发布 |
 
 ## 4. 当前下一步
 
-1. 等待 Draft PR #79 CI 与 PO 后续指示。
+1. 等待 PO 决定是否进入 Preview 与后续验收。
 2. Preview、合并和 Production 继续保持 pending，直到 PO 分别当次明确授权。
