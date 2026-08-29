@@ -10,4 +10,4 @@
 - [工程评审与验收](工程评审与验收-生活助手-LifeConsole-2.7.0.md)
 - [项目管理](项目管理-生活助手-LifeConsole-2.7.0.md)
 
-当前状态：Gate 1 与 Gate 2 已由 PO 于 2026-08-29 确认；本地候选和全量门禁已通过，独立审查问题已修正待复审，随后创建 Draft PR。本次仅授权本地开发和 Draft PR，未授权 Preview、合并或 Production 发布。
+当前状态：Gate 1 与 Gate 2 已由 PO 于 2026-08-29 确认；本地候选、全量门禁与独立代码复审已通过，待创建 Draft PR。本次仅授权本地开发和 Draft PR，未授权 Preview、合并或 Production 发布。

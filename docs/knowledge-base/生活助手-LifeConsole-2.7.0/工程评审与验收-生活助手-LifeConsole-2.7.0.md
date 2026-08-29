@@ -1,6 +1,6 @@
 # 工程评审与验收：Life Console 2.7.0
 
-状态：本地候选与全量验证已通过，独立审查问题已修正待复审；Preview、合并与 Production 均未授权。
+状态：本地候选、全量验证与独立代码复审已通过，待 Draft PR CI；Preview、合并与 Production 均未授权。
 
 ## 1. 工程评审
 
@@ -28,7 +28,7 @@
 
 ## 4. 待补全证据
 
-- 独立代码复审和 Draft PR CI。
+- Draft PR CI。
 - 若 PO 后续授权，再产生 Preview 与真实浏览器验收证据。
 
 本文档不预写未执行的验收结果。
