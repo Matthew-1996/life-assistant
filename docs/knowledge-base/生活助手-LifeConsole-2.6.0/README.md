@@ -8,6 +8,7 @@
 - [技术方案](技术方案-生活助手-LifeConsole-2.6.0.md)
 - [实施计划](实施计划-生活助手-LifeConsole-2.6.0.md)
 - [工程评审与验收](工程评审与验收-生活助手-LifeConsole-2.6.0.md)
+- [上线证据](上线证据-生活助手-LifeConsole-2.6.0.md)
 - [项目管理](项目管理-生活助手-LifeConsole-2.6.0.md)
 
-当前状态：方案 2、390px 底部导航安全区、Todo 表单单列、记录页 iOS 日期筛选及 Todo“计划开始”/“DDL”日期时间边界修复均已按 TDD 完成，并通过本地应用、构建、浏览器、治理与隐私门禁。第四次响应式修复后的受保护纯静态合成 Preview 已 READY；390px 下两个 Todo 日期时间控件的右侧溢出均为 0，四页内容控件彼此交集、控件横向越界、底栏自身交集和根横向溢出均为 0。PO 于 2026-08-29 确认最新 Preview“没问题了”，并明确要求继续开发上线，已放开 PR 合并与 Production 当次门禁；Draft PR [#77](https://github.com/Matthew-1996/life-assistant/pull/77) 正在进入发布流程，尚未把未产生的 Production 证据写成已完成。
+当前状态：2.6.0 已上线。PR [#77](https://github.com/Matthew-1996/life-assistant/pull/77) 已 squash merge；合并后的准确 `main` 已发布到 [Life Console 正式站点](https://project-wpabq.vercel.app/)。Production 为 READY，PWA 资产、严格 CSP、无 Service Worker / Cache Storage 边界、未登录 API 门禁和 390px 四页布局均已只读验收；未触发 Cron、模型或真实数据写入。仍需 PO 在正式域名完成添加到主屏幕、独立窗口、登录恢复与飞行模式的发布后真机复验。

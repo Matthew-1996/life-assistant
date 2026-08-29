@@ -1,6 +1,6 @@
 # 工程评审与验收：Life Console 2.6.0
 
-状态：本地工程与第四次响应式修复后的受保护合成 Preview 验收通过；PO 已确认最新 Preview 无问题并明确要求继续开发上线，PR 合并与 Production 门禁已放开，尚无 Production 结果证据。
+状态：本地工程、受保护合成 Preview、PR 合并与 Production 只读验收均已通过；等待 PO 在正式域名完成主屏幕安装 / 离线真机复验。
 
 ## 1. 当前基线
 
@@ -95,10 +95,17 @@ cd apps/life-console && npm run test:e2e:synthetic
 - 修复版部署 `dpl_HSVSZjeb9jdHonoN8r6oq9zaXdXG` 状态为 `READY`、目标为 `preview`：<https://life-console-synthetic-preview-6susynxst-test11-b88a.vercel.app>。制品仍为 9 个静态文件、0 Functions、0 Cron；匿名访问返回受保护 SSO 302 与 `cache-control: no-store`，认证后首页 / Manifest 为 200、`/api/daily-news` 为 404，CSP 保持 `script-src 'self'` 与 `connect-src 'none'`。
 - 真实浏览器 390×844 检查中，两个 Todo 日期时间输入及各自标签的左右边界均为 `35–355px`、宽 `320px`，计算样式为 `width: 320px; min-width: 0; max-width: 100%`，各自右侧溢出为 0。工作台、记录、进展、系统共 32 个可见主内容表单控件的两两交集数为 0、横向越界数为 0；底栏按钮自身交集数为 0，四页根横向溢出为 0。
 
-## 10. 尚待产生的证据
+## 10. Production 上线证据
 
-- PR #77 合并提交、Production `READY / PROMOTED` 与稳定正式域名指向准确 `main` 的证据。
-- 正式域名上的 Manifest、Apple Touch Icon、严格 CSP、无 Service Worker、四页 390px 布局与 Owner 登录边界只读复验。
+- PR [#77](https://github.com/Matthew-1996/life-assistant/pull/77) 于 2026-08-29 通过 Node、Python、隐私 CI 后 squash merge；merge commit 为 `c97660b1df4c40b1742dca6d2a401c42aba91230`。
+- 发布前重新核对既有 Vercel 登录账号、`life-console-production` 项目绑定、Production 配置与稳定正式域名；从准确 `main` 发布，应用发布目录无已跟踪差异。新 Production 为 `READY`，正式别名 [project-wpabq.vercel.app](https://project-wpabq.vercel.app/) 已指向上述 merge commit。
+- 正式首页、Manifest 与 Apple Touch Icon 均为 200；Manifest 类型为 `application/manifest+json`，180×180 PNG 与本地合并制品逐字节一致。首页保持 `script-src 'self'`、`nosniff`、`DENY` 与既有 Supabase / Unsplash 白名单，没有放宽为 `unsafe-eval`。
+- `/service-worker.js` 返回 404；浏览器 Service Worker 注册数和 Cache Storage 名称数均为 0。未登录空 POST `/api/journal-normalize-health` 返回 `401 / no-store`，在认证、模型与数据读取之前关闭。
+- 真实浏览器在 390×844 下检查工作台、记录、进展、系统，共 108 个可见主内容表单控件：控件两两交集、横向越界、底栏自身交集、根横向溢出和错误覆盖层均为 0。Todo“计划开始”/“DDL”与各自标签均为 `35–355px`，日记日期筛选与标签同为 `35–355px`，三者右侧溢出均为 0。
+- 上线验收全程未提交表单、未写 Owner 数据、未触发 Cron 或模型，也未读取或记录日记正文、健康值或服务凭据。去敏发布摘要见[上线证据](上线证据-生活助手-LifeConsole-2.6.0.md)。
+
+## 11. 尚待产生的证据
+
 - PO 在正式域名上对添加到主屏幕、独立窗口、登录恢复与飞行模式行为的发布后复验结论。
 
 PO 于 2026-08-29 在最新受保护 Preview 上确认“没问题了”，随后明确要求“继续开发上线”。该确认放开 PR #77 合并与本次 Production 发布；发布结果仍必须按实际证据回填，不能因授权提前标记为已上线。
