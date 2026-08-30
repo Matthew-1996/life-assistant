@@ -4,11 +4,11 @@
 
 - 主阶段：已上线。
 - 子状态：已完成。
-- 分支：2.6.0 功能与上线证据分支均已合并清理；当前在独立 `agent/life-console-edit-datetime-width` 分支处理编辑弹窗的移动端快速维护候选。
-- PR：PR [#77](https://github.com/Matthew-1996/life-assistant/pull/77) 已 squash merge，包含治理文档、iOS 安装资产、响应式修复与自动化契约；编辑弹窗快速维护候选位于 Draft PR [#82](https://github.com/Matthew-1996/life-assistant/pull/82)。
+- 分支：PR #82 的功能 worktree、本地分支与远端分支均已在合并后清理；上线证据按独立 Git 流程收口。
+- PR：PR [#77](https://github.com/Matthew-1996/life-assistant/pull/77) 与编辑弹窗快速维护 PR [#82](https://github.com/Matthew-1996/life-assistant/pull/82) 均已 squash merge。
 - 实现：本地候选、390px 底部导航安全区、Todo 表单单列、记录页 iOS 日期筛选与 Todo“计划开始”/“DDL”日期时间边界修复已完成；Manifest、Apple Touch Icon、iOS 元数据和无 Service Worker 边界均已自动验证。
 - 数据：不改数据库、Owner 数据、备份或自动化。
-- 发布：合并后的准确 `main` 已发布到 [正式站点](https://project-wpabq.vercel.app/)；Production READY，安全、PWA、未登录门禁和 390px 只读验收通过。编辑弹窗快速维护已创建[受保护合成 Preview](https://life-console-synthetic-preview-2llfw6ii1-test11-b88a.vercel.app)，没有变更 Production。发布后主屏幕安装 / 离线真机复验仍待 PO。
+- 发布：准确 `main` `4274998` 已通过 Vercel 远端 Production 构建发布到[正式站点](https://project-wpabq.vercel.app/)；Production READY，稳定别名、安全头、PWA 在线边界、未登录门禁和 390px Todo 编辑弹窗字段对齐均已只读验收。发布后主屏幕安装 / 离线真机复验仍待 PO。
 
 ## 2. 决策日志
 
@@ -30,6 +30,8 @@
 | 2026-08-30 | PO 反馈移动端 Todo 编辑弹窗的“计划开始”与“DDL”宽于其他字段 | 已确认编辑表单未被原 iOS `datetime-local` 移动端宽度规则覆盖；按快速维护 + TDD 形成 Draft PR #82，不构成 Preview、合并或 Production 授权 |
 | 2026-08-30 | PO 确认创建受保护合成 Preview | 已从 Draft PR #82 准确提交创建纯静态 Preview 并完成只读 390px 验收；未授权合并或 Production |
 | 2026-08-31 | PO 确认编辑弹窗快速维护 Preview“已验收，符合预期” | Preview 验收完成；Draft PR #82 继续等待单独的合并授权，Production 未变更 |
+| 2026-08-31 | PO 确认合并 PR #82 并完成上线部署 | 合并与本次 Production 发布获得当次授权；不扩展数据、API、自动化或离线能力范围 |
+| 2026-08-31 | PR #82 squash merge，准确 `main` 远端构建并发布 Production | READY；稳定别名、严格 CSP、无 Service Worker、未登录 401 与 390px 编辑弹窗四字段对齐只读验收通过 |
 
 书面 PRD 明确补充：方案 2 不会在网络中断瞬间主动遮住已经加载的页面。PO 已在 Gate 1 确认该限制。
 
@@ -51,8 +53,10 @@
 | Gate 2 设计 / 技术 | completed | PO 于 2026-08-29 确认图标、元数据、禁止 Service Worker 和验收方案 |
 | 开始实现 | approved | 按实施计划执行 TDD；不复用为后续发布授权 |
 | Preview | completed | 第四次响应式修复版受保护合成 Preview READY；9 个静态文件、0 Functions、0 Cron，390px 两个 Todo 日期时间控件右侧溢出为 0，四页内容控件彼此交集、控件横向越界、底栏自身交集与根横向溢出均为 0 |
-| 编辑弹窗快速维护 Preview | completed | Draft PR #82 受保护纯静态 Preview READY；10 个静态文件、0 Functions、0 Cron，真实浏览器 390px 四个编辑字段左右边界一致，日期时间右侧溢出为 0；未授权合并或 Production |
+| 编辑弹窗快速维护 Preview | completed | Draft PR #82 受保护纯静态 Preview READY；10 个静态文件、0 Functions、0 Cron，真实浏览器 390px 四个编辑字段左右边界一致，日期时间右侧溢出为 0 |
 | 编辑弹窗快速维护 PO 验收 | completed | PO 于 2026-08-31 确认“已验收，符合预期”；该确认不自动授权 PR 合并或 Production |
+| 编辑弹窗快速维护 PR 合并 | completed | PO 单独授权后，PR #82 三项 CI 全绿并 squash merge；准确 merge commit 为 `4274998` |
+| 编辑弹窗快速维护 Production | completed | 从准确 `main` 远端构建；READY、稳定别名、安全头、401 门禁和 390px 编辑弹窗四字段同宽验收通过 |
 | PO Preview 验收 | completed | PO 于 2026-08-29 确认最新修复版“没问题了” |
 | PR 合并 | completed | PR #77 已通过三项 CI 并 squash merge；准确 merge commit 已记录 |
 | Production | completed | 已从准确 `main` 发布；READY、稳定别名、PWA 资产、安全头、401 门禁和 390px 四页布局已只读验收 |

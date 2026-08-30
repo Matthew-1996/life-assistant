@@ -1,6 +1,7 @@
 # 上线证据：Life Console 2.6.0
 
-日期：2026-08-29
+首次发布日期：2026-08-29
+最近维护发布：2026-08-31
 
 Life Console 2.6.0 已发布到 [正式站点](https://project-wpabq.vercel.app/)。PR [#77](https://github.com/Matthew-1996/life-assistant/pull/77) 通过 Node、Python、隐私 CI 后 squash merge；Production 源码精确对应 merge commit `c97660b1df4c40b1742dca6d2a401c42aba91230`。
 
@@ -48,3 +49,14 @@ Life Console 2.6.0 已发布到 [正式站点](https://project-wpabq.vercel.app/
 3. 飞行模式下重新启动或刷新时显示 iOS 原生网络错误，恢复网络后可重新加载。
 
 该发布后复验不影响已经产生的 Production 上线事实，但在 PO 回报前不标记为已完成。
+
+## 6. Todo 编辑弹窗 iOS 日期时间宽度快速维护
+
+- PO 于 2026-08-31 确认受保护 Preview“已验收，符合预期”，随后明确授权合并 PR #82 并完成上线部署。
+- PR [#82](https://github.com/Matthew-1996/life-assistant/pull/82) 的 Node、Python、隐私 CI 全部通过后 squash merge；准确 `main` 为 `4274998be90f2ac55fd8f1abdbd21de428703a2a`。功能 worktree、本地分支与远端分支均已在合并后清理。
+- 合并前门禁：Vitest 83 个文件 / 618 项、应用 Python 75 + 7 + 10 + 1 项、Playwright 15/15、仓库工具 372 项全部通过（仓库工具 1 项既有跳过）；默认构建 130 个模块完成。回环端口用例在允许本地监听后原样复跑，没有放宽断言或超时。
+- Production 从准确 `main` 触发 Vercel 远端构建；Production 环境守卫先于 TypeScript / Vite 执行并通过，130 个模块构建完成。未使用可能包含敏感占位符的本地 `--prebuilt` 制品。
+- 新部署为 READY，target 为 Production；稳定正式别名 [project-wpabq.vercel.app](https://project-wpabq.vercel.app/) 已指向新制品。按准确合并 SHA 查询可唯一命中该 Production 部署，近 30 分钟错误日志数量为 0。
+- 正式首页和 Manifest 均为 200；严格 CSP 保持 `script-src 'self'`，并保留 `X-Content-Type-Options: nosniff`、`X-Frame-Options: DENY`。`/service-worker.js` 返回 404；未登录空 POST `/api/journal-normalize-health` 返回 `401 / no-store`。
+- 真实浏览器在 390×844 下只读打开 Todo 编辑弹窗：Todo 项目、优先级、计划开始、DDL 四个控件均为 `45–345px`、宽 `300px`；两个日期时间控件右侧溢出为 0，根页面与 body 宽均为 390px，控制台无警告或错误。验收后关闭弹窗并恢复默认视口。
+- 本次没有提交表单、改变 Todo 状态、读取或记录日记正文、触发 Cron / 模型，且没有数据库迁移或真实数据写入。发布后真机安装 / 离线复验门禁保持不变。

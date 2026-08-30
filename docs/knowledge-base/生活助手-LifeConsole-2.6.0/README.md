@@ -11,4 +11,4 @@
 - [上线证据](上线证据-生活助手-LifeConsole-2.6.0.md)
 - [项目管理](项目管理-生活助手-LifeConsole-2.6.0.md)
 
-当前状态：2.6.0 已上线。PR [#77](https://github.com/Matthew-1996/life-assistant/pull/77) 已 squash merge；合并后的准确 `main` 已发布到 [Life Console 正式站点](https://project-wpabq.vercel.app/)。Production 为 READY，PWA 资产、严格 CSP、无 Service Worker / Cache Storage 边界、未登录 API 门禁和 390px 四页布局均已只读验收；未触发 Cron、模型或真实数据写入。仍需 PO 在正式域名完成添加到主屏幕、独立窗口、登录恢复与飞行模式的发布后真机复验。
+当前状态：2.6.0 已上线。PR [#77](https://github.com/Matthew-1996/life-assistant/pull/77) 与移动端 Todo 编辑弹窗快速维护 PR [#82](https://github.com/Matthew-1996/life-assistant/pull/82) 均已 squash merge；准确 `main` `4274998` 已远端构建并发布到 [Life Console 正式站点](https://project-wpabq.vercel.app/)。Production 为 READY，PWA 资产、严格 CSP、无 Service Worker / Cache Storage 边界、未登录 API 门禁和 390px 编辑弹窗字段对齐均已只读验收；未触发 Cron、模型或真实数据写入。仍需 PO 在正式域名完成添加到主屏幕、独立窗口、登录恢复与飞行模式的发布后真机复验。
