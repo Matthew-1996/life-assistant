@@ -220,6 +220,48 @@ test("contains mobile Todo date-time controls when iOS includes their padding in
   expect(overflowingControls).toEqual([]);
 });
 
+test("contains mobile Todo editor date-time controls when iOS includes their padding in the native width", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+
+  await page.evaluate(() => {
+    const editor = document.createElement("section");
+    editor.className = "todo-sheet";
+    editor.setAttribute("aria-label", "Synthetic Todo editor");
+    editor.setAttribute("role", "dialog");
+    editor.innerHTML = `
+      <form class="todo-editor-form">
+        <label>Todo 项目<input aria-label="编辑 Todo 项目"></label>
+        <label>优先级<select aria-label="编辑 Todo 优先级"><option>P1</option></select></label>
+        <label>计划开始<input aria-label="编辑 Todo 计划开始" type="datetime-local"></label>
+        <label>DDL<input aria-label="编辑 Todo DDL" type="datetime-local"></label>
+      </form>
+    `;
+    document.body.append(editor);
+  });
+  const editor = page.getByRole("dialog");
+  await expect(editor).toBeVisible();
+
+  const dateTimeControls = editor.locator("input[type='datetime-local']");
+  await expect(dateTimeControls).toHaveCount(2);
+  await dateTimeControls.evaluateAll((inputs) => {
+    for (const input of inputs) input.style.width = "calc(100% + 20px)";
+  });
+
+  const overflowingControls = await dateTimeControls.evaluateAll((inputs) => inputs
+    .map((input) => {
+      const inputRect = input.getBoundingClientRect();
+      const labelRect = input.closest("label")?.getBoundingClientRect();
+      if (!labelRect) throw new Error("Todo editor date-time label is missing");
+      return inputRect.right > labelRect.right + 0.5
+        ? input.getAttribute("aria-label") ?? input.tagName
+        : null;
+    })
+    .filter((label): label is string => label !== null));
+
+  expect(overflowingControls).toEqual([]);
+});
+
 test("contains the mobile journal date filter when iOS includes its padding in the native width", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");

@@ -1389,11 +1389,13 @@ pre {
     max-width: 100%;
   }
 
-  .todo-quick-form label {
+  .todo-quick-form label,
+  .todo-editor-form label {
     min-width: 0;
   }
 
-  .todo-quick-form input[type="datetime-local"] {
+  .todo-quick-form input[type="datetime-local"],
+  .todo-editor-form input[type="datetime-local"] {
     width: auto;
     min-width: 0;
     max-width: 100%;

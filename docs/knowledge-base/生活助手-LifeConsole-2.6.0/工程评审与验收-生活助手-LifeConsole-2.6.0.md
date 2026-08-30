@@ -108,6 +108,15 @@ cd apps/life-console && npm run test:e2e:synthetic
 
 - PO 在正式域名上对添加到主屏幕、独立窗口、登录恢复与飞行模式行为的发布后复验结论。
 
+## 12. Todo 编辑弹窗 iOS 日期时间宽度快速维护
+
+- 2026-08-30，PO 提供 iPhone 截图并反馈 Todo 编辑弹窗的“计划开始”与“DDL”宽度大于标题和优先级字段，而 PC 端一致。截图内容仅用于界面定位，未写入 Git、测试数据或项目文档。
+- 根因是移动端规则只覆盖 `.todo-quick-form` 的 `datetime-local`，编辑弹窗使用的 `.todo-editor-form` 仍继承基础 `width: 100%` 与水平 padding 组合，因此在 iOS WebKit 的原生日期时间控件宽度计算下发生额外溢出；桌面 Chromium 不触发该现象。
+- TDD 红灯：新增 390×844 Playwright 几何回归，使用生产 CSS 与编辑表单同构标记模拟 WebKit 多算 20px；修复前精确返回 `编辑 Todo 计划开始`、`编辑 Todo DDL` 两个越界控件。
+- 最小修复：在原有移动端规则中同时覆盖 `.todo-editor-form` 标签与 `datetime-local`，使用 `width: auto; min-width: 0; max-width: 100%`，不修改桌面布局、业务逻辑、数据、API 或 PWA 离线边界。
+- 本地候选验证：聚焦用例由 1 失败转为 1 通过；完整 Playwright 15/15 通过；Vitest 83 个文件 / 618 项、应用 Python 75 + 7 + 10 + 1 项、根目录工具 372 项全部通过（根工具 1 项既有跳过）；默认构建 130 个模块成功。沙箱内基线首跑的 26 个 Miniflare 失败与根工具 4 个错误均为本机回环监听被禁止；允许监听后原样全部通过，未放宽超时。
+- 当前仅为本地快速维护候选；未创建 Preview、未合并、未部署 Production。
+
 PO 于 2026-08-29 在最新受保护 Preview 上确认“没问题了”，随后明确要求“继续开发上线”。该确认放开 PR #77 合并与本次 Production 发布；发布结果仍必须按实际证据回填，不能因授权提前标记为已上线。
 
 任何本地、CI 或 Preview 通过都不自动授权 Production 发布。
