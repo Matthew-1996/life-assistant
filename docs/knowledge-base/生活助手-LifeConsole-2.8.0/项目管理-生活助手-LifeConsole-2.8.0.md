@@ -7,7 +7,7 @@
 - 范围：iOS / iPhone 移动端浮动底部导航，仅前端与 PWA 布局。
 - 数据：不改 Supabase、Owner 数据、API、备份或自动化。
 - 分支：`agent/life-console-bottom-nav-280`。
-- PR：待创建 Draft PR；仅承载 Gate 1 / Gate 2 文档草案。
+- PR：Docs-only Draft PR [#84](https://github.com/Matthew-1996/life-assistant/pull/84)；仅承载 Gate 1 / Gate 2 文档草案。
 - 授权：PO 已确认需求方向与方案 2；尚未授权代码实现、Preview、合并或 Production。
 
 ## 2. 决策日志
@@ -19,6 +19,7 @@
 | 2026-08-31 | PO 明确不做“向下滚动自动收起” | 已纳入范围与非目标 |
 | 2026-08-31 | PO 确认进入方案固化阶段 | 已创建 2.8.0 设计 / 技术 / 测试草案；不等于代码或发布授权 |
 | 2026-08-31 | Agent 推荐启用 `viewport-fit=cover` 并同步处理顶部 / 底部 safe-area | 待 Gate 2 PO 评审 |
+| 2026-08-31 | 创建 Docs-only Draft PR #84 | 已完成；不构成代码实现、Preview、合并或 Production 授权 |
 
 ## 3. 门禁
 
@@ -53,6 +54,6 @@
 
 ## 5. 当前下一步
 
-1. 完成 Docs-only Draft PR 与 CI。
+1. 等待 Docs-only Draft PR #84 CI。
 2. 请 PO 评审 Gate 2 四项：`viewport-fit=cover`、64/32/12/8px 几何、四个内联图标、不自动收起。
 3. Gate 2 未确认前停止代码实现。
