@@ -29,6 +29,7 @@
 | 2026-08-29 | PR #77 squash merge，准确 `main` 发布到既有 Production | READY；稳定别名、PWA 资产、严格 CSP、无 Service Worker、未登录 401 与 390px 四页只读验收通过 |
 | 2026-08-30 | PO 反馈移动端 Todo 编辑弹窗的“计划开始”与“DDL”宽于其他字段 | 已确认编辑表单未被原 iOS `datetime-local` 移动端宽度规则覆盖；按快速维护 + TDD 形成 Draft PR #82，不构成 Preview、合并或 Production 授权 |
 | 2026-08-30 | PO 确认创建受保护合成 Preview | 已从 Draft PR #82 准确提交创建纯静态 Preview 并完成只读 390px 验收；未授权合并或 Production |
+| 2026-08-31 | PO 确认编辑弹窗快速维护 Preview“已验收，符合预期” | Preview 验收完成；Draft PR #82 继续等待单独的合并授权，Production 未变更 |
 
 书面 PRD 明确补充：方案 2 不会在网络中断瞬间主动遮住已经加载的页面。PO 已在 Gate 1 确认该限制。
 
@@ -51,6 +52,7 @@
 | 开始实现 | approved | 按实施计划执行 TDD；不复用为后续发布授权 |
 | Preview | completed | 第四次响应式修复版受保护合成 Preview READY；9 个静态文件、0 Functions、0 Cron，390px 两个 Todo 日期时间控件右侧溢出为 0，四页内容控件彼此交集、控件横向越界、底栏自身交集与根横向溢出均为 0 |
 | 编辑弹窗快速维护 Preview | completed | Draft PR #82 受保护纯静态 Preview READY；10 个静态文件、0 Functions、0 Cron，真实浏览器 390px 四个编辑字段左右边界一致，日期时间右侧溢出为 0；未授权合并或 Production |
+| 编辑弹窗快速维护 PO 验收 | completed | PO 于 2026-08-31 确认“已验收，符合预期”；该确认不自动授权 PR 合并或 Production |
 | PO Preview 验收 | completed | PO 于 2026-08-29 确认最新修复版“没问题了” |
 | PR 合并 | completed | PR #77 已通过三项 CI 并 squash merge；准确 merge commit 已记录 |
 | Production | completed | 已从准确 `main` 发布；READY、稳定别名、PWA 资产、安全头、401 门禁和 390px 四页布局已只读验收 |

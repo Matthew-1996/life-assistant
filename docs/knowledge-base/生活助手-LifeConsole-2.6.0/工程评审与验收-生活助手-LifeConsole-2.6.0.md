@@ -118,7 +118,7 @@ cd apps/life-console && npm run test:e2e:synthetic
 - PO 于 2026-08-30 确认创建受保护合成 Preview。[验收地址](https://life-console-synthetic-preview-2llfw6ii1-test11-b88a.vercel.app) 为 READY；制品只有 10 个静态文件、0 Functions、0 Cron，构建前与部署前均确认不含 Supabase / Production 环境值。临时项目链接生成的 OIDC 环境文件在部署前已删除。
 - 受保护只读 HTTP 验收：首页与 Manifest 为 200，API 路径为 404；CSP 保持 `script-src 'self'`、`connect-src 'none'`，并保留 `nosniff`、`DENY`与 `noindex`。候选源码和静态制品均无 Service Worker 注册或脚本资产。
 - 真实浏览器 390×844 验收中，在合成 Todo 上只读打开编辑弹窗，没有提交表单。Todo 项目、优先级、计划开始、DDL 四个控件均为 `45–345px`、宽 `300px`，两个 `datetime-local` 右侧溢出均为 0；根页面与 body 宽均为 390px，控制台无警告或错误。
-- 当前为 Draft PR [#82](https://github.com/Matthew-1996/life-assistant/pull/82) Preview 待 PO 验收；未合并、未部署 Production。
+- PO 于 2026-08-31 确认 Preview“已验收，符合预期”。当前 Draft PR [#82](https://github.com/Matthew-1996/life-assistant/pull/82) 已完成 Preview 验收，继续等待单独的合并授权；未合并、未部署 Production。
 
 PO 于 2026-08-29 在最新受保护 Preview 上确认“没问题了”，随后明确要求“继续开发上线”。该确认放开 PR #77 合并与本次 Production 发布；发布结果仍必须按实际证据回填，不能因授权提前标记为已上线。
 
