@@ -115,7 +115,10 @@ cd apps/life-console && npm run test:e2e:synthetic
 - TDD 红灯：新增 390×844 Playwright 几何回归，使用生产 CSS 与编辑表单同构标记模拟 WebKit 多算 20px；修复前精确返回 `编辑 Todo 计划开始`、`编辑 Todo DDL` 两个越界控件。
 - 最小修复：在原有移动端规则中同时覆盖 `.todo-editor-form` 标签与 `datetime-local`，使用 `width: auto; min-width: 0; max-width: 100%`，不修改桌面布局、业务逻辑、数据、API 或 PWA 离线边界。
 - 本地候选验证：聚焦用例由 1 失败转为 1 通过；完整 Playwright 15/15 通过；Vitest 83 个文件 / 618 项、应用 Python 75 + 7 + 10 + 1 项、根目录工具 372 项全部通过（根工具 1 项既有跳过）；默认构建 130 个模块成功。沙箱内基线首跑的 26 个 Miniflare 失败与根工具 4 个错误均为本机回环监听被禁止；允许监听后原样全部通过，未放宽超时。
-- 当前为 Draft PR [#82](https://github.com/Matthew-1996/life-assistant/pull/82) 快速维护候选；未创建 Preview、未合并、未部署 Production。
+- PO 于 2026-08-30 确认创建受保护合成 Preview。[验收地址](https://life-console-synthetic-preview-2llfw6ii1-test11-b88a.vercel.app) 为 READY；制品只有 10 个静态文件、0 Functions、0 Cron，构建前与部署前均确认不含 Supabase / Production 环境值。临时项目链接生成的 OIDC 环境文件在部署前已删除。
+- 受保护只读 HTTP 验收：首页与 Manifest 为 200，API 路径为 404；CSP 保持 `script-src 'self'`、`connect-src 'none'`，并保留 `nosniff`、`DENY`与 `noindex`。候选源码和静态制品均无 Service Worker 注册或脚本资产。
+- 真实浏览器 390×844 验收中，在合成 Todo 上只读打开编辑弹窗，没有提交表单。Todo 项目、优先级、计划开始、DDL 四个控件均为 `45–345px`、宽 `300px`，两个 `datetime-local` 右侧溢出均为 0；根页面与 body 宽均为 390px，控制台无警告或错误。
+- 当前为 Draft PR [#82](https://github.com/Matthew-1996/life-assistant/pull/82) Preview 待 PO 验收；未合并、未部署 Production。
 
 PO 于 2026-08-29 在最新受保护 Preview 上确认“没问题了”，随后明确要求“继续开发上线”。该确认放开 PR #77 合并与本次 Production 发布；发布结果仍必须按实际证据回填，不能因授权提前标记为已上线。
 
