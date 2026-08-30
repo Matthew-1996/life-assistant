@@ -5,7 +5,7 @@
 - 主阶段：已上线。
 - 子状态：已完成。
 - 分支：2.6.0 功能与上线证据分支均已合并清理；当前在独立 `agent/life-console-edit-datetime-width` 分支处理编辑弹窗的移动端快速维护候选。
-- PR：PR [#77](https://github.com/Matthew-1996/life-assistant/pull/77) 已 squash merge，包含治理文档、iOS 安装资产、响应式修复与自动化契约。
+- PR：PR [#77](https://github.com/Matthew-1996/life-assistant/pull/77) 已 squash merge，包含治理文档、iOS 安装资产、响应式修复与自动化契约；编辑弹窗快速维护候选位于 Draft PR [#82](https://github.com/Matthew-1996/life-assistant/pull/82)。
 - 实现：本地候选、390px 底部导航安全区、Todo 表单单列、记录页 iOS 日期筛选与 Todo“计划开始”/“DDL”日期时间边界修复已完成；Manifest、Apple Touch Icon、iOS 元数据和无 Service Worker 边界均已自动验证。
 - 数据：不改数据库、Owner 数据、备份或自动化。
 - 发布：合并后的准确 `main` 已发布到 [正式站点](https://project-wpabq.vercel.app/)；Production READY，安全、PWA、未登录门禁和 390px 只读验收通过。发布后主屏幕安装 / 离线真机复验仍待 PO。
@@ -27,7 +27,7 @@
 | 2026-08-29 | PO 确认最新 Preview“没问题了” | 最新 390px 响应式修复验收通过 |
 | 2026-08-29 | PO 明确要求“继续开发上线” | PR #77 合并与本次 Production 发布已获当次授权；不扩展数据、API、自动化或离线能力范围 |
 | 2026-08-29 | PR #77 squash merge，准确 `main` 发布到既有 Production | READY；稳定别名、PWA 资产、严格 CSP、无 Service Worker、未登录 401 与 390px 四页只读验收通过 |
-| 2026-08-30 | PO 反馈移动端 Todo 编辑弹窗的“计划开始”与“DDL”宽于其他字段 | 已确认编辑表单未被原 iOS `datetime-local` 移动端宽度规则覆盖；按快速维护 + TDD 形成本地候选，不构成 Preview、合并或 Production 授权 |
+| 2026-08-30 | PO 反馈移动端 Todo 编辑弹窗的“计划开始”与“DDL”宽于其他字段 | 已确认编辑表单未被原 iOS `datetime-local` 移动端宽度规则覆盖；按快速维护 + TDD 形成 Draft PR #82，不构成 Preview、合并或 Production 授权 |
 
 书面 PRD 明确补充：方案 2 不会在网络中断瞬间主动遮住已经加载的页面。PO 已在 Gate 1 确认该限制。
 
