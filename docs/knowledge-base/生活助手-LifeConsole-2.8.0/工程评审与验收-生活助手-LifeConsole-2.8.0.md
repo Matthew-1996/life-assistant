@@ -1,6 +1,6 @@
 # 工程评审与验收：Life Console 2.8.0
 
-状态：进行中。高度与底距修订已获 PO 认可；20px 侧距修订已通过 TDD 与完整本地回归，等待 Draft PR CI 与新 Preview 技术验收。合并与 Production 均未授权。
+状态：进行中。20px 侧距修订已通过 TDD、完整本地回归、Draft PR CI 与纯静态 Preview 远端浏览器技术验收，等待 PO 真机产品验收。合并与 Production 均未授权。
 
 ## 1. 工程评审
 
@@ -47,7 +47,10 @@ PO 随后在同一设备真机截图中确认首版导航整体偏高，并提�
 - 对比图约 50px 的视觉曲率换算为约 31px CSS 半径；本轮保持高度、圆角、底距、内部点击区与交互不变，仅将左右间距由 12px 改为 20px。
 - 定向 TDD 在旧实现上因实测 12px 而失败，最小样式修订后通过。
 - 完整本地验证：Playwright 18/18、Vitest 620/620、Life Console Python 93/93、工作区工具 372 项通过 / 1 项跳过；通用与 Preview build 均完成 130 个模块转换。
-- 新 Preview 还需等待 Draft PR CI、部署检查和远端浏览器技术验收，不将本地结果写成远端或真机证据。
+- 应用提交 `68243b5` 的 node、python、privacy CI 分别以 1m52s、1m05s、8s 通过。
+- 首次远端源码构建错误识别了五个 API Functions；该候选未交付并已删除。新候选改为从已验证的合成产物生成隔离 Build Output，检查为纯静态 Preview。
+- [20px 侧距 Preview](https://life-console-production-no4wccgkq-test11-b88a.vercel.app)为 Ready / preview；10 个静态文件、0 Functions、0 Cron；首页 / Manifest 200、API 404，安全头保持。
+- 402×874 远端浏览器实测得到 62px 高、31px 圆角、左右各 20px、底距 8px；四个点击区均为 85×52px。四页切换、滚动常驻、无横向溢出与控制台无 error / warning 均通过。
 
 ## 6. 未完成门禁
 

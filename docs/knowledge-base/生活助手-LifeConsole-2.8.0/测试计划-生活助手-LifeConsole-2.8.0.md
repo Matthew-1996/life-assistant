@@ -1,6 +1,6 @@
 # 测试计划：Life Console 2.8.0
 
-状态：Gate 2 已由 PO 于 2026-08-31 确认；20px 侧距修订已完成 TDD 与完整本地回归，等待 Draft PR CI 与新合成 Preview 技术验收。
+状态：Gate 2 已由 PO 于 2026-08-31 确认；20px 侧距修订已完成 TDD、完整本地回归、Draft PR CI 与纯静态 Preview 技术验收，等待 PO 产品验收。
 
 ## 1. 测试范围
 
@@ -100,3 +100,7 @@ Production 构建只使用去敏 / 合法的环境配置；不得把占位符、
 - 绿灯：仅将横向定位改为 `max(20px, env(safe-area-inset-left/right))`，同一用例通过；62px 高、31px 圆角和底部定位断言同时保持通过。
 - 完整本地回归：Playwright 18/18、Vitest 620/620、Life Console Python 93/93、工作区工具 372 项通过 / 1 项跳过；通用与 Preview build 均完成 130 个模块转换。
 - `git diff --check`、项目治理、索引与 `origin/main..HEAD` 历史隐私检查均通过。`validate_project.py` 仍仅报告隔离 worktree 缺少 Git 排除的私人真相源 / 运维文件、两处既有测试夹具启发式命中及一条旧研究链接，本轮差异未新增命中。
+- 应用提交 `68243b5` 的 node、python、privacy CI 分别以 1m52s、1m05s、8s 通过。
+- 首次远端源码构建错误识别了五个 API Functions；该候选未交付并已精确删除。随后从已验证的合成构建产物生成隔离 Build Output，部署为纯静态 Preview。
+- [20px 侧距 Preview](https://life-console-production-no4wccgkq-test11-b88a.vercel.app)状态 Ready、target 为 preview；10 个静态文件、0 Functions、0 Cron。经认证的首页 / Manifest 为 200，`/api/daily-news` 为 404；`noindex`、严格 CSP、`nosniff` 与 `DENY` 保持不变。
+- 402×874 远端浏览器实测：62px 高、31px 圆角、左右各 20px、底距 8px、四个 85×52px 点击区，无横向溢出。四页切换均正确更新 `aria-current=page`，滚动 650px 后导航仍常驻且无 transform，控制台无 error / warning。
