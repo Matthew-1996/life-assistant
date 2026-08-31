@@ -42,9 +42,9 @@ full-screen iOS viewport (`viewport-fit=cover`)
 - 顶部容器高度 / padding 纳入 `safe-area-inset-top`。
 - 移除移动 `.workspace` 为导航预留的外部 `margin-bottom`。
 - 为 `.page-content` 和滚动容器增加由导航高度、间距和底部安全区组成的底部留量。
-- 将移动导航改为 64px 高、32px 圆角的固定浮层。
+- 将移动导航改为 62px 高、31px 圆角的固定浮层。
 - 左右位置使用 `max(12px, env(safe-area-inset-left/right))`。
-- 底部位置使用 `calc(8px + env(safe-area-inset-bottom))`。
+- 以 `--mobile-safe-area-bottom: env(safe-area-inset-bottom)` 作为可验证的安全区 token；底部位置使用 `max(8px, calc(var(--mobile-safe-area-bottom) - 13px))`，在 34px iPhone 安全区下得到 21px。
 - 增加 WebKit 与标准 `backdrop-filter`，并提供 `@supports` 不可用时的高不透明回退。
 - 调整当前页内层表面、图标、标签、焦点和 reduced-motion 样式。
 - 将移动 `.candidate-toast` 的 bottom 锚点移到导航顶部以上。
@@ -60,16 +60,16 @@ full-screen iOS viewport (`viewport-fit=cover`)
 定义移动导航常量：
 
 ```text
-bar height = 64px
-bar gap above safe area = 8px
-safe bottom = env(safe-area-inset-bottom)
+bar height = 62px
+physical bottom gap = max(8px, safe bottom - 13px)
+safe bottom = --mobile-safe-area-bottom = env(safe-area-inset-bottom)
 minimum content gap above bar = 24px
 ```
 
 内容底部留量至少为：
 
 ```text
-64px + 8px + safe bottom + 24px
+62px + physical bottom gap + 24px
 ```
 
 外层导航不参与文档流；滚动容器继续拥有独立滚动。点击与焦点目标必须在最终滚动位置完全位于导航顶部以上。
@@ -94,7 +94,7 @@ minimum content gap above bar = 24px
 
 1. 先写失败的 AppShell 语义测试：四个图标存在、图标不替代文字、当前页语义不变。
 2. 先写失败的 viewport 契约测试：要求 `viewport-fit=cover`，同时拒绝 Service Worker / 缓存边界回归。
-3. 先写失败的 390×844 几何测试：浮动导航尺寸、左右间距、内容透出、最后控件可滚到导航上方。
+3. 先写失败的 390×844 几何测试，并在 402×874 下将安全区 token 设为 34px：验证 62px 高度、31px 圆角、21px 物理底距、内容透出及最后控件可滚到导航上方。
 4. 先写失败的层级测试：Sheet / Dialog 在导航之上，Toast 在导航之上且不重叠。
 5. 完成最小实现，运行定向测试、完整 `npm test`、Production build 与 Playwright。
 6. 仅在 PO 单独授权后创建合成数据 Preview；真实 iPhone 验收不能由桌面浏览器替代。
@@ -108,6 +108,6 @@ minimum content gap above bar = 24px
 ## 9. Gate 2 评审项
 
 1. 确认启用 `viewport-fit=cover`，接受同时调整顶部和底部安全区。
-2. 确认 64px 高度、32px 圆角、12px 侧距、`safe-area + 8px` 底距。
+2. 初版确认 64px 高度、32px 圆角、12px 侧距、`safe-area + 8px` 底距；首版 Preview 真机反馈后，PO 已确认按招商银行 App 参照修订为 62px、31px、12px，并在 34px 安全区下使用 21px 物理底距。
 3. 确认增加四个内联 SVG 图标并持续显示文字标签。
 4. 确认不实现滚动自动收起或原生 Liquid Glass 专有行为。

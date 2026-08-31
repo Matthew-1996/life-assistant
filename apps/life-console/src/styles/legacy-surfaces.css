@@ -1135,6 +1135,7 @@ pre {
 @media (max-width: 720px) {
   :root {
     --page-width: calc(100vw - 32px);
+    --mobile-safe-area-bottom: env(safe-area-inset-bottom);
   }
 
   html,
@@ -1177,7 +1178,9 @@ pre {
     flex: 1 1 auto;
     overflow-y: auto;
     overscroll-behavior-y: contain;
-    scroll-padding-bottom: calc(116px + env(safe-area-inset-bottom));
+    scroll-padding-bottom: calc(
+      86px + max(8px, calc(var(--mobile-safe-area-bottom) - 13px))
+    );
   }
 
   .topbar {
@@ -1225,14 +1228,14 @@ pre {
     position: fixed;
     z-index: 40;
     right: max(12px, env(safe-area-inset-right));
-    bottom: calc(8px + env(safe-area-inset-bottom));
+    bottom: max(8px, calc(var(--mobile-safe-area-bottom) - 13px));
     left: max(12px, env(safe-area-inset-left));
     width: auto;
-    height: 64px;
+    height: 62px;
     gap: 4px;
-    padding: 5px;
+    padding: 4px;
     border-color: rgb(255 255 255 / 72%);
-    border-radius: 32px;
+    border-radius: 31px;
     background: rgb(248 248 250 / 96%);
     box-shadow:
       0 12px 36px rgb(31 35 48 / 18%),
@@ -1272,7 +1275,9 @@ pre {
   }
 
   .page-content {
-    padding: 36px 0 calc(120px + env(safe-area-inset-bottom));
+    padding: 36px 0 calc(
+      86px + max(8px, calc(var(--mobile-safe-area-bottom) - 13px))
+    );
   }
 
   .startup-state {
@@ -1300,7 +1305,9 @@ pre {
 
   .candidate-toast {
     right: 16px;
-    bottom: calc(104px + env(safe-area-inset-bottom));
+    bottom: calc(
+      94px + max(8px, calc(var(--mobile-safe-area-bottom) - 13px))
+    );
     left: 16px;
     max-width: none;
   }

@@ -77,8 +77,8 @@ test("uses the approved floating navigation geometry on a phone", async ({ page 
     };
   });
 
-  expect(geometry.height).toBeCloseTo(64, 0);
-  expect(geometry.radius).toBeCloseTo(32, 0);
+  expect(geometry.height).toBeCloseTo(62, 0);
+  expect(geometry.radius).toBeCloseTo(31, 0);
   expect(geometry.left).toBeGreaterThanOrEqual(12);
   expect(geometry.right).toBeGreaterThanOrEqual(12);
   expect(geometry.bottom).toBeCloseTo(8, 0);
@@ -92,6 +92,32 @@ test("uses the approved floating navigation geometry on a phone", async ({ page 
     })
     .map((element) => element.textContent?.trim()));
   expect(undersizedControls).toEqual([]);
+});
+
+test("keeps the floating navigation close to the Home Indicator", async ({ page }) => {
+  await page.setViewportSize({ width: 402, height: 874 });
+  await page.goto("/");
+
+  await page.locator(":root").evaluate((element) => {
+    (element as HTMLElement).style.setProperty(
+      "--mobile-safe-area-bottom",
+      "34px",
+    );
+  });
+
+  const navigation = page.getByRole("navigation", { name: "全局导航" });
+  const geometry = await navigation.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    return {
+      bottom: window.innerHeight - rect.bottom,
+      height: rect.height,
+    };
+  });
+
+  expect(geometry).toEqual({
+    bottom: 21,
+    height: 62,
+  });
 });
 
 test("keeps page content behind the floating navigation layer", async ({ page }) => {
