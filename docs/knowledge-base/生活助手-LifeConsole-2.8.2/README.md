@@ -10,4 +10,4 @@
 - [工程评审与验收](工程评审与验收-生活助手-LifeConsole-2.8.2.md)
 - [项目管理](项目管理-生活助手-LifeConsole-2.8.2.md)
 
-当前状态：待测试（进行中）。PO 于 2026-08-31 明确了日期区间规则；本地全量工程验证与独立审查修订已完成，尚未完成 Draft PR CI、Preview、合并或 Production 发布。
+当前状态：待测试（进行中）。PO 于 2026-08-31 明确了日期区间规则；本地全量工程验证与独立审查修订已完成，Draft PR [#88](https://github.com/Matthew-1996/life-assistant/pull/88) 已创建并等待 CI；Preview、合并与 Production 尚未完成。
