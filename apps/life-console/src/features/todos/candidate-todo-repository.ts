@@ -16,6 +16,13 @@ function shifted(now: Date, hours: number): string {
   return new Date(now.getTime() + hours * 60 * 60 * 1_000).toISOString();
 }
 
+function laterToday(now: Date): string {
+  const end = new Date(now);
+  end.setHours(24, 0, 0, 0);
+  return new Date(now.getTime() + Math.floor((end.getTime() - now.getTime()) / 2))
+    .toISOString();
+}
+
 function cloneTodo(todo: TodoItem): TodoItem {
   return { ...todo };
 }
@@ -54,15 +61,15 @@ function syntheticTodos(now: Date): TodoItem[] {
       user_id: syntheticUserId,
       title: "准备本周采购",
       priority: "P0",
-      status: "in_progress",
-      planned_start_at: shifted(now, -24),
+      status: "not_started",
+      planned_start_at: laterToday(now),
       due_at: shifted(now, 24),
-      actual_started_at: shifted(now, -6),
+      actual_started_at: null,
       completed_at: null,
       deleted_at: null,
-      revision: 2,
+      revision: 1,
       created_at: shifted(now, -96),
-      updated_at: shifted(now, -6),
+      updated_at: shifted(now, -96),
     },
     {
       id: 3,

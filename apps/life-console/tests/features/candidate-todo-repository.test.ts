@@ -26,6 +26,6 @@ describe("Candidate Todo repository", () => {
     expect(transitioned.status).toBe("completed");
     expect((await first.listStatusEvents(target.id))).toHaveLength(1);
     expect((await second.listAll()).find((item) => item.id === target.id)?.status)
-      .toBe("in_progress");
+      .toBe("not_started");
   });
 });

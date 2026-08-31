@@ -112,7 +112,8 @@ describe("Life Console 2.5.0 repositories", () => {
 
     const todayUrl = new URL(requests[0].url);
     expect(todayUrl.pathname).toBe("/rest/v1/todo_items");
-    expect(todayUrl.searchParams.get("or")).toContain("planned_start_at.lte.2030-05-01T12:00:00.000Z");
+    expect(todayUrl.searchParams.get("or")).toContain("planned_start_at.gte.2030-04-30T16:00:00.000Z");
+    expect(todayUrl.searchParams.get("or")).toContain("planned_start_at.lt.2030-05-01T16:00:00.000Z");
     expect(todayUrl.searchParams.get("or")).toContain("completed_at.gte.2030-04-30T16:00:00.000Z");
     expect(todayUrl.searchParams.get("deleted_at")).toBe("is.null");
     expect(new URL(requests[1].url).searchParams.get("order")).toBe(
