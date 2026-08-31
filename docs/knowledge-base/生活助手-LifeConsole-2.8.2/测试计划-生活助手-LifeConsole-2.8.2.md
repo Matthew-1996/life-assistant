@@ -24,3 +24,9 @@
 - 2026-08-31 合成 Preview 为 Ready，部署仅含静态文件，没有 Functions 或 Cron。
 - 浏览器切换“全部 → 今日”后，昨日开始、未来截止的跨日样本仍显示在“今日”。
 - 页面没有错误覆盖层，控制台错误为空；Preview 通过，Production 尚未验收。
+
+## Production 执行结果
+
+- 准确合并提交使用显式 `supabase-production` 配置完成远端构建，130 个模块转换，最终 deployment 为 Ready。
+- 稳定域名 `/` 与 manifest 为 200，`service-worker.js` 为 404；严格 CSP 与安全头保持。
+- Owner 只读验收确认目标跨日 Todo 已在“今日”显示；未执行任何 Todo 或其他 Owner 数据写入。
