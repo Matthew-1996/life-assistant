@@ -1,6 +1,6 @@
 # 测试计划：Life Console 2.8.0
 
-状态：Gate 2 已由 PO 于 2026-08-31 确认；TDD 与完整本地回归已通过，Draft PR CI 待复验。
+状态：Gate 2 已由 PO 于 2026-08-31 确认；TDD、完整本地回归与 Draft PR CI 已通过，等待 Preview 产品验收授权。
 
 ## 1. 测试范围
 
@@ -70,3 +70,4 @@ Production 构建只使用去敏 / 合法的环境配置；不得把占位符、
 - 构建：`npm run build` 退出码 0，130 个模块完成转换；Playwright 启动前的 Sites 合成构建同样成功。
 - Production 构建守卫：本机 Vercel 拉取配置不含可用于构建的有效公开 publishable key，守卫按预期拒绝；未伪造变量、未输出配置内容、未发布制品，交由具备合法测试环境变量的 CI 复验。
 - 治理：`check_project_governance.py`、当前差异与 `origin/main..HEAD` 历史隐私检查、`git diff --check` 均通过。
+- 远端 CI：Draft PR #84 的 node、python、privacy 三项检查分别于 2m13s、1m04s、6s 通过。
