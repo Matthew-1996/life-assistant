@@ -1,6 +1,6 @@
 # 技术方案：Life Console 2.8.0
 
-状态：Gate 2 已由 PO 于 2026-08-31 确认；20px 侧距修订已通过本地、CI 与纯静态 Preview 技术验收。
+状态：Gate 2 已由 PO 于 2026-08-31 确认；20px 侧距修订已通过本地、CI、纯静态 Preview 技术验收与 PO 产品验收，已授权合并和 Production 上线。
 
 ## 1. 当前结构
 

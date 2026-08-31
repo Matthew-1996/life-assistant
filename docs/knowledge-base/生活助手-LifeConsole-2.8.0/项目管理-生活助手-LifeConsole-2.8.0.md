@@ -2,13 +2,13 @@
 
 ## 1. 当前状态
 
-- 主阶段：待验收。
-- 子状态：进行中（合成 Preview 待 PO 产品验收）。
+- 主阶段：待上线。
+- 子状态：进行中（PO 已验收并授权合并上线，等待执行与只读验收）。
 - 范围：iOS / iPhone 移动端浮动底部导航，仅前端与 PWA 布局。
 - 数据：不改 Supabase、Owner 数据、API、备份或自动化。
 - 分支：`agent/life-console-bottom-nav-280`。
 - PR：Draft PR [#84](https://github.com/Matthew-1996/life-assistant/pull/84)；实现候选、完整本地回归与 node / python / privacy CI 已通过。
-- 授权：PO 已确认 Gate 2 四项参数，并分别授权本地 TDD 实现与合成数据 Preview；尚未授权合并或 Production。
+- 授权：PO 已确认 Gate 2 四项参数，分别授权本地 TDD 实现与合成数据 Preview，并于 2026-08-31 明确验收通过及授权合并 PR #84、发布 Production。
 
 ## 2. 决策日志
 
@@ -32,6 +32,8 @@
 | 2026-08-31 | PO 确认高度已与招行参照一致，但侧距和圆角观感仍有差异 | 尺寸复核确认合成图约 50px 圆角等效于 31px CSS 半径；侧距目标改为 20px |
 | 2026-08-31 | PO 确认 62px 高 / 31px CSS 圆角 / 20px 侧距，并要求先看新 Preview | 已完成侧距 TDD 红绿循环；新 Preview 技术验证进行中 |
 | 2026-08-31 | 修订提交 `68243b5` 的 node、python、privacy CI 全绿；纯静态 Preview 已部署并通过远端浏览器技术验收 | 等待 PO 真机产品验收；保持 Draft，未授权合并或 Production |
+| 2026-08-31 | PO 明确回复“可以了，验收通过” | 20px 侧距 Preview 产品验收通过 |
+| 2026-08-31 | PO 当次明确“授权合并上线” | PR #84 合并与 Production 门禁已开启；等待准确 `main` 发布和只读验收 |
 
 ## 3. 门禁
 
@@ -41,9 +43,9 @@
 | Gate 2 设计 / 技术 / 测试 | completed | PO 已明确确认全部四项参数 |
 | 本地开发 | completed | 20px 侧距 TDD 红绿循环与完整本地回归已通过 |
 | Draft PR CI | completed | 本轮修订提交的 node、python、privacy 三项检查已通过 |
-| 合成 Preview | in progress | [20px 侧距 Preview](https://life-console-production-no4wccgkq-test11-b88a.vercel.app)技术验收通过；等待 PO 真机产品验收 |
-| PR 合并 | not authorized | Preview 产品验收与 PO 当次授权 |
-| Production | not authorized | 合并后准确 main 与 PO 当次发布授权 |
+| 合成 Preview | completed | [20px 侧距 Preview](https://life-console-production-no4wccgkq-test11-b88a.vercel.app)技术验收与 PO 产品验收均已通过 |
+| PR 合并 | authorized | 合并前完整门禁通过后执行，并记录准确 `main` |
+| Production | authorized | 从准确、干净的 `main` 远端构建；完成只读 HTTP 与浏览器验收后收口 |
 
 ## 4. 工作分解
 
@@ -65,14 +67,20 @@
 - 独立复审并修复 Critical / Important 问题。
 - PO 授权后已生成受保护的合成数据 Preview，并完成技术验收。
 
-### 当前工作块 C：Preview 产品验收
+### 已完成工作块 C：Preview 产品验收
 
 - Preview 仅含合成数据，为纯静态站点；`/api/*` 不可用。
 - 已完成 393×852 浏览器几何、四页切换、滚动常驻与控制台检查。
-- 等待 PO 视觉与产品验收；真实 iPhone Safari / 主屏幕 PWA 仍按独立验收项处理。
+- PO 已完成视觉与产品验收；真实 iPhone Safari / 主屏幕 PWA 对比证据已用于最终尺寸确认。
 - 首版 Preview 因导航整体偏高未通过 PO 产品验收；12px 侧距替换 Preview 因横向留白观感未通过 PO 产品验收。当前[20px 侧距 Preview](https://life-console-production-no4wccgkq-test11-b88a.vercel.app)保持 62px 高和 31px CSS 圆角，已通过技术验收。
+
+### 当前工作块 D：合并、Production 与上线验收
+
+- 复核完整测试、治理、隐私、CI 与准确提交。
+- 合并 PR #84 后从准确、干净的 `main` 触发 Vercel 远端 Production 构建，不复用本地 Preview Build Output。
+- 只读核验稳定域名、响应头、API 未认证门禁、移动导航几何、页面切换、滚动常驻与控制台；不读取或写入真实 Owner 数据。
 
 ## 5. 当前下一步
 
-1. 请 PO 在同一 iPhone 上检查[20px 侧距 Preview](https://life-console-production-no4wccgkq-test11-b88a.vercel.app)并明确产品验收结论。
-2. Preview 产品验收通过后，PR 合并仍需另一次明确授权。
+1. 完成 PR #84 合并并记录准确 `main`。
+2. 从准确 `main` 发布 Production，完成只读验收与上线证据收口。

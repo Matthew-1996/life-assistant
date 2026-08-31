@@ -1,6 +1,6 @@
 # 工程评审与验收：Life Console 2.8.0
 
-状态：进行中。20px 侧距修订已通过 TDD、完整本地回归、Draft PR CI 与纯静态 Preview 远端浏览器技术验收，等待 PO 真机产品验收。合并与 Production 均未授权。
+状态：PO 产品验收已通过。20px 侧距修订已通过 TDD、完整本地回归、Draft PR CI、纯静态 Preview 远端浏览器技术验收与 PO 产品验收；已当次授权合并与 Production，等待执行和上线后只读验收。
 
 ## 1. 工程评审
 
@@ -52,8 +52,9 @@ PO 随后在同一设备真机截图中确认首版导航整体偏高，并提�
 - [20px 侧距 Preview](https://life-console-production-no4wccgkq-test11-b88a.vercel.app)为 Ready / preview；10 个静态文件、0 Functions、0 Cron；首页 / Manifest 200、API 404，安全头保持。
 - 402×874 远端浏览器实测得到 62px 高、31px 圆角、左右各 20px、底距 8px；四个点击区均为 85×52px。四页切换、滚动常驻、无横向溢出与控制台无 error / warning 均通过。
 
-## 6. 未完成门禁
+## 6. PO 产品验收与上线授权
 
-- 当前浏览器技术验收不能替代真实 iPhone Safari 与主屏幕 PWA 的产品验收，尤其是 Home Indicator、真实 safe-area、软键盘、弹层遮挡和材质观感。
-- 等待 PO 对当前 Preview 给出产品验收结论。
-- PR #84 保持 Draft；合并与 Production 均需后续单独明确授权。
+- PO 于 2026-08-31 在同一 iPhone 的 Preview 对比后明确回复“可以了，验收通过”。
+- PO 随后当次明确“授权合并上线”，授权范围为合并 PR #84 并发布 Production。
+- 上线仍需核对准确合并后的 `main`、远端 Production 构建、稳定域名、安全响应头、移动导航几何与浏览器控制台；完成前不标记“已上线”。
+- 验收过程不读取或写入真实日记、健康数据及其他 Owner 内容，不触发模型、Cron、迁移或数据库写入。

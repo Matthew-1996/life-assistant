@@ -54,4 +54,4 @@
 
 - Gate 1：已确认。
 - Gate 2：初版确认 `viewport-fit=cover`、64px 高 / 32px 圆角 / 12px 侧距 / `safe-area + 8px` 底距、四个内联 SVG 图标与持续文字标签，并确认不做滚动自动收起。2026-08-31 经两轮 Preview 真机参照反馈，PO 最终确认为 62px 高 / 31px CSS 圆角 / 20px 侧距，iPhone 34px 底部安全区下外壳底距约 21px；其他范围不变。
-- 本地 TDD 实现与合成数据 Preview 已分别获得授权；Preview 已创建并进入产品验收，PR 合并和 Production 发布尚未授权，后续分别执行对应门禁。
+- 本地 TDD 实现与合成数据 Preview 已分别获得授权；PO 于 2026-08-31 验收 20px 侧距 Preview 通过，并当次授权合并 PR #84 与 Production 发布。上线结论仍以准确 `main`、远端 Production 构建和只读验收证据为准。

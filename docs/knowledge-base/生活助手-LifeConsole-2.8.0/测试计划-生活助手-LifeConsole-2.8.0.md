@@ -1,6 +1,6 @@
 # 测试计划：Life Console 2.8.0
 
-状态：Gate 2 已由 PO 于 2026-08-31 确认；20px 侧距修订已完成 TDD、完整本地回归、Draft PR CI 与纯静态 Preview 技术验收，等待 PO 产品验收。
+状态：Gate 2 已由 PO 于 2026-08-31 确认；20px 侧距修订已完成 TDD、完整本地回归、Draft PR CI、纯静态 Preview 技术验收与 PO 产品验收，已进入待上线阶段。
 
 ## 1. 测试范围
 
@@ -60,7 +60,7 @@ Production 构建只使用去敏 / 合法的环境配置；不得把占位符、
 ## 5. 门禁
 
 - 自动测试通过不构成产品验收。
-- Preview、真实 iPhone 产品验收、PR 合并与 Production 分别需要 PO 当次明确授权。
+- Preview、真实 iPhone 产品验收、PR 合并与 Production 分别需要 PO 当次明确授权；本版本四项门禁均已于 2026-08-31 获得明确授权。
 - 真实 iPhone 验收失败时记录具体设备 / iOS / Safari 或 PWA 模式与几何证据，不以桌面模拟替代。
 
 ## 6. 2026-08-31 本地执行记录
