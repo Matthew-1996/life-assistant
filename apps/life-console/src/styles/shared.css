@@ -170,6 +170,10 @@ a:focus-visible {
     box-shadow 160ms ease;
 }
 
+.nav-icon {
+  display: none;
+}
+
 .nav-item:hover {
   color: var(--foreground);
 }

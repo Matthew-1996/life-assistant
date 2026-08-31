@@ -75,6 +75,16 @@ describe("Life Console synthetic UI", () => {
     expect(screen.getByRole("link", { name: "跳到主要内容" })).toBeTruthy();
   });
 
+  it("keeps a decorative icon and visible label in every navigation control", () => {
+    render(<App />);
+
+    for (const label of ["工作台", "记录", "进展", "系统"]) {
+      const button = navigationButton(label);
+      expect(button.querySelector("svg[aria-hidden='true']")).toBeTruthy();
+      expect(button.querySelector(".nav-label")?.textContent).toBe(label);
+    }
+  });
+
   it("uses the accepted 2.5 workbench information architecture", () => {
     render(<App />);
 
