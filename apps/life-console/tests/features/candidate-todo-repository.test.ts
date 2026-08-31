@@ -11,6 +11,18 @@ describe("Candidate Todo repository", () => {
       .toContain("完成房间整理");
   });
 
+  it("keeps its future same-day example in Today before its planned start", async () => {
+    const now = new Date("2030-01-08T10:00:00+08:00");
+    const end = new Date(now);
+    end.setHours(24, 0, 0, 0);
+    const item = (await createCandidateTodoRepository(now).listToday(now))
+      .find((todo) => todo.title === "准备本周采购");
+
+    expect(item).toBeTruthy();
+    expect(Date.parse(item!.planned_start_at)).toBeGreaterThan(now.getTime());
+    expect(Date.parse(item!.planned_start_at)).toBeLessThan(end.getTime());
+  });
+
   it("keeps transitions local to one factory instance", async () => {
     const now = new Date("2030-01-08T10:00:00+08:00");
     const first = createCandidateTodoRepository(now);
@@ -26,6 +38,6 @@ describe("Candidate Todo repository", () => {
     expect(transitioned.status).toBe("completed");
     expect((await first.listStatusEvents(target.id))).toHaveLength(1);
     expect((await second.listAll()).find((item) => item.id === target.id)?.status)
-      .toBe("in_progress");
+      .toBe("not_started");
   });
 });

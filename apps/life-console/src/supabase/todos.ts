@@ -97,7 +97,7 @@ export class TodoRepository implements TodoRepositoryPort {
     const end = new Date(start);
     end.setDate(end.getDate() + 1);
     const filter = [
-      `and(status.neq.completed,planned_start_at.lte.${now.toISOString()})`,
+      `and(status.neq.completed,planned_start_at.gte.${start.toISOString()},planned_start_at.lt.${end.toISOString()})`,
       `and(status.eq.completed,completed_at.gte.${start.toISOString()},completed_at.lt.${end.toISOString()})`,
     ].join(",");
     return await this.repository.executeRead<TodoItem[]>(async () =>
