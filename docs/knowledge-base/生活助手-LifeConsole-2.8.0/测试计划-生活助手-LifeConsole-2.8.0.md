@@ -1,6 +1,6 @@
 # 测试计划：Life Console 2.8.0
 
-状态：Gate 2 已由 PO 于 2026-08-31 确认；TDD、完整本地回归与 Draft PR CI 已通过，等待 Preview 产品验收授权。
+状态：Gate 2 已由 PO 于 2026-08-31 确认；TDD、完整本地回归、Draft PR CI 与合成 Preview 技术验收已通过，等待 PO 产品验收。
 
 ## 1. 测试范围
 
@@ -71,3 +71,12 @@ Production 构建只使用去敏 / 合法的环境配置；不得把占位符、
 - Production 构建守卫：本机 Vercel 拉取配置不含可用于构建的有效公开 publishable key，守卫按预期拒绝；未伪造变量、未输出配置内容、未发布制品，交由具备合法测试环境变量的 CI 复验。
 - 治理：`check_project_governance.py`、当前差异与 `origin/main..HEAD` 历史隐私检查、`git diff --check` 均通过。
 - 远端 CI：Draft PR #84 的 node、python、privacy 三项检查分别于 2m13s、1m04s、6s 通过。
+
+## 7. 2026-08-31 Preview 技术验收
+
+- PO 已当次授权创建合成数据 Preview；候选为[受保护的合成数据 Preview](https://life-console-production-lbvbo3rna-test11-b88a.vercel.app)，应用内容提交为 `4e2b5a2`。
+- 部署状态 Ready，target 为 preview；10 个静态文件、0 Functions、0 Cron；首页与 Manifest 返回 200，`/api/daily-news` 返回 404。
+- 安全边界保持 `noindex`、`connect-src 'none'`、`script-src 'self'`、`X-Frame-Options: DENY` 与 `nosniff`；浏览器控制台无 error / warning。
+- 393×852 浏览器视口实测：导航左右各 12px、高 64px、圆角 32px、底部 8px，无根级横向溢出；四项点击目标均可切换并正确更新 `aria-current`。
+- 长内容滚动 650px 后导航仍保持固定、可见、无位移或自动收起；工作台、记录、进展、系统四页切换后几何保持一致。
+- 本项为真实浏览器的响应式技术验收，不冒充真实 iPhone Safari 或主屏幕 PWA 产品验收。

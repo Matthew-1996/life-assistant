@@ -7,6 +7,7 @@
 - [设计方案](设计方案-生活助手-LifeConsole-2.8.0.md)
 - [技术方案](技术方案-生活助手-LifeConsole-2.8.0.md)
 - [测试计划](测试计划-生活助手-LifeConsole-2.8.0.md)
+- [工程评审与验收](工程评审与验收-生活助手-LifeConsole-2.8.0.md)
 - [项目管理](项目管理-生活助手-LifeConsole-2.8.0.md)
 
-当前状态：待验收（待开始）。Gate 1 与 Gate 2 已由 PO 于 2026-08-31 确认；PO 已选择浮动方案、接受不完全原生的 PWA 替代，确认 `viewport-fit=cover`、64/32/12/8px 几何与四个内联图标，并明确不做“向下滚动自动收起”。本地 TDD 候选、完整本地回归与 Draft PR CI 已通过；Preview、合并与 Production 尚未授权。
+当前状态：待验收（进行中）。Gate 1 与 Gate 2 已由 PO 于 2026-08-31 确认；PO 已选择浮动方案、接受不完全原生的 PWA 替代，确认 `viewport-fit=cover`、64/32/12/8px 几何与四个内联图标，并明确不做“向下滚动自动收起”。本地 TDD 候选、完整本地回归与 Draft PR CI 已通过；PO 已授权并已创建[受保护的合成数据 Preview](https://life-console-production-lbvbo3rna-test11-b88a.vercel.app)，技术验收通过，等待 PO 产品验收。合并与 Production 尚未授权。

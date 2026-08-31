@@ -37,4 +37,4 @@
 
 - 产品与技术方案：当前 Draft PR。
 - 代码阶段：预计拆为两个不超过 4 小时的连续工作块——先完成 TDD 与结构 / 样式实现，再完成浏览器回归与真实 iPhone 验收准备。
-- 真实 iPhone 产品验收、Preview、合并和 Production 分别等待 PO 当次授权。
+- 合成数据 Preview 已获得 PO 当次授权并创建；真实 iPhone 产品验收、合并和 Production 仍分别等待对应门禁与 PO 当次授权。

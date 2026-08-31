@@ -54,4 +54,4 @@
 
 - Gate 1：已确认。
 - Gate 2：已确认 `viewport-fit=cover`、64px 高 / 32px 圆角 / 12px 侧距 / `safe-area + 8px` 底距、四个内联 SVG 图标与持续文字标签，并确认不做滚动自动收起。
-- 本地 TDD 实现已授权；合成 Preview、PR 合并和 Production 发布尚未授权，后续分别执行对应门禁。
+- 本地 TDD 实现与合成数据 Preview 已分别获得授权；Preview 已创建并进入产品验收，PR 合并和 Production 发布尚未授权，后续分别执行对应门禁。
