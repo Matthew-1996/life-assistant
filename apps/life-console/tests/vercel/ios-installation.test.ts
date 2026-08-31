@@ -121,6 +121,16 @@ describe("iOS home-screen installation", () => {
     });
   });
 
+  it("lets the iOS layout consume the full safe-area viewport", () => {
+    const index = readFileSync(resolve(appRoot, "index.html"), "utf8");
+    const $ = load(index);
+    const viewport = $("meta[name='viewport']").attr("content") ?? "";
+
+    expect(viewport.split(",").map((value) => value.trim())).toContain(
+      "viewport-fit=cover",
+    );
+  });
+
   it("ships the declared iOS PNG icons at their exact sizes", () => {
     const manifest = readManifest();
     expect(manifest, "manifest.webmanifest must exist").not.toBeNull();

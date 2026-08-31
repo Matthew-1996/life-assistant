@@ -1,6 +1,6 @@
 # 测试计划：Life Console 2.8.0
 
-状态：Gate 2 Draft，等待 PO 评审；尚未开始执行。
+状态：Gate 2 已由 PO 于 2026-08-31 确认；TDD 定向测试与无端口回归已通过，完整 CI 待 Draft PR 更新后复验。
 
 ## 1. 测试范围
 
@@ -62,3 +62,11 @@ Production 构建只使用去敏 / 合法的环境配置；不得把占位符、
 - 自动测试通过不构成产品验收。
 - Preview、真实 iPhone 产品验收、PR 合并与 Production 分别需要 PO 当次明确授权。
 - 真实 iPhone 验收失败时记录具体设备 / iOS / Safari 或 PWA 模式与几何证据，不以桌面模拟替代。
+
+## 6. 2026-08-31 本地执行记录
+
+- 红灯：组件用例因缺少 `svg[aria-hidden=true]` 失败；iOS 安装契约因缺少 `viewport-fit=cover` 失败，均确认由目标能力缺失触发。
+- 绿灯：组件 28/28、iOS 安装契约 4/4、无本机端口 Vitest 回归 594/594 通过。
+- 构建：`npm run build` 退出码 0，130 个模块完成转换；Production 构建因本地未注入所需 Supabase 公共环境变量而未执行，不伪造变量绕过构建守卫。
+- 治理：`check_project_governance.py`、`check_git_privacy.sh` 与 `git diff --check` 通过。
+- 环境限制：受管沙箱禁止回环端口，Miniflare、Hub 与 Playwright 本地执行分别出现 `EPERM` 或测试服务无法启动；这些用例必须由 Draft PR CI 复验，当前不记为通过。

@@ -1175,14 +1175,15 @@ pre {
   .workspace {
     min-height: 0;
     flex: 1 1 auto;
-    margin-bottom: calc(64px + max(8px, env(safe-area-inset-bottom)));
     overflow-y: auto;
     overscroll-behavior-y: contain;
+    scroll-padding-bottom: calc(116px + env(safe-area-inset-bottom));
   }
 
   .topbar {
-    height: 50px;
-    flex: 0 0 50px;
+    height: calc(50px + env(safe-area-inset-top));
+    flex: 0 0 calc(50px + env(safe-area-inset-top));
+    padding-top: env(safe-area-inset-top);
     background: rgb(250 250 250 / 96%);
     backdrop-filter: none;
   }
@@ -1223,28 +1224,55 @@ pre {
   .topbar nav {
     position: fixed;
     z-index: 40;
-    right: 12px;
-    bottom: max(8px, env(safe-area-inset-bottom));
-    left: 12px;
+    right: max(12px, env(safe-area-inset-right));
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    left: max(12px, env(safe-area-inset-left));
     width: auto;
-    height: 56px;
+    height: 64px;
     gap: 4px;
     padding: 5px;
-    border-color: rgb(0 0 0 / 9%);
-    background: rgb(242 242 247 / 94%);
-    box-shadow: 0 10px 32px rgb(31 35 48 / 18%);
-    backdrop-filter: saturate(180%) blur(20px);
+    border-color: rgb(255 255 255 / 72%);
+    border-radius: 32px;
+    background: rgb(248 248 250 / 96%);
+    box-shadow:
+      0 12px 36px rgb(31 35 48 / 18%),
+      0 2px 8px rgb(31 35 48 / 8%);
+  }
+
+  @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+    .topbar nav {
+      background: rgb(248 248 250 / 78%);
+      -webkit-backdrop-filter: saturate(180%) blur(22px);
+      backdrop-filter: saturate(180%) blur(22px);
+    }
   }
 
   .nav-item {
-    height: 44px;
+    height: 52px;
     min-width: 0;
-    padding: 0 6px;
-    font-size: 12px;
+    flex-direction: column;
+    gap: 2px;
+    padding: 3px 6px 2px;
+    border-radius: 26px;
+    font-size: 10px;
+    line-height: 1.1;
+  }
+
+  .nav-icon {
+    display: block;
+    width: 21px;
+    height: 21px;
+    flex: 0 0 auto;
+  }
+
+  .nav-label {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .page-content {
-    padding: 36px 0 calc(104px + env(safe-area-inset-bottom));
+    padding: 36px 0 calc(120px + env(safe-area-inset-bottom));
   }
 
   .startup-state {
@@ -1272,7 +1300,7 @@ pre {
 
   .candidate-toast {
     right: 16px;
-    bottom: calc(80px + env(safe-area-inset-bottom));
+    bottom: calc(104px + env(safe-area-inset-bottom));
     left: 16px;
     max-width: none;
   }

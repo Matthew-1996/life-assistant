@@ -38,7 +38,7 @@ test("keeps the four-page workbench inside a phone viewport", async ({ page }) =
   }
 });
 
-test("keeps mobile controls above the fixed bottom navigation", async ({ page }) => {
+test("keeps mobile controls above the floating bottom navigation", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
 
@@ -58,6 +58,58 @@ test("keeps mobile controls above the fixed bottom navigation", async ({ page })
   expect(navigationBox).not.toBeNull();
   expect(anchorButtonBox).not.toBeNull();
   expect(anchorButtonBox!.y + anchorButtonBox!.height).toBeLessThanOrEqual(navigationBox!.y);
+});
+
+test("uses the approved floating navigation geometry on a phone", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+
+  const navigation = page.getByRole("navigation", { name: "全局导航" });
+  const geometry = await navigation.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    const style = getComputedStyle(element);
+    return {
+      bottom: window.innerHeight - rect.bottom,
+      height: rect.height,
+      left: rect.left,
+      radius: Number.parseFloat(style.borderTopLeftRadius),
+      right: window.innerWidth - rect.right,
+    };
+  });
+
+  expect(geometry.height).toBeCloseTo(64, 0);
+  expect(geometry.radius).toBeCloseTo(32, 0);
+  expect(geometry.left).toBeGreaterThanOrEqual(12);
+  expect(geometry.right).toBeGreaterThanOrEqual(12);
+  expect(geometry.bottom).toBeCloseTo(8, 0);
+
+  const controls = navigation.getByRole("button");
+  await expect(controls).toHaveCount(4);
+  const undersizedControls = await controls.evaluateAll((elements) => elements
+    .filter((element) => {
+      const rect = element.getBoundingClientRect();
+      return rect.width < 44 || rect.height < 44;
+    })
+    .map((element) => element.textContent?.trim()));
+  expect(undersizedControls).toEqual([]);
+});
+
+test("keeps page content behind the floating navigation layer", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+
+  const navigation = page.getByRole("navigation", { name: "全局导航" });
+  const workspace = page.locator(".workspace");
+  const [navigationBox, workspaceBox] = await Promise.all([
+    navigation.boundingBox(),
+    workspace.boundingBox(),
+  ]);
+
+  expect(navigationBox).not.toBeNull();
+  expect(workspaceBox).not.toBeNull();
+  expect(workspaceBox!.y + workspaceBox!.height).toBeGreaterThanOrEqual(
+    navigationBox!.y + navigationBox!.height,
+  );
 });
 
 test("keeps mobile Todo form controls from overlapping each other", async ({ page }) => {

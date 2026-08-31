@@ -1,6 +1,6 @@
 # PRD：Life Console 2.8.0
 
-状态：Gate 1 已由 PO 于 2026-08-31 确认；Gate 2 设计 / 技术待评审。
+状态：Gate 1 与 Gate 2 已由 PO 于 2026-08-31 确认；本地 TDD 实现已获授权。
 
 ## 1. 背景
 
@@ -53,5 +53,5 @@
 ## 7. 门禁
 
 - Gate 1：已确认。
-- Gate 2：等待 PO 对设计、`viewport-fit=cover` 全屏布局取舍、技术与测试方案作明确确认。
-- 本地实现、合成 Preview、PR 合并和 Production 发布尚未授权，后续分别执行对应门禁。
+- Gate 2：已确认 `viewport-fit=cover`、64px 高 / 32px 圆角 / 12px 侧距 / `safe-area + 8px` 底距、四个内联 SVG 图标与持续文字标签，并确认不做滚动自动收起。
+- 本地 TDD 实现已授权；合成 Preview、PR 合并和 Production 发布尚未授权，后续分别执行对应门禁。

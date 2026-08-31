@@ -12,6 +12,53 @@ const navigation: Array<{
   { id: "system", label: "系统" },
 ];
 
+function NavigationIcon({ page }: { page: PageId }) {
+  const commonProps = {
+    "aria-hidden": true,
+    className: "nav-icon",
+    fill: "none",
+    focusable: "false" as const,
+    stroke: "currentColor",
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    strokeWidth: 1.8,
+    viewBox: "0 0 24 24",
+  };
+
+  if (page === "today") {
+    return (
+      <svg {...commonProps}>
+        <path d="m3.5 10.5 8.5-7 8.5 7" />
+        <path d="M5.5 9.5v10h13v-10M9.5 19.5v-6h5v6" />
+      </svg>
+    );
+  }
+  if (page === "records") {
+    return (
+      <svg {...commonProps}>
+        <path d="M5 4.5h9.5a2 2 0 0 1 2 2v3" />
+        <path d="M5 4.5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-3" />
+        <path d="m12.5 15.5 1.2-3.4 5.9-5.9 2.2 2.2-5.9 5.9-3.4 1.2Z" />
+      </svg>
+    );
+  }
+  if (page === "progress") {
+    return (
+      <svg {...commonProps}>
+        <path d="M4 19.5h16" />
+        <path d="M6.5 16v-4M12 16V8.5M17.5 16V5" />
+      </svg>
+    );
+  }
+  return (
+    <svg {...commonProps}>
+      <path d="M4 7h10M18 7h2M4 17h2M10 17h10" />
+      <circle cx="16" cy="7" r="2" />
+      <circle cx="8" cy="17" r="2" />
+    </svg>
+  );
+}
+
 interface AppShellProps {
   activePage: PageId;
   date: string;
@@ -83,7 +130,8 @@ export function AppShell({
                   onClick={() => onNavigate(item.id)}
                   type="button"
                 >
-                  {item.label}
+                  <NavigationIcon page={item.id} />
+                  <span className="nav-label">{item.label}</span>
                 </button>
               ))}
             </nav>
