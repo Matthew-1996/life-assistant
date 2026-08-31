@@ -7,6 +7,7 @@
 - 范围：工作台 Todo“今日”Tab 的本地自然日读取语义。
 - 数据：不改 Schema、RPC、RLS、Owner 数据、备份或自动化。
 - 应用 PR：[#86](https://github.com/Matthew-1996/life-assistant/pull/86)，已 squash 合并。
+- 上线证据 PR：[#87](https://github.com/Matthew-1996/life-assistant/pull/87)，仅含去敏文档收口。
 - 应用发布提交：`6a269934f1622fbfd1ffaaedc78a47a6fd7f20bc`。
 - 门禁：PO 于 2026-08-31 明确授权的合成 Preview、合并、Production 与只读上线验收均已完成。
 
@@ -28,5 +29,5 @@
 
 ## 3. 后续门禁
 
-1. 将去敏上线证据通过独立文档 PR 合入 `main`，随后清理该短期分支和 worktree。
-2. 本版本无剩余产品或上线门禁；若后续发现新的 Todo 日期语义问题，另开维护任务。
+1. 去敏上线证据通过独立文档 PR #87 合入 `main` 后，清理该短期分支和 worktree。
+2. 本版本无其他产品或上线门禁；若后续发现新的 Todo 日期语义问题，另开维护任务。
