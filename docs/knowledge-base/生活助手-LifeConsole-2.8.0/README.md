@@ -8,6 +8,7 @@
 - [技术方案](技术方案-生活助手-LifeConsole-2.8.0.md)
 - [测试计划](测试计划-生活助手-LifeConsole-2.8.0.md)
 - [工程评审与验收](工程评审与验收-生活助手-LifeConsole-2.8.0.md)
+- [上线证据](上线证据-生活助手-LifeConsole-2.8.0.md)
 - [项目管理](项目管理-生活助手-LifeConsole-2.8.0.md)
 
-当前状态：待上线（进行中）。Gate 1 与 Gate 2 已由 PO 于 2026-08-31 确认；PO 已选择浮动方案、接受不完全原生的 PWA 替代，并明确不做“向下滚动自动收起”。经两轮同机参照反馈，当前外壳几何为 62px 高、31px CSS 圆角、20px 侧距，34px 安全区下约 21px 物理底距。[20px 侧距 Preview](https://life-console-production-no4wccgkq-test11-b88a.vercel.app)已通过本地、CI、远端浏览器技术验收及 PO 产品验收；PO 已当次授权合并 PR #84 与 Production 上线，等待执行和上线后只读验收。
+当前状态：已上线。Gate 1、Gate 2、20px 侧距 Preview 产品验收、PR 合并与 Production 授权均已由 PO 于 2026-08-31 明确确认。PR #84 已 squash 合并，准确 `main` 已由 Vercel 远端构建并发布至[稳定 Production 域名](https://project-wpabq.vercel.app)；HTTP、安全头、iOS 导航几何、四页切换、滚动常驻和控制台只读验收通过。每日新闻既有读取失败不属于本版本范围。
