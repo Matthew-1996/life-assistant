@@ -23,6 +23,7 @@
 | 2026-08-31 | 审查修订后全量复验 | 既存 Miniflare 响应体竞态单独 7/7 通过后，完整 Vitest 623/623、Life Console Python 93/93 与 Production build 重跑通过 |
 | 2026-08-31 | 创建 Draft PR #88 | 已创建；等待远端 CI |
 | 2026-08-31 | Draft PR #88 CI | Node、Python、privacy 三项检查全部通过 |
+| 2026-08-31 | 为 Preview 增加跨日合成样本 | TDD 红灯后将“整理旅行清单”设为昨日开始、未来截止；最终 Vitest 624/624、Life Console Python 93/93 与 Production build 通过 |
 
 ## 3. 下一步
 

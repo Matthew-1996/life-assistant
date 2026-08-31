@@ -3,6 +3,18 @@ import { describe, expect, it } from "vitest";
 import { createCandidateTodoRepository } from "../../src/features/todos/candidate-todo-repository";
 
 describe("Candidate Todo repository", () => {
+  it("keeps its cross-day active example in Today", async () => {
+    const now = new Date("2030-01-08T10:00:00+08:00");
+    const start = new Date(now);
+    start.setHours(0, 0, 0, 0);
+    const item = (await createCandidateTodoRepository(now).listToday(now))
+      .find((todo) => todo.title === "整理旅行清单");
+
+    expect(item).toBeTruthy();
+    expect(Date.parse(item!.planned_start_at)).toBeLessThan(start.getTime());
+    expect(Date.parse(item!.due_at)).toBeGreaterThanOrEqual(start.getTime());
+  });
+
   it("keeps its completed example in Today at the Shanghai midnight boundary", async () => {
     const now = new Date("2030-01-08T00:30:00+08:00");
     const repository = createCandidateTodoRepository(now);

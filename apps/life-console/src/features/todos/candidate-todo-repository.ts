@@ -47,7 +47,7 @@ function syntheticTodos(now: Date): TodoItem[] {
       title: "整理旅行清单",
       priority: "P1",
       status: "not_started",
-      planned_start_at: shifted(now, -2),
+      planned_start_at: shifted(now, -26),
       due_at: shifted(now, 48),
       actual_started_at: null,
       completed_at: null,
