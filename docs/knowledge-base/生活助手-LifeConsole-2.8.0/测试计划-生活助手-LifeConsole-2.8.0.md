@@ -1,6 +1,6 @@
 # 测试计划：Life Console 2.8.0
 
-状态：Gate 2 已由 PO 于 2026-08-31 确认；TDD 定向测试与无端口回归已通过，完整 CI 待 Draft PR 更新后复验。
+状态：Gate 2 已由 PO 于 2026-08-31 确认；TDD 与完整本地回归已通过，Draft PR CI 待复验。
 
 ## 1. 测试范围
 
@@ -66,7 +66,7 @@ Production 构建只使用去敏 / 合法的环境配置；不得把占位符、
 ## 6. 2026-08-31 本地执行记录
 
 - 红灯：组件用例因缺少 `svg[aria-hidden=true]` 失败；iOS 安装契约因缺少 `viewport-fit=cover` 失败，均确认由目标能力缺失触发。
-- 绿灯：组件 28/28、iOS 安装契约 4/4、无本机端口 Vitest 回归 594/594 通过。
-- 构建：`npm run build` 退出码 0，130 个模块完成转换；Production 构建因本地未注入所需 Supabase 公共环境变量而未执行，不伪造变量绕过构建守卫。
-- 治理：`check_project_governance.py`、`check_git_privacy.sh` 与 `git diff --check` 通过。
-- 环境限制：受管沙箱禁止回环端口，Miniflare、Hub 与 Playwright 本地执行分别出现 `EPERM` 或测试服务无法启动；这些用例必须由 Draft PR CI 复验，当前不记为通过。
+- 绿灯：Vitest 620/620；Life Console Python 93/93；Playwright 合成浏览器 17/17；工作区工具共运行 372 条，其中 371 通过、1 条按 CI 私有契约规则跳过。
+- 构建：`npm run build` 退出码 0，130 个模块完成转换；Playwright 启动前的 Sites 合成构建同样成功。
+- Production 构建守卫：本机 Vercel 拉取配置不含可用于构建的有效公开 publishable key，守卫按预期拒绝；未伪造变量、未输出配置内容、未发布制品，交由具备合法测试环境变量的 CI 复验。
+- 治理：`check_project_governance.py`、当前差异与 `origin/main..HEAD` 历史隐私检查、`git diff --check` 均通过。

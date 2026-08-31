@@ -9,4 +9,4 @@
 - [测试计划](测试计划-生活助手-LifeConsole-2.8.0.md)
 - [项目管理](项目管理-生活助手-LifeConsole-2.8.0.md)
 
-当前状态：待联调（进行中）。Gate 1 与 Gate 2 已由 PO 于 2026-08-31 确认；PO 已选择浮动方案、接受不完全原生的 PWA 替代，确认 `viewport-fit=cover`、64/32/12/8px 几何与四个内联图标，并明确不做“向下滚动自动收起”。本地 TDD 实现已获授权；Preview、合并与 Production 尚未授权。
+当前状态：待测试（进行中）。Gate 1 与 Gate 2 已由 PO 于 2026-08-31 确认；PO 已选择浮动方案、接受不完全原生的 PWA 替代，确认 `viewport-fit=cover`、64/32/12/8px 几何与四个内联图标，并明确不做“向下滚动自动收起”。本地 TDD 候选与完整本地回归已通过，等待 Draft PR CI；Preview、合并与 Production 尚未授权。
