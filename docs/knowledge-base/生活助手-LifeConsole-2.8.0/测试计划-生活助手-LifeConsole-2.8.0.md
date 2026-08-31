@@ -1,6 +1,6 @@
 # 测试计划：Life Console 2.8.0
 
-状态：Gate 2 已由 PO 于 2026-08-31 确认；TDD、完整本地回归、Draft PR CI 与合成 Preview 技术验收已通过，等待 PO 产品验收。
+状态：Gate 2 已由 PO 于 2026-08-31 确认；20px 侧距修订已完成 TDD 与完整本地回归，等待 Draft PR CI 与新合成 Preview 技术验收。
 
 ## 1. 测试范围
 
@@ -22,7 +22,7 @@
 
 ### Playwright
 
-1. 390×844 中导航外层高 62px、左右至少 12px、圆角约为半高；402×874 且 34px 底部安全区下，物理底距为 21px。
+1. 390×844 中导航外层高 62px、左右各 20px、圆角 31px；402×874 且 34px 底部安全区下，物理底距为 21px。
 2. 四个点击目标均不小于 44×44px，无重叠、折行或横向溢出。
 3. 页面内容几何上延伸到导航下方，导航 z-index 高于普通内容。
 4. 最后一个可操作控件 `scrollIntoView({ block: "end" })` 后完整位于导航顶部以上。
@@ -92,3 +92,11 @@ Production 构建只使用去敏 / 合法的环境配置；不得把占位符、
 - Draft PR #84 最新 node、python、privacy CI 分别以 2m04s、1m00s、8s 通过。
 - [招商银行参照替换 Preview](https://life-console-production-ka0l2h263-test11-b88a.vercel.app)状态 Ready，target 为 preview；10 个静态文件、0 Functions、0 Cron；首页 / Manifest 为 200，`/api/daily-news` 为 404，安全响应头保持不变。
 - 402×874 远端浏览器实测：62px 高、31px 圆角、左右 12px、无横向溢出；四个入口切换、滚动 650px 后常驻、52px 点击高度和控制台无 error / warning 均通过。普通浏览器没有 iPhone safe-area，因此 34px 安全区下的 21px 底距由上述独立几何用例验证，不混写为真机证据。
+
+## 9. 2026-08-31 20px 侧距修订
+
+- 同机对比图中约 50px 的转角半径换算为约 31px CSS 半径，因此保持 62px 高 / 31px 圆角，仅将两侧最小间距从 12px 改为 20px。
+- 红灯：390×844 几何用例改为期望左右各 20px 后，旧实现实测为 12px，按预期失败。
+- 绿灯：仅将横向定位改为 `max(20px, env(safe-area-inset-left/right))`，同一用例通过；62px 高、31px 圆角和底部定位断言同时保持通过。
+- 完整本地回归：Playwright 18/18、Vitest 620/620、Life Console Python 93/93、工作区工具 372 项通过 / 1 项跳过；通用与 Preview build 均完成 130 个模块转换。
+- `git diff --check`、项目治理、索引与 `origin/main..HEAD` 历史隐私检查均通过。`validate_project.py` 仍仅报告隔离 worktree 缺少 Git 排除的私人真相源 / 运维文件、两处既有测试夹具启发式命中及一条旧研究链接，本轮差异未新增命中。

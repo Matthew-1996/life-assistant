@@ -1,11 +1,11 @@
 # 工程评审与验收：Life Console 2.8.0
 
-状态：进行中。首版 Preview 技术验收通过，但因导航整体偏高未通过 PO 产品验收；招商银行参照替换 Preview 已通过本地、CI 与远端浏览器技术验收，等待 PO 真机产品验收。合并与 Production 均未授权。
+状态：进行中。高度与底距修订已获 PO 认可；20px 侧距修订已通过 TDD 与完整本地回归，等待 Draft PR CI 与新 Preview 技术验收。合并与 Production 均未授权。
 
 ## 1. 工程评审
 
 - 改动限于 AppShell 导航表现、移动端安全区 / 几何、内联 SVG 图标及对应测试；不改 Supabase、Owner 数据、API、备份或自动化。
-- 移动端使用 `position: fixed` 的 64px 浮动胶囊，左右各 12px、圆角 32px、底距为 `safe-area-inset-bottom + 8px`；页面内容保留到底部，由半透明背景、模糊、描边与阴影维持可读性。
+- 移动端使用 `position: fixed` 的 62px 浮动胶囊，左右各 20px、圆角 31px，34px 安全区下物理底距为 21px；页面内容保留到底部，由半透明背景、模糊、描边与阴影维持可读性。
 - 四个导航按钮保留原标签、顺序、点击与 `aria-current` 语义；图标为随代码交付的内联 SVG，不引入外部字体、图标 CDN 或新网络依赖。
 - 未实现向下滚动自动收起；导航始终常驻。桌面布局继续使用顶部导航。
 - Preview 使用候选模式与合成数据，不连接真实数据或持久化，不提供 API、Function、Cron 或离线缓存。
@@ -42,7 +42,14 @@ PO 随后在同一设备真机截图中确认首版导航整体偏高，并提�
 - 402×874 远端浏览器实测外壳 62px 高、31px 圆角、左右各 12px；四页切换、滚动 650px 后常驻、52px 点击高度、无横向溢出与控制台无 error / warning 均通过。
 - 普通浏览器没有 iPhone safe-area，34px 安全区下的 21px 底距由可控 token 的独立几何用例验证；仍需 PO 在同一 iPhone 上完成材质、Home Indicator 与主屏幕 PWA 观感验收。
 
-## 5. 未完成门禁
+## 5. 20px 侧距修订
+
+- 对比图约 50px 的视觉曲率换算为约 31px CSS 半径；本轮保持高度、圆角、底距、内部点击区与交互不变，仅将左右间距由 12px 改为 20px。
+- 定向 TDD 在旧实现上因实测 12px 而失败，最小样式修订后通过。
+- 完整本地验证：Playwright 18/18、Vitest 620/620、Life Console Python 93/93、工作区工具 372 项通过 / 1 项跳过；通用与 Preview build 均完成 130 个模块转换。
+- 新 Preview 还需等待 Draft PR CI、部署检查和远端浏览器技术验收，不将本地结果写成远端或真机证据。
+
+## 6. 未完成门禁
 
 - 当前浏览器技术验收不能替代真实 iPhone Safari 与主屏幕 PWA 的产品验收，尤其是 Home Indicator、真实 safe-area、软键盘、弹层遮挡和材质观感。
 - 等待 PO 对当前 Preview 给出产品验收结论。

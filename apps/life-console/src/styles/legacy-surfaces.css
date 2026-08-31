@@ -1227,9 +1227,9 @@ pre {
   .topbar nav {
     position: fixed;
     z-index: 40;
-    right: max(12px, env(safe-area-inset-right));
+    right: max(20px, env(safe-area-inset-right));
     bottom: max(8px, calc(var(--mobile-safe-area-bottom) - 13px));
-    left: max(12px, env(safe-area-inset-left));
+    left: max(20px, env(safe-area-inset-left));
     width: auto;
     height: 62px;
     gap: 4px;

@@ -79,8 +79,8 @@ test("uses the approved floating navigation geometry on a phone", async ({ page 
 
   expect(geometry.height).toBeCloseTo(62, 0);
   expect(geometry.radius).toBeCloseTo(31, 0);
-  expect(geometry.left).toBeGreaterThanOrEqual(12);
-  expect(geometry.right).toBeGreaterThanOrEqual(12);
+  expect(geometry.left).toBeCloseTo(20, 0);
+  expect(geometry.right).toBeCloseTo(20, 0);
   expect(geometry.bottom).toBeCloseTo(8, 0);
 
   const controls = navigation.getByRole("button");

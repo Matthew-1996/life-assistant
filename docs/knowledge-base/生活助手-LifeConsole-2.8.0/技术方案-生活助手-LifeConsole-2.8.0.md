@@ -43,7 +43,7 @@ full-screen iOS viewport (`viewport-fit=cover`)
 - 移除移动 `.workspace` 为导航预留的外部 `margin-bottom`。
 - 为 `.page-content` 和滚动容器增加由导航高度、间距和底部安全区组成的底部留量。
 - 将移动导航改为 62px 高、31px 圆角的固定浮层。
-- 左右位置使用 `max(12px, env(safe-area-inset-left/right))`。
+- 左右位置使用 `max(20px, env(safe-area-inset-left/right))`。
 - 以 `--mobile-safe-area-bottom: env(safe-area-inset-bottom)` 作为可验证的安全区 token；底部位置使用 `max(8px, calc(var(--mobile-safe-area-bottom) - 13px))`，在 34px iPhone 安全区下得到 21px。
 - 增加 WebKit 与标准 `backdrop-filter`，并提供 `@supports` 不可用时的高不透明回退。
 - 调整当前页内层表面、图标、标签、焦点和 reduced-motion 样式。
@@ -108,6 +108,6 @@ minimum content gap above bar = 24px
 ## 9. Gate 2 评审项
 
 1. 确认启用 `viewport-fit=cover`，接受同时调整顶部和底部安全区。
-2. 初版确认 64px 高度、32px 圆角、12px 侧距、`safe-area + 8px` 底距；首版 Preview 真机反馈后，PO 已确认按招商银行 App 参照修订为 62px、31px、12px，并在 34px 安全区下使用 21px 物理底距。
+2. 初版确认 64px 高度、32px 圆角、12px 侧距、`safe-area + 8px` 底距；经两轮 Preview 真机参照反馈，PO 最终确认为 62px、31px CSS 圆角、20px 侧距，并在 34px 安全区下使用 21px 物理底距。
 3. 确认增加四个内联 SVG 图标并持续显示文字标签。
 4. 确认不实现滚动自动收起或原生 Liquid Glass 专有行为。
