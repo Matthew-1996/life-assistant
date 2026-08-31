@@ -15,3 +15,9 @@
 3. `npm test` 完整 Node / Life Console Python 回归。
 4. `npm run build`、工作区 Python、治理、隐私、历史隐私和差异检查。
 5. PO 已于 2026-08-31 授权依次进行合成 Preview 验收、合并和 Production；Preview 只使用合成数据，Production 仅做不写真实数据的只读验收。
+
+## Preview 执行结果
+
+- 应用内容提交 `4e0c307` 的纯静态合成 Preview 为 READY：10 个静态文件、0 Functions、0 Cron。
+- 首页 / Manifest 200，`/api/daily-news` 404，严格 CSP 与安全响应头通过。
+- 浏览器在“今日”Tab 验证同日未来 Todo 可见：当前 16:40，合成计划开始 20:19；列表与甘特均出现该项，控制台无 error / warning。

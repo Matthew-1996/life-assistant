@@ -2,7 +2,7 @@
 
 ## 1. 当前状态
 
-- 主阶段：待验收。
+- 主阶段：待上线。
 - 子状态：进行中。
 - 范围：工作台 Todo“今日”Tab 的本地自然日读取语义。
 - 数据：不改 Schema、RPC、RLS、Owner 数据、备份或自动化。
@@ -21,9 +21,10 @@
 | 2026-08-31 | 独立代码审查 | 无 Critical；1 项 Important 测试缺口和文档证据数已修正；定向 21/21 与全量 Vitest 621/621 重跑通过 |
 | 2026-08-31 | 创建 Draft PR #86 并等待远端门禁 | Node、Python、privacy 三项 CI 全部通过；保持 Draft |
 | 2026-08-31 | PO 回复“授权全部” | 授权范围确认为合成 Preview 验收、PR #86 合并和 Production 发布；按顺序执行，失败即停 |
+| 2026-08-31 | 从应用内容提交 `4e0c307` 创建纯静态合成 Preview | READY；10 个静态文件、0 Functions、0 Cron；HTTP、安全头与真实浏览器今日未来项验收通过 |
 
 ## 3. 后续门禁
 
-1. 从最新 PR 提交创建纯合成 Preview，并验证今日稍后 Todo 在当前时刻之前可见。
-2. Preview 通过后将 PR 转为 Ready、合并，并从准确 `main` 远端发布 Production。
+1. 等待最新文档提交的三项 CI，通过后将 PR #86 转为 Ready 并合并。
+2. 从准确且干净的 `main` 远端发布 Production，不复用 Preview Build Output。
 3. 对稳定域名执行只读 HTTP 与浏览器验收；不操作真实 Todo，不触发模型、Cron、迁移或数据库写入。

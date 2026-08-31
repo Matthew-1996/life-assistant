@@ -15,4 +15,14 @@
 
 ## 验收边界
 
-本地工程候选已就绪，但不等于 Preview 验收、合并或 Production 上线。如进入 Preview，应使用合成同日未来时刻 Todo，不读写真实 Owner Todo。
+本地工程候选通过不自动等于 Preview 验收、合并或 Production 上线。Preview 只使用合成同日未来时刻 Todo，不读写真实 Owner Todo；合并与 Production 继续以各自证据为准。
+
+## 合成 Preview 验收
+
+- PO 于 2026-08-31 授权进入 Preview；应用内容提交为 `4e0c307`。
+- [验收 Preview](https://life-console-production-8nmm1kqq0-test11-b88a.vercel.app)为 `READY / preview`，Build Output 为 10 个静态文件、0 Functions、0 Cron。
+- 首页与 Manifest 返回 200，`/api/daily-news` 返回 404；CSP 保持 `connect-src 'none'` 与 `script-src 'self'`，同时具有 `nosniff`、`DENY` 和 `no-referrer`。
+- 真实浏览器中“今日”处于选中状态；合成 Todo“准备本周采购”在页面当前时间 16:40、计划开始时间 20:19 时已同时出现在列表和甘特中。
+- 页面有实际内容、无错误浮层，浏览器控制台无 error / warning。Preview 不连接 Supabase，未读取或写入 Owner Todo。
+
+结论：Preview 已满足 2.8.1 成功标准，可以进入已获授权的 PR 合并门禁；本结论仍不等于 Production 已发布。
