@@ -64,6 +64,21 @@ const todo: TodoItem = {
 };
 
 describe("Life Console 2.5.0 repositories", () => {
+  it("queries unfinished Todos whose planned-to-due dates cover the local day", async () => {
+    const { client, requests } = syntheticClient([{ status: 200, body: [] }]);
+
+    await new TodoRepository(client).listToday(new Date("2030-05-01T12:00:00.000Z"));
+
+    const filter = new URL(requests[0].url).searchParams.get("or");
+    expect(filter).toContain(
+      "and(status.neq.completed,planned_start_at.lt.2030-05-01T16:00:00.000Z,due_at.gte.2030-04-30T16:00:00.000Z)",
+    );
+    expect(filter).toContain(
+      "and(status.eq.completed,completed_at.gte.2030-04-30T16:00:00.000Z,completed_at.lt.2030-05-01T16:00:00.000Z)",
+    );
+    expect(filter).not.toContain("planned_start_at.gte.2030-04-30T16:00:00.000Z");
+  });
+
   it("maps Todo reads and all four write RPCs without client-authored status time", async () => {
     const updated = { ...todo, title: "Updated Todo", revision: 2 };
     const completed = {
@@ -112,9 +127,9 @@ describe("Life Console 2.5.0 repositories", () => {
 
     const todayUrl = new URL(requests[0].url);
     expect(todayUrl.pathname).toBe("/rest/v1/todo_items");
-    expect(todayUrl.searchParams.get("or")).toContain("planned_start_at.gte.2030-04-30T16:00:00.000Z");
     expect(todayUrl.searchParams.get("or")).toContain("planned_start_at.lt.2030-05-01T16:00:00.000Z");
-    expect(todayUrl.searchParams.get("or")).not.toContain("planned_start_at.lte.");
+    expect(todayUrl.searchParams.get("or")).toContain("due_at.gte.2030-04-30T16:00:00.000Z");
+    expect(todayUrl.searchParams.get("or")).not.toContain("planned_start_at.gte.");
     expect(todayUrl.searchParams.get("or")).toContain("completed_at.gte.2030-04-30T16:00:00.000Z");
     expect(todayUrl.searchParams.get("or")).toContain("completed_at.lt.2030-05-01T16:00:00.000Z");
     expect(todayUrl.searchParams.get("deleted_at")).toBe("is.null");
