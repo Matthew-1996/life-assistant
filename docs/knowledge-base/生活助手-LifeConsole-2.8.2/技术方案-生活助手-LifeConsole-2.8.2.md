@@ -17,6 +17,7 @@ end   = 次日 00:00:00.000
 - 已完成项：继续使用 `completed_at >= start AND completed_at < end`。
 
 合成投影和 Supabase REST 查询使用同一边界。不修改 UI、写入、Schema、RPC、RLS 或排序。
+合成投影对无法解析的计划开始时间或 DDL 失败关闭，不将畸形记录误纳入“今日”。
 
 ## 3. 边界说明
 

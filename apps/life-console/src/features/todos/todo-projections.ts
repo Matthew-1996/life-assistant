@@ -38,7 +38,10 @@ export function selectTodayTodos(
     if (todo.status !== "completed") {
       const plannedStartAt = time(todo.planned_start_at);
       const dueAt = time(todo.due_at);
-      return plannedStartAt < end.getTime() && dueAt >= start.getTime();
+      return Number.isFinite(plannedStartAt)
+        && Number.isFinite(dueAt)
+        && plannedStartAt < end.getTime()
+        && dueAt >= start.getTime();
     }
     const completedAt = todo.completed_at ? time(todo.completed_at) : Number.NaN;
     return completedAt >= start.getTime() && completedAt < end.getTime();

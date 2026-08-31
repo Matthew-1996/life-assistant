@@ -70,8 +70,12 @@ describe("Life Console 2.5.0 repositories", () => {
     await new TodoRepository(client).listToday(new Date("2030-05-01T12:00:00.000Z"));
 
     const filter = new URL(requests[0].url).searchParams.get("or");
-    expect(filter).toContain("planned_start_at.lt.2030-05-01T16:00:00.000Z");
-    expect(filter).toContain("due_at.gte.2030-04-30T16:00:00.000Z");
+    expect(filter).toContain(
+      "and(status.neq.completed,planned_start_at.lt.2030-05-01T16:00:00.000Z,due_at.gte.2030-04-30T16:00:00.000Z)",
+    );
+    expect(filter).toContain(
+      "and(status.eq.completed,completed_at.gte.2030-04-30T16:00:00.000Z,completed_at.lt.2030-05-01T16:00:00.000Z)",
+    );
     expect(filter).not.toContain("planned_start_at.gte.2030-04-30T16:00:00.000Z");
   });
 

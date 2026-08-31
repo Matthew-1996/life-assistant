@@ -93,6 +93,11 @@ describe("Todo deterministic projections", () => {
         planned_start_at: "2030-04-27T06:00:00Z",
         due_at: "2030-04-30T15:59:59Z",
       }),
+      todo({
+        id: 5,
+        planned_start_at: "2030-04-27T06:00:00Z",
+        due_at: "invalid",
+      }),
     ];
 
     expect(selectTodayTodos(rows, now).map((item) => item.id)).toEqual([1, 2]);
