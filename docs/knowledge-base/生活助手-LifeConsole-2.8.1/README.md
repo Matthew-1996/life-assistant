@@ -10,4 +10,4 @@
 - [工程评审与验收](工程评审与验收-生活助手-LifeConsole-2.8.1.md)
 - [项目管理](项目管理-生活助手-LifeConsole-2.8.1.md)
 
-当前状态：待验收（待开始）。PO 已明确产品语义并要求修复；本地 TDD、完整回归、构建、治理与当前隐私检查已通过。Draft PR、Preview、合并和 Production 仍分别受门禁约束。
+当前状态：待验收（待开始）。PO 已明确产品语义并要求修复；Draft PR [#86](https://github.com/Matthew-1996/life-assistant/pull/86) 的本地 TDD、完整回归、构建、治理、隐私检查、独立复审与三项 CI 已通过。Preview、合并和 Production 仍分别受门禁约束。

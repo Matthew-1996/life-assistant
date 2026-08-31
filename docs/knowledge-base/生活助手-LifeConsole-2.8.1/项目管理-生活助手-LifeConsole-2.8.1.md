@@ -7,6 +7,7 @@
 - 范围：工作台 Todo“今日”Tab 的本地自然日读取语义。
 - 数据：不改 Schema、RPC、RLS、Owner 数据、备份或自动化。
 - 分支：`agent/life-console-today-future-todo`。
+- Draft PR：[#86](https://github.com/Matthew-1996/life-assistant/pull/86)，三项 CI 已通过。
 - 门禁：PO 已明确修复语义和本地实施；未授权 Preview、合并或 Production。
 
 ## 2. 决策与进展
@@ -18,8 +19,9 @@
 | 2026-08-31 | 先添加同日未来时刻与自然日边界红灯，再最小修正两层过滤 | 初始定向 9/9 通过；合成 Preview 与独立审查增强后 21/21 通过 |
 | 2026-08-31 | 完整回归、构建、治理、当前隐私和差异检查 | 已完成；独立 worktree 便携性仍如实报告不跟踪私人真相源与既存告警 |
 | 2026-08-31 | 独立代码审查 | 无 Critical；1 项 Important 测试缺口和文档证据数已修正；定向 21/21 与全量 Vitest 621/621 重跑通过 |
+| 2026-08-31 | 创建 Draft PR #86 并等待远端门禁 | Node、Python、privacy 三项 CI 全部通过；保持 Draft |
 
 ## 3. 后续门禁
 
-1. 创建 Draft PR 并等待 CI；保持 Draft 不自动合并。
-2. Preview、PO 验收、PR 合并和 Production 按各自的当次明确授权执行。
+1. 等待 PO 决定是否授权合成 Preview 验收；可以延后，不影响 Draft 候选保留。
+2. PR 合并和 Production 按各自的当次明确授权执行。
