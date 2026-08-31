@@ -3,12 +3,12 @@
 ## 1. 当前状态
 
 - 主阶段：待验收。
-- 子状态：待开始。
+- 子状态：Preview 已通过，待合并。
 - 范围：工作台 Todo“今日”Tab 的跨日日期区间读取语义。
 - 数据：不改 Schema、RPC、RLS、Owner 数据、备份或自动化。
 - 分支：`agent/life-console-today-date-range`。
 - PR：[#88](https://github.com/Matthew-1996/life-assistant/pull/88)，Draft。
-- 门禁：Gate 1、本地全量工程验证、独立审查修订和 Draft PR CI 已完成；Preview、合并和 Production 尚未完成。
+- 门禁：Gate 1、本地全量工程验证、独立审查修订、Draft PR CI 与合成 Preview 已完成；合并和 Production 尚未完成。
 
 ## 2. 决策与进展
 
@@ -24,9 +24,9 @@
 | 2026-08-31 | 创建 Draft PR #88 | 已创建；等待远端 CI |
 | 2026-08-31 | Draft PR #88 CI | Node、Python、privacy 三项检查全部通过 |
 | 2026-08-31 | 为 Preview 增加跨日合成样本 | TDD 红灯后将“整理旅行清单”设为昨日开始、未来截止；最终 Vitest 624/624、Life Console Python 93/93 与 Production build 通过 |
+| 2026-08-31 | 合成 Preview 验收 | Preview Ready；10 个静态文件、0 Functions、0 Cron；切换“全部 → 今日”后跨日样本仍展示，页面无错误覆盖层或控制台错误 |
 
 ## 3. 下一步
 
-1. 执行只含合成数据的 Preview 验收。
-2. Preview 通过后按授权处理 PR #88 合并。
-3. Production 发布与只读验收按独立证据推进。
+1. 按授权处理 PR #88 合并。
+2. Production 发布与只读验收按独立证据推进。

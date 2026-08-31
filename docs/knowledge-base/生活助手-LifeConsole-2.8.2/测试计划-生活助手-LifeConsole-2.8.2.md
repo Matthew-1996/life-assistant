@@ -18,3 +18,9 @@
 3. `npm test` 完整 Node / Life Console Python 回归。
 4. `npm run build`、工作区 Python、治理、隐私、历史隐私和差异检查。
 5. 工程候选通过后创建 Draft PR；Preview、合并和 Production 分别记录独立证据。
+
+## Preview 执行结果
+
+- 2026-08-31 合成 Preview 为 Ready，部署仅含静态文件，没有 Functions 或 Cron。
+- 浏览器切换“全部 → 今日”后，昨日开始、未来截止的跨日样本仍显示在“今日”。
+- 页面没有错误覆盖层，控制台错误为空；Preview 通过，Production 尚未验收。

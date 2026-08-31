@@ -13,9 +13,11 @@
 | 独立审查 | 无 Critical；1 项 Important 查询分组测试缺口与 2 项 Minor 已全部修正，定向 11/11 复验通过 |
 | 审查后复验 | 首次全量运行有 1 项既存 Miniflare 响应体竞态失败；该文件单独 7/7 通过，随后完整 Vitest 623/623 通过；增加跨日 Preview 样本后最终 Vitest 624/624、Life Console Python 93/93 与 Production build 重跑通过 |
 | Draft PR CI | [#88](https://github.com/Matthew-1996/life-assistant/pull/88) 的 Node、Python、privacy 三项检查全部通过 |
+| 合成 Preview | [Preview](https://life-console-production-rnub6scit-test11-b88a.vercel.app) 为 Ready；Build Output 为 10 个静态文件、0 Functions、0 Cron，`connect-src 'none'` |
+| 浏览器验收 | 2026-08-31 在合成 Preview 中切换“全部 → 今日”后，昨日开始、未来截止的“整理旅行清单”（`08/30 16:16 → 09/02 18:16`）仍在“今日”展示；无错误覆盖层或控制台错误 |
 
 独立 worktree 的 `validate_project.py` 仍如实报告未跟踪的私人真相源、个人自动化与长期导出缺失，同时报告 2 个既存测试 fixture 高风险词命中及 1 个既存本地断链；没有复制私人文件或修改既存告警来伪造便携性通过。
 
 ## 验收边界
 
-本地工程候选通过不自动等于 Preview 验收、合并或 Production 上线。真实 Owner 数据只允许在获得相应门禁后进行只读验收，不为测试创建或修改 Todo。
+本地工程候选与合成 Preview 已通过，但不自动等于合并或 Production 上线。真实 Owner 数据只允许在获得相应门禁后进行只读验收，不为测试创建或修改 Todo。
