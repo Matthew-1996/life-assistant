@@ -14,4 +14,4 @@
 2. 最小实现后定向绿灯。
 3. `npm test` 完整 Node / Life Console Python 回归。
 4. `npm run build`、工作区 Python、治理、隐私、历史隐私和差异检查。
-5. Preview、Owner 浏览器验收、合并与 Production 仅在取得对应授权后进行。
+5. PO 已于 2026-08-31 授权依次进行合成 Preview 验收、合并和 Production；Preview 只使用合成数据，Production 仅做不写真实数据的只读验收。

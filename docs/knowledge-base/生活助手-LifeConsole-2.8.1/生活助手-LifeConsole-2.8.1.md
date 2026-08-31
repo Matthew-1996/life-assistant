@@ -22,4 +22,4 @@
 
 - 不修改 Supabase Schema、RPC、RLS、Owner 数据或时区配置。
 - 不引入定时刷新或客户端隐藏逻辑。
-- 本轮修复不授权 Preview、合并或 Production 发布。
+- PO 于 2026-08-31 明确授权依次完成合成 Preview 验收、PR #86 合并和 Production 发布；任一阶段失败即停止，不越过到下一门禁。
