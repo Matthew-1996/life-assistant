@@ -74,7 +74,7 @@ Production 构建只使用去敏 / 合法的环境配置；不得把占位符、
 
 ## 7. 2026-08-31 Preview 技术验收
 
-- PO 已当次授权创建合成数据 Preview；候选为[受保护的合成数据 Preview](https://life-console-production-lbvbo3rna-test11-b88a.vercel.app)，应用内容提交为 `4e2b5a2`。
+- PO 已当次授权创建合成数据 Preview；首版候选为[受保护的合成数据 Preview](https://life-console-production-lbvbo3rna-test11-b88a.vercel.app)，应用内容提交为 `4e2b5a2`。
 - 部署状态 Ready，target 为 preview；10 个静态文件、0 Functions、0 Cron；首页与 Manifest 返回 200，`/api/daily-news` 返回 404。
 - 安全边界保持 `noindex`、`connect-src 'none'`、`script-src 'self'`、`X-Frame-Options: DENY` 与 `nosniff`；浏览器控制台无 error / warning。
 - 393×852 浏览器视口实测：导航左右各 12px、高 64px、圆角 32px、底部 8px，无根级横向溢出；四项点击目标均可切换并正确更新 `aria-current`。
@@ -88,3 +88,7 @@ Production 构建只使用去敏 / 合法的环境配置；不得把占位符、
 - 红灯：更新几何用例后，旧实现实测为 64px / 8px（无安全区浏览器）并且不响应 34px 测试安全区 token；两项用例均按预期失败。
 - 绿灯：修订为 62px 高、31px 圆角、12px 侧距，并使用 `max(8px, safe-area - 13px)` 后，390×844 与 402×874 / 34px 安全区两项定向用例 2/2 通过。
 - 完整回归：Playwright 18/18；允许本机回环监听后原样复跑 Vitest 620/620、Life Console Python 93/93。首次受限沙箱中的 26 个 Miniflare 失败均由 `listen EPERM 127.0.0.1` 触发，未修改测试或超时。
+- 工作区工具 372 项通过、1 项按 CI 私有契约规则跳过；通用 build 与替换 Preview build 均完成 130 个模块转换。
+- Draft PR #84 最新 node、python、privacy CI 分别以 2m04s、1m00s、8s 通过。
+- [招商银行参照替换 Preview](https://life-console-production-ka0l2h263-test11-b88a.vercel.app)状态 Ready，target 为 preview；10 个静态文件、0 Functions、0 Cron；首页 / Manifest 为 200，`/api/daily-news` 为 404，安全响应头保持不变。
+- 402×874 远端浏览器实测：62px 高、31px 圆角、左右 12px、无横向溢出；四个入口切换、滚动 650px 后常驻、52px 点击高度和控制台无 error / warning 均通过。普通浏览器没有 iPhone safe-area，因此 34px 安全区下的 21px 底距由上述独立几何用例验证，不混写为真机证据。

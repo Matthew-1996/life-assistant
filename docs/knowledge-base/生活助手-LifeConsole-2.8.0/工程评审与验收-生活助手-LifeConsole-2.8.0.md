@@ -1,6 +1,6 @@
 # 工程评审与验收：Life Console 2.8.0
 
-状态：进行中。首版 Preview 技术验收通过，但因导航整体偏高未通过 PO 产品验收；招商银行参照修订候选已通过本地回归，等待 CI 与替换 Preview。合并与 Production 均未授权。
+状态：进行中。首版 Preview 技术验收通过，但因导航整体偏高未通过 PO 产品验收；招商银行参照替换 Preview 已通过本地、CI 与远端浏览器技术验收，等待 PO 真机产品验收。合并与 Production 均未授权。
 
 ## 1. 工程评审
 
@@ -21,7 +21,7 @@
 
 ## 3. Preview 技术验收
 
-- PO 于 2026-08-31 当次授权创建 Preview；当前候选为[受保护的合成数据 Preview](https://life-console-production-lbvbo3rna-test11-b88a.vercel.app)，应用内容提交为 `4e2b5a2`。
+- PO 于 2026-08-31 当次授权创建 Preview；首版候选为[受保护的合成数据 Preview](https://life-console-production-lbvbo3rna-test11-b88a.vercel.app)，应用内容提交为 `4e2b5a2`。
 - 首次临时构建输出因缺少框架版本元数据而失败；该失败部署已精确删除，修正临时元数据后重新部署成功。未调整应用实现或安全策略。
 - 当前候选状态 Ready，target 为 preview；10 个静态文件、0 Functions、0 Cron；首页与 Manifest 返回 200，`/api/daily-news` 返回 404。
 - 响应保持 `noindex`、`connect-src 'none'`、`script-src 'self'`、`X-Frame-Options: DENY` 与 `nosniff`；浏览器控制台无 error / warning。
@@ -30,9 +30,19 @@
 - 工作台、记录、进展、系统逐项点击后均正确更新 `aria-current=page`，页面内容切换成功，导航几何保持不变。
 - 内部长内容滚动 650px 后导航仍位于视口底部、`position: fixed`、可见且无 transform，不存在自动收起。
 
-PO 随后在同一设备真机截图中确认首版导航整体偏高，并提供招商银行 App 作为尺寸参照，因此上述首版 Preview 不再作为最新产品验收件。修订候选将外壳调整为 62px 高 / 31px 圆角，并在 34px 底部安全区下将物理底距从约 42px 下调到约 21px；替换 Preview 部署与技术证据另行回填。
+PO 随后在同一设备真机截图中确认首版导航整体偏高，并提供招商银行 App 作为尺寸参照，因此上述首版 Preview 不再作为最新产品验收件。修订候选将外壳调整为 62px 高 / 31px 圆角，并在 34px 底部安全区下将物理底距从约 42px 下调到约 21px；替换 Preview 证据见下一节。
 
-## 4. 未完成门禁
+## 4. 招商银行参照替换 Preview
+
+- 当前验收件为[招商银行参照替换 Preview](https://life-console-production-ka0l2h263-test11-b88a.vercel.app)，应用内容提交为 `d3a8e60`；首版 Preview 仅保留历史审计意义，不再作为产品验收件。
+- TDD 红灯在旧实现上准确得到 64px 高 / 8px 无安全区底距；修订后 390×844 几何和 402×874 / 34px 安全区用例 2/2 通过，后者得到 62px 高 / 21px 物理底距。
+- 完整验证：Playwright 18/18、Vitest 620/620、Life Console Python 93/93、工作区工具 372 项通过 / 1 项跳过；通用与 Preview build 均完成 130 个模块转换。
+- Draft PR #84 最新 node、python、privacy CI 分别以 2m04s、1m00s、8s 通过。
+- 部署状态 Ready，target 为 preview；10 个静态文件、0 Functions、0 Cron；首页 / Manifest 为 200，`/api/daily-news` 为 404；`noindex`、严格 CSP、`nosniff` 与 `X-Frame-Options: DENY` 保持不变。
+- 402×874 远端浏览器实测外壳 62px 高、31px 圆角、左右各 12px；四页切换、滚动 650px 后常驻、52px 点击高度、无横向溢出与控制台无 error / warning 均通过。
+- 普通浏览器没有 iPhone safe-area，34px 安全区下的 21px 底距由可控 token 的独立几何用例验证；仍需 PO 在同一 iPhone 上完成材质、Home Indicator 与主屏幕 PWA 观感验收。
+
+## 5. 未完成门禁
 
 - 当前浏览器技术验收不能替代真实 iPhone Safari 与主屏幕 PWA 的产品验收，尤其是 Home Indicator、真实 safe-area、软键盘、弹层遮挡和材质观感。
 - 等待 PO 对当前 Preview 给出产品验收结论。

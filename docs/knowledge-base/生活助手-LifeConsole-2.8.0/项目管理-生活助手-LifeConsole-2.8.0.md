@@ -28,6 +28,7 @@
 | 2026-08-31 | 部署受保护的纯静态合成数据 Preview；桌面与 393×852 浏览器技术验收通过 | 等待 PO 产品验收；真实 iPhone Safari / 主屏幕 PWA 验收仍未完成 |
 | 2026-08-31 | PO 真机反馈首版导航整体偏高，并明确要求尺寸参照招商银行 App | 已测量为外壳高度约 62px、物理底距约 21px；进入 TDD 修订 |
 | 2026-08-31 | 招商银行参照几何完成红绿循环与完整本地回归 | 等待 Draft PR CI 与替换 Preview |
+| 2026-08-31 | 修订提交 `d3a8e60` 的 node、python、privacy CI 全绿；替换 Preview 已部署并通过远端浏览器技术验收 | 等待 PO 真机产品验收；保持 Draft，未授权合并或 Production |
 
 ## 3. 门禁
 
@@ -37,7 +38,7 @@
 | Gate 2 设计 / 技术 / 测试 | completed | PO 已明确确认全部四项参数 |
 | 本地开发 | completed | TDD 红绿循环与完整本地回归已通过 |
 | Draft PR CI | completed | node、python、privacy 三项检查已通过 |
-| 合成 Preview | in progress | 首版未通过 PO 产品验收；招商银行参照修订已完成本地候选，等待替换 Preview |
+| 合成 Preview | in progress | [招商银行参照替换 Preview](https://life-console-production-ka0l2h263-test11-b88a.vercel.app)技术验收通过；等待 PO 真机产品验收 |
 | PR 合并 | not authorized | Preview 产品验收与 PO 当次授权 |
 | Production | not authorized | 合并后准确 main 与 PO 当次发布授权 |
 
@@ -66,9 +67,9 @@
 - Preview 仅含合成数据，为纯静态站点；`/api/*` 不可用。
 - 已完成 393×852 浏览器几何、四页切换、滚动常驻与控制台检查。
 - 等待 PO 视觉与产品验收；真实 iPhone Safari / 主屏幕 PWA 仍按独立验收项处理。
-- 首版 Preview 因导航整体偏高未通过 PO 产品验收；替换 Preview 必须使用招商银行参照修订后的准确候选提交。
+- 首版 Preview 因导航整体偏高未通过 PO 产品验收；当前验收件已替换为招商银行参照修订后的准确候选提交 `d3a8e60`。
 
 ## 5. 当前下一步
 
-1. 请 PO 检查[受保护的合成数据 Preview](https://life-console-production-lbvbo3rna-test11-b88a.vercel.app)并明确产品验收结论。
+1. 请 PO 在同一 iPhone 上检查[招商银行参照替换 Preview](https://life-console-production-ka0l2h263-test11-b88a.vercel.app)并明确产品验收结论。
 2. Preview 产品验收通过后，PR 合并仍需另一次明确授权。
