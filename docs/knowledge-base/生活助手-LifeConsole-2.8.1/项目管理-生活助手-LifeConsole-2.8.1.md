@@ -2,13 +2,13 @@
 
 ## 1. 当前状态
 
-- 主阶段：待上线。
-- 子状态：进行中。
+- 主阶段：已上线。
+- 子状态：已完成。
 - 范围：工作台 Todo“今日”Tab 的本地自然日读取语义。
 - 数据：不改 Schema、RPC、RLS、Owner 数据、备份或自动化。
-- 分支：`agent/life-console-today-future-todo`。
-- Draft PR：[#86](https://github.com/Matthew-1996/life-assistant/pull/86)，三项 CI 已通过。
-- 门禁：PO 于 2026-08-31 明确授权依次完成合成 Preview 验收、PR #86 合并和 Production；每步仍须实际验证通过后才进入下一步。
+- 应用 PR：[#86](https://github.com/Matthew-1996/life-assistant/pull/86)，已 squash 合并。
+- 应用发布提交：`6a269934f1622fbfd1ffaaedc78a47a6fd7f20bc`。
+- 门禁：PO 于 2026-08-31 明确授权的合成 Preview、合并、Production 与只读上线验收均已完成。
 
 ## 2. 决策与进展
 
@@ -22,9 +22,11 @@
 | 2026-08-31 | 创建 Draft PR #86 并等待远端门禁 | Node、Python、privacy 三项 CI 全部通过；保持 Draft |
 | 2026-08-31 | PO 回复“授权全部” | 授权范围确认为合成 Preview 验收、PR #86 合并和 Production 发布；按顺序执行，失败即停 |
 | 2026-08-31 | 从应用内容提交 `4e0c307` 创建纯静态合成 Preview | READY；10 个静态文件、0 Functions、0 Cron；HTTP、安全头与真实浏览器今日未来项验收通过 |
+| 2026-08-31 | PR #86 最新三项 CI 通过并 squash 合并 | 准确远端 `main` 为 `6a269934f1622fbfd1ffaaedc78a47a6fd7f20bc`；远端与本地功能分支及 worktree 已清理 |
+| 2026-08-31 | 从准确 `main` 触发 Vercel 远端 Production 构建 | 构建守卫与 130 模块转换通过，READY；稳定域名指向本轮部署 |
+| 2026-08-31 | Production HTTP、Owner 浏览器与日志只读验收 | 通过；真实数据无同日未来时刻样本，功能条件沿用合成 Preview 证据，不创建验收数据 |
 
 ## 3. 后续门禁
 
-1. 等待最新文档提交的三项 CI，通过后将 PR #86 转为 Ready 并合并。
-2. 从准确且干净的 `main` 远端发布 Production，不复用 Preview Build Output。
-3. 对稳定域名执行只读 HTTP 与浏览器验收；不操作真实 Todo，不触发模型、Cron、迁移或数据库写入。
+1. 将去敏上线证据通过独立文档 PR 合入 `main`，随后清理该短期分支和 worktree。
+2. 本版本无剩余产品或上线门禁；若后续发现新的 Todo 日期语义问题，另开维护任务。

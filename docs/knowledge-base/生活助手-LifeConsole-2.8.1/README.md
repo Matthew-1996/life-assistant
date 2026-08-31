@@ -8,6 +8,7 @@
 - [技术方案](技术方案-生活助手-LifeConsole-2.8.1.md)
 - [测试计划](测试计划-生活助手-LifeConsole-2.8.1.md)
 - [工程评审与验收](工程评审与验收-生活助手-LifeConsole-2.8.1.md)
+- [上线证据](上线证据-生活助手-LifeConsole-2.8.1.md)
 - [项目管理](项目管理-生活助手-LifeConsole-2.8.1.md)
 
-当前状态：待上线（进行中）。PO 于 2026-08-31 明确授权依次完成合成 Preview 验收、合并 Draft PR [#86](https://github.com/Matthew-1996/life-assistant/pull/86) 和 Production 发布；本地门禁与[纯静态合成 Preview](https://life-console-production-8nmm1kqq0-test11-b88a.vercel.app)验收已通过，正进入 PR 合并门禁。
+当前状态：已上线。PO 于 2026-08-31 明确授权依次完成合成 Preview 验收、合并 PR [#86](https://github.com/Matthew-1996/life-assistant/pull/86) 和 Production 发布；准确 `main` 已由 Vercel 远端构建并发布至[稳定 Production 域名](https://project-wpabq.vercel.app)，只读 HTTP、Owner 浏览器与运行日志验收通过。

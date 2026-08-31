@@ -21,3 +21,10 @@
 - 应用内容提交 `4e0c307` 的纯静态合成 Preview 为 READY：10 个静态文件、0 Functions、0 Cron。
 - 首页 / Manifest 200，`/api/daily-news` 404，严格 CSP 与安全响应头通过。
 - 浏览器在“今日”Tab 验证同日未来 Todo 可见：当前 16:40，合成计划开始 20:19；列表与甘特均出现该项，控制台无 error / warning。
+
+## Production 执行结果
+
+- PR #86 已合并；准确 `main` 的远端 Production 构建守卫与 130 模块 Vite build 通过，状态 READY。
+- 稳定域名首页 / Manifest 200、Service Worker 404、未认证空 POST 健康门禁 401 / `no-store`，安全头通过。
+- Owner 浏览器显示 Supabase 在线、页面正常渲染且控制台无 error / warning；真实数据没有符合本缺陷条件的样本，未为验收创建或修改 Todo。
+- 最近一小时 Vercel error 日志为 0；全程无模型、Cron、迁移或数据库写入。

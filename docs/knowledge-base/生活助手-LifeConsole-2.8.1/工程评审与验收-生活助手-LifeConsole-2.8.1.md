@@ -26,3 +26,11 @@
 - 页面有实际内容、无错误浮层，浏览器控制台无 error / warning。Preview 不连接 Supabase，未读取或写入 Owner Todo。
 
 结论：Preview 已满足 2.8.1 成功标准，可以进入已获授权的 PR 合并门禁；本结论仍不等于 Production 已发布。
+
+## Production 上线验收
+
+- PR #86 已 squash 合并，应用发布提交为 `6a269934f1622fbfd1ffaaedc78a47a6fd7f20bc`。
+- Vercel 从准确、干净的 `main` 远端构建，Production READY，稳定域名已指向本轮部署；未使用本地 `--prebuilt` Production 制品。
+- 首页 / Manifest 200，Service Worker 404，未认证空 POST 健康门禁 401 / `no-store`；严格 CSP、`nosniff` 与 `DENY` 保持。
+- Owner 页面正常渲染、Supabase 在线、控制台无 error / warning；验收时真实数据没有同日未来时刻 Todo，因此功能条件以合成 Preview 为证，Production 仅记真实环境 smoke 结果。
+- 最近一小时 Vercel error 日志为 0；完整去敏证据见[上线证据](上线证据-生活助手-LifeConsole-2.8.1.md)。
