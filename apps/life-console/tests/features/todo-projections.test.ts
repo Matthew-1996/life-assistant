@@ -46,7 +46,7 @@ describe("Todo deterministic projections", () => {
     expect(isOverdue(todo({ status: "completed", due_at: "2030-05-01T00:00:00Z" }), now)).toBe(false);
   });
 
-  it("selects every open item planned for the local day plus items completed today", () => {
+  it("selects every open interval covering the local day plus items completed today", () => {
     const now = new Date("2030-05-01T12:00:00.000Z");
     const rows = [
       todo({ id: 1, planned_start_at: "2030-05-01T11:00:00Z" }),
@@ -67,6 +67,34 @@ describe("Todo deterministic projections", () => {
       todo({ id: 6, planned_start_at: "2030-05-01T16:00:00Z" }),
     ];
 
-    expect(selectTodayTodos(rows, now).map((item) => item.id)).toEqual([1, 2, 4]);
+    expect(selectTodayTodos(rows, now).map((item) => item.id)).toEqual([1, 2, 4, 5]);
+  });
+
+  it("selects unfinished items when the local day falls inside their planned-to-due dates", () => {
+    const now = new Date("2030-05-01T12:00:00.000Z");
+    const rows = [
+      todo({
+        id: 1,
+        planned_start_at: "2030-04-27T06:00:00Z",
+        due_at: "2030-04-30T16:00:00Z",
+      }),
+      todo({
+        id: 2,
+        planned_start_at: "2030-05-01T15:59:59Z",
+        due_at: "2030-05-02T01:00:00Z",
+      }),
+      todo({
+        id: 3,
+        planned_start_at: "2030-05-01T16:00:00Z",
+        due_at: "2030-05-02T01:00:00Z",
+      }),
+      todo({
+        id: 4,
+        planned_start_at: "2030-04-27T06:00:00Z",
+        due_at: "2030-04-30T15:59:59Z",
+      }),
+    ];
+
+    expect(selectTodayTodos(rows, now).map((item) => item.id)).toEqual([1, 2]);
   });
 });
