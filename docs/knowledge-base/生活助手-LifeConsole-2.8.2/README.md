@@ -9,5 +9,6 @@
 - [测试计划](测试计划-生活助手-LifeConsole-2.8.2.md)
 - [工程评审与验收](工程评审与验收-生活助手-LifeConsole-2.8.2.md)
 - [项目管理](项目管理-生活助手-LifeConsole-2.8.2.md)
+- [上线证据](上线证据-生活助手-LifeConsole-2.8.2.md)
 
-当前状态：待验收（Preview 已通过，待合并）。PO 于 2026-08-31 明确了日期区间规则；本地全量工程验证、独立审查修订、Draft PR [#88](https://github.com/Matthew-1996/life-assistant/pull/88) 的 Node、Python、privacy CI 和合成 Preview 已通过；合并与 Production 尚未完成。
+当前状态：已上线。PO 于 2026-08-31 明确了日期区间规则；本地全量工程验证、独立审查、合成 Preview、PR [#88](https://github.com/Matthew-1996/life-assistant/pull/88) 合并、Production 发布与 Owner 只读验收均已完成。
