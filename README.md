@@ -1,5 +1,7 @@
 # Life Assistant Agent Toolkit
 
+![生活助手 Agent Toolkit：隐私优先的个人 Agent 工具箱](docs/assets/readme/life-assistant-hero.svg)
+
 这是一个用于构建生活助手 Agent 的私有代码与方案设计仓库，目标是减少用户认知负担，
 并在健康、时间、关系、生活环境、财务安全与乐趣之间形成现实平衡。
 
@@ -10,13 +12,21 @@
 - 隐私、删除、迁移、备份和派生展示的通用机制；
 - 自动化、测试与多 Agent 协作规范。
 
-当前只有 `apps/life-console/` 是活跃产品代码。iCloud 私人台账是唯一真相源，Life Console 是主要入口；Google 表格和 XLSX 都只按需生成且不得反向写回。原移动网页已归档，仓库不再维护其源码或执行新部署，生命周期见 [`docs/operations/product-surfaces.json`](docs/operations/product-surfaces.json)。
+当前只有 `apps/life-console/` 是活跃产品代码。私人真相源按域分工：稳定上下文与私人计划保留在 iCloud，Life Console 管理的记录保存在 Owner-scoped 数据库。Life Console 是主要入口；Google 表格和 XLSX 都只按需生成且不得反向写回。原移动网页已归档，仓库不再维护其源码或执行新部署，生命周期见 [`docs/operations/product-surfaces.json`](docs/operations/product-surfaces.json)。
+
+## 工作方式
+
+![生活助手从日常输入到行动与复盘的工作闭环](docs/assets/readme/life-assistant-flow.svg)
+
+日常输入先沉淀到用户自己的私有真相源，再由 Life Console 按治理规则组织为行动、回顾和受控自动化；表格只作为按需派生的视图。
 
 ## 隐私边界
 
+![公开能力层与用户私有数据层之间的边界](docs/assets/readme/life-assistant-privacy.svg)
+
 GitHub 只保存通用方案和代码，不保存某位用户的个人生活助手实例。真实用户资料、记忆、
 目标、日记、状态台账、Apple Health、个性化计划、当前自动化、外部服务绑定、导出和备份
-只保存在用户自己的 iCloud 工作区，并由根目录 `.gitignore` 排除。
+只保存在用户自己的私有环境（iCloud 与 Owner-scoped 数据库）中；本地文件、导出、缓存、密钥和用户映射继续由根目录 `.gitignore` 排除。
 
 因此，单独克隆本仓库不能恢复个人数据或个性化展示。
 
