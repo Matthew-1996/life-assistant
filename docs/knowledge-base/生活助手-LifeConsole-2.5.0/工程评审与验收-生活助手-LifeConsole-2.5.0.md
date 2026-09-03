@@ -188,3 +188,13 @@ Supabase 首次上线前只读核对曾因账号不匹配而失败关闭；重�
 - 纯静态 Preview 首次浏览器验收发现候选模式没有注入合成健康 Repository，活动与睡眠卡仍为 0/0，无法直观验收趋势修复。新增候选组件红灯后，只在 `candidate-preview` 动态注入六天公开合成健康摘要和三条合成睡眠时刻；步数、活动能量、锻炼分钟、睡眠时长均展示前 7 天 3 条、最近 7 天 3 条。Production 仍只读取 Owner-scoped Repository；真实 `supabase-production` 构建边界测试确认不含候选健康唯一标记或样例日期，不共享该 fixture。
 - Draft PR #74 已创建并保持 Draft；最终合成 Preview 为 READY、target=`preview`、0 Functions、0 Cron，首页 200，`/api/journal-normalize` 与 `/api/daily-news` 均为 404，CSP 为 `connect-src 'none'` 且不含 `unsafe-eval`。真实浏览器验证工作台、记录、进展、系统和只读写入拦截；桌面 console error/warning 为 0，390px 根页面无横向溢出。制品不含 Owner、Supabase、DeepSeek、Cron、OIDC 或 `/api/journal-normalize` 运行材料；中间 Preview 与临时 OIDC/Build Output 目录已清理。
 - 合成 Preview 和供应商数据用途门禁已完成；Production 合并发布、发布后 Owner 只读复验及既有“无标题日记”是否单独整理仍是独立门禁。
+
+### PR #74 Production 发布与 Owner 验收
+
+- PO 于 2026-08-26 当次明确确认合并 PR #74、发布 Production，并单独指定一篇既有待整理日记补充整理；该授权不扩展到其他历史日记、活动数据补写或新的代码修复。
+- 合并前完整 `npm test` 通过：Vitest 80 个文件 / 603 项，应用 Python 共 93 项；GitHub privacy、Python、Node 三项 CI 全绿。PR #74 已 squash 合并，发布制品从合并后的准确 `main` 构建，Production 状态 READY，稳定别名与合并提交一致。
+- Production 首页为 200，严格 CSP 保持 `script-src 'self'` 且不含 `unsafe-eval`；日记整理与健康探针端点匿名请求均为 401。正式制品包含预期的 5 个 Functions，不改数据库 schema、RLS、Cron 或 Secret。
+- 已认证 Owner 浏览器复验无 console error：主观信号能比较连续 14 天的前后窗口；睡眠时长在健康摘要缺失时能从已保存的入睡/醒来时刻确定性派生。活动最近窗口仍无 Owner-scoped `health_days` 来源，故继续显示数据不足；这不是图表漏画，本次不伪造、不插值，也不把本机或旧日期数据反向补写 Supabase。
+- 对唯一符合当次指定条件的既有待整理日记，只使用 Owner Session、RLS、source revision 与幂等 task key 发起一次 Production DeepSeek 整理。请求到达函数，但供应商输出在内部重试后仍未通过严格证据契约，返回稳定错误 `provider_contract_rejected`；原文和 revision 按失败关闭设计保持，未输出供应商原始响应。
+- 为完成 PO 明确要求的单篇整理，随后复用既有 Owner-scoped Agent 原子整理路径；begin/complete RPC、revision/etag 校验与修订记录均成功，页面显示整理完成，并呈现标题、摘要、明确事实、人物、主题、规划线索与标签等结构化区域。未使用 service role 或管理 SQL，未处理其他历史日记，也未把真实日记正文或健康值写入 Git。
+- 结论：两项趋势缺陷和指定日记补充整理已通过 Production 验收；“以后新日记自动发送 DeepSeek”已经部署，但此次既有日记最终由 Agent fallback 完成，因此首个真实新日记的 DeepSeek 成功闭环仍待自然新增验证。后续若修复供应商契约兼容性，必须新开 TDD/Preview/发布门禁，不得放宽事实证据约束。

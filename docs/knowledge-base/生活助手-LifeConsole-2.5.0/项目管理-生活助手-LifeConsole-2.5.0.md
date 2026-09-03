@@ -2,11 +2,11 @@
 
 ## 1. 当前状态
 
-- 主阶段：2.5.0 已上线；PR #72 已合并并从准确 `main` 重新发布，Production READY，三个新闻 Functions 与每日 Cron 均正常。
+- 主阶段：2.5.0 已上线；PR #74 已按 PO 当次确认合并并从准确 `main` 发布，Production READY，正式别名与合并提交一致。
 - 子状态：最终 Owner 只读复验仍为 `error`、0 条，且同期 `/api/daily-news` 请求计数为 0。按 PO 明确边界，每日新闻前端展示已搁置，不再继续热修复。
-- 分支：`agent/life-console-records-progress-fixes` 承载 2026-08-26 记录与进展快速维护；既有新闻搁置边界不变。
-- PR：Draft PR #74 已创建，包含两项趋势修复、新日记自动整理候选接线、合成测试与去敏证据；纯静态合成 Preview 已完成，未合并或发布 Production。PR #72 的最终失败和恢复门禁仍见“每日新闻搁置与接力”。
-- 数据库：两个加法 migration 保持已应用，不回滚或删除用户数据；本次不改 Supabase schema 或 Owner 数据。
+- 分支：PR #74 的开发分支与 worktree 已在合并后清理；既有新闻搁置边界不变。
+- PR：PR #74 已合并并发布；Owner 浏览器确认两项趋势修复生效，并对 PO 当次明确指定的一篇既有待整理日记完成去敏、revision-safe 的结构化回写。PR #72 的最终失败和恢复门禁仍见“每日新闻搁置与接力”。
+- 数据库：两个加法 migration 保持已应用，不回滚或删除用户数据；本次不改 Supabase schema，只按 PO 当次指定范围更新一篇 Owner 日记的整理字段与修订记录。
 
 ## 2. 阶段计划
 
@@ -28,7 +28,7 @@
 14. Owner 有效 token 保留：PR #70 已合并发布但页面仍无 API 请求；TDD 修复同一 Owner tokenless 事件清空既有有效 token，退出和用户切换继续失败关闭。
 15. 认证单一真相源架构修复：PR #71 发布和 Owner 重新登录仍未触发新闻 API；PO 已确认进入 PR #72，按 provider Session 真相源、请求时取 token、闭集加载状态和全量门禁执行。
 16. 最终复验与搁置：PR #72 已合并发布；Owner 页面闭集状态为 `error` 且 Function 请求计数为 0。PO 已决定停止本轮新闻修复，转为完整接力留档。
-17. 记录与进展快速维护：已复现并按 TDD 修复主观信号只加载自然周、睡眠趋势不复用每日状态时刻两项缺陷；活动最近窗口没有可供 Production 页面读取的 `health_days`，不伪造或跨源补值。PO 于 2026-08-26 明确同意以后新日记在原文保存成功后自动发送 DeepSeek 整理并回写，并在确认账号没有训练开关后知情接受可能的训练用途。候选接线与纯静态合成 Preview 已完成，既有待整理日记不追溯发送。
+17. 记录与进展快速维护：已复现并按 TDD 修复主观信号只加载自然周、睡眠趋势不复用每日状态时刻两项缺陷；PR #74 已合并并发布，Owner 浏览器确认两项修复生效。活动最近窗口没有可供 Production 页面读取的 `health_days`，不伪造或跨源补值。PO 于 2026-08-26 明确同意以后新日记在原文保存成功后自动发送 DeepSeek 整理并回写，并在确认账号没有训练开关后知情接受可能的训练用途；另行明确指定的一篇既有待整理日记，在一次 DeepSeek 严格契约拒绝后保持原文并通过既有 Agent 原子整理路径完成，不追溯处理其他历史日记。
 
 ## 3. 门禁与恢复条件
 
@@ -50,7 +50,7 @@
 | Owner 有效 token 保留热修复 | completed_with_followup | PR #71 已合并发布且 Owner 退出重登复验失败；该内存 token 方案由 PR #72 的 provider Session 单一真相源取代 |
 | Owner 认证单一真相源 PR #72 | completed_failed_acceptance | PR 已合并并重新发布；Functions/Cron 正常，但最终 Owner 页面为 `error`、0 条且未发出 API 请求 |
 | 每日新闻前端展示 | shelved | PO 明确本次为最后一次修复；未来仅在新的当次确认、真实浏览器红灯和新架构评审后恢复 |
-| 记录与 14 天趋势快速维护 | preview_accepted | Draft PR #74 的两项确定性趋势修复、新日记自动整理候选接线和纯静态合成 Preview 已通过；PO 已知情接受可能的供应商训练用途，活动采集补链、Production 与发布后 Owner 复验仍保持独立门禁 |
+| 记录与 14 天趋势快速维护 | completed_with_followup | PR #74 已合并发布，Production 与 Owner 浏览器复验通过；指定既有日记已完成结构化回写。活动采集补链仍需单独授权；DeepSeek 自动整理虽已部署，但首个真实新日记成功样本仍待自然新增验证 |
 
 ## 4. 开放风险
 
@@ -63,6 +63,7 @@
 - PR #72 最终仍在 fetch 前失败：当前只证明闭集为 `error`，未证明是 provider 读取、刷新锁、浏览器持久化还是其他异常。该项已搁置；待证假设不得写成已确认根因。
 - Production 内容链路可观测性：HTTP 空态会吞掉真实失败阶段。快速维护只允许记录闭集状态、来源、失败阶段、稳定错误码、摘要日期和收据可用性；未知字符串统一降级，不记录标题、摘要、URL、JWT、Secret 或供应商响应体。
 - DeepSeek 当前公开隐私政策说明，经安全加密和去标识化后，输入及输出可能用于模型训练与服务优化。PO 已确认账号没有训练开关，并于 2026-08-26 知情接受以后新日记可能用于该用途；此决定清除数据用途门禁，但不替代 PR 合并、Production 发布或发布后 Owner 复验确认。
+- 指定既有待整理日记的 Production DeepSeek 调用返回稳定错误 `provider_contract_rejected`：认证、Owner RLS 和请求到达正常，供应商输出未通过严格证据契约，原文按设计保持。后续不得通过放宽证据校验、输出供应商原文或盲目重试来伪造成功；自动整理的真实成功闭环仍需在新的自然新增日记上验证。
 - 已认证事件缺少 access token：AuthGate 可凭用户字段渲染 Owner UI，但旧 `getAccessToken()` 因 `hasAuthState` 直接返回 null。恢复只允许在 `currentSession` 非空且 token 缺失时重读存储 Session；明确退出仍保持 null，不得复活旧会话。
 - Unsplash Key 可能不存在：Preview 使用合成元数据，Production 使用渐变。
 - 当前 bundle 大于 500 kB：样式/组件拆分时观察，不为追求指标引入无关架构。
@@ -133,4 +134,7 @@
 | 2026-08-26 | Draft PR #74 | 包含两项趋势修复、新日记自动整理候选接线、合成测试和去敏证据；未创建 Preview、未合并、未发布或写 Owner 数据 |
 | 2026-08-26 | DeepSeek 可能训练用途 | 账号无训练开关；PO 在知情后明确接受以后新日记输入及输出可能用于训练或服务优化，范围不追溯既有日记 |
 | 2026-08-26 | Draft PR #74 纯静态合成 Preview | READY、0 Functions、0 Cron、首页 200，日记整理与新闻 API 均为 404，严格 CSP `connect-src 'none'`；桌面与 390px 验证通过，活动和睡眠合成趋势均显示前后窗口各 3 条；未连接 Owner、DeepSeek 或 Production |
+| 2026-08-26 | PR #74 合并与 Production 发布 | PO 当次明确确认并完成；合并前 GitHub privacy、Python、Node 三项 CI 全绿，发布制品来自合并后的准确 `main`，Production READY，稳定别名、严格 CSP、匿名鉴权边界与 Owner 页面 console 均通过 |
+| 2026-08-26 | PR #74 发布后 Owner 趋势复验 | 主观信号前后两段窗口均有有效样本，睡眠时长按已保存时刻确定性派生；活动最近窗口仍无 `health_days` 来源，不把缺失数据写成图表故障或补造数值 |
+| 2026-08-26 | 单篇既有待整理日记补充整理 | PO 当次明确指定范围；一次 Production DeepSeek 调用因严格契约拒绝而失败关闭，随后使用既有 Owner-scoped Agent 原子整理路径成功回写并记录 revision。未使用管理权限，未处理其他历史日记 |
 | 2026-08-19 | 视觉、设计、技术确认前不写生产功能 | Gate 2 v2 后已满足 |
