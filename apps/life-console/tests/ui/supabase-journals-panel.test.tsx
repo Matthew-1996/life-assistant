@@ -281,7 +281,7 @@ describe("Supabase Journals panel", () => {
     );
     await user.click(screen.getByRole("button", { name: "新建日记" }));
 
-    expect(repository.create).toHaveBeenCalledWith(
+    await waitFor(() => expect(repository.create).toHaveBeenCalledWith(
       "synthetic-journal-key-0001",
       {
         content: "Synthetic journal content",
@@ -289,12 +289,12 @@ describe("Supabase Journals panel", () => {
         tags: ["reflection", "test"],
         title: "Synthetic Journal",
       },
-    );
+    ));
     expect(await screen.findByText("Synthetic Journal")).toBeTruthy();
-    expect((content as HTMLTextAreaElement).value).toBe("");
-    expect(screen.getByRole("status").textContent).toContain(
+    await waitFor(() => expect(screen.getByRole("status").textContent).toContain(
       "日记已保存",
-    );
+    ));
+    expect((content as HTMLTextAreaElement).value).toBe("");
     expect(onSaved).toHaveBeenCalledOnce();
     expect(localStorage.getItem(
       `${SESSION_DRAFT_STORAGE_PREFIX}anonymous:journals`,
