@@ -206,6 +206,10 @@ export function createSupabaseProductionVercelConfig(environment) {
     );
   }
 
+  const newsSchedule = environment.LIFE_CONSOLE_NEWS_SCHEDULE ?? "daily";
+  if (!["daily", "disabled"].includes(newsSchedule)) {
+    throw new Error("LIFE_CONSOLE_NEWS_SCHEDULE must be daily or disabled");
+  }
   const config = createSupabaseCandidateVercelConfig({
     ...environment,
     VERCEL_ENV: "preview",
@@ -213,7 +217,7 @@ export function createSupabaseProductionVercelConfig(environment) {
   return {
     ...config,
     buildCommand: "npm run build:supabase-production",
-    crons: [
+    crons: newsSchedule === "disabled" ? [] : [
       {
         path: "/api/cron/daily-news",
         schedule: "0 23 * * *",

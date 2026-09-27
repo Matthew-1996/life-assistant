@@ -8,6 +8,8 @@ CSP 仅加入一个已确认的 HTTPS origin；自托管路线未启用 Realtime
 
 自托管公开凭据必须是 `role=anon` 的传统 JWT；构建时检查结构和角色，服务端继续负责签名验证。禁止将 service-role JWT 或服务器管理凭据用作浏览器公开配置。
 
+生产配置提供 `LIFE_CONSOLE_NEWS_SCHEDULE=daily|disabled`：默认保留每日计划，显式 `disabled` 生成空 Cron 列表。迁移部署按已核对的线上状态禁用调度，避免因重新发布而恢复搁置任务；无效值使构建配置生成失败。
+
 ## 数据与认证
 
 目标为兼容 PostgreSQL、Auth 与 PostgREST 的后端。迁移须保存真实 schema、函数、授权、RLS、序列及 Owner 身份引用。不同实例的登录会话不可默认复用；须验证新登录和刷新路径。

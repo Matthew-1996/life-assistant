@@ -473,3 +473,18 @@ describe("explicitly approved self-hosted backend", () => {
     }
   });
 });
+
+
+describe("explicit news scheduling", () => {
+  it("omits news cron when the deployment explicitly keeps scheduling disabled", () => {
+    const config = createSupabaseProductionVercelConfig({
+      ...syntheticProductionEnvironment, LIFE_CONSOLE_NEWS_SCHEDULE: "disabled",
+    });
+    expect(config.crons).toEqual([]);
+  });
+  it("rejects an ambiguous schedule flag", () => {
+    expect(() => createSupabaseProductionVercelConfig({
+      ...syntheticProductionEnvironment, LIFE_CONSOLE_NEWS_SCHEDULE: "false",
+    })).toThrow("LIFE_CONSOLE_NEWS_SCHEDULE");
+  });
+});
