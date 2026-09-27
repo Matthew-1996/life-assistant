@@ -436,3 +436,40 @@ describe("Vercel deployment artifact generation", () => {
     }
   });
 });
+
+
+describe("explicitly approved self-hosted backend", () => {
+  const publicAnon = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.${Buffer.from(JSON.stringify({ role: "anon" })).toString("base64url")}.synthetic-signature`;
+  const selfHosted = {
+    ...syntheticProductionEnvironment,
+    VITE_SUPABASE_URL: "https://backend.example.test:8443",
+    LIFE_CONSOLE_SELF_HOSTED_ORIGIN: "https://backend.example.test:8443",
+    VITE_SUPABASE_PUBLISHABLE_KEY: publicAnon,
+  };
+  it("allows exactly the explicitly configured origin and port in Production CSP", () => {
+    const config = createSupabaseProductionVercelConfig(selfHosted);
+    const csp = config.headers[0].headers.find((header) => header.key === "Content-Security-Policy")?.value;
+    expect(csp).toContain("connect-src 'self' https://backend.example.test:8443;");
+    expect(csp).not.toContain("wss://");
+    expect(csp).not.toContain("*");
+    expect(JSON.stringify(config)).not.toContain(publicAnon);
+  });
+  it("rejects unapproved origins and configuration drift", () => {
+    const { LIFE_CONSOLE_SELF_HOSTED_ORIGIN: _, ...unapproved } = selfHosted;
+    expect(() => createSupabaseProductionVercelConfig(unapproved)).toThrow();
+    expect(() => createSupabaseProductionVercelConfig({ ...selfHosted, VITE_SUPABASE_URL: "https://another.example.test:8443" })).toThrow();
+    expect(() => createSupabaseProductionVercelConfig({ ...selfHosted, VITE_SUPABASE_URL: "https://synthetic-project.supabase.co" })).toThrow();
+  });
+  it.each([
+    "http://backend.example.test:8443", "https://user:password@backend.example.test:8443",
+    "https://backend.example.test:8443/path", "https://backend.example.test:8443?extra=1",
+    "https://backend.example.test:8443#fragment", "https://*.example.test:8443",
+  ])("rejects malformed or broad self-hosted origin %s", (origin) => {
+    expect(() => createSupabaseProductionVercelConfig({ ...selfHosted, VITE_SUPABASE_URL: origin, LIFE_CONSOLE_SELF_HOSTED_ORIGIN: origin })).toThrow();
+  });
+  it("requires an anon-role JWT for self-hosted public credentials", () => {
+    for (const key of ["sb_publishable_synthetic_only", "eyJ.invalid.payload", `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.${Buffer.from(JSON.stringify({ role: "service_role" })).toString("base64url")}.synthetic-signature`]) {
+      expect(() => createSupabaseProductionVercelConfig({ ...selfHosted, VITE_SUPABASE_PUBLISHABLE_KEY: key })).toThrow();
+    }
+  });
+});

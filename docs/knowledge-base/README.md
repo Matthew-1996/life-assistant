@@ -20,6 +20,10 @@
 | 生活助手 / Life Console / 2.8.1（今日 Todo 日期语义修复） | [版本知识库](生活助手-LifeConsole-2.8.1/README.md) | [PRD（PO 已明确修复语义）](生活助手-LifeConsole-2.8.1/生活助手-LifeConsole-2.8.1.md) | [设计](生活助手-LifeConsole-2.8.1/设计方案-生活助手-LifeConsole-2.8.1.md) / [技术](生活助手-LifeConsole-2.8.1/技术方案-生活助手-LifeConsole-2.8.1.md) / [测试计划](生活助手-LifeConsole-2.8.1/测试计划-生活助手-LifeConsole-2.8.1.md) / [工程验收](生活助手-LifeConsole-2.8.1/工程评审与验收-生活助手-LifeConsole-2.8.1.md) / [上线证据](生活助手-LifeConsole-2.8.1/上线证据-生活助手-LifeConsole-2.8.1.md) | [项目管理](生活助手-LifeConsole-2.8.1/项目管理-生活助手-LifeConsole-2.8.1.md) | 已上线 | PR #86 已 squash 合并；准确 `main` 已远端构建并发布至 [Production](https://project-wpabq.vercel.app)，合成 Preview 功能验收、HTTP、Owner 浏览器与运行日志只读验收通过；去敏证据由 PR #87 收口 |
 | 生活助手 / Life Console / 2.8.2（Todo 跨日区间语义修复） | [版本知识库](生活助手-LifeConsole-2.8.2/README.md) | [PRD（PO 已明确日期区间规则）](生活助手-LifeConsole-2.8.2/生活助手-LifeConsole-2.8.2.md) | [设计](生活助手-LifeConsole-2.8.2/设计方案-生活助手-LifeConsole-2.8.2.md) / [技术](生活助手-LifeConsole-2.8.2/技术方案-生活助手-LifeConsole-2.8.2.md) / [测试计划](生活助手-LifeConsole-2.8.2/测试计划-生活助手-LifeConsole-2.8.2.md) / [工程验收](生活助手-LifeConsole-2.8.2/工程评审与验收-生活助手-LifeConsole-2.8.2.md) / [上线证据](生活助手-LifeConsole-2.8.2/上线证据-生活助手-LifeConsole-2.8.2.md) | [项目管理](生活助手-LifeConsole-2.8.2/项目管理-生活助手-LifeConsole-2.8.2.md) | 已上线 | PR [#88](https://github.com/Matthew-1996/life-assistant/pull/88) 已合并；Production 与 Owner 只读验收通过 |
 
+## 进行中的基础设施候选
+
+- [Life Console 2.9.0：自托管后端兼容与切源](生活助手-LifeConsole-2.9.0/README.md)：待联调（进行中）；本次个人后端与迁移范围已明确，候选验收、真实切源和发布待完成。
+
 ## 读取顺序
 
 1. 先读最高优先级开发规范，确定角色、阶段和确认门禁。
