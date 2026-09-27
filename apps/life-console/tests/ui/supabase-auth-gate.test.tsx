@@ -185,6 +185,24 @@ describe("Supabase Auth gate", () => {
     expect(await screen.findByText("私有工作区")).toBeTruthy();
   });
 
+  it("uses manual password recovery by default and keeps password login available", async () => {
+    const auth = createAuthService();
+    render(<SupabaseAuthGate auth={auth}><div>私有工作区</div></SupabaseAuthGate>);
+    await screen.findByRole("heading", { name: "登录 Life Console" });
+    expect(screen.queryByRole("button", { name: "忘记密码？" })).toBeNull();
+    expect(screen.getByText("忘记密码请联系管理员重置。")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "登录" })).toBeTruthy();
+    expect(auth.requestPasswordReset).not.toHaveBeenCalled();
+  });
+
+  it("does not enter email recovery from a stale recovery URL when disabled", async () => {
+    const auth = createAuthService();
+    render(<SupabaseAuthGate auth={auth} mode="recovery"><div>私有工作区</div></SupabaseAuthGate>);
+    await screen.findByRole("heading", { name: "登录 Life Console" });
+    expect(screen.queryByLabelText("新密码")).toBeNull();
+    expect(auth.updatePassword).not.toHaveBeenCalled();
+  });
+
   it("requests password reset and shows neutral acknowledgement", async () => {
     const user = userEvent.setup();
     const originalLocation = window.location;
@@ -197,7 +215,7 @@ describe("Supabase Auth gate", () => {
 
     const auth = createAuthService();
     render(
-      <SupabaseAuthGate auth={auth}>
+      <SupabaseAuthGate emailRecoveryEnabled auth={auth}>
         <div>私有工作区</div>
       </SupabaseAuthGate>,
     );
@@ -229,7 +247,7 @@ describe("Supabase Auth gate", () => {
     const user = userEvent.setup();
     const auth = createAuthService();
     render(
-      <SupabaseAuthGate auth={auth}>
+      <SupabaseAuthGate emailRecoveryEnabled auth={auth}>
         <div>私有工作区</div>
       </SupabaseAuthGate>,
     );
@@ -253,7 +271,7 @@ describe("Supabase Auth gate", () => {
       throw new Error("recovery flow uses auth state change");
     });
     render(
-      <SupabaseAuthGate auth={auth} mode="recovery">
+      <SupabaseAuthGate emailRecoveryEnabled auth={auth} mode="recovery">
         <div>私有工作区</div>
       </SupabaseAuthGate>,
     );
@@ -283,7 +301,7 @@ describe("Supabase Auth gate", () => {
     const auth = createAuthService();
     auth.session = vi.fn(async () => null);
     render(
-      <SupabaseAuthGate auth={auth} mode="recovery">
+      <SupabaseAuthGate emailRecoveryEnabled auth={auth} mode="recovery">
         <div>私有工作区</div>
       </SupabaseAuthGate>,
     );
