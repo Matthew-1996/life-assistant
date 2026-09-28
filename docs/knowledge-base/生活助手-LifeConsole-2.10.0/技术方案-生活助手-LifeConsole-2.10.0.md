@@ -1,6 +1,6 @@
 # 技术方案（评审候选） · Life Console 2.10.0
 
-状态：draft.2，待技术方案评审（进行中）。设计已获 PO 确认；本方案尚未获实施确认，接口和数据结构均未实现。
+状态：draft.2 技术路线已获 PO 确认，批准实施 A（合成库与接口）。A 已形成工程候选；B–E 尚未执行。详见阶段 A 工程验收。
 
 ## 当前基线
 
@@ -38,7 +38,7 @@ ICS 输出事件标题、开始/结束和地点，备注默认为无；可选备
 
 记录设备/OS、操作时间、观察时间和实际时延；不承诺固定 SLA。必须确认修改不重复、删除收敛、撤销阻断读取、日志无令牌、服务故障不清空、没有写入其他日历。任一关键条件不满足即不发布订阅入口，仍可独立推进站内日历；不拿一次性导入冒充同步。
 
-本轮只核查公开官方说明并制作模拟 UI，未部署 ICS 服务，未验证上述探针。
+设计阶段已核查公开官方说明；当前 A 实现不包含 ICS 服务，仍未验证上述探针。
 
 ## 评审候选：模块与交付边界
 
@@ -54,7 +54,7 @@ FitnessPanel 内部分为 MonthCalendar、DayAppointments、AppointmentEditor �
 
 幂等回执唯一键为 (user_id, operation_key)，保存规范化输入指纹与 appointment_id；相同键同输入返回原记录，键同但输入不同返回冲突。新建事务一次完成记录、回执、仅元数据审计。更新/删除以 owner+id 行锁和 expected_revision 校验，成功时递增 revision；软删除重复请求返回已删除结果，不恢复、不重复创建。状态未知的写入不得盲目自动重试：新建复用同一幂等键，更新失败读取最新 revision 后让用户核对。
 
-所有写 RPC 使用现有 Owner 验证条件；仅“已登录”不等于 Owner。user_id 由 auth.uid() 得出，拒绝客户端指定/更换 owner。默认拒绝 anon；非 Owner 有效账号同样拒绝。表 RLS 允许 Owner 读自己的记录；authenticated 无直接 INSERT/UPDATE/DELETE，写入仅走受限 RPC。definer 函数固定空 search_path，完整限定表名，撤销 PUBLIC/anon 执行权限。参照 [Supabase 数据库函数安全说明](https://supabase.com/docs/guides/database/functions)，实际以自托管 PostgreSQL 权限测试验收。
+所有写 RPC 使用不可由用户自行修改的 Owner 授权登记；仅“已登录”不等于 Owner。user_id 由 auth.uid() 得出，拒绝客户端指定/更换 owner。默认拒绝 anon；非 Owner 有效账号同样拒绝。表 RLS 允许 Owner 读自己的记录；authenticated 无直接 INSERT/UPDATE/DELETE，写入仅走受限 RPC。definer 函数固定空 search_path，完整限定表名，撤销 PUBLIC/anon 执行权限。参照 [Supabase 数据库函数安全说明](https://supabase.com/docs/guides/database/functions)，实际以自托管 PostgreSQL 权限测试验收。
 
 ### 前端接口约定
 
@@ -107,3 +107,9 @@ ICS 使用 [RFC 5545](https://www.rfc-editor.org/rfc/rfc5545) 格式：VCALENDAR
 | E 发布准备 | 端到端测试、数据恢复、去敏证据、发布/回退清单 | PO 验收与上线分别确认 |
 
 唯一主项是站内日历；订阅是可独立停用的次项。D 不通过则隐藏订阅入口并说明未提供同步，B 可独立验收。当前技术评审只请求确认上述实现路线，不请求开启真实数据访问。
+
+## 阶段 A 实施补充
+
+公开 schema 中 profiles 可由登录用户维护，不能充当 Owner allowlist。新增 `life_console_private.fitness_owners`，默认空表，仅受控管理员可登记；迁移不授予任何真实用户访问。预约表在 public，回执、Owner 登记和订阅元数据在私有 schema，不向 authenticated 开放数据权限；RLS helper 仅提供当前用户是否获准的布尔结果。
+
+同 Owner 的写事务先取得相同 advisory lock，再执行行锁/revision/回执/审计与 feed_revision 更新，保证小型个人日历的写入原子性。幂等重试返回原预约的当前状态（可已改期或软删），不会重新插入或复活；get(id) 包含软删记录以供后续冲突界面使用。订阅元数据默认 disabled/token_hash=null，本阶段没有签发令牌或提供 feed。
