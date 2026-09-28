@@ -19,6 +19,7 @@ export interface SupabaseAuthGateProps {
     | ReactNode
     | ((context: SupabaseAuthenticatedContext) => ReactNode);
   mode?: "sign-in" | "recovery";
+  emailRecoveryEnabled?: boolean;
 }
 
 export interface SupabaseAuthenticatedContext {
@@ -50,8 +51,10 @@ function resetPasswordErrorMessage(error: unknown): string {
 export function SupabaseAuthGate({
   auth,
   children,
-  mode = "sign-in",
+  mode: requestedMode = "sign-in",
+  emailRecoveryEnabled = false,
 }: SupabaseAuthGateProps): ReactElement {
+  const mode = emailRecoveryEnabled ? requestedMode : "sign-in";
   const [session, setSession] = useState<AuthSession | null | undefined>(
     undefined,
   );
@@ -130,7 +133,7 @@ export function SupabaseAuthGate({
 
   async function handleRequestReset(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (pending) return;
+    if (pending || !emailRecoveryEnabled) return;
     setPending(true);
     setError(null);
     try {
@@ -270,7 +273,7 @@ export function SupabaseAuthGate({
           >
             {pending ? "正在登录…" : "登录"}
           </button>
-          <button
+          {emailRecoveryEnabled ? <button
             className="secondary-button"
             disabled={pending}
             onClick={() => {
@@ -280,7 +283,7 @@ export function SupabaseAuthGate({
             type="button"
           >
             忘记密码？
-          </button>
+          </button> : <p className="auth-gate-intro">忘记密码请联系管理员重置。</p>}
         </form>
       </>
     );

@@ -46,20 +46,32 @@ function validateCronEnvironment(environment) {
   }
 }
 
+function selfHostedProjectOrigin(environment) {
+  if (!Object.prototype.hasOwnProperty.call(environment, "LIFE_CONSOLE_SELF_HOSTED_ORIGIN")) return null;
+  const raw = requiredValue(environment, "LIFE_CONSOLE_SELF_HOSTED_ORIGIN");
+  const url = new URL(raw);
+  if (url.protocol !== "https:" || url.username || url.password || url.search || url.hash
+      || (url.pathname !== "/" && url.pathname !== "") || url.hostname.includes("*")) {
+    throw new Error("LIFE_CONSOLE_SELF_HOSTED_ORIGIN must be one exact HTTPS origin");
+  }
+  return url.origin;
+}
+
 export function resolveCandidateProjectOrigin(environment) {
   const rawUrl = requiredValue(environment, "VITE_SUPABASE_URL");
   const url = new URL(rawUrl);
+  const approvedOrigin = selfHostedProjectOrigin(environment);
   const hostedProjectHostname =
     /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.supabase\.co$/;
   if (
     url.protocol !== "https:"
     || url.username
     || url.password
-    || url.port
+    || (!approvedOrigin && url.port)
     || url.search
     || url.hash
     || (url.pathname !== "/" && url.pathname !== "")
-    || !hostedProjectHostname.test(url.hostname.toLowerCase())
+    || (approvedOrigin ? url.origin !== approvedOrigin : !hostedProjectHostname.test(url.hostname.toLowerCase()))
   ) {
     throw new Error(
       "VITE_SUPABASE_URL must be an exact HTTPS Supabase project origin",
@@ -70,11 +82,13 @@ export function resolveCandidateProjectOrigin(environment) {
 
 export function candidateContentSecurityPolicy(environment) {
   const httpsOrigin = resolveCandidateProjectOrigin(environment);
-  const wssOrigin = `wss://${new URL(httpsOrigin).host}`;
+  const connectionOrigins = selfHostedProjectOrigin(environment)
+    ? httpsOrigin
+    : `${httpsOrigin} wss://${new URL(httpsOrigin).host}`;
   return [
     "default-src 'self'",
     "base-uri 'none'",
-    `connect-src 'self' ${httpsOrigin} ${wssOrigin}`,
+    `connect-src 'self' ${connectionOrigins}`,
     "font-src 'self'",
     "form-action 'none'",
     "frame-ancestors 'none'",
@@ -104,6 +118,19 @@ export function createSupabaseCandidateVercelConfig(environment) {
     throw new Error(
       "VITE_SUPABASE_PUBLISHABLE_KEY must contain a publishable key or legacy anon JWT",
     );
+  }
+  if (selfHostedProjectOrigin(environment)) {
+    let claims;
+    try {
+      const segments = publishableKey.split(".");
+      if (segments.length !== 3) throw new Error("Invalid JWT shape");
+      claims = JSON.parse(Buffer.from(segments[1], "base64url").toString("utf8"));
+    } catch {
+      throw new Error("Self-hosted public credentials must be an anon-role JWT");
+    }
+    if (claims?.role !== "anon") {
+      throw new Error("Self-hosted public credentials must be an anon-role JWT");
+    }
   }
   if (environment.VERCEL_ENV && environment.VERCEL_ENV !== "preview") {
     throw new Error("The Supabase candidate may only deploy to Vercel Preview");
@@ -179,6 +206,10 @@ export function createSupabaseProductionVercelConfig(environment) {
     );
   }
 
+  const newsSchedule = environment.LIFE_CONSOLE_NEWS_SCHEDULE ?? "daily";
+  if (!["daily", "disabled"].includes(newsSchedule)) {
+    throw new Error("LIFE_CONSOLE_NEWS_SCHEDULE must be daily or disabled");
+  }
   const config = createSupabaseCandidateVercelConfig({
     ...environment,
     VERCEL_ENV: "preview",
@@ -186,7 +217,7 @@ export function createSupabaseProductionVercelConfig(environment) {
   return {
     ...config,
     buildCommand: "npm run build:supabase-production",
-    crons: [
+    crons: newsSchedule === "disabled" ? [] : [
       {
         path: "/api/cron/daily-news",
         schedule: "0 23 * * *",
