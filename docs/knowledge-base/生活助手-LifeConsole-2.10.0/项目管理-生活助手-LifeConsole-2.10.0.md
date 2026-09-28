@@ -18,7 +18,7 @@
 
 主项：PO 审阅本地设计稿。次项：按反馈完善方案后进入技术评审。可延后：Apple 客户端端到端探针，若不可靠则停用该能力，不阻塞站内日历。
 
-Git：独立任务分支与隔离 worktree，Draft PR 待附链接。原型仅本地预览；Draft PR 只容纳通用文档与合成稿，不部署为网站。
+Git：独立任务分支与隔离 worktree，[Draft PR #92](https://github.com/Matthew-1996/life-assistant/pull/92) 已创建，保持 Draft 待 PO 设计评审。命令行缺少写入认证，使用现有 GitHub 连接器上传；已验证远端文件树与本地已审查提交一致。原型仅本地预览；Draft PR 只容纳通用文档与合成稿，不部署为网站。
 
 ## 独立只读复审
 
