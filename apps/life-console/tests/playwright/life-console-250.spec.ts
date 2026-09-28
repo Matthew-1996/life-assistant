@@ -42,7 +42,8 @@ for (const viewport of [
     await expect(page.getByRole("region", { name: "本周寄语" })).toBeVisible();
     await expect(page.getByRole("region", { exact: true, name: "Todo" })).toBeVisible();
     await expect(page.getByRole("region", { name: "每日新闻" })).toContainText("新闻服务尚未连接");
-    await expect(page.getByRole("region", { name: "今日锚点" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "今日锚点" })).toHaveCount(0);
+    await expect(page.getByRole("region", { name: "健身计划" })).toBeVisible();
     await expectNoPageOverflow(page, `${viewport.name}: 工作台`);
 
     const todayLayout = await page.evaluate(() => {

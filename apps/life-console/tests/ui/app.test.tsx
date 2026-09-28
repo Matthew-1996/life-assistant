@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { App } from "../../src/App";
-import { ApiError, createApiClient, type LifeConsoleClient } from "../../src/api/client";
+import { createApiClient, type LifeConsoleClient } from "../../src/api/client";
 import { syntheticDashboard } from "../../src/data/dashboard";
 
 afterEach(() => {
@@ -91,25 +91,9 @@ describe("Life Console synthetic UI", () => {
     expect(screen.getByRole("region", { name: "本周寄语" })).toBeTruthy();
     expect(screen.getByRole("region", { name: "Todo" })).toBeTruthy();
     expect(screen.getByRole("region", { name: "每日新闻" })).toBeTruthy();
-    expect(screen.getByRole("region", { name: "今日锚点" })).toBeTruthy();
+    expect(screen.queryByRole("region", { name: "今日锚点" })).toBeNull();
+    expect(screen.getByRole("region", { name: "健身计划" })).toBeTruthy();
     expect(screen.queryByText("隐私与保存链路")).toBeNull();
-  });
-
-  it("keeps unknown distinct from skipped in anchor controls", async () => {
-    const user = userEvent.setup();
-    render(<App />);
-
-    const lifeAction = screen.getByRole("group", { name: "生活动作状态" });
-    const unknown = within(lifeAction).getByRole("button", { name: "未记录" });
-    const skipped = within(lifeAction).getByRole("button", { name: "跳过" });
-
-    expect(unknown.getAttribute("aria-pressed")).toBe("true");
-    expect((unknown as HTMLButtonElement).disabled).toBe(true);
-    expect(skipped.getAttribute("aria-pressed")).toBe("false");
-
-    await user.click(skipped);
-    expect(unknown.getAttribute("aria-pressed")).toBe("false");
-    expect(skipped.getAttribute("aria-pressed")).toBe("true");
   });
 
   it("keeps confirmed auxiliary goals on the progress page", async () => {
@@ -288,96 +272,6 @@ describe("Life Console synthetic UI", () => {
     expect(screen.getByText("设计治理资产关系")).toBeTruthy();
   });
 
-  it("does not show an anchor as saved when the Hub write fails", async () => {
-    const user = userEvent.setup();
-    const client = {
-      dashboard: vi.fn().mockResolvedValue(syntheticDashboard),
-      journal: vi.fn(),
-      checkin: vi.fn().mockRejectedValue(new Error("synthetic hub failure")),
-      preview: vi.fn(),
-      ...enrichmentStubs(),
-    } satisfies LifeConsoleClient;
-    render(<App client={client} initialDashboard={syntheticDashboard} />);
-
-    const group = screen.getByRole("group", { name: "生活动作状态" });
-    const unknown = within(group).getByRole("button", { name: "未记录" });
-    const complete = within(group).getByRole("button", { name: "完成" });
-    await user.click(complete);
-
-    await waitFor(() => expect(client.checkin).toHaveBeenCalledTimes(1));
-    expect(unknown.getAttribute("aria-pressed")).toBe("true");
-    expect(complete.getAttribute("aria-pressed")).toBe("false");
-    expect(screen.getByRole("status").textContent).toContain("保存失败");
-    const draft = screen.getByRole("region", { name: "今日锚点未保存草稿" });
-    expect(draft.textContent).toContain("生活动作");
-    expect(draft.textContent).toContain("完成");
-    await user.click(within(draft).getByRole("button", { name: "重试保存" }));
-    await waitFor(() => expect(client.checkin).toHaveBeenCalledTimes(2));
-  });
-
-  it("shows an explicit saving state while an anchor write is pending", async () => {
-    const user = userEvent.setup();
-    let release: ((value: Awaited<ReturnType<LifeConsoleClient["checkin"]>>) => void)
-      | undefined;
-    const checkin = vi.fn(() =>
-      new Promise<Awaited<ReturnType<LifeConsoleClient["checkin"]>>>((resolve) => {
-        release = resolve;
-      }));
-    const client = {
-      dashboard: vi.fn().mockResolvedValue(syntheticDashboard),
-      journal: vi.fn(),
-      checkin,
-      preview: vi.fn(),
-      ...enrichmentStubs(),
-    } satisfies LifeConsoleClient;
-    render(<App client={client} initialDashboard={syntheticDashboard} />);
-
-    const group = screen.getByRole("group", { name: "生活动作状态" });
-    await user.click(within(group).getByRole("button", { name: "完成" }));
-    expect(screen.getByRole("status").textContent).toContain("正在保存");
-    expect(within(group).getByRole("button", { name: "完成" }).hasAttribute("disabled")).toBe(true);
-    release?.({
-      request_id: "synthetic-request",
-      command_id: "synthetic-command",
-      action: "updated",
-      source: { state: "saved", revision: 2 },
-      read_model: "current",
-      message: "已保存到 iCloud",
-    });
-    expect(await screen.findByText("已保存到 iCloud")).toBeTruthy();
-  });
-
-  it("shows a source-confirmed anchor only after the dashboard refresh", async () => {
-    const user = userEvent.setup();
-    const updated = structuredClone(syntheticDashboard);
-    updated.today.anchors.life_action = "complete";
-    updated.today.daily_revision = 4;
-    const client = {
-      dashboard: vi.fn().mockResolvedValue(updated),
-      journal: vi.fn(),
-      checkin: vi.fn().mockResolvedValue({
-        request_id: "req_anchor",
-        command_id: "cmd_anchor",
-        action: "updated" as const,
-        source: { state: "saved" as const, revision: 4 },
-        read_model: "current" as const,
-        message: "已保存到 iCloud",
-      }),
-      preview: vi.fn(),
-      ...enrichmentStubs(),
-    } satisfies LifeConsoleClient;
-    render(<App client={client} initialDashboard={syntheticDashboard} />);
-
-    const group = screen.getByRole("group", { name: "生活动作状态" });
-    const complete = within(group).getByRole("button", { name: "完成" });
-    await user.click(complete);
-
-    await waitFor(() => expect(complete.getAttribute("aria-pressed")).toBe("true"));
-    expect(client.dashboard).toHaveBeenCalled();
-    expect(screen.getByRole("status").textContent).toContain("已保存到 iCloud");
-    expect(screen.queryByRole("region", { name: "今日锚点未保存草稿" })).toBeNull();
-  });
-
   it("submits a record only through the primary conversation entry", async () => {
     const user = userEvent.setup();
     const journal = vi.fn().mockResolvedValue({
@@ -411,70 +305,6 @@ describe("Life Console synthetic UI", () => {
     expect(screen.getByRole("status").textContent).toContain("已保存到 iCloud");
   });
 
-  it("compares current and submitted values on revision conflict", async () => {
-    const user = userEvent.setup();
-    const response = {
-      request_id: "req_conflict",
-      error: {
-        code: "REVISION_CONFLICT" as const,
-        message: "记录已更新",
-        retryable: false,
-      },
-      conflict: {
-        target_key: syntheticDashboard.date,
-        current_revision: 2,
-        current: { life_action: "complete" as const },
-        submitted: { life_action: "minimum" as const },
-      },
-    };
-    const checkin = vi.fn()
-      .mockRejectedValueOnce(new ApiError(response, 409))
-      .mockResolvedValueOnce({
-        request_id: "req_resolved",
-        command_id: "cmd_resolved",
-        action: "updated" as const,
-        source: { state: "saved" as const, revision: 3 },
-        read_model: "current" as const,
-        message: "已使用最新版本保存",
-      });
-    const client = {
-      dashboard: vi.fn().mockResolvedValue(syntheticDashboard),
-      journal: vi.fn(),
-      checkin,
-      preview: vi.fn(),
-      ...enrichmentStubs(),
-    } satisfies LifeConsoleClient;
-    render(<App client={client} initialDashboard={syntheticDashboard} />);
-    const group = screen.getByRole("group", { name: "生活动作状态" });
-    await user.click(within(group).getByRole("button", { name: "最低版" }));
-
-    expect(await screen.findByRole("region", { name: "状态冲突" })).toBeTruthy();
-    expect(screen.getByText("当前值")).toBeTruthy();
-    expect(screen.getByText("本次提交")).toBeTruthy();
-    expect(within(group).getByRole("button", { name: "未记录" }).getAttribute("aria-pressed")).toBe("true");
-    expect((within(group).getByRole("button", {
-      name: "完成",
-    }) as HTMLButtonElement).disabled).toBe(true);
-
-    await user.click(screen.getByRole("button", { name: "使用最新记录" }));
-    await waitFor(() => {
-      expect(screen.queryByRole("region", { name: "状态冲突" })).toBeNull();
-    });
-    const draft = screen.getByRole("region", {
-      name: "今日锚点未保存草稿",
-    });
-    await user.click(within(draft).getByRole("button", { name: "重试保存" }));
-    await waitFor(() => expect(checkin).toHaveBeenNthCalledWith(
-      2,
-      syntheticDashboard.date,
-      {
-        schema_version: 1,
-        expect_revision: 2,
-        fields: { life_action: "minimum" },
-      },
-    ));
-  });
-
   it("keeps the retired daily-status form off the record page", async () => {
     const user = userEvent.setup();
     const checkin = vi.fn().mockResolvedValue({
@@ -499,7 +329,7 @@ describe("Life Console synthetic UI", () => {
     expect(checkin).not.toHaveBeenCalled();
   });
 
-  it("keeps quick anchors on the workbench instead of duplicating them in records", async () => {
+  it("keeps retired quick anchor controls off records without changing checkin API", async () => {
     const user = userEvent.setup();
     const checkin = vi.fn().mockResolvedValue({
       request_id: "req_quick_anchor",

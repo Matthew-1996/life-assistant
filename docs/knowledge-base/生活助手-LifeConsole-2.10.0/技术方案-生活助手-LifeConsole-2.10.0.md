@@ -1,6 +1,6 @@
 # 技术方案（评审候选） · Life Console 2.10.0
 
-状态：draft.2 技术路线已获 PO 确认，批准实施 A（合成库与接口）。A 已形成工程候选；B–E 尚未执行。详见阶段 A 工程验收。
+状态：draft.2 技术路线已获 PO 确认，批准实施 A（合成库与接口）。A 已完成，PO 随后回复“继续”授权 B；站内界面候选已实现，C–E 未执行。详见 A/B 工程验收。
 
 ## 当前基线
 
@@ -113,3 +113,9 @@ ICS 使用 [RFC 5545](https://www.rfc-editor.org/rfc/rfc5545) 格式：VCALENDAR
 公开 schema 中 profiles 可由登录用户维护，不能充当 Owner allowlist。新增 `life_console_private.fitness_owners`，默认空表，仅受控管理员可登记；迁移不授予任何真实用户访问。预约表在 public，回执、Owner 登记和订阅元数据在私有 schema，不向 authenticated 开放数据权限；RLS helper 仅提供当前用户是否获准的布尔结果。
 
 同 Owner 的写事务先取得相同 advisory lock，再执行行锁/revision/回执/审计与 feed_revision 更新，保证小型个人日历的写入原子性。幂等重试返回原预约的当前状态（可已改期或软删），不会重新插入或复活；get(id) 包含软删记录以供后续冲突界面使用。订阅元数据默认 disabled/token_hash=null，本阶段没有签发令牌或提供 feed。
+
+## 阶段 B 实施补充
+
+FitnessPanel 将来源对象或 sessionScope 变化视为新会话重新挂载；退出/卸载后不应用旧异步结果。月历完整取完可见日期范围的所有游标页后才更新，失败保留可用同月数据并显式未刷新。编辑侧栏另查目标日期以提示重叠，不阻断提交；不保存到浏览器持久层。
+
+首次新建生成 operationKey，响应未知时锁定该次内容、重试复用原键；后续认证拒绝不能清除曾经未知的请求键。关闭未知结果的草稿须确认并提示先刷新核对。编辑冲突先 get 最新记录，展示当前值/本次草稿，再明确按最新 revision 重提；已删不能复活。成功改期选中新业务日，删除冲突可取消并用常驻刷新入口核对。原生 modal 使用 showModal 后显式焦点，取消回触发按钮，保存/删除回稳定新增按钮。

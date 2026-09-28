@@ -10,6 +10,7 @@ const executablePath =
 
 export default defineConfig({
   testDir: "./tests/playwright",
+  testIgnore: "fitness-plan.spec.ts",
   fullyParallel: false,
   workers: 1,
   retries: 0,

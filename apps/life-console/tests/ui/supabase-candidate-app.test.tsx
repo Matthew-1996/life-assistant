@@ -203,7 +203,7 @@ describe("Supabase candidate product application", () => {
     expect(screen.queryByText(/2030-01-03/)).not.toBeNull();
   });
 
-  it("joins a newer successful refresh before confirming an anchor save", async () => {
+  it("joins a newer successful refresh before confirming a journal save", async () => {
     const user = userEvent.setup();
     const deferred: { resolve?: (value: Dashboard) => void } = {};
     const newerDashboard = structuredClone(dashboard);
@@ -214,30 +214,32 @@ describe("Supabase candidate product application", () => {
         deferred.resolve = resolve;
       }))
       .mockResolvedValueOnce(newerDashboard);
-    client.checkin.mockResolvedValueOnce({
+    client.journal.mockResolvedValueOnce({
       request_id: "synthetic-request",
       command_id: "synthetic-command",
       action: "updated",
       source: { state: "saved", revision: 1 },
       read_model: "current",
       message: "候选状态已保存。",
+      journal: { id: "synthetic-journal", date: "2030-01-01", summary: "合成日志", source_text: "合成日志", revision: 1 },
     });
     renderCandidate();
     await waitFor(() => expect(client.dashboard).toHaveBeenCalledTimes(1));
 
-    const group = screen.getByRole("group", { name: "生活动作状态" });
-    await user.click(within(group).getByRole("button", { name: "完成" }));
+    await user.click(screen.getByRole("button", { name: "记录" }));
+    await user.type(screen.getByLabelText("直接描述想记录的内容"), "合成日志");
+    await user.click(screen.getByRole("button", { name: "保存到 Supabase 候选环境" }));
     await waitFor(() => expect(client.dashboard).toHaveBeenCalledTimes(2));
     window.dispatchEvent(new Event("focus"));
-    await screen.findByText(/2030-01-03/);
+    await waitFor(() => expect(client.dashboard).toHaveBeenCalledTimes(3));
     deferred.resolve?.(dashboard);
 
-    expect(await screen.findByText("候选状态已保存。")).toBeTruthy();
+    expect(await screen.findByText(/已保存/)).toBeTruthy();
     expect(screen.queryByText(/但页面暂时无法刷新/)).toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
-  it("reports a write refresh failure only when the newer refresh fails", async () => {
+  it("keeps the saved journal receipt when the newer dashboard refresh fails", async () => {
     const user = userEvent.setup();
     const deferred: { resolve?: (value: Dashboard) => void } = {};
     client.dashboard
@@ -246,25 +248,27 @@ describe("Supabase candidate product application", () => {
         deferred.resolve = resolve;
       }))
       .mockRejectedValueOnce(new Error("latest synthetic refresh failed"));
-    client.checkin.mockResolvedValueOnce({
+    client.journal.mockResolvedValueOnce({
       request_id: "synthetic-request",
       command_id: "synthetic-command",
       action: "updated",
       source: { state: "saved", revision: 1 },
       read_model: "current",
       message: "候选状态已保存。",
+      journal: { id: "synthetic-journal", date: "2030-01-01", summary: "合成日志", source_text: "合成日志", revision: 1 },
     });
     renderCandidate();
     await waitFor(() => expect(client.dashboard).toHaveBeenCalledTimes(1));
 
-    const group = screen.getByRole("group", { name: "生活动作状态" });
-    await user.click(within(group).getByRole("button", { name: "完成" }));
+    await user.click(screen.getByRole("button", { name: "记录" }));
+    await user.type(screen.getByLabelText("直接描述想记录的内容"), "合成日志");
+    await user.click(screen.getByRole("button", { name: "保存到 Supabase 候选环境" }));
     await waitFor(() => expect(client.dashboard).toHaveBeenCalledTimes(2));
     window.dispatchEvent(new Event("focus"));
     await screen.findByRole("alert");
     deferred.resolve?.(dashboard);
 
-    expect(await screen.findByText(/已保存到.*但页面暂时无法刷新/)).toBeTruthy();
+    expect(await screen.findByText("候选状态已保存。")).toBeTruthy();
     expect(screen.getByRole("alert").textContent).toContain("私有工作台暂不可用");
   });
 
@@ -295,89 +299,6 @@ describe("Supabase candidate product application", () => {
 
     await waitFor(() => expect(client.dashboard).toHaveBeenCalledTimes(2));
     expect(screen.getByRole("button", { name: /2030-01-02/ })).toBeTruthy();
-  });
-
-  it("restores a failed Today anchor draft after page navigation", async () => {
-    const user = userEvent.setup();
-    client.checkin.mockRejectedValueOnce(new Error("synthetic failure"));
-    renderCandidate();
-    const group = screen.getByRole("group", { name: "生活动作状态" });
-    await user.click(within(group).getByRole("button", { name: "完成" }));
-    const draft = await screen.findByRole("region", {
-      name: "今日锚点未保存草稿",
-    });
-    expect(draft.textContent).toContain("生活动作");
-    await waitFor(() => expect(localStorage.getItem(
-      `${SESSION_DRAFT_STORAGE_PREFIX}synthetic-owner:today-anchor`,
-    )).toBeTruthy());
-    const nav = screen.getByRole("navigation", { name: "全局导航" });
-    await user.click(within(nav).getByRole("button", { name: "记录" }));
-    await user.click(within(nav).getByRole("button", { name: "工作台" }));
-
-    const restored = await screen.findByRole("region", {
-      name: "今日锚点未保存草稿",
-    });
-    expect(restored.textContent).toContain("完成");
-  });
-
-  it("retries a failed Today anchor against its original date after midnight", async () => {
-    const user = userEvent.setup();
-    const nextDashboard = structuredClone(dashboard);
-    nextDashboard.date = "2030-01-02";
-    nextDashboard.today.daily_revision = 9;
-    client.dashboard
-      .mockResolvedValueOnce(dashboard)
-      .mockResolvedValue(nextDashboard);
-    client.checkin
-      .mockRejectedValueOnce(new Error("synthetic failure"))
-      .mockResolvedValueOnce({
-        request_id: "synthetic-request",
-        command_id: "synthetic-command",
-        action: "updated",
-        source: { state: "saved", revision: 1 },
-        read_model: "current",
-        message: "候选状态已保存。",
-      });
-    renderCandidate();
-    const group = screen.getByRole("group", { name: "生活动作状态" });
-    await user.click(within(group).getByRole("button", { name: "完成" }));
-    const draft = await screen.findByRole("region", {
-      name: "今日锚点未保存草稿",
-    });
-    expect(draft.textContent).toContain("2030-01-01");
-
-    window.dispatchEvent(new Event("focus"));
-    await screen.findByText(/2030-01-02/);
-    await user.click(within(draft).getByRole("button", { name: "重试保存" }));
-
-    await waitFor(() => expect(client.checkin).toHaveBeenNthCalledWith(
-      2,
-      "2030-01-01",
-      {
-        schema_version: 1,
-        expect_revision: null,
-        fields: { life_action: "complete" },
-      },
-    ));
-  });
-
-  it("clears the persisted Today anchor draft immediately after success", async () => {
-    const user = userEvent.setup();
-    client.checkin.mockResolvedValueOnce({
-      request_id: "synthetic-request",
-      command_id: "synthetic-command",
-      action: "updated",
-      source: { state: "saved", revision: 1 },
-      read_model: "current",
-      message: "候选状态已保存。",
-    });
-    renderCandidate();
-    const group = screen.getByRole("group", { name: "生活动作状态" });
-    await user.click(within(group).getByRole("button", { name: "完成" }));
-    await screen.findByText("候选状态已保存。");
-    expect(localStorage.getItem(
-      `${SESSION_DRAFT_STORAGE_PREFIX}synthetic-owner:today-anchor`,
-    )).toBeNull();
   });
 
   it("does not expose historical check-in editing on the record page", async () => {
@@ -594,7 +515,8 @@ describe("Supabase candidate product application", () => {
     expect(screen.getByRole("region", { name: "Todo" })).toBeTruthy();
     expect(screen.getByText("当前预览未连接 Todo 数据源。")).toBeTruthy();
     expect(screen.getByRole("region", { name: "每日新闻" })).toBeTruthy();
-    expect(screen.getByRole("region", { name: "今日锚点" })).toBeTruthy();
+    expect(screen.queryByRole("region", { name: "今日锚点" })).toBeNull();
+    expect(screen.getByRole("region", { name: "健身计划" })).toBeTruthy();
     expect(screen.queryByText("合成室内训练")).toBeNull();
     expect(screen.queryByText("候选环境边界")).toBeNull();
     expect(screen.queryByText(/publishable key/i)).toBeNull();

@@ -51,23 +51,11 @@ describe("Life Console 2.5 workbench", () => {
     expect(screen.getByRole("region", { name: "本周寄语" })).toBeTruthy();
     expect(screen.getByRole("region", { name: "Todo" })).toBeTruthy();
     expect(screen.getByRole("region", { name: "每日新闻" })).toBeTruthy();
-    expect(screen.getByRole("region", { name: "今日锚点" })).toBeTruthy();
+    expect(screen.queryByRole("region", { name: "今日锚点" })).toBeNull();
+    expect(screen.getByRole("region", { name: "健身计划" })).toBeTruthy();
     expect(screen.queryByText("隐私与保存链路")).toBeNull();
     expect(screen.queryByText("今天可以不做")).toBeNull();
-    expect(screen.getByText("0 / 4 已填写")).toBeTruthy();
-    expect(screen.getByRole("group", { name: "起床状态" })).toBeTruthy();
-  });
 
-  it("keeps unknown, complete, minimum and skipped as distinct editable states", async () => {
-    const user = userEvent.setup();
-    render(<App initialDashboard={syntheticDashboard} todos={todos} />);
-
-    const wake = screen.getByRole("group", { name: "起床状态" });
-    expect((within(wake).getByRole("button", { name: "未记录" }) as HTMLButtonElement).disabled).toBe(true);
-    expect(within(wake).getByRole("button", { name: "完成" })).toBeTruthy();
-    expect(within(wake).getByRole("button", { name: "最低版" })).toBeTruthy();
-    await user.click(within(wake).getByRole("button", { name: "跳过" }));
-    expect(within(wake).getByRole("button", { name: "跳过" }).getAttribute("aria-pressed")).toBe("true");
   });
 
   it("uses a responsive 8/4 layout with shrink-safe direct children", () => {
