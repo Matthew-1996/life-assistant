@@ -23,7 +23,7 @@ import {
 
 function syntheticSnapshot(): LifeConsoleSnapshot {
   return {
-    schema_version: 3,
+    schema_version: 4,
     exported_at: "2030-01-02T03:04:05Z",
     profiles: [{ user_id: "synthetic-owner" }],
     goals: [{ id: 1, title: "Synthetic goal" }],
@@ -37,6 +37,7 @@ function syntheticSnapshot(): LifeConsoleSnapshot {
     todo_items: [{ id: 10, title: "Synthetic Todo" }],
     todo_status_events: [{ id: 11, todo_id: 10 }],
     dashboard_messages: [{ id: 12, message: "Synthetic message" }],
+    fitness_appointments: [{ id: "synthetic-fitness", title: "Synthetic appointment", revision: 1 }],
     backup_runs: [{ id: 9, status: "completed" }],
   };
 }
@@ -49,7 +50,7 @@ function clientWithRpc(
 
 function emptySnapshot(): LifeConsoleSnapshot {
   return Object.fromEntries([
-    ["schema_version", 3],
+    ["schema_version", 4],
     ["exported_at", "2030-01-02T03:04:05Z"],
     ...BACKUP_RESOURCE_NAMES.map((name) => [name, []]),
   ]) as LifeConsoleSnapshot;
@@ -129,6 +130,7 @@ describe("synthetic backup snapshots", () => {
       "todo_items",
       "todo_status_events",
       "dashboard_messages",
+      "fitness_appointments",
     ]);
   });
 
@@ -187,14 +189,14 @@ describe("synthetic backup snapshots", () => {
   });
 });
 
-describe("life-console-backup/3 packaging", () => {
+describe("life-console-backup/4 packaging", () => {
   const options = {
     exportId: "synthetic-export-0001",
     sourceProductVersion: "2.5.0",
     sourceSchemaVersion: "supabase/3",
   };
 
-  it("packages exactly eleven empty NDJSON resources and one manifest", async () => {
+  it("packages exactly twelve empty NDJSON resources and one manifest", async () => {
     const result = await createBackupArchive(emptySnapshot(), options);
     const files = unzipSync(result.bytes);
     const expectedPaths = [
@@ -214,7 +216,7 @@ describe("life-console-backup/3 packaging", () => {
     expect(result.manifest).toMatchObject({
       format_version: BACKUP_FORMAT_VERSION,
       source_product_version: "2.5.0",
-      source_schema_version: "supabase/3",
+      source_schema_version: "supabase/4",
       export_id: "synthetic-export-0001",
       exported_at: "2030-01-02T03:04:05Z",
     });

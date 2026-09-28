@@ -25,17 +25,19 @@ const legacyResources = {
 };
 
 describe("life-console-backup/3 compatibility", () => {
-  it("writes v3 while declaring v2 and v3 as readable", () => {
-    expect(BACKUP_FORMAT_VERSION).toBe("life-console-backup/3");
+  it("declares v4 current while retaining v2 and v3 readability", () => {
+    expect(BACKUP_FORMAT_VERSION).toBe("life-console-backup/4");
     expect(READABLE_BACKUP_FORMATS).toEqual([
       "life-console-backup/2",
       "life-console-backup/3",
+      "life-console-backup/4",
     ]);
     expect(BACKUP_RESOURCE_NAMES).toEqual([
       ...Object.keys(legacyResources),
       "todo_items",
       "todo_status_events",
       "dashboard_messages",
+      "fitness_appointments",
     ]);
   });
 

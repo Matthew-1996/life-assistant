@@ -32,12 +32,13 @@ LEGACY_RESOURCE_NAMES = (
     "health_days",
     "health_segments",
 )
-RESOURCE_NAMES = LEGACY_RESOURCE_NAMES + (
+V3_RESOURCE_NAMES = LEGACY_RESOURCE_NAMES + (
     "todo_items",
     "todo_status_events",
     "dashboard_messages",
 )
 
+RESOURCE_NAMES = V3_RESOURCE_NAMES + ("fitness_appointments",)
 
 def _canonical(value: Any) -> bytes:
     return json.dumps(
@@ -50,12 +51,13 @@ def _canonical(value: Any) -> bytes:
 
 def build_archive(snapshot: dict[str, Any], export_id: str) -> tuple[bytes, dict[str, int], str]:
     schema_version = snapshot.get("schema_version")
-    if schema_version not in (2, 3) or not snapshot.get("exported_at"):
+    if schema_version not in (2, 3, 4) or not snapshot.get("exported_at"):
         raise CloudWriteError("unavailable")
     payloads: dict[str, bytes] = {}
     resources: dict[str, dict[str, object]] = {}
     counts: dict[str, int] = {}
-    for name in RESOURCE_NAMES:
+    resource_names = RESOURCE_NAMES if schema_version == 4 else V3_RESOURCE_NAMES
+    for name in resource_names:
         rows = snapshot.get(name, []) if schema_version == 2 and name not in LEGACY_RESOURCE_NAMES else snapshot.get(name)
         if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
             raise CloudWriteError("unavailable")
@@ -70,9 +72,10 @@ def build_archive(snapshot: dict[str, Any], export_id: str) -> tuple[bytes, dict
         }
     digest = content_digest_for_resources(resources)
     manifest = {
-        "format_version": "life-console-backup/3",
-        "source_product_version": "2.5.0",
-        "source_schema_version": "supabase/3",
+        "format_version": "life-console-backup/4" if schema_version == 4 else "life-console-backup/3",
+        "source_product_version": "unknown",
+        "exporter_product_version": "2.10.0",
+        "source_schema_version": f"supabase/{schema_version}",
         "export_id": export_id,
         "exported_at": snapshot["exported_at"],
         "resources": resources,

@@ -18,28 +18,35 @@ export const LEGACY_BACKUP_RESOURCE_NAMES = [
   "health_segments",
 ] as const;
 
-export const BACKUP_RESOURCE_NAMES = [
+export const V3_BACKUP_RESOURCE_NAMES = [
   ...LEGACY_BACKUP_RESOURCE_NAMES,
   "todo_items",
   "todo_status_events",
   "dashboard_messages",
 ] as const;
 
-export type BackupResourceName = typeof BACKUP_RESOURCE_NAMES[number];
+export const BACKUP_RESOURCE_NAMES = [
+  ...V3_BACKUP_RESOURCE_NAMES,
+  "fitness_appointments",
+] as const;
+
+export type BackupResourceName = (typeof BACKUP_RESOURCE_NAMES)[number];
 export type BackupRecord = Record<string, unknown>;
 
-export const BACKUP_FORMAT_VERSION = "life-console-backup/3";
+export const BACKUP_FORMAT_VERSION = "life-console-backup/4";
 export const READABLE_BACKUP_FORMATS = [
   "life-console-backup/2",
   "life-console-backup/3",
+  "life-console-backup/4",
 ] as const;
 
 export type LifeConsoleSnapshot = {
-  schema_version: 2 | 3;
+  schema_version: 2 | 3 | 4;
+  fitness_appointments?: BackupRecord[];
   exported_at: string;
   profiles?: BackupRecord[];
   backup_runs?: BackupRecord[];
-} & Record<BackupResourceName, BackupRecord[]>;
+} & Record<(typeof V3_BACKUP_RESOURCE_NAMES)[number], BackupRecord[]>;
 
 export interface BackupResourceMetadata {
   count: number;
@@ -48,7 +55,7 @@ export interface BackupResourceMetadata {
 }
 
 export interface BackupManifest {
-  format_version: typeof BACKUP_FORMAT_VERSION;
+  format_version: "life-console-backup/3" | typeof BACKUP_FORMAT_VERSION;
   source_product_version: string;
   source_schema_version: string;
   export_id: string;
@@ -60,6 +67,7 @@ export interface BackupManifest {
 export interface CreateBackupArchiveOptions {
   exportId: string;
   sourceProductVersion: string;
+  /** Retained for caller compatibility; manifest schema comes from the snapshot. */
   sourceSchemaVersion: string;
 }
 
@@ -94,25 +102,26 @@ function invalidSnapshot(): RepositoryError {
 }
 
 function isRecord(value: unknown): value is BackupRecord {
-  return (
-    typeof value === "object"
-    && value !== null
-    && !Array.isArray(value)
-  );
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function validateSnapshot(value: unknown): LifeConsoleSnapshot {
   if (
-    !isRecord(value)
-    || (value.schema_version !== 2 && value.schema_version !== 3)
-    || typeof value.exported_at !== "string"
-    || value.exported_at.length === 0
+    !isRecord(value) ||
+    (value.schema_version !== 2 &&
+      value.schema_version !== 3 &&
+      value.schema_version !== 4) ||
+    typeof value.exported_at !== "string" ||
+    value.exported_at.length === 0
   ) {
     throw invalidSnapshot();
   }
-  const requiredResources = value.schema_version === 2
-    ? LEGACY_BACKUP_RESOURCE_NAMES
-    : BACKUP_RESOURCE_NAMES;
+  const requiredResources =
+    value.schema_version === 2
+      ? LEGACY_BACKUP_RESOURCE_NAMES
+      : value.schema_version === 3
+        ? V3_BACKUP_RESOURCE_NAMES
+        : BACKUP_RESOURCE_NAMES;
   for (const name of requiredResources) {
     const rows = value[name];
     if (!Array.isArray(rows) || rows.some((row) => !isRecord(row))) {
@@ -133,9 +142,9 @@ function validateSnapshot(value: unknown): LifeConsoleSnapshot {
 
 function canonicalValue(value: unknown): unknown {
   if (
-    value === null
-    || typeof value === "string"
-    || typeof value === "boolean"
+    value === null ||
+    typeof value === "string" ||
+    typeof value === "boolean"
   ) {
     return value;
   }
@@ -165,7 +174,7 @@ async function sha256Hex(value: Uint8Array | string): Promise<string> {
   const input = Uint8Array.from(bytes);
   const digest = await globalThis.crypto.subtle.digest("SHA-256", input);
   return Array.from(new Uint8Array(digest), (byte) =>
-    byte.toString(16).padStart(2, "0")
+    byte.toString(16).padStart(2, "0"),
   ).join("");
 }
 
@@ -186,11 +195,14 @@ export async function createBackupArchive(
     readonly [BackupResourceName, BackupResourceMetadata]
   > = [];
 
-  for (const name of BACKUP_RESOURCE_NAMES) {
-    const rows = snapshot[name];
-    const ndjson = rows.length === 0
-      ? ""
-      : `${rows.map(canonicalJson).join("\n")}\n`;
+  const resourceNames =
+    snapshot.schema_version === 4
+      ? BACKUP_RESOURCE_NAMES
+      : V3_BACKUP_RESOURCE_NAMES;
+  for (const name of resourceNames) {
+    const rows = snapshot[name]!;
+    const ndjson =
+      rows.length === 0 ? "" : `${rows.map(canonicalJson).join("\n")}\n`;
     const payload = strToU8(ndjson);
     const path = `data/${name}.ndjson`;
     files[path] = payload;
@@ -204,9 +216,10 @@ export async function createBackupArchive(
     ]);
   }
 
-  const resources = Object.fromEntries(
-    metadataEntries,
-  ) as Record<BackupResourceName, BackupResourceMetadata>;
+  const resources = Object.fromEntries(metadataEntries) as Record<
+    BackupResourceName,
+    BackupResourceMetadata
+  >;
   const canonicalResources = Object.fromEntries(
     [...metadataEntries]
       .sort(([left], [right]) => left.localeCompare(right))
@@ -220,15 +233,16 @@ export async function createBackupArchive(
       ]),
   );
   const manifest: BackupManifest = {
-    format_version: BACKUP_FORMAT_VERSION,
+    format_version:
+      snapshot.schema_version === 4
+        ? BACKUP_FORMAT_VERSION
+        : "life-console-backup/3",
     source_product_version: validateOption(options.sourceProductVersion),
-    source_schema_version: validateOption(options.sourceSchemaVersion),
+    source_schema_version: `supabase/${snapshot.schema_version}`,
     export_id: validateOption(options.exportId),
     exported_at: snapshot.exported_at,
     resources,
-    archive_content_sha256: await sha256Hex(
-      canonicalJson(canonicalResources),
-    ),
+    archive_content_sha256: await sha256Hex(canonicalJson(canonicalResources)),
   };
   files["manifest.json"] = strToU8(canonicalJson(manifest));
   const bytes = zipSync(files, { level: 0 });
@@ -252,21 +266,20 @@ export class BackupRepository {
   async snapshot(): Promise<LifeConsoleSnapshot> {
     const value = await this.repository.executeRead<unknown>(
       async () =>
-        await this.client.rpc(
+        (await this.client.rpc(
           "export_life_console_snapshot",
-        ) as SupabaseResult<unknown>,
+        )) as SupabaseResult<unknown>,
     );
     return validateSnapshot(value);
   }
 
   async start(): Promise<BackupStatus> {
-    const result = await this.client.rpc(
+    const result = (await this.client.rpc(
       "request_life_console_backup",
-    ) as SupabaseResult<BackupRunRow[]>;
+    )) as SupabaseResult<BackupRunRow[]>;
     if (result.error) {
-      const status = result.status === 401 || result.status === 403
-        ? result.status
-        : 503;
+      const status =
+        result.status === 401 || result.status === 403 ? result.status : 503;
       throw new RepositoryError(
         status === 503 ? "transient" : "unauthorized",
         status,
@@ -281,11 +294,11 @@ export class BackupRepository {
   async latest(): Promise<BackupStatus | null> {
     const rows = await this.repository.executeRead<BackupRunRow[]>(
       async () =>
-        await this.client
+        (await this.client
           .from("backup_runs")
           .select("id,status,created_at,completed_at,record_counts")
           .order("created_at", { ascending: false })
-          .limit(1) as SupabaseResult<BackupRunRow[]>,
+          .limit(1)) as SupabaseResult<BackupRunRow[]>,
     );
     return rows?.[0] ? this.publicStatus(rows[0]) : null;
   }

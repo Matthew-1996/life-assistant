@@ -11,7 +11,7 @@ import tempfile
 from typing import Any
 from zipfile import ZipFile
 
-from life_console_backup_agent import LEGACY_RESOURCE_NAMES, RESOURCE_NAMES
+from life_console_backup_agent import LEGACY_RESOURCE_NAMES, V3_RESOURCE_NAMES, RESOURCE_NAMES
 
 
 def verify_isolated_restore(archive_path: Path) -> dict[str, Any]:
@@ -24,12 +24,13 @@ def verify_isolated_restore(archive_path: Path) -> dict[str, Any]:
             if format_version not in (
                 "life-console-backup/2",
                 "life-console-backup/3",
+                "life-console-backup/4",
             ):
                 raise ValueError("backup_format_invalid")
             resource_names = (
                 LEGACY_RESOURCE_NAMES
                 if format_version == "life-console-backup/2"
-                else RESOURCE_NAMES
+                else V3_RESOURCE_NAMES if format_version == "life-console-backup/3" else RESOURCE_NAMES
             )
             expected = {"manifest.json"} | {
                 f"data/{name}.ndjson" for name in resource_names
