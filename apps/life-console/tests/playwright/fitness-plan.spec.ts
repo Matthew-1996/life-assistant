@@ -26,6 +26,8 @@ for (const width of [1440, 1280, 390])
     await panel.getByRole("button", { name: "新增预约", exact: true }).click();
     let dialog = page.getByRole("dialog", { name: "新增预约", exact: true });
     await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole("button", { name: "保存预约" })).toHaveCSS("opacity", "1");
+    await expect(dialog.getByRole("button", { name: "保存预约" })).toHaveCSS("filter", "none");
     await expect(dialog.getByLabel("健身事件")).toBeFocused();
     // The native modal keeps keyboard navigation inside and restores its trigger.
     await page.keyboard.press("Shift+Tab");
