@@ -288,3 +288,9 @@
     padding: 20px;
   }
 }
+
+.fitness-subscription-notes { display: flex; align-items: center; gap: 10px; margin: 24px 0; }
+.fitness-subscription-notes input { width: 18px; height: 18px; accent-color: var(--accent, #007aff); }
+.fitness-subscription-link { margin: 24px 0; padding: 18px; border: 1px solid var(--border, #e5e5ea); border-radius: 16px; }
+.fitness-subscription-link input { width: 100%; min-width: 0; font-size: 13px; margin-top: 8px; }
+.fitness-subscription-confirm { margin-top: 24px; padding: 18px; background: #f5f7fb; border-radius: 16px; }

@@ -1,3 +1,4 @@
+import type { FitnessSubscriptionPort } from "./fitness-subscription";
 export const FITNESS_TIME_ZONE = "Asia/Shanghai" as const;
 export const FITNESS_PAGE_SIZE = 100;
 
@@ -48,6 +49,7 @@ export interface FitnessPage {
   nextCursor: FitnessCursor | null;
 }
 export interface FitnessRepositoryPort {
+  subscription?: FitnessSubscriptionPort;
   listRange(input: FitnessRange): Promise<FitnessPage>;
   /** Includes soft-deleted rows so an editor can explain a conflict. */
   get(id: string): Promise<FitnessAppointment | null>;

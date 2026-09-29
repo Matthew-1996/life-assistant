@@ -4,6 +4,7 @@ import type {
   FitnessCursor,
   FitnessRepositoryPort,
 } from "../../domain/fitness";
+import { CalendarSubscriptionSettings } from "./CalendarSubscriptionSettings";
 import { AppointmentEditor } from "./AppointmentEditor";
 import { FitnessDialog } from "./FitnessDialog";
 import {
@@ -233,6 +234,7 @@ function FitnessSession({ repository, now, synthetic }: Props) {
         </div>
         <div className="button-row">
           <span className="quiet">上海时区</span>
+          {repository?.subscription && <CalendarSubscriptionSettings repository={repository.subscription} synthetic={synthetic} />}
           <button
             className="secondary-button"
             disabled={!repository || loading}
