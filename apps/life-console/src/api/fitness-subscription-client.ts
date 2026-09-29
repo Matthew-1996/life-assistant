@@ -1,10 +1,11 @@
 import type {FitnessSubscriptionPort,FitnessSubscriptionState} from '../domain/fitness-subscription';
 interface Dependencies {origin:string;getAccessToken():Promise<string|null>;fetch:typeof globalThis.fetch}
 export function createFitnessSubscriptionClient(deps:Dependencies):FitnessSubscriptionPort{
+ const fetchRequest = deps.fetch;
  const origin=new URL(deps.origin);if(origin.protocol!=='https:'||origin.username||origin.password||origin.search||origin.hash||origin.pathname!=='/')throw Error('Invalid subscription origin');
  async function request(body?:Record<string,unknown>):Promise<FitnessSubscriptionState & {url?:string}>{
   const token=await deps.getAccessToken();if(!token)throw Error('Authentication required');
-  const response=await deps.fetch(`${origin.origin}/calendar/subscription`,{method:body?'POST':'GET',cache:'no-store',redirect:'error',credentials:'omit',referrerPolicy:'no-referrer',signal:AbortSignal.timeout(15000),headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});
+  const response=await fetchRequest(`${origin.origin}/calendar/subscription`,{method:body?'POST':'GET',cache:'no-store',redirect:'error',credentials:'omit',referrerPolicy:'no-referrer',signal:AbortSignal.timeout(15000),headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});
   if(!response.ok)throw Error(`Subscription request failed (${response.status})`);
   const value=await response.json();if(!value||typeof value.enabled!=='boolean'||typeof value.includeNotes!=='boolean'||!Number.isSafeInteger(value.revision)||value.revision<0)throw Error('Invalid subscription response');
   const state={enabled:value.enabled,includeNotes:value.includeNotes,revision:value.revision};
