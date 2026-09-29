@@ -60,17 +60,14 @@ export function TodoGantt({ emptyMessage = "创建 Todo 后在这里查看计划
           const outside = rawEnd <= 0 || rawStart >= 14;
           return (
             <div className="todo-gantt__row" key={todo.id}>
-              {outside && <span className="todo-gantt__row-title">{todo.title}</span>}
+              <span className="todo-gantt__row-title">{todo.title}</span>
               <div className="todo-gantt__grid todo-gantt__track">
                 {!outside && (
                   <span
                     aria-label={`${todo.title}：第 ${barStart + 1} 天至第 ${barEnd} 天`}
                     className={`todo-gantt__bar todo-gantt__bar--${todo.status}`}
                     style={{ gridColumn: `${barStart + 1} / ${barEnd + 1}` }}
-                    title={todo.title}
-                  >
-                    <span className="todo-gantt__row-title">{todo.title}</span>
-                  </span>
+                  />
                 )}
               </div>
             </div>
