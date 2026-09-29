@@ -16,6 +16,7 @@ from local_agent.backup_store import (
     BACKUP_FORMAT_VERSION,
     EXPECTED_RESOURCES,
     LEGACY_EXPECTED_RESOURCES,
+    RESOURCES_BY_FORMAT,
     BackupAgentError,
     BackupStore,
     BackupStoreLimits,
@@ -31,11 +32,7 @@ def archive_bytes(
     extra_writer=None,
     format_version: str = BACKUP_FORMAT_VERSION,
 ) -> bytes:
-    resource_names = (
-        LEGACY_EXPECTED_RESOURCES
-        if format_version == "life-console-backup/2"
-        else EXPECTED_RESOURCES
-    )
+    resource_names = RESOURCES_BY_FORMAT[format_version]
     payloads = {
         name: b"" if empty_resources else (
             json.dumps({"id": f"{name}_synthetic", "value": record_text}, sort_keys=True)

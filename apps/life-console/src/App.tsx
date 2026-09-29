@@ -23,6 +23,7 @@ import { StageAPocPanel } from "./features/system/StageAPocPanel";
 import { SystemPage } from "./features/system/SystemPage";
 import { TodayPage } from "./features/today/TodayPage";
 import type { DailyNewsClient } from "./domain/daily-news";
+import type { FitnessRepositoryPort } from "./domain/fitness";
 import type { TodoRepositoryPort } from "./domain/todos";
 import type { AuthSession } from "./supabase/auth";
 import type { BackupRepository } from "./supabase/backups";
@@ -41,6 +42,7 @@ export interface SupabaseProductContext {
   reviews: ReviewRepositoryPort;
   dashboardMessages?: DashboardMessageRepositoryPort;
   todos?: TodoRepositoryPort;
+  fitness?: FitnessRepositoryPort;
   session: AuthSession;
   signOut(): Promise<void>;
   backups?: BackupRepository;
@@ -63,6 +65,7 @@ interface AppProps {
   candidateHealth?: HealthRepositoryPort;
   dashboardMessages?: DashboardMessageRepositoryPort;
   todos?: TodoRepositoryPort;
+  fitness?: FitnessRepositoryPort;
 }
 
 export function App({
@@ -75,6 +78,7 @@ export function App({
   candidateHealth,
   dashboardMessages,
   todos,
+  fitness,
 }: AppProps) {
   const supabaseMode = mode === "supabase-candidate" || mode === "supabase-production";
   const [activePage, setActivePage] = useState<PageId>("today");
@@ -209,6 +213,7 @@ export function App({
         onSaved={refreshAfterWrite}
         sourceTruth={sitesStatus?.source_truth}
         todos={todos ?? supabase?.todos}
+        fitness={fitness ?? supabase?.fitness}
       />
     ),
     progress: (

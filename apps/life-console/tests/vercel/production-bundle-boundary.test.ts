@@ -40,6 +40,7 @@ describe("Supabase Production browser bundle boundary", () => {
     });
 
     const bundle = readTree(outputDirectory);
+    expect(bundle).toContain("合成私教训练");
     expect(bundle).toContain("整理旅行清单");
     expect(bundle).toContain("准备本周采购");
     expect(bundle).toContain("完成房间整理");
@@ -60,6 +61,8 @@ describe("Supabase Production browser bundle boundary", () => {
     expect(bundle).not.toContain("合成示例：人工智能基础设施持续演进");
     expect(bundle).not.toContain("2026-01-03");
     expect(bundle).not.toContain("candidate-health-preview-only");
+    expect(bundle).not.toContain("合成私教训练");
+    expect(bundle).not.toContain("synthetic-fitness-preview");
     expect(bundle).not.toContain("整理旅行清单");
     expect(bundle).not.toContain("准备本周采购");
     expect(bundle).not.toContain("完成房间整理");

@@ -20,6 +20,7 @@ import { GoalRepository } from "./supabase/goals";
 import { HealthRepository } from "./supabase/health";
 import { JournalRepository } from "./supabase/journals";
 import { ReviewRepository } from "./supabase/reviews";
+import { FitnessRepository } from "./supabase/fitness";
 import { TodoRepository } from "./supabase/todos";
 import { createSupabaseDashboardClient } from "./supabase/dashboard";
 import "./styles.css";
@@ -65,6 +66,7 @@ if (supabaseMode) {
   const journals = new JournalRepository(supabase);
   const reviews = new ReviewRepository(supabase);
   const todos = new TodoRepository(supabase);
+  const fitness = new FitnessRepository(supabase);
   const backups = new BackupRepository(supabase);
   const auth = createSupabaseAuthService(supabase.auth);
   const dailyNews = createDailyNewsApiClient({
@@ -106,6 +108,7 @@ if (supabaseMode) {
               session,
               signOut,
               todos,
+              fitness,
             }}
           />
         )}
@@ -114,15 +117,16 @@ if (supabaseMode) {
   );
 } else {
   void (async () => {
-    const [dailyNews, candidateHealth, candidateTodos] = candidateMode
+    const [dailyNews, candidateHealth, candidateTodos, candidateFitness] = candidateMode
       ? await Promise.all([
         import("./data/daily-news").then((module) => module.syntheticDailyNewsClient),
         import("./data/candidate-health").then((module) => module.candidateHealthRepository),
         import("./features/todos/candidate-todo-repository").then(
           (module) => module.createCandidateTodoRepository(),
         ),
+        import("./features/fitness/candidate-fitness-repository").then(module => module.createCandidateFitnessRepository()),
       ])
-      : [undefined, undefined, undefined];
+      : [undefined, undefined, undefined, undefined];
     createRoot(root).render(
       <StrictMode>
         <App
@@ -133,6 +137,7 @@ if (supabaseMode) {
           mode={candidateMode ? "candidate-preview" : sitesMode ? "sites" : "local"}
           stageAPocEnabled={stageAPocEnabled}
           todos={candidateTodos}
+          fitness={candidateFitness}
         />
       </StrictMode>,
     );

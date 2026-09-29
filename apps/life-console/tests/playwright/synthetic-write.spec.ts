@@ -44,8 +44,8 @@ test("keeps mobile controls above the floating bottom navigation", async ({ page
 
   const navigation = page.getByRole("navigation", { name: "全局导航" });
   const anchorButton = page
-    .getByRole("group", { name: "起床状态" })
-    .getByRole("button", { name: "完成" });
+    .getByRole("region", { name: "健身计划", exact: true })
+    .getByRole("button", { name: "今天", exact: true });
 
   await expect(navigation).toBeVisible();
   await expect(anchorButton).toBeVisible();
@@ -386,7 +386,8 @@ test("keeps the 2.5 workbench in-screen and stacks columns below 1180px content 
     await expect(page.getByRole("region", { name: "本周寄语" })).toBeVisible();
     await expect(page.getByRole("region", { exact: true, name: "Todo" })).toBeVisible();
     await expect(page.getByRole("region", { name: "每日新闻" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "今日锚点" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "今日锚点" })).toHaveCount(0);
+    await expect(page.getByRole("region", { name: "健身计划" })).toBeVisible();
 
     const layout = await page.evaluate(() => {
       const primary = document.querySelector<HTMLElement>(".workbench-primary");

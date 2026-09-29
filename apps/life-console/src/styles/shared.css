@@ -226,9 +226,9 @@ a:focus-visible {
   background: #f7f7ff;
 }
 
-.candidate-preview form button[type="submit"],
-.candidate-preview button.danger,
-.candidate-preview [data-write-control] {
+.candidate-preview form button[type="submit"]:not([data-candidate-local-write] *),
+.candidate-preview button.danger:not([data-candidate-local-write] *),
+.candidate-preview [data-write-control]:not([data-candidate-local-write] *) {
   opacity: 0.48;
   filter: saturate(0.35);
 }

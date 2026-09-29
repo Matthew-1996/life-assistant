@@ -24,10 +24,11 @@ from typing import BinaryIO, Mapping
 from zipfile import BadZipFile, ZipFile
 
 
-BACKUP_FORMAT_VERSION = "life-console-backup/3"
+BACKUP_FORMAT_VERSION = "life-console-backup/4"
 READABLE_BACKUP_FORMATS = (
     "life-console-backup/2",
     "life-console-backup/3",
+    "life-console-backup/4",
 )
 RECEIPT_FORMAT_VERSION = "life-console-local-receipts/1"
 LEGACY_EXPECTED_RESOURCES = (
@@ -40,14 +41,16 @@ LEGACY_EXPECTED_RESOURCES = (
     "health_days",
     "health_segments",
 )
-EXPECTED_RESOURCES = LEGACY_EXPECTED_RESOURCES + (
+V3_EXPECTED_RESOURCES = LEGACY_EXPECTED_RESOURCES + (
     "todo_items",
     "todo_status_events",
     "dashboard_messages",
 )
+EXPECTED_RESOURCES = V3_EXPECTED_RESOURCES + ("fitness_appointments",)
 RESOURCES_BY_FORMAT = {
     "life-console-backup/2": LEGACY_EXPECTED_RESOURCES,
-    "life-console-backup/3": EXPECTED_RESOURCES,
+    "life-console-backup/3": V3_EXPECTED_RESOURCES,
+    "life-console-backup/4": EXPECTED_RESOURCES,
 }
 RUN_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
 HEX_SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
