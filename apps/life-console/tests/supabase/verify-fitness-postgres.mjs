@@ -35,7 +35,7 @@ try {
   running = true;
   const admin = await connect();
   const migrations = join(app, 'supabase/migrations');
-  for (const file of [join(app, 'tests/supabase/fixtures/auth-shim.sql'), join(migrations, '0001_life_console.sql'), join(migrations, readdirSync(migrations).find(n => n.endsWith('_fitness_appointments.sql')))]) await admin.query(readFileSync(file, 'utf8'));
+  for (const file of [join(app, 'tests/supabase/fixtures/auth-shim.sql'), join(migrations, '0001_life_console.sql'), join(migrations, readdirSync(migrations).find(n => n.endsWith('_fitness_appointments.sql'))), join(migrations, readdirSync(migrations).find(n => n.endsWith('_fitness_http_conflicts.sql')))]) await admin.query(readFileSync(file, 'utf8'));
   await admin.query(`insert into auth.users(id) values ($1);`, [owner]);
   await admin.query('insert into life_console_private.fitness_owners(user_id) values ($1)', [owner]);
   const a = await connect(true), b = await connect(true);
@@ -65,11 +65,11 @@ try {
   console.log('PASS same key concurrent create: one appointment, receipt and audit');
   const altered = create('fitness-concurrent-different'); altered.values[1] = 'Different';
   const [, conflict] = await race(create('fitness-concurrent-different'), altered);
-  assert.equal(conflict.error?.code, '40001');
+  assert.equal(conflict.error?.code, 'PT409');
   console.log('PASS same key different payload: conflict');
   const [updated, deleted] = await race({ text: `select * from public.update_fitness_appointment($1,1,'Updated','2030-05-01T12:00Z','2030-05-01T13:00Z','','')`, values: [row.id] }, { text: 'select * from public.soft_delete_fitness_appointment($1,1)', values: [row.id] });
   assert.equal(updated.revision, 2);
-  assert.equal(deleted.error?.code, '40001');
+  assert.equal(deleted.error?.code, 'PT409');
   assert.equal((await admin.query('select deleted_at from public.fitness_appointments where id=$1', [row.id])).rows[0].deleted_at, null);
   console.log('PASS same revision concurrent update/delete: only update succeeds');
 } finally {

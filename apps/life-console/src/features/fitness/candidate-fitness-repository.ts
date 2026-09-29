@@ -30,7 +30,7 @@ export function createCandidateFitnessRepository(
     new RepositoryError(
       "conflict",
       409,
-      "40001",
+      "PT409",
       "Synthetic revision conflict",
     );
   return {

@@ -31,6 +31,9 @@ beforeAll(async () => {
   const migration = (await readdir(dir)).find(name => name.endsWith("_fitness_appointments.sql"));
   if (!migration) throw new Error("Fitness appointment migration is not implemented");
   await db.exec(await readFile(new URL(migration, dir), "utf8"));
+  const conflictMigration = (await readdir(dir)).find(name => name.endsWith("_fitness_http_conflicts.sql"));
+  if (!conflictMigration) throw new Error("Fitness HTTP conflict migration missing");
+  await db.exec(await readFile(new URL(conflictMigration, dir), "utf8"));
   await db.query("insert into auth.users(id) values ($1),($2),($3)",[owner,other,guest]);
   await db.query("insert into life_console_private.fitness_owners(user_id) values ($1),($2)",[owner,other]);
 });
@@ -71,7 +74,7 @@ describe("fitness appointment SQL behavior", () => {
     const p=input("  私教  ");const [a]=await create(p);
     const [b]=await create([p[0],"私教","2030-05-01T18:00:00+08:00","2030-05-01T19:00:00+08:00",...p.slice(4)]);
     expect(b.id).toBe(a.id);expect(a.title).toBe("私教");expect(a.revision).toBe(1);
-    await expect(create([p[0],"不同标题",...p.slice(2)])).rejects.toThrow(/Idempotency/);
+    await expect(create([p[0],"不同标题",...p.slice(2)])).rejects.toMatchObject({code:"PT409"});
     const rows=await db.query<{count:number}>("select count(*)::int as count from public.audit_events where entity_type='fitness_appointment' and entity_id=$1",[a.id]);
     expect(rows.rows[0].count).toBe(1);
   });
@@ -97,8 +100,8 @@ describe("fitness appointment SQL behavior", () => {
   });
   it("protects edits and deletes with revision; repeat deletes and create retries never resurrect", async () => {
     const p=input();const [a]=await create(p);const [b]=await update(a.id,1);expect(b.revision).toBe(2);
-    await expect(update(a.id,1)).rejects.toThrow(/revision/);
-    await expect(remove(a.id,1)).rejects.toThrow(/revision/);
+    await expect(update(a.id,1)).rejects.toMatchObject({code:"PT409"});
+    await expect(remove(a.id,1)).rejects.toMatchObject({code:"PT409"});
     const [c]=await remove(a.id,2);expect(c.revision).toBe(3);expect(c.deleted_at).toBeTruthy();
     expect((await remove(a.id,2))[0].revision).toBe(3);
     await expect(update(a.id,3)).rejects.toThrow(/deleted/);

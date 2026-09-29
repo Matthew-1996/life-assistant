@@ -57,7 +57,7 @@ describe("FitnessRepository",()=>{
     for(const [from,to] of [["2030-02-30","2030-03-01"],["2030-01-01","2030-04-01"],["2030-01-02","2030-01-01"]]) await expect(repo.listRange({from,to})).rejects.toMatchObject({kind:"validation"});
     expect(requests).toHaveLength(0);
   });
-  it.each([[403,"42501","forbidden"],[409,"40001","conflict"],[400,"22023","validation"],[404,"P0002","conflict"],[503,"PGRST000","transient"]])("maps write error %s/%s without retry",async(status,code,kind)=>{
+  it.each([[403,"42501","forbidden"],[409,"PT409","conflict"],[409,"40001","conflict"],[400,"22023","validation"],[404,"P0002","conflict"],[503,"PGRST000","transient"]])("maps write error %s/%s without retry",async(status,code,kind)=>{
     const {repo,requests}=client([{status:status as number,body:{code,message:"Synthetic error"}}]);
     await expect(repo.update({...input,id,expectedRevision:1})).rejects.toMatchObject({kind});expect(requests).toHaveLength(1);
   });

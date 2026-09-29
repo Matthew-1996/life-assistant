@@ -18,7 +18,7 @@ async function setup() {
       .filter(
         (n) =>
           n.endsWith("_fitness_appointments.sql") ||
-          n.endsWith("_fitness_backup_v4.sql"),
+          n.endsWith("_fitness_backup_v4.sql") || n.endsWith("_fitness_http_conflicts.sql"),
       )
       .sort(),
   ]) {
