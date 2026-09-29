@@ -52,8 +52,15 @@ function fields(input: FitnessFields) {
   const start = timestamp(input.startAt);
   const end = timestamp(input.endAt);
   const shanghaiDay = (ms: number) => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Shanghai", year: "numeric", month: "2-digit", day: "2-digit" }).format(ms);
-  if (end <= start || shanghaiDay(start) !== shanghaiDay(end)) invalid("Appointment must end later on the same Shanghai day");
+  const kind = input.timeKind ?? "timed";
+  if (kind !== "timed" && kind !== "all_day") invalid("Invalid time kind");
+  if (kind === "all_day") {
+    const local = (ms: number) => new Intl.DateTimeFormat("en-GB", {timeZone:"Asia/Shanghai",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"}).format(ms);
+    const nextDate = new Date(Date.parse(`${shanghaiDay(start)}T00:00:00Z`) + 86400000).toISOString().slice(0,10);
+    if (local(start) !== "00:00:00" || local(end) !== "00:00:00" || start % 1000 !== 0 || end % 1000 !== 0 || shanghaiDay(end) !== nextDate) invalid("All-day appointment must span one Shanghai calendar day");
+  } else if (end <= start || shanghaiDay(start) !== shanghaiDay(end)) invalid("Appointment must end later on the same Shanghai day");
   return {
+    ...(input.timeKind !== undefined ? { p_time_kind: kind } : {}),
     p_title: title,
     p_start_at: input.startAt,
     p_end_at: input.endAt,

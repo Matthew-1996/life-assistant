@@ -58,5 +58,6 @@ export function compareAppointments(
   return a.start_at.localeCompare(b.start_at) || a.id.localeCompare(b.id);
 }
 export function timeLabel(row: FitnessAppointment) {
+  if (row.time_kind === "all_day") return "全天";
   return `${shanghaiParts(row.start_at).time}–${shanghaiParts(row.end_at).time}`;
 }

@@ -184,6 +184,7 @@
   min-width: 0;
 }
 .fitness-form input,
+.fitness-form select,
 .fitness-form textarea {
   width: 100%;
   min-width: 0;
@@ -195,6 +196,7 @@
   color: inherit;
   box-sizing: border-box;
 }
+.fitness-form select,
 .fitness-form textarea {
   resize: vertical;
 }
