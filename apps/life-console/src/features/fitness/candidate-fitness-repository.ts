@@ -33,7 +33,21 @@ export function createCandidateFitnessRepository(
       "PT409",
       "Synthetic revision conflict",
     );
+  let subscription = { enabled: false, includeNotes: false, revision: 0 };
   return {
+    subscription: {
+      async get() { return { ...subscription }; },
+      async rotate(input) {
+        if (input.expectedRevision !== subscription.revision) throw conflict();
+        subscription = { enabled: true, includeNotes: input.includeNotes, revision: subscription.revision + 1 };
+        return { ...subscription, url: `https://calendar.example.test/calendar/fitness/${"s".repeat(43)}.ics` };
+      },
+      async update(input) {
+        if (input.expectedRevision !== subscription.revision || (input.enabled && !subscription.enabled)) throw conflict();
+        subscription = { enabled: input.enabled, includeNotes: input.includeNotes, revision: subscription.revision + 1 };
+        return { ...subscription };
+      },
+    },
     async listRange({ from, to, cursor }) {
       const all = [...rows.values()]
         .filter(

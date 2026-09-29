@@ -1,3 +1,4 @@
+import type { FitnessSubscriptionPort } from "../domain/fitness-subscription";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   FITNESS_PAGE_SIZE,
@@ -65,7 +66,7 @@ function fields(input: FitnessFields) {
 /** Phase A adapter only: no production wiring or fallback synthetic data. */
 export class FitnessRepository implements FitnessRepositoryPort {
   private readonly repository: LifeConsoleRepository;
-  constructor(private readonly client: SupabaseClient) {
+  constructor(private readonly client: SupabaseClient, readonly subscription?: FitnessSubscriptionPort) {
     this.repository = new LifeConsoleRepository(client);
   }
 

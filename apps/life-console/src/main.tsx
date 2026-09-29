@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
+import { createFitnessSubscriptionClient } from "./api/fitness-subscription-client";
 import { App } from "./App";
 import { createApiClient } from "./api/client";
 import { createDailyNewsApiClient } from "./api/daily-news-client";
@@ -66,9 +67,11 @@ if (supabaseMode) {
   const journals = new JournalRepository(supabase);
   const reviews = new ReviewRepository(supabase);
   const todos = new TodoRepository(supabase);
-  const fitness = new FitnessRepository(supabase);
   const backups = new BackupRepository(supabase);
   const auth = createSupabaseAuthService(supabase.auth);
+  const fitness = new FitnessRepository(supabase, import.meta.env.VITE_FITNESS_SUBSCRIPTION_ENABLED === "true"
+    ? createFitnessSubscriptionClient({ origin: config.url, getAccessToken: auth.getAccessToken, fetch: globalThis.fetch })
+    : undefined);
   const dailyNews = createDailyNewsApiClient({
     fetch: globalThis.fetch,
     getAccessToken: auth.getAccessToken,
