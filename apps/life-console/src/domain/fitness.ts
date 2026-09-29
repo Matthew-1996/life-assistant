@@ -9,6 +9,7 @@ export interface FitnessAppointment {
   start_at: string;
   end_at: string;
   time_zone: typeof FITNESS_TIME_ZONE;
+  time_kind?: "timed" | "all_day";
   location: string;
   notes: string;
   revision: number;
@@ -18,6 +19,7 @@ export interface FitnessAppointment {
 }
 
 export interface FitnessFields {
+  timeKind?: "timed" | "all_day";
   title: string;
   startAt: string;
   endAt: string;

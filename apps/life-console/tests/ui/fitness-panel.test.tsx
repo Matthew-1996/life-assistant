@@ -10,6 +10,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, expect, it, vi } from "vitest";
+import { createCandidateFitnessRepository } from "../../src/features/fitness/candidate-fitness-repository";
 import { FitnessPanel } from "../../src/features/fitness/FitnessPanel";
 import type {
   FitnessAppointment,
@@ -320,4 +321,37 @@ it("warns about overlapping times without blocking an explicit save", async () =
   await userEvent.click(screen.getByRole("button", { name: "保存预约" }));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   expect(r.create).toHaveBeenCalledOnce();
+});
+
+ it("creates an all-day appointment without clock fields and renders all-day label", async () => {
+  const r = repo([]);
+  render(<FitnessPanel repository={r} now={now} />);
+  await screen.findByText("当天暂无预约");
+  await userEvent.click(screen.getByRole("button", { name: "新增预约" }));
+  fireEvent.change(screen.getByLabelText("健身事件"), { target: { value: "安排下周训练" } });
+  await userEvent.selectOptions(screen.getByLabelText("时间类型"), "all_day");
+  expect(screen.queryByLabelText("开始时间")).toBeNull();
+  expect(screen.queryByLabelText("结束时间")).toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: "保存预约" }));
+  await waitFor(() => expect(r.create).toHaveBeenCalledWith(expect.objectContaining({
+    timeKind: "all_day", startAt: "2030-04-30T16:00:00.000Z", endAt: "2030-05-01T16:00:00.000Z"
+  })));
+});
+
+it("renders and reopens all-day events, and can switch back to timed", async () => {
+ const r=createCandidateFitnessRepository(now);
+ await r.create({title:"全天联络",timeKind:"all_day",startAt:"2030-04-30T16:00:00.000Z",endAt:"2030-05-01T16:00:00.000Z",operationKey:"synthetic-all-day-ui"});
+ render(<FitnessPanel repository={r} now={now}/>);
+ await screen.findByRole("button",{name:"编辑全天联络"});
+ expect(within(screen.getByRole("region",{name:"当日预约"})).getByText("全天")).toBeTruthy();
+ expect(screen.getByText("全天 全天联络")).toBeTruthy();
+ await userEvent.click(screen.getByRole("button",{name:"编辑全天联络"}));
+ expect((screen.getByLabelText("时间类型") as HTMLSelectElement).value).toBe("all_day");
+ expect(screen.queryByLabelText("开始时间")).toBeNull();
+ await userEvent.selectOptions(screen.getByLabelText("时间类型"),"timed");
+ fireEvent.change(screen.getByLabelText("开始时间"),{target:{value:"12:00"}});
+ fireEvent.change(screen.getByLabelText("结束时间"),{target:{value:"13:00"}});
+ await userEvent.click(screen.getByRole("button",{name:"保存预约"}));
+ expect(await screen.findByText("12:00–13:00")).toBeTruthy();
+ expect(within(screen.getByRole("region",{name:"当日预约"})).queryByText("全天")).toBeNull();
 });

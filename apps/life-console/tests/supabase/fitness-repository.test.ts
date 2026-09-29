@@ -73,3 +73,9 @@ describe("FitnessRepository",()=>{
     const {repo}=client([{status:200,body:[]}]);await expect(repo.create({...input,operationKey:"fitness-client-empty"})).rejects.toMatchObject({kind:"unknown"});
   });
 });
+
+it("accepts a Shanghai whole day and passes its explicit kind", async () => {
+ const {repo,requests}=client([{status:200,body:[{...appointment,time_kind:"all_day"}]}]);
+ await repo.create({...input,startAt:"2030-05-01T00:00:00+08:00",endAt:"2030-05-02T00:00:00+08:00",timeKind:"all_day",operationKey:"fitness-all-day-test"});
+ expect(await requests[0].json()).toMatchObject({p_time_kind:"all_day"});
+});

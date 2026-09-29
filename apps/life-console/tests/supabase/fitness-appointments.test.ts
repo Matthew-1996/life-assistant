@@ -34,8 +34,13 @@ beforeAll(async () => {
   const conflictMigration = (await readdir(dir)).find(name => name.endsWith("_fitness_http_conflicts.sql"));
   if (!conflictMigration) throw new Error("Fitness HTTP conflict migration missing");
   await db.exec(await readFile(new URL(conflictMigration, dir), "utf8"));
-  await db.query("insert into auth.users(id) values ($1),($2),($3)",[owner,other,guest]);
-  await db.query("insert into life_console_private.fitness_owners(user_id) values ($1),($2)",[owner,other]);
+  await db.query("insert into auth.users(id) values ($1)",[owner]);
+  await db.query("insert into life_console_private.fitness_owners(user_id) values ($1)",[owner]);
+  await create(["fitness-before-migration", "旧定时", "2030-05-01T10:00:00Z", "2030-05-01T11:00:00Z", "", ""]);
+  const allDayMigration = (await readdir(dir)).find(name => name.endsWith("_fitness_all_day.sql"));
+  if (allDayMigration) await db.exec(await readFile(new URL(allDayMigration, dir), "utf8"));
+  await db.query("insert into auth.users(id) values ($1),($2),($3) on conflict do nothing",[owner,other,guest]);
+  await db.query("insert into life_console_private.fitness_owners(user_id) values ($1),($2) on conflict do nothing",[owner,other]);
 });
 afterAll(async () => { await db?.close(); });
 
@@ -133,4 +138,23 @@ describe("fitness appointment SQL behavior", () => {
     const privateTables=await db.query<{relrowsecurity:boolean}>("select relrowsecurity from pg_class join pg_namespace n on n.oid=relnamespace where n.nspname='life_console_private' and relkind='r'");
     expect(privateTables.rows).toHaveLength(3);expect(privateTables.rows.every(x=>x.relrowsecurity)).toBe(true);
   });
+});
+
+it("stores true all-day rows and retains idempotency and revision checks",async()=>{
+ const p=["fitness-all-day-synthetic","全天安排","2030-05-01T00:00:00+08:00","2030-05-02T00:00:00+08:00","","","all_day"];
+ const sql="select * from public.create_fitness_appointment($1,$2,$3,$4,$5,$6,$7)";
+ const [a]=await asUser(sql,p); const [b]=await asUser(sql,p);
+ expect(a.time_kind).toBe("all_day"); expect(a.id).toBe(b.id);
+ await expect(asUser(sql,[...p.slice(0,6),"timed"])).rejects.toMatchObject({code:"PT409"});
+ await expect(asUser(sql,["fitness-bad-all-day-1",...p.slice(1,3),"2030-05-02T01:00:00+08:00",...p.slice(4)])).rejects.toThrow();
+ const [updated]=await asUser("select * from public.update_fitness_appointment($1,$2,$3,$4,$5,$6,$7,$8)",[a.id,1,"定时课程","2030-05-01T18:00:00+08:00","2030-05-01T19:00:00+08:00","","","timed"]);
+ expect(updated.time_kind).toBe("timed");expect(updated.revision).toBe(2);
+ await expect(asUser("select * from public.update_fitness_appointment($1,$2,$3,$4,$5,$6,$7,$8)",[a.id,1,...p.slice(1)])).rejects.toMatchObject({code:"PT409"});
+});
+
+it("retries a pre-migration timed receipt with legacy arguments without duplication",async()=>{
+ const [row]=await create(["fitness-before-migration","旧定时","2030-05-01T10:00:00Z","2030-05-01T11:00:00Z","",""]);
+ expect(row.time_kind).toBe("timed");expect(row.revision).toBe(1);
+ const result=await db.query<{count:number}>("select count(*)::int as count from public.audit_events where entity_id=$1",[row.id]);
+ expect(result.rows[0].count).toBe(1);
 });

@@ -85,6 +85,7 @@ export function createCandidateFitnessRepository(
         ...seed,
         id: crypto.randomUUID(),
         title: input.title,
+        time_kind: input.timeKind ?? "timed",
         start_at: input.startAt,
         end_at: input.endAt,
         location: input.location ?? "",
@@ -101,6 +102,7 @@ export function createCandidateFitnessRepository(
       const next = {
         ...row,
         title: input.title,
+        time_kind: input.timeKind ?? "timed",
         start_at: input.startAt,
         end_at: input.endAt,
         location: input.location ?? "",

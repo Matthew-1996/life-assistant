@@ -32,3 +32,5 @@ Tests: repository与UI测试，真实浏览器合成预览。先红再绿。
 - Final: fixed 大快照先传输后校验导致潜在OOM — SQL预算反例RED→GREEN；10000条最大emoji备注、4连接、96MiB V8堆实际返回小型503。
 - Task 4: 独立复审的唯一P2已修复；Apple真实客户端、固定服务器版本复验与发布仍未执行。
 - Verification: 最终应用695 Vitest + 93 Python通过；根目录376项/1skip通过。治理与Git隐私通过。完整私人工作区便携性校验不适用于公开克隆，未降低检查规则或复制私人资料。
+
+- Compatibility: merged current all-day appointment model; added ordered feed projection migration and DATE-valued ICS contract. Application 701 Vitest + 93 Python passed; candidate build passed. The backend counterpart passed 43 Node tests and isolated PostgreSQL/HTTP probes. Apple client probe is in progress; this does not enable production subscriptions.
