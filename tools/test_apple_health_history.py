@@ -8,6 +8,8 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+from apple_health_history import HealthHistoryError, read_health_summary
+
 
 SCRIPT = Path(__file__).resolve().parent / "apple_health_history.py"
 
@@ -71,6 +73,25 @@ class AppleHealthHistoryTests(unittest.TestCase):
             "--start", "2026-08-06", "--end", "2026-08-06", command="list"
         )
         self.assertEqual(json.loads(listed.stdout)["count"], 1)
+
+    def test_read_health_summary_normalizes_without_creating_history(self):
+        self.write_source()
+        parsed = read_health_summary(self.source, "2026-08-06")
+
+        self.assertEqual(parsed["health_date"], "2026-08-06")
+        self.assertEqual(parsed["generated_at"], "2026-08-06T10:55:00+08:00")
+        self.assertEqual(
+            set(parsed["summary"]),
+            {"steps", "active_energy", "exercise_minutes", "sleep_start", "sleep_end"},
+        )
+        self.assertEqual(parsed["summary"]["steps"], 8474)
+        self.assertFalse((self.root / "apple-health-history.jsonl").exists())
+
+    def test_read_health_summary_rejects_nonmatching_date_without_side_effects(self):
+        self.write_source()
+        with self.assertRaisesRegex(HealthHistoryError, "不是指定日期"):
+            read_health_summary(self.source, "2026-08-07")
+        self.assertFalse(self.root.exists())
 
     def test_same_values_are_noop_and_later_same_day_update_increments_revision(self):
         self.write_source()

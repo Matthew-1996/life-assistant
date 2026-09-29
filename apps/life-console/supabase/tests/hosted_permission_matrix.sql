@@ -78,8 +78,59 @@ create temporary table life_console_permission_results (
 ) on commit drop;
 grant select, insert on life_console_permission_results to anon, authenticated;
 
+insert into life_console_permission_results
+select
+  'health_day_rpc_rights',
+  count(*) = 1
+    and bool_and(not p.prosecdef)
+    and bool_and(p.proretset)
+    and bool_and(p.proconfig @> array['search_path=""'])
+    and pg_catalog.has_function_privilege(
+      'authenticated',
+      'public.upsert_health_day_v1(date,timestamptz,jsonb)',
+      'EXECUTE'
+    )
+    and not pg_catalog.has_function_privilege(
+      'anon',
+      'public.upsert_health_day_v1(date,timestamptz,jsonb)',
+      'EXECUTE'
+    )
+    and not exists (
+      select 1
+      from information_schema.routine_privileges as privilege
+      where privilege.routine_schema = 'public'
+        and privilege.routine_name = 'upsert_health_day_v1'
+        and privilege.grantee = 'PUBLIC'
+        and privilege.privilege_type = 'EXECUTE'
+    )
+from pg_catalog.pg_proc as p
+join pg_catalog.pg_namespace as n on n.oid = p.pronamespace
+where n.nspname = 'public'
+  and p.proname = 'upsert_health_day_v1';
+
 set local role anon;
 select set_config('request.jwt.claim.sub', '', true);
+
+do $$
+begin
+  perform * from public.upsert_health_day_v1(
+    (clock_timestamp() at time zone 'Asia/Shanghai')::date,
+    clock_timestamp(),
+    jsonb_build_object(
+      'steps', 1,
+      'active_energy', 1,
+      'exercise_minutes', 1,
+      'sleep_start', null,
+      'sleep_end', null
+    )
+  );
+  insert into life_console_permission_results
+  values ('health_day_rpc_anon_denied', false);
+exception when others then
+  insert into life_console_permission_results
+  values ('health_day_rpc_anon_denied', sqlstate = '42501');
+end
+$$;
 
 do $$
 begin
