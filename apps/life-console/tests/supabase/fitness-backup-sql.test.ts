@@ -18,7 +18,7 @@ async function setup() {
       .filter(
         (n) =>
           n.endsWith("_fitness_appointments.sql") ||
-          n.endsWith("_fitness_backup_v4.sql") || n.endsWith("_fitness_http_conflicts.sql"),
+          n.endsWith("_fitness_backup_v4.sql") || n.endsWith("_fitness_http_conflicts.sql") || n.endsWith("_fitness_all_day.sql"),
       )
       .sort(),
   ]) {
@@ -41,7 +41,7 @@ it("exports only the current Owner including tombstones and restores exact appoi
       ]);
       await db.exec("set role authenticated");
       await db.query(
-        "select * from public.create_fitness_appointment($1,'合成预约','2030-05-01T10:00Z','2030-05-01T11:00Z','场地','备注')",
+        "select * from public.create_fitness_appointment($1,'合成预约','2030-04-30T16:00Z','2030-05-01T16:00Z','场地','备注','all_day')",
         ["backup-synthetic"],
       );
       await db.exec("reset role");
@@ -64,6 +64,7 @@ it("exports only the current Owner including tombstones and restores exact appoi
     expect(snapshot.fitness_appointments[0]).toMatchObject({
       user_id: owner,
       revision: 3,
+      time_kind: "all_day",
     });
     expect(snapshot.fitness_appointments[0].deleted_at).toBeTruthy();
     expect(Object.keys(snapshot).join()).not.toMatch(

@@ -22,6 +22,7 @@ export function AppointmentEditor({
   onClose(): void;
   onSaved(row: FitnessAppointment): void;
 }) {
+  const [timeKind, setTimeKind] = useState<"timed" | "all_day">(record?.time_kind ?? "timed");
   const [title, setTitle] = useState(record?.title ?? "");
   const [day, setDay] = useState(
     record ? shanghaiParts(record.start_at).date : date,
@@ -89,6 +90,7 @@ export function AppointmentEditor({
     };
   }, [day, repository]);
   const changed =
+    timeKind !== (record?.time_kind ?? "timed") ||
     title !== (record?.title ?? "") ||
     day !== (record ? shanghaiParts(record.start_at).date : date) ||
     start !== (record ? shanghaiParts(record.start_at).time : "") ||
@@ -101,13 +103,13 @@ export function AppointmentEditor({
   }
   let overlaps = false;
   try {
-    if (start && end) {
+    if (timeKind === "timed" && start && end) {
       const a = Date.parse(localInstant(day, start)),
         b = Date.parse(localInstant(day, end));
       overlaps = dayAppointments.some(
         (row) =>
           row.id !== record?.id &&
-          !row.deleted_at &&
+          !row.deleted_at && row.time_kind !== "all_day" &&
           Date.parse(row.start_at) < b &&
           Date.parse(row.end_at) > a,
       );
@@ -124,7 +126,7 @@ export function AppointmentEditor({
   }, []);
   function fields(): FitnessFields {
     if (!title.trim()) throw Error("请填写健身事件。");
-    if (!day || !start || !end || end <= start)
+    if (!day || (timeKind === "timed" && (!start || !end || end <= start)))
       throw Error("结束时间必须晚于开始时间，且在同一天。");
     const instant = (time: string, original?: string) =>
       original &&
@@ -133,9 +135,10 @@ export function AppointmentEditor({
         ? original
         : localInstant(day, time);
     return {
+      timeKind,
       title: title.trim(),
-      startAt: instant(start, record?.start_at),
-      endAt: instant(end, record?.end_at),
+      startAt: timeKind === "all_day" ? localInstant(day, "00:00") : instant(start, record?.start_at),
+      endAt: timeKind === "all_day" ? localInstant(addDays(day, 1), "00:00") : instant(end, record?.end_at),
       location,
       notes,
     };
@@ -278,7 +281,12 @@ export function AppointmentEditor({
               onChange={(e) => setDay(e.target.value)}
             />
           </label>
-          <div className="fitness-times">
+          <label>时间类型
+            <select value={timeKind} onChange={(e) => setTimeKind(e.target.value as "timed" | "all_day")}>
+              <option value="timed">定时</option><option value="all_day">全天</option>
+            </select>
+          </label>
+          {timeKind === "timed" && <div className="fitness-times">
             <label>
               开始时间
               <input
@@ -297,7 +305,7 @@ export function AppointmentEditor({
                 onChange={(e) => setEnd(e.target.value)}
               />
             </label>
-          </div>
+          </div>}
           <label>
             地点
             <input
@@ -330,7 +338,7 @@ export function AppointmentEditor({
         {conflict && (
           <section className="fitness-conflict" aria-label="预约冲突">
             <p>
-              本次草稿：{title} · {day} {start}–{end}
+              本次草稿：{title} · {day} {timeKind === "all_day" ? "全天" : `${start}–${end}`}
             </p>
             <button
               type="button"

@@ -287,7 +287,7 @@ function FitnessSession({ repository, now, synthetic }: Props) {
                       </span>
                       {events.slice(0, 2).map((x) => (
                         <span className="fitness-summary" key={x.id}>
-                          {shanghaiParts(x.start_at).time} {x.title}
+                          {x.time_kind === "all_day" ? "全天" : shanghaiParts(x.start_at).time} {x.title}
                         </span>
                       ))}
                       {events.length > 2 && (
